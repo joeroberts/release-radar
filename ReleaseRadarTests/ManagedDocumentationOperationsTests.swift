@@ -11,21 +11,39 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         }
         private nonisolated let storage = Storage()
         var prepares = 0
+        var preparesByRequestID: [UUID: Int] = [:]
+        var definiteRefusals: Set<UUID> = []
+        var partialRefusals: Set<UUID> = []
         var gate: DocumentationCommitGate?
+        var noEffectsGate: DocumentationCommitGate?
         var value: ProjectExecutionAssignment? {
             get { storage.lock.withLock { storage.value } }
             set { storage.lock.withLock { storage.value = newValue } }
         }
         func setGate(_ gate: DocumentationCommitGate) { self.gate = gate }
+        func setNoEffectsGate(_ gate: DocumentationCommitGate) { noEffectsGate = gate }
+        func refuseBeforeEffects(_ requestID: UUID) { definiteRefusals.insert(requestID) }
+        func refuseAfterPreparing(_ requestID: UUID) { partialRefusals.insert(requestID) }
         func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
             prepares += 1
+            preparesByRequestID[requestID, default: 0] += 1
+            if definiteRefusals.contains(requestID) {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
             guard reviewOfAssignmentID == nil, baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
             if let gate { await gate.enterAndWait(); self.gate = nil }
             var assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
                 checkoutPath: "/Fixture/Checkout", role: .delivery, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
                 authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
                 excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work)
-            assignment.state = .preparing; value = assignment; return assignment
+            assignment.state = .preparing; value = assignment
+            if partialRefusals.contains(requestID) { throw ProjectExecutionError.assignmentNotAuthorized }
+            return assignment
+        }
+        func verifyNoPreparationEffects(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
+                                        reviewOfAssignmentID: String?, baselineFromAssignmentID: String?) async -> Bool {
+            if let noEffectsGate { await noEffectsGate.enterAndWait(); self.noEffectsGate = nil }
+            return definiteRefusals.contains(requestID) && !partialRefusals.contains(requestID)
         }
         nonisolated func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
             try storage.lock.withLock {
@@ -134,6 +152,112 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let value = await preparer.value; XCTAssertEqual(value?.state, .revoked)
         let recovered = await dispatcher.dispatch(request)
         XCTAssertNil(recovered.error); XCTAssertEqual(recovered.executionAssignment?.state, .authorized)
+    }
+
+    func testDefinitePreparationRefusalSettlesExactReceiptAndDoesNotStrandFreshWork() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let refusedRequestID = UUID()
+        await preparer.refuseBeforeEffects(refusedRequestID)
+        let refused = AgentCommandEnvelope(version: 1, requestID: refusedRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Retired parent cannot authorize a new assignment",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: "delivery-retired"))
+
+        let first = await dispatcher.dispatch(refused)
+        XCTAssertEqual(first.error, .execution(.assignmentNotAuthorized))
+        let refusalAuditID = try XCTUnwrap(first.auditEventID, "A definite refusal needs an audited terminal receipt")
+
+        let replay = await dispatcher.dispatch(refused)
+        XCTAssertEqual(replay, first)
+        let refusedPrepares = await preparer.preparesByRequestID[refusedRequestID]
+        XCTAssertEqual(refusedPrepares, 1, "Exact replay must not rerun a terminal refusal")
+
+        let changed = AgentCommandEnvelope(version: 1, requestID: refusedRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Changed body", command: refused.command)
+        let changedResult = await dispatcher.dispatch(changed)
+        XCTAssertEqual(changedResult.error, .requestIDReused)
+
+        let freshRequestID = UUID()
+        let fresh = AgentCommandEnvelope(version: 1, requestID: freshRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Fresh canonical baseline",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil))
+        let recovered = await dispatcher.dispatch(fresh)
+        XCTAssertNil(recovered.error)
+        XCTAssertEqual(recovered.executionAssignment?.state, .authorized)
+        let freshPrepares = await preparer.preparesByRequestID[freshRequestID]
+        XCTAssertEqual(freshPrepares, 1)
+
+        let auditCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(refusalAuditID.rawValue)])
+        }
+        XCTAssertEqual(auditCount, 1)
+    }
+
+    func testPartiallyPreparedRefusalKeepsOutcomeUnknownAndBlocksReplacement() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseAfterPreparing(requestID)
+        let request = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Preparation may have effects",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil))
+
+        let uncertain = await dispatcher.dispatch(request)
+        XCTAssertEqual(uncertain.error, .execution(.assignmentNotAuthorized))
+        XCTAssertNil(uncertain.auditEventID)
+        let partialState = await preparer.value?.state
+        XCTAssertEqual(partialState, .preparing)
+        let persisted = try await store.read { connection -> AgentCommandResult in
+            let bytes = try XCTUnwrap(connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)])?["result_data"])
+            guard case let .blob(data) = bytes else { throw ProjectExecutionError.unavailable }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persisted.error, .outcomeUnknown)
+
+        let replacement = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path,
+            expectedRegistration: registration, reason: "Replacement must remain blocked",
+            command: request.command)
+        let blocked = await dispatcher.dispatch(replacement)
+        XCTAssertEqual(blocked.error, .execution(.conflict))
+    }
+
+    func testChangedWorkBeforeRefusalSettlementPreservesOutcomeUnknown() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseBeforeEffects(requestID)
+        let gate = DocumentationCommitGate()
+        await preparer.setNoEffectsGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Retired parent refusal",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: "delivery-retired"))
+        let operation = Task { await dispatcher.dispatch(request) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change work before refusal settlement",
+            auditScope: .init(projectID: registration.projectID, entityType: .ticketTaskPlan, entityID: "ticket")) {
+                try $0.execute("UPDATE ticket_tasks SET title='Changed task' WHERE project_id='p' AND ticket_id='ticket' AND id='task'")
+            }
+        await gate.release()
+
+        let result = await operation.value
+        XCTAssertEqual(result.error, .execution(.assignmentNotAuthorized))
+        XCTAssertNil(result.auditEventID)
+        let persisted = try await store.read { connection -> AgentCommandResult in
+            guard case let .blob(data)? = try connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)])?["result_data"] else {
+                throw ProjectExecutionError.unavailable
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persisted.error, .outcomeUnknown)
     }
 
     func testManagedEvidenceWriterRejectsCompletedTicketAssociation() async throws {

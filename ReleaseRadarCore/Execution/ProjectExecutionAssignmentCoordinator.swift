@@ -8,7 +8,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     private let configuration: any ProjectExecutionConfiguring
     private let provisioning: any ExecutionWorktreeProvisioning
     private let handlerPath: String
-    private var preparing: Set<String> = []
+    private var preparing: [String: UUID] = [:]
 
     public init(root: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
                 configuration: any ProjectExecutionConfiguring, handlerPath: String,
@@ -71,15 +71,67 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     public func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
                         reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
         let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
-        guard preparing.insert(key).inserted else { throw ProjectExecutionError.conflict }
-        defer { preparing.remove(key) }
+        guard preparing[key] == nil else { throw ProjectExecutionError.conflict }
+        preparing[key] = requestID
         do {
             let result = try await prepareOperation(project: project, work: work, requestID: requestID,
                 reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID, contextPaths: contextPaths)
             try await configuration.finishConfiguration()
             return result
         } catch {
-            let failure = error; try await configuration.finishConfiguration(); throw failure
+            let failure = error
+            do { try await configuration.finishConfiguration() }
+            catch {
+                if preparing[key] == requestID { preparing.removeValue(forKey: key) }
+                throw error
+            }
+            if !(failure is ProjectExecutionPreparationFailure), preparing[key] == requestID {
+                preparing.removeValue(forKey: key)
+            }
+            throw failure
+        }
+    }
+
+    public func finishPreparation(work: ProjectExecutionWork, requestID: UUID) async {
+        let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
+        if preparing[key] == requestID { preparing.removeValue(forKey: key) }
+    }
+
+    public func verifyNoPreparationEffects(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
+                                           reviewOfAssignmentID: String?, baselineFromAssignmentID: String?) async throws -> Bool {
+        let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
+        guard preparing[key] == requestID, let registration = project.registration,
+              work.projectID == project.projectID,
+              reviewOfAssignmentID == nil || baselineFromAssignmentID == nil else { return false }
+        let store = try ProjectExecutionFileStore(root: root(), create: false)
+        let policy = try store.policy(projectID: project.projectID.rawValue)
+        guard policy.registration == registration, policy.primaryRoot == project.canonicalRoot.path,
+              policy.enabled, policy.bindingRecoveryPending != true else { return false }
+        let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review
+        let id = role.rawValue + "-" + requestID.uuidString.lowercased()
+        let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: id)
+        guard try store.assignmentIfPresent(projectID: project.projectID.rawValue, taskID: id) == nil,
+              try !provisioning.hasPreparedResources(primaryRoot: project.canonicalRoot, checkout: paths.checkout,
+                projectID: project.projectID.rawValue, taskID: id) else { return false }
+        if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
+            let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
+                projectID: project.projectID.rawValue, taskID: parentID)
+            guard parent.registration == registration, parent.work == work, parent.state == .superseded,
+                  parent.retirement?.completed == true, parent.retirement?.connectionCloseUncertain != true,
+                  parent.checkoutPath == parentPaths.checkout.path, parent.worktree?.primaryRoot == policy.primaryRoot,
+                  reviewOfAssignmentID == nil || parent.role == .delivery else { return false }
+        }
+        do {
+            try await configuration.useCodexContext(policy.codexContextID)
+            let profileExists = try await configuration.workerProfileExists(primaryRoot: policy.primaryRoot,
+                profileID: "rr-" + id)
+            try await configuration.finishConfiguration()
+            return !profileExists
+        } catch {
+            let failure = error
+            try await configuration.finishConfiguration()
+            throw failure
         }
     }
 
@@ -130,6 +182,12 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
             let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
+            if parent.registration == registration, parent.work == work, parent.state == .superseded,
+               parent.retirement?.completed == true, parent.retirement?.connectionCloseUncertain != true,
+               parent.checkoutPath == parentPaths.checkout.path, parent.worktree?.primaryRoot == policy.primaryRoot,
+               reviewOfAssignmentID == nil || parent.role == .delivery {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
             guard parent.registration == registration, parent.work == work, parent.state == .closed, parent.retirement == nil, parent.sessionID != nil,
                   parent.checkoutPath == parentPaths.checkout.path, let tree = parent.worktree,
                   tree.primaryRoot == policy.primaryRoot, reviewOfAssignmentID == nil || parent.role == .delivery else { throw ProjectExecutionError.assignmentNotAuthorized }

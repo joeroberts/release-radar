@@ -34,8 +34,10 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     let prior = try replay(c, envelope: envelope, body: body, registration: registration)
                     return (work, prior)
                 }
-                if var prior = capture.1, prior.error == nil, let priorAssignment = prior.executionAssignment {
-                    prior.executionAssignment = try await preparer.readCurrent(project: project, assignmentID: priorAssignment.id)
+                if var prior = capture.1, prior.error != .outcomeUnknown {
+                    if prior.error == nil, let priorAssignment = prior.executionAssignment {
+                        prior.executionAssignment = try await preparer.readCurrent(project: project, assignmentID: priorAssignment.id)
+                    }
                     return prior
                 }
                 let intent = AgentCommandResult(entityIDs: [ticketID, taskID], auditEventID: nil, error: .outcomeUnknown)
@@ -61,11 +63,51 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     try c.execute("INSERT INTO agent_command_requests (request_id,request_body,result_data,created_at,registration_project_id,registration_id,request_generation) VALUES (?,?,?,?,?,?,?)",
                         bindings: [.text(envelope.requestID.uuidString), .blob(body), .blob(try JSONEncoder().encode(intent)), .text(ISO8601DateFormatter().string(from: Date()))] + ProjectLifecycleManager.receiptScopeBindings(registration))
                 }
-                let assignment = try await preparer.prepare(project: project, work: capture.0, requestID: envelope.requestID,
-                    reviewOfAssignmentID: review, baselineFromAssignmentID: baseline, contextPaths: paths)
+                let assignment: ProjectExecutionAssignment
+                do {
+                    assignment = try await preparer.prepare(project: project, work: capture.0, requestID: envelope.requestID,
+                        reviewOfAssignmentID: review, baselineFromAssignmentID: baseline, contextPaths: paths)
+                } catch let failure as ProjectExecutionPreparationFailure {
+                    do {
+                        guard try await preparer.verifyNoPreparationEffects(project: project, work: capture.0,
+                            requestID: envelope.requestID, reviewOfAssignmentID: review,
+                            baselineFromAssignmentID: baseline) else { throw failure.error }
+                        let auditID = AuditEventID(rawValue: UUID().uuidString)
+                        let terminal = AgentCommandResult(entityIDs: [ticketID, taskID], auditEventID: auditID,
+                            error: .execution(failure.error))
+                        let result = try await store.transact(actor: actor,
+                            reason: "Project execution preparation refused without effects", auditEventID: auditID,
+                            auditScope: .init(projectID: project.projectID, entityType: .ticketTaskPlan, entityID: ticketID)) { c in
+                                try checkDeadline(admissionDeadline)
+                                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID,
+                                    registration: registration, connection: c)
+                                try context.verifyPersisted(c)
+                                guard try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID,
+                                    taskID: taskID, taskPlanRevision: taskRevision, phaseRevision: phaseRevision,
+                                    connection: c) == capture.0,
+                                      let row = try c.row("SELECT request_body,result_data,registration_project_id,registration_id,request_generation FROM agent_command_requests WHERE request_id=?",
+                                        bindings: [.text(envelope.requestID.uuidString)]),
+                                      ProjectLifecycleManager.receiptScopeMatches(row, registration: registration),
+                                      row["request_body"] == .blob(body),
+                                      case let .blob(pendingBytes)? = row["result_data"],
+                                      let pending = try? JSONDecoder().decode(AgentCommandResult.self, from: pendingBytes),
+                                      pending.error == .outcomeUnknown else { throw ProjectExecutionError.assignmentNotAuthorized }
+                                try c.execute("UPDATE agent_command_requests SET result_data=? WHERE request_id=? AND request_body=? AND registration_project_id=? AND registration_id=? AND request_generation=? AND result_data=?",
+                                    bindings: [.blob(try JSONEncoder().encode(terminal)), .text(envelope.requestID.uuidString), .blob(body)]
+                                        + ProjectLifecycleManager.receiptScopeBindings(registration) + [.blob(pendingBytes)])
+                                guard try c.scalarInt("SELECT changes()") == 1 else { throw ProjectExecutionError.assignmentNotAuthorized }
+                                return terminal
+                            }
+                        await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                        return result
+                    } catch {
+                        await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                        throw error
+                    }
+                }
                 let auditID = AuditEventID(rawValue: UUID().uuidString)
                 do {
-                    return try await store.transact(actor: actor, reason: "Project execution assignment prepared",
+                    let result = try await store.transact(actor: actor, reason: "Project execution assignment prepared",
                     auditEventID: auditID, auditScope: .init(projectID: project.projectID, entityType: .ticketTaskPlan, entityID: ticketID)) { c in
                     try checkDeadline(admissionDeadline)
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID, registration: registration, connection: c)
@@ -80,12 +122,16 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                         bindings: [.blob(try JSONEncoder().encode(completed)), .text(envelope.requestID.uuidString), .blob(body)])
                     return completed
                     }
+                    await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                    return result
                 } catch {
                     let failure = error
                     do { try preparer.revokePreparation(assignment) }
                     catch {
+                        await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
                         throw StoreError.unavailable("Execution finalization failed: \(failure.localizedDescription). Protected revocation failed: \(error.localizedDescription). Do not launch; recover the exact request.")
                     }
+                    await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
                     throw failure
                 }
             }

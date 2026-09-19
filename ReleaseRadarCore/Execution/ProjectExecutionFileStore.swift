@@ -86,6 +86,19 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
         }
     }
 
+    public func assignmentIfPresent(projectID: String, taskID: String) throws -> ProjectExecutionAssignment? {
+        try lock.withLock {
+            let path = ["Assignments", try ProjectExecutionPaths.component(projectID), try ProjectExecutionPaths.component(taskID), "assignment.json"]
+            guard try exists(path) else { return nil }
+            let value = try read(ProjectExecutionAssignment.self, path: path)
+            try value.validated()
+            guard value.registration.projectID.rawValue == projectID, value.id == taskID else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            return value
+        }
+    }
+
     public func assignments(projectID: String) throws -> [ProjectExecutionAssignment] {
         try lock.withLock {
             let project = try ProjectExecutionPaths.component(projectID)

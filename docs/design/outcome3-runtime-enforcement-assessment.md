@@ -2005,3 +2005,30 @@ The correction ensures the directory under the verified assigned checkout in com
 Focused checks and independent containment/recovery review precede Build Agent's scoped commit. Main owns signed installation/runtime acceptance for same request 67a32c8b-11fd-430e-b916-439046da4531. Native tests do not prove production discovery or worker startup.
 
 Direct source acceptance: Build Agent reports 35/35 focused checks across GREEN-2/3, including actual native worktree fresh/same-request preparation with a committed baseline lacking .codex and untracked primary owned hook. The linked directory is empty and primary hook unchanged. Existing canonical discovery and exact trust/key/hash/enabled readiness rejection remain passing. The pre-mutation boundary rechecks saved policy/assignment and selected context after awaited profile preparation; reserved/uncertain preparing requests cannot materialize the layer. Four initial regressions had native RED; later native/freshness coverage has no separate RED claim. App/test compilation is verified; independent containment/recovery review, scoped commit, canonical integration and installed signed-runtime acceptance remain pending. Existing catalog artifact IDs and checksum policy are unchanged.
+
+### September 19 preparation receipt recovery
+
+Execution preparation keeps the existing command, request receipt and audit model.
+A thrown preparation error is not evidence that no effects occurred. Only a narrowly
+typed coordinator refusal reached before request-owned resource creation is eligible
+for terminal recovery, and a pending historical request additionally requires
+authoritative app-owned readback proving that its deterministic assignment, worktree
+and branch, worker profile and in-flight preparation are all absent. Missing,
+unreadable, malformed, partial, reserved, live or uncertain evidence remains
+`outcomeUnknown` and continues to block replacement work.
+
+For an exact retired-parent replay, the coordinator must also re-establish current
+project, registration, root and work identity and prove the parent's completed
+retirement. Parent retirement alone is insufficient. The app never recreates or
+unretires the parent, drops the recorded baseline relationship, substitutes another
+request identity or performs cleanup as part of this inspection.
+
+After complete no-effects proof, one app-owned transaction conditionally replaces
+only the exact pending receipt result with the existing terminal execution error and
+a new audit identity. It preserves the original request body, registration scope,
+creation record and prior audit history. Exact replay returns that stored terminal
+result without preparing again; changed-body reuse remains rejected. A failed or
+stale resolution transaction leaves the receipt uncertain. The existing preparation
+single-flight now remains held through admission, revocation or terminal settlement,
+so a concurrent replay cannot clear or duplicate live work. This adds no schema,
+public recovery tool, force-clear action or UI contract.
