@@ -45,6 +45,21 @@ the typo; Build Agent remains the sole compiler/test runner.
 Chief confirmed no actual pending approval: its optional skill read was denied,
 local fallback applied, and the architectural report completed. The app task-status
 label was misleading; no owner approval action is needed for that consultation.
+Build Agent GREEN attempt is terminal: compilation/link/signing passed; typed
+handshake test passed; three native transport tests failed at setup because the
+shared service was already registered or a mixed-wire peer answered. No signal
+was sent; Xcode finalized naturally. Result/log/sample are retained under the
+assignment `.build/native-checks/rr-p6-connector-recovery-green-6197c062` paths.
+No recovery/upgrade acceptance follows from these fixture failures.
+
+Main identified required contract gaps in the initial nine-file candidate:
+bootstrap handshake signature compatibility, externally visible typed diagnostics,
+stale-generation/invalidation health handling, typed truthful initial/UI status,
+wire-gated app health, and actual unauthorized XPC health coverage. The same writer
+is correcting that collected set. Build Agent is investigating the existing
+supported controlled-fixture quiesce/restore sequence read-only; no registration,
+owner app-state or permission change is authorized by that investigation.
+
 Packaged documentation and diff checks pass.
 
 Managed delivery still selects Terra/medium and review Terra/high. The earlier
