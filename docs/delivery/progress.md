@@ -2,6 +2,19 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+### Prepared publication — Release Radar 0.1.24
+
+Local branch `codex/release-0.1.24-permissions` preserves the completed release and all existing branches. Proposed PR base: `main`. Publication is awaiting separate owner authorization; no push or PR creation has occurred.
+
+PR title: **Release 0.1.24: isolate managed review scratch writes**
+
+PR description:
+
+Managed review assignments need writable build scratch while repository content remains read-only. This release adds assignment-local `.build` scratch for new review profiles and preserves saved legacy profile behavior. It includes consistent 0.1.24 app/plugin metadata, the signed installer under `dist/`, and delivery records of owner acceptance for permissions and connector recovery.
+
+Validation: focused permission cases, independent source review and installed runtime isolation probes passed. Signed build, DMG verification and installed identity checks passed. XCTest cases passed, but result finalization stalled after test-host exit; overall test-run completion is not claimed. Second-Mac verification is deferred to GitHub #106. Metrics and the separately approved reviewer image-viewing correction are not included.
+
+
 Closeout prerequisite blocker resolved (audit `DBF169E6-4534-4ECD-959D-7D14573F4FA9`) and ticket moved In Progress (audit `EFCF01E4-CD5B-4F7A-9EA4-05638C00B799`). Both named dependencies are Accepted; no task definition or completion changes. PR #107 is verified MERGED at `e6f50b5bbb1d4e8b685bd4abd2379be76227ae59`, with PR head `38daddbdec4f67cc7b4c1b335c1e02381c145baa`; earlier claims that it remains open are superseded. Local 0.1.24 permission implementation/package and later records remain unpublished. Build Agent is reconciling existing local release evidence without rebuilding or rerunning tests.
 
 ```json
