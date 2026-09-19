@@ -1,6 +1,8 @@
 # Release Radar delivery state
 
-## Proposed RR self-onboarding plan import — awaiting owner approval
+## RR self-onboarding plan import — created and verified
+
+Owner-approved import applied through supported audited connector operations: 3 phases and all 16 tickets exist with exact approved IDs, outcomes and phase membership. Fresh complete inventory confirms 0 active tasks; phases remain Unassessed and all tickets are in Backlog. Project Plan visibly shows 16 recorded tickets / 3 phases / 0 unplaced; All-phase Board shows Backlog16 and all other lanes0. Metrics has the visible explicit blocker “STOPPED by owner. Do not start metrics work without explicit owner resume.” New-ticket creation directly into Blocked was rejected without effects; the approved STOP is represented by Backlog plus blocker, not an artificial execution transition. No tasks, goals, formal dependencies, execution, phase activation or completion were added. The exact initial requests below are committed except the rejected metrics request; its separately preserved replacement and blocker requests committed successfully (audits `77359E29-10D8-4FD1-9A46-6B88E18F27B3`, `DA0693E0-6466-4F62-AAA4-8418338F654B`). Do not replay the rejected initial request. Prior preview language below is retained as approval provenance.
 
 Exact target: canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`; project `project-fffdc0e0b15b9b86`; root `project-fffdc0e0b15b9b86-root-0`; registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1. Fresh supported inventory is complete with zero phases, tickets and active tasks. No app writes are authorized by this preview alone. This records remaining work, not historical completion. Owner conversation corrections override stale historical ledger wording.
 
@@ -28,7 +30,41 @@ Propose three phases in the existing sequence: `rr-p6-remediation` / **P6-remedi
 Source: full-product plan owner-corrected P6-remediation grouping and delivery sequence, Outcome 3 correction brief/#99, observed copy-prompt defect, #101, current owner sequencing. Phase 7 and Phase 8 scope is planned future work, not implementation authorization. Explicitly unscheduled #91/#92/#93/#94/#95/#96/#3 and other discovery backlog remain outside this initial phase import. Existing self-onboarding technical setup is complete and is not recreated as a pending ticket. Current PRs #98/#100 are open per fresh GitHub readback. Task decomposition and formal dependency links will be previewed separately before execution; this proposal creates only the phase/ticket list requested by the owner.
 
 
-### Approved import requests — pending
+### Approved import requests — applied with metrics recovery
+
+Runtime deviation: initial metrics Blocked creation was rejected with no entity created; fresh inventory confirms absence. New tickets must start Backlog and cannot transition directly to Blocked. Preserve owner STOP with an explicit blocker and no execution transition. The exact replacement creation and blocker requests are:
+
+```json
+{
+  "replacement": {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+    "requestID": "c9065aeb-44ba-463a-9cc3-53e418fbb7f7",
+    "ticketID": "rr-p6-metrics",
+    "phaseID": "rr-p6-remediation",
+    "outcome": "Correct metric labels, icons and value alignment",
+    "lane": "backlog",
+    "reason": "Owner-approved existing-project plan import. Boundary: Former 6F; BLOCKED/STOPPED, requires explicit owner resume. Runtime requires initial Backlog; preserve STOPPED via explicit blocker without entering execution."
+  },
+  "blocker": {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+    "ticketID": "rr-p6-metrics",
+    "id": "rr-p6-metrics-owner-stop",
+    "summary": "STOPPED by owner. Do not start metrics work without explicit owner resume.",
+    "reason": "Preserve the approved metrics STOPPED state; app disallows creating a new ticket directly in Blocked.",
+    "requestID": "865b6091-3362-43f0-80ca-3721058dd5d2"
+  }
+}
+```
 
 Owner approved the exact 3-phase/16-ticket preview. Fresh supported inventory still has zero phases/tickets, matching registration generation 1. Apply the following requests serially; preserve identities for uncertain replay.
 
