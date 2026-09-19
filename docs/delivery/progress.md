@@ -1,7 +1,7 @@
 # Release Radar delivery state
 
 
-## Connector recovery integration baseline ready
+## Connector recovery managed implementation started
 
 Canonical checkout now uses `codex/connector-recovery-baseline`, baseline
 `6652228c`, combining installed 0.1.22 product source and current delivery records.
@@ -28,8 +28,14 @@ Chief consultation completed read-only; its bounded transport/health/recovery
 contract is recorded in the owning plugin lifecycle design. No runtime approval
 was answered by Main. Build Agent confirmed Xcode 26.6 and pinned RDS availability;
 the assigned checkout needs the repository's offline libgit2 build before tests.
-No product implementation or compilation has started. Main will prepare task 02
-through the supported connector from the committed current brief/design baseline.
+Task 02 prepared from committed contract baseline `6197c062`, audit
+`209E53C6-FC38-456C-A1C1-5FB5822C524C`, assignment
+`delivery-f3be516e-32db-430d-9cae-b8925bd013a5`. Worker
+`61226F01-A079-4841-A1C6-E910D4334205`, task
+`01a0b9f3-c324-70b3-a1d4-58bcea51940e`, is authoring regression tests first.
+Returned effective settings verify Terra/medium, assignment-only workspace write,
+network disabled, on-request/auto_review. Build Agent executes RED before this
+same writer proceeds to product behavior; no compilation has occurred yet.
 Packaged documentation and diff checks pass.
 
 Managed delivery still selects Terra/medium and review Terra/high. The earlier

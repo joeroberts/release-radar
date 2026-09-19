@@ -91,9 +91,12 @@ Preserve accepted ADR-001/002 boundaries and existing typed XPC contracts. Resol
 
 Canonical packaged documentation check passed after baseline integration. Following the owner's Codex restart, the original supported connector returned complete inventory for the exact project/root/registration generation 1: recovery ticket In Progress, task-plan revision 1, all three tasks pending; phase lifecycle revision 1. Chief architecture consultation is complete; apply the September 19 connector recovery contract in `docs/design/release-radar-codex-plugin-lifecycle-design.md`. Build Agent verified Xcode/RDS prerequisites; build the repository-native offline libgit2 prerequisite in the assigned checkout before tests. No compilation has occurred. GitHub issue and this brief retain the full scope; implementation, independent correction review and recovery acceptance remain incomplete.
 
-### Connector implementation preparation — pending
+### Connector implementation preparation — committed
 
-Exact supported request; preserve unchanged if outcome is uncertain:
+Prepared on baseline `6197c062`; audit `209E53C6-FC38-456C-A1C1-5FB5822C524C`.
+Assignment `delivery-f3be516e-32db-430d-9cae-b8925bd013a5` started as worker
+`61226F01-A079-4841-A1C6-E910D4334205`, task `01a0b9f3-c324-70b3-a1d4-58bcea51940e`.
+Exact committed request (do not repeat):
 
 ```json
 {
