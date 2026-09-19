@@ -53,6 +53,17 @@ task rooted at this exact repository must load the updated plugin before resumin
 the pending supported assignment checks. No managed assignment or ticket
 completion has been inferred; no helper or connector bypass was attempted.
 
+After this task loaded the 0.1.24 skill catalog, its inventory call still failed
+before submission. A normal Quit/relaunch completed successfully; the project
+list loaded with the existing four projects. Read-only loaded-executable inspection
+then identified all three running connector processes (4485, 5358, 8824) at
+`/Applications/.ReleaseRadar.backup.19753.28751/Contents/Helpers/ReleaseRadarAgentTools`,
+despite their command paths naming the current installation. This establishes
+retained old connector executables after app replacement, not missing project
+binding. No connector process was killed or invoked directly. The existing
+request for a fresh Main task remains unanswered; app restart requires no owner
+action and has already been completed.
+
 The closeout blocker identity was recovered from its original ledger receipt:
 `rr-p6-closeout-prerequisites`. Supported correction request
 `fa63c48c-c7c9-4f8e-8f74-4f7129484e37` committed with audit
