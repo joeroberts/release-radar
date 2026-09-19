@@ -806,10 +806,130 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let before = await inventory(f.store, f.root)
         let illegal = await f.dispatcher.dispatch(envelope(f.root, .acceptDocumentationCatalog(target: candidate, priorCatalogVersion: 1, priorCatalogDigest: accepted.catalogDigest)))
         XCTAssertEqual(illegal.error, .documentation(.invalidTransition))
+        XCTAssertEqual(illegal.documentationCatalogTransition?.validationError, .invalidTransition)
+        XCTAssertEqual(illegal.documentationCatalogTransition?.artifactID, "draft")
+        XCTAssertEqual(illegal.documentationCatalogTransition?.artifactPath, "docs/plans/draft.md")
         let stale = await f.dispatcher.dispatch(envelope(f.root, .acceptDocumentationCatalog(target: candidate, priorCatalogVersion: 1, priorCatalogDigest: String(repeating: "0", count: 64))))
         XCTAssertEqual(stale.error, .documentation(.catalogUnaccepted))
         let after = await inventory(f.store, f.root)
         XCTAssertEqual(after, before)
+    }
+
+    func testCatalogAcceptancePreservesRepositoryBindingMismatchWithoutEffects() async throws {
+        let f = try await makeFixture()
+        let accepted = try target(f.root)
+        _ = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: accepted)))
+        try editCatalog(f.root) { catalog in
+            catalog["repositoryID"] = "22222222-2222-4222-8222-222222222222"
+        }
+        let candidate = try target(f.root)
+        let before = await inventory(f.store, f.root)
+
+        let result = await f.dispatcher.dispatch(envelope(
+            f.root,
+            .acceptDocumentationCatalog(
+                target: candidate,
+                priorCatalogVersion: accepted.catalogVersion,
+                priorCatalogDigest: accepted.catalogDigest
+            )
+        ))
+
+        XCTAssertEqual(result.error, .documentation(.bindingMismatch))
+        XCTAssertNil(result.documentationCatalogTransition)
+        let after = await inventory(f.store, f.root)
+        XCTAssertEqual(after, before)
+    }
+
+    func testCatalogTransitionDiagnosticIsAuthorizedReadOnlyBoundedAndReportsValidAndInvalidTransitions() async throws {
+        let f = try await makeFixture()
+        let accepted = try target(f.root)
+        let binding = await f.dispatcher.dispatch(
+            envelope(f.root, .bindDocumentationRepository(target: accepted))
+        )
+        XCTAssertNil(binding.error)
+        let before = try await f.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarText("SELECT accepted_catalog_digest FROM project_documentation_bindings WHERE project_id='p'")
+            )
+        }
+        try editCatalog(f.root) { catalog in
+            var artifacts = catalog["artifacts"] as! [[String: Any]]
+            artifacts[3]["lifecycle"] = "active"
+            catalog["artifacts"] = artifacts
+        }
+        let queries = AgentQueryDispatcher(store: f.store, bookmarkStore: bookmarks(f.root))
+        let valid = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertNil(valid.error)
+        XCTAssertEqual(valid.documentationCatalogTransition?.isValid, true)
+        XCTAssertEqual(valid.documentationCatalogTransition?.acceptedCatalogDigest, accepted.catalogDigest)
+        XCTAssertNil(valid.documentationCatalogTransition?.validationError)
+
+        try editCatalog(f.root) { catalog in
+            var artifacts = catalog["artifacts"] as! [[String: Any]]
+            artifacts[3]["lifecycle"] = "archived"
+            artifacts[3]["authorityLevel"] = "nonAuthoritative"
+            catalog["artifacts"] = artifacts
+        }
+        try Data("# Current\n".utf8).write(to: f.root.appendingPathComponent("docs/plans/current.md"))
+        let invalid = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertNil(invalid.error)
+        XCTAssertEqual(invalid.documentationCatalogTransition?.isValid, false)
+        XCTAssertEqual(invalid.documentationCatalogTransition?.validationError, .invalidTransition)
+        XCTAssertEqual(invalid.documentationCatalogTransition?.artifactID, "draft")
+        XCTAssertEqual(invalid.documentationCatalogTransition?.artifactPath, "docs/plans/draft.md")
+        XCTAssertEqual(invalid.documentationCatalogTransition?.candidateCatalogDigest, try target(f.root).catalogDigest)
+
+        try editCatalog(f.root) { catalog in
+            catalog["repositoryID"] = "22222222-2222-4222-8222-222222222222"
+        }
+        let changedIdentity = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertNil(changedIdentity.error)
+        XCTAssertEqual(changedIdentity.documentationCatalogTransition?.isValid, false)
+        XCTAssertEqual(changedIdentity.documentationCatalogTransition?.validationError, .repositoryIdentityChanged)
+        XCTAssertNil(changedIdentity.documentationCatalogTransition?.artifactID)
+        XCTAssertNil(changedIdentity.documentationCatalogTransition?.artifactPath)
+
+        let wrongRoot = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "other-root")
+        ))
+        XCTAssertEqual(wrongRoot.error, .documentation(.rootMismatch))
+        XCTAssertNil(wrongRoot.documentationCatalogTransition)
+
+        try Data("{".utf8).write(to: f.root.appendingPathComponent("docs/catalog.json"))
+        let malformed = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertEqual(malformed.error, .documentation(.catalogInvalid))
+        XCTAssertNil(malformed.documentationCatalogTransition)
+
+        let after = try await f.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarText("SELECT accepted_catalog_digest FROM project_documentation_bindings WHERE project_id='p'")
+            )
+        }
+        XCTAssertEqual(after.0, before.0)
+        XCTAssertEqual(after.1, before.1)
+        XCTAssertEqual(after.2, before.2)
     }
 
     func testAuthorizationFailuresAndCrossProjectRepositoryCollisionAreZeroEffect() async throws {

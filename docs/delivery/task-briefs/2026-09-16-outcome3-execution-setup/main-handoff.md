@@ -1,5 +1,11 @@
 # Outcome 3 — Main coordination handoff
 
+## September 19 correction — overrides prior closeout status
+
+Outcome 3 connector upgrade recovery is **not complete**. [Issue #99](https://github.com/joeroberts/release-radar/issues/99) and the [correction brief](brief.md#september-19-connector-upgraderecovery-correction--current) record the confirmed stale AgentTools process, signing rejection, generic error and missing UI health reporting. Direct helper fallbacks were used and do not establish connector acceptance. Package delivery remains valid within its scope; the fresh release-focused test run remains incomplete. PR #98's prior closeout wording is superseded by this correction.
+
+Owner authorized records → validation → Outcome 3 correction, followed by repository-doc reconciliation and then the plan-reconstruction feature. Implementation has not started. Main owns records; independent validation and supported connector recovery remain pending. No direct-helper or alternate-worker bypass, signing relaxation, configuration change or SQLite access is authorized. Deferred #91/#92 remain separate. Earlier completion statements below are historical for this disputed connector scope.
+
 Prepared September 18, 2026 at the owner's request to replace the long Main conversation. This is a navigation and operating handoff, not a new authority source. Read `AGENTS.md`, `docs/README.md`, the catalog, and `docs/delivery/progress.md` first. The existing [brief](brief.md) retains detailed results; do not ingest its full historical chronology by default.
 
 ## September 18 supporting-role replacement — complete
@@ -14,15 +20,54 @@ Main is `01a0b54e-8f55-7c62-8bf4-4090f49b0a84`. The owner explicitly authorized 
 
 All three are rooted at the canonical project for their standing roles, with no authority to write or commit main. Creation explicitly requested Astra/medium for the coordinators and Terra/medium for Build Agent; effective model/effort is not exposed to the agents and is not independently confirmed. The task API cannot select a permission profile. The owner selected both coordinator profiles. Fresh runtime confirms their filesystem boundaries; Restricted routing recovered after owner approval-mode selection and successful message delivery. RO05 and Build Agent 02 ownership transfers are recorded and accepted; their idle predecessors are archived with supported success receipts. Restricted03 ownership transfer is recorded and accepted; its idle predecessor is archived with a supported success receipt. All three predecessors had no attached managed worktree; known retained checkout paths were verified present after the first two archives, and no resource cleanup was requested or performed. No product work has been released during transfer.
 
-## Current correction and checkout state
+## September 18 correction and checkout snapshot
 
-Implementation [PR #89](https://github.com/joeroberts/release-radar/pull/89) is open; last verified published coordination revision `f4d5f26fa11a38a422164d98d843235439754ded`. Owner merges. Correction writer `01a0b553-0483-7613-b708-46972e116258` delivered `7332710e077c9afab333e9662a410ed60f55134f` on `codex/hook-update-recovery-guidance-delivery` in `/Users/jroberts/.codex/worktrees/bf75/release_radar`. Build Agent 02 completed four focused native tests with zero failures/skips after causal RED and bounded test-fixture corrections. Results remain in that checkout's `.build/native-checks/`.
+Coordination [PR #89](https://github.com/joeroberts/release-radar/pull/89) merged as `e4600a23de15d2613271cb3ec7924dc3393509`; correction [PR #90](https://github.com/joeroberts/release-radar/pull/90) merged as `ac75d0df9615ed4f11eac23c1e4d387c29651b47`. GitHub content readback confirmed all six correction files on `main` exactly match reviewed `2827a059b80ce0e0401feaa48ca69f8b0537d932`. Correction writer `01a0b553-0483-7613-b708-46972e116258` delivered the candidate in `/Users/jroberts/.codex/worktrees/bf75/release_radar`; Build Agent 02 completed four focused native tests with zero failures/skips after causal RED and bounded test-fixture corrections. The writer completed its terminal `notLoaded` correction turn and was archived successfully; its branch, checkout and retained resources remain preserved. Results remain in that checkout's `.build/native-checks/`.
 
 Independent reviewer `01a0b56b-637e-7bd0-a781-b554de66a373` passed corrected source `2827a059b80ce0e0401feaa48ca69f8b0537d932` after the one missing presentation-test case was added and passed in isolation. No other source findings remain. Build Agent signed/staged/installed this acceptance candidate as 0.1.19/build 1; source/stage/installed executable identity matched. Main observed the corrected disabled Update message in the installed app after one Remove. The disposable workflow is currently disabled; no Save or Resume followed.
 
-Independent UI inspection is blocked: reviewer's CUA runtime failed on system OpenSSL-configuration access before returning app/screenshot/AX data. Main's observation is not an independent pass. Keep this reviewer and writer for the same outcome; source/tests remain terminal. Normal/narrow onboarding/settings QA, mixed-hook live feedback, actual second Mac and final delivery remain open. See the current ledger for precise identity/evidence and limits.
+The owner authorized and Main applied only two precise `rr-project-ro` user-configuration grants: read `/System/Library/OpenSSL/openssl.cnf` and write `/private/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/com.openai.sky.CUAService`; TOML and semantic checks passed with no other setting change. Reviewer `01a0b56b` reports source PASS for `2827a059` and installed disabled-Update UI/AX PASS: corrected message, enabled hook controls, closed worker, readable warning and settings-reference match. Under the owner's blanket disposable-acceptance authorization, resumed Update preserved one separate inert `/usr/bin/true` hook with the owned handler; the reviewer then passed the readable/AX execution-conflict callout after only owned timeout `10 → 9`, with no P1/P2. Main's Remove preserved the unrelated entry; Build Agent restored exact original empty hook bytes and confirmed no inline project config. The final UI run passed Settings → Connections at normal, expanded and left-half narrow widths (sidebar collapsed), plus normal/narrow initial Add Project chooser with distinct AX Initialize/Attach/Cancel. At native zoom in expanded chooser, title and choices compressed upper-left with almost the window otherwise blank; controls remained usable/AX-labeled. Native dimensions are unexposed and screenshot sizes establish pixels only. The window was restored to normal Projects with no selection/submission/project change. This bounded initial-chooser/recovery evidence does not establish every onboarding state or full UI acceptance. The owner explicitly deferred the cosmetic expanded-layout follow-up in [issue #92](https://github.com/joeroberts/release-radar/issues/92), so Outcome 3 release closeout is now eligible; no UI correction is authorized in this closeout. The owner deferred actual second-Mac acceptance as non-blocking current-closeout work in [issue #91](https://github.com/joeroberts/release-radar/issues/91); it remains unpassed. Outcome 3 release closeout is one item in the owner-corrected **P6-remediation** grouping with former 6F metrics presentation, former 6G Manage Project activation, former 6H Archive/Remove relocation and remaining navigation, proposed former 6I guided shared-execution setup, and repository-plan reconstruction. The old labels are historical cross-references, not separate active phases. After Outcome 3 closeout, reconcile Release Radar repository documentation, then implement the reviewed supported-projection reconstruction feature. Reconciliation resolves scattered/stale plans, contradictory status/next-work and overlapping IDs while preserving historical records; it does not parse prose into application state. Feature implementation is unstarted, and live owner-data reconstruction requires a separate exact-operation approval. This grouping authorizes no deferred implementation and does not claim proposed/reviewed work complete; Phase 7, Phase 8 and the unscheduled backlog remain outside it. Self-onboarding is UNSCHEDULED; Jira ticket pending. Final delivery remains open. See the current ledger for precise identity/evidence and limits.
 
-The old b5a9 checkout is absent/unregistered; its cause and uncommitted/generated artifact disposition are unverified. Committed handoff/ledger and branch remain intact. Current documentation checkout is `/Users/jroberts/.codex/worktrees/outcome3-handoff-ledger/release_radar`, on existing `codex/coordinator-context-handoff`, created clean from `f4d5f26`. Main owns its documentation; Build Agent owns Git. No deletion/recovery or main mutation was performed.
+The old b5a9 checkout is absent/unregistered; its cause and uncommitted/generated artifact disposition are unverified. Committed handoff/ledger and branch remain intact. Current documentation closeout checkout is `/Users/jroberts/.codex/worktrees/outcome3-closeout/release_radar`, clean on `codex/outcome3-closeout` from merged `ac75d0df`. Main owns its documentation; Build Agent owns Git. No deletion/recovery or main mutation was performed.
+
+Release candidate commits `528c19d` and `6a4b17b` passed Main's independent
+review. Annotated `v0.1.20` names the verified artifact commit. The tracked
+installer `dist/ReleaseRadar-0.1.20.dmg` and matching Downloads copy have
+SHA-256 `3ea7a407db57e0bd93754a6bfa6aaa62dc8b4826d5302ce682cacf652ac07b28`;
+the mounted application and installed `/Applications/ReleaseRadar.app` verified
+as `com.rekonlabs.ReleaseRadar` 0.1.20 (build 1) with strict signatures. The
+fresh focused Xcode test invocation is incomplete—not passing evidence—because
+after restoring its pinned local libgit2 build dependency Xcode did not emit a
+complete result bundle; no failure was reported and no further retry is planned.
+Prior terminal native product and UI acceptance evidence remains applicable.
+GitHub merged [PR #97](https://github.com/joeroberts/release-radar/pull/97) as
+`5cb47f8dde09032a71a5d003ab41ac0e1c8720cf`. No GitHub Release or notarization
+is authorized.
+
+## Current post-merge state
+
+Outcome 3 is merged and locally released as 0.1.20. The installed application
+is verified as `com.rekonlabs.ReleaseRadar` 0.1.20 (build 1), and the tracked
+installer digest remains
+`3ea7a407db57e0bd93754a6bfa6aaa62dc8b4826d5302ce682cacf652ac07b28`.
+The fresh focused Xcode run remains incomplete, not passing evidence: after its
+pinned local libgit2 dependency was restored, Xcode did not finalize a result
+bundle; no failure was reported and no retry is planned. Prior native and UI
+acceptance results remain terminal. The supported application-inventory
+connector returned `appUnavailable`; no missing binding was inferred and no
+application repair or mutation occurred.
+
+The local `codex/outcome3-closeout` ref is advanced to published `64fc431`,
+which remote `main` contains through PR #97. The correction writer and reviewer
+are archived with their branches, worktrees and retained resources preserved;
+standing coordinator and Build Agent tasks remain available. Deferred follow-ups
+remain [#91](https://github.com/joeroberts/release-radar/issues/91) and
+[#92](https://github.com/joeroberts/release-radar/issues/92). Within
+P6-remediation, next authorized work is repository-documentation reconciliation,
+then the separately scoped supported-projection reconstruction feature. The
+reconciliation preserves history and does not parse prose into application state;
+live owner-data reconstruction remains separately authorized. Former 6F, 6G, 6H
+and proposed 6I remain unstarted.
 
 The sections below preserve the original handoff snapshot and role prompts. Their old task IDs, checkout availability and dispatch status are historical; use the current sections above and ledger for operational state.
 
@@ -52,7 +97,7 @@ Live hook sequence: Update → verified; Remove → owned hook absent and policy
 1. Correct the disabled hook Update error. Actual message incorrectly says an assignment is stopped and to return to the coordinator. Provide operation-specific project guidance pointing to Resume only when eligible; retain distinct conflict/unavailability errors and all enforcement. RO04 classified this Required. Use focused existing regression checks, one fresh independent reviewer, and recheck the affected UI path after installation. No redesign or new testing machinery.
 2. Finish independent UI/QA: onboarding/settings references `docs/design/mockups/onboarding_state.png` and `settings.png`; normal/narrow window layout, accessible controls and recovery feedback. Review actual runtime screenshots/accessibility, not source alone. Remaining distinct hook-conflict/unrelated-entry acceptance should be determined from current evidence, not assumed passed or expanded into a project-removal campaign.
 3. Second-computer portability remains unverified. Main asked which other Mac is available; no answer yet. Do not equate local tests with another computer or invent machine access. Continue independent work while arranging this.
-4. Deliver reviewed implementation and subsequent correction in manageable PRs, then appropriate release and final catalog/ledger/resource/task cleanup. Owner merges. Do not make whole Outcome 3 completion a prerequisite for a coherent PR. RR self-onboarding stays deferred until disposable acceptance and a stable merged release.
+4. Deliver reviewed implementation and subsequent correction in manageable PRs, then appropriate release and final catalog/ledger/resource/task cleanup. Owner merges. Do not make whole Outcome 3 completion a prerequisite for a coherent PR. RR self-onboarding is unscheduled; Jira ticket creation is pending.
 
 ## Routing and authorizations
 

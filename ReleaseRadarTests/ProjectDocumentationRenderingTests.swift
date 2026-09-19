@@ -206,6 +206,159 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testDocumentationActivationShowsActionableCatalogTransitionRejection() async throws {
+        let projectID = ProjectID(rawValue: "catalog-transition-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "catalog-transition-registration",
+            requestGeneration: 1
+        )
+        let preview = ProjectDocumentationSetupPreview(
+            registration: registration,
+            rootPath: "/Synthetic/CatalogTransition",
+            target: .init(
+                projectID: projectID.rawValue,
+                rootID: "root",
+                repositoryID: "00000000-0000-4000-8000-000000000001",
+                catalogVersion: 1,
+                catalogDigest: String(repeating: "b", count: 64)
+            ),
+            action: .accept(
+                priorCatalogVersion: 1,
+                priorCatalogDigest: String(repeating: "a", count: 64)
+            )
+        )
+        let diagnostic = DocumentationCatalogTransitionDiagnostic(
+            projectID: projectID.rawValue,
+            rootID: "root",
+            repositoryID: preview.target.repositoryID,
+            acceptedCatalogVersion: 1,
+            acceptedCatalogDigest: String(repeating: "a", count: 64),
+            candidateCatalogVersion: 1,
+            candidateCatalogDigest: String(repeating: "b", count: 64),
+            isValid: false,
+            validationError: .invalidTransition,
+            artifactID: "rr-active-brief",
+            artifactPath: "docs/delivery/task-briefs/active.md"
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Catalog Transition",
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 1
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: preview.rootPath,
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: []
+        )
+
+        for width in [1100.0, 620.0] {
+            let view = ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .managedUnavailable(hasAuditedHandoff: true, reason: .catalogUnaccepted, validationError: nil),
+                projectRoot: URL(fileURLWithPath: preview.rootPath),
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectHealth: { health },
+                previewDocumentationSetup: { _ in preview },
+                performDocumentationSetup: { _ in
+                    throw ProjectDocumentationSetupError.catalogTransitionRejected(diagnostic)
+                }
+            )
+            try await render(
+                view,
+                name: "catalog-transition-rejection-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Catalog was not accepted",
+                    "invalidTransition",
+                    "rr-active-brief",
+                    "docs/delivery/task-briefs/active.md",
+                    "Run the repository documentation check",
+                    "No accepted documentation state changed",
+                ],
+                postActionIdentifiers: ["project-documentation-action-error"],
+                postActionVisibleIdentifiers: ["project-documentation-action-error"],
+                postActionFocusedIdentifier: "project-documentation-action-error",
+                pressTitles: ["Preview Documentation Action", "Accept This Catalog"]
+            )
+        }
+    }
+
+    func testDocumentationBindFailureRetainsRepositoryActionHeading() async throws {
+        let projectID = ProjectID(rawValue: "repository-bind-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "repository-bind-registration",
+            requestGeneration: 1
+        )
+        let preview = ProjectDocumentationSetupPreview(
+            registration: registration,
+            rootPath: "/Synthetic/RepositoryBind",
+            target: .init(
+                projectID: projectID.rawValue,
+                rootID: "root",
+                repositoryID: "00000000-0000-4000-8000-000000000001",
+                catalogVersion: 1,
+                catalogDigest: String(repeating: "b", count: 64)
+            ),
+            action: .bind
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Repository Binding",
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 1
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: preview.rootPath,
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: []
+        )
+
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.current(version: RepositoryDocumentContract.guidanceVersion)),
+                projectRoot: URL(fileURLWithPath: preview.rootPath),
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectHealth: { health },
+                previewDocumentationSetup: { _ in preview },
+                performDocumentationSetup: { _ in
+                    throw ProjectDocumentationSetupError.command(.documentation(.bindingMismatch))
+                }
+            ),
+            name: "repository-bind-rejection-620",
+            width: 620,
+            expected: nil,
+            expectedText: ["Repository was not bound", "bindingMismatch"],
+            absentText: ["Catalog was not accepted"],
+            postActionIdentifiers: ["project-documentation-action-error"],
+            postActionVisibleIdentifiers: ["project-documentation-action-error"],
+            postActionFocusedIdentifier: "project-documentation-action-error",
+            pressTitles: ["Preview Documentation Action", "Bind This Repository"]
+        )
+    }
+
     func testOnboardingDocumentationPreviewAtWideAndCompactWidths() async throws {
         let output = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-M5-Rendering-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
@@ -689,7 +842,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(rootsInvocationCount, 1)
     }
 
-    func testOnboardingNativeCopyUsesTheSameExistingDocumentationBootstrapShownInPreview() async throws {
+    func testOnboardingNativeCopyUsesTheManagedUpgradePromptForOutdatedGuidance() async throws {
         let directory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
         let root = directory.appendingPathComponent("repository", isDirectory: true)
@@ -725,9 +878,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             pressIdentifiers: ["onboarding-initialize-confirm", "onboarding-copy-codex-prompt"]
         )
 
-        XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
-        XCTAssertTrue(copied.localizedCaseInsensitiveContains("existing documentation"))
-        XCTAssertFalse(copied.contains("Require an existing catalogued"))
+        XCTAssertFalse(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+        XCTAssertTrue(copied.contains("Require an existing catalogued"))
     }
 
     func testPhase3ADocumentationCheckingAndFolderRecoveryAtWideAndCompactWidths() async throws {
@@ -1028,6 +1180,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         absentText: [String] = [],
         absentButtonTitles: [String] = [],
         presentIdentifiers: [String] = [],
+        postActionIdentifiers: [String] = [],
+        postActionVisibleIdentifiers: [String] = [],
+        postActionFocusedIdentifier: String? = nil,
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
@@ -1138,6 +1293,36 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
             try await Task.sleep(for: .milliseconds(300))
         }
+        for identifier in postActionIdentifiers {
+            XCTAssertNotNil(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing post-action accessibility element \(identifier)"
+            )
+        }
+        for identifier in postActionVisibleIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing visible post-action accessibility element \(identifier)"
+            )
+            let elementFrame = try XCTUnwrap(accessibilityFrame(element))
+            let windowFrame = try XCTUnwrap(accessibilityFrame(try XCTUnwrap(ownWindow)))
+            XCTAssertTrue(
+                windowFrame.intersects(elementFrame) && !windowFrame.intersection(elementFrame).isEmpty,
+                "Post-action accessibility element \(identifier) is outside the visible window"
+            )
+        }
+        if let postActionFocusedIdentifier {
+            let focusedElement = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: postActionFocusedIdentifier),
+                "Missing focused post-action element \(postActionFocusedIdentifier)"
+            )
+            var focusedValue: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(focusedElement, kAXFocusedAttribute as CFString, &focusedValue),
+                .success
+            )
+            XCTAssertEqual(focusedValue as? Bool, true)
+        }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
         if let expected {
             XCTAssertTrue(
@@ -1209,6 +1394,20 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         return nil
+    }
+
+    private func accessibilityFrame(_ element: AXUIElement) -> CGRect? {
+        var positionValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue) == .success,
+              let positionValue, CFGetTypeID(positionValue) == AXValueGetTypeID(),
+              let sizeValue, CFGetTypeID(sizeValue) == AXValueGetTypeID() else { return nil }
+        var position = CGPoint.zero
+        var size = CGSize.zero
+        guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &position),
+              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else { return nil }
+        return CGRect(origin: position, size: size)
     }
 
     private func accessibilityButton(_ root: AXUIElement, title: String) -> AXUIElement? {

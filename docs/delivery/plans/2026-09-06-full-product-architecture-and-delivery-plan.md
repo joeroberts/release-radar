@@ -33,6 +33,26 @@ application tickets or a second delivery ledger.
 
 ## Owner-authorized sequence — 2026-09-08
 
+### P6-remediation grouping — owner correction 2026-09-18
+
+The six remaining items below are one phase, **P6-remediation**. This corrects
+current planning and does not create, update, or complete an application phase,
+authorize implementation, or alter the accepted contracts. Earlier `6F`–`6I`
+labels remain historical cross-references only; they are not separate active
+phases.
+
+| P6-remediation item | Current boundary |
+| --- | --- |
+| Outcome 3 release closeout | Produce and verify the versioned DMG, commit the verified installer under `dist/`, deliver the release PR, install and verify the release, and record the result. The normal separate authorization boundaries for release, push/PR, and application mutation remain in force. |
+| Former 6F metrics presentation | Correct metrics labels, icons and value alignment while retaining the existing **STOPPED** state. |
+| Former 6G Manage Project activation | Deliver the scoped documentation activation, shared-execution, repository-access and evidence controls. |
+| Former 6H lifecycle/navigation remediation | Deliver Archive/Remove relocation and the remaining navigation work; exclude the already delivered toolbar and search. |
+| Proposed former 6I guided shared-execution setup | Reconcile its residual scope with delivered Outcome 3. This is proposed work only and must not be described as complete. |
+| Repository-plan reconstruction | After Outcome 3 release closeout, reconcile Release Radar repository documentation, then implement this reviewed supported-projection import feature. Reconciliation resolves scattered/stale plans, contradictory status/next-work and overlapping IDs while preserving historical records; it does not parse prose into application state. Implementation remains unstarted; any live owner-data reconstruction is a separately authorized exact operation. |
+
+Phase 7, Phase 8 and the unscheduled backlog remain outside P6-remediation.
+Self-onboarding is explicitly **UNSCHEDULED**; Jira ticket pending.
+
 Phase 3 source delivery is merged through PR #35 (`6f528c5`). The owner authorized
 Phase 4 RM2/P7/P8 and issue #9 through scoped source/tests/docs, commits, pushes and
 PRs, with separate approval before every merge. Resolve only its necessary D6/IA

@@ -1,5 +1,61 @@
 # Outcome 3 project execution setup
 
+## September 19 owner-approved bootstrap exception — catalog diagnostics
+
+The owner approved a narrowly scoped bootstrap exception after catalog acceptance blocked managed-worker admission. This supersedes the alternate-task prohibition below only for implementing and independently reviewing this diagnostic fix. It does not authorize direct AgentTools invocation, direct database access, catalog reset/rebinding, relaxed validation, trust/configuration changes, or unrelated implementation.
+
+- **Outcome:** preserve the real catalog-transition validation reason and affected artifact/path; expose a read-only transition diagnostic through the supported connector and show actionable detail in the app. Run that diagnostic against this project's saved accepted/current catalogs after verified delivery, then explain the smallest proposed metadata or validator correction before changing catalog state.
+- **Evidence:** owner completed onboarding after enabling the previously disabled hook. Connector reads recovered after Codex restart and use the current 0.1.20 app helper. Accept This Catalog then failed without committing. Accepted digest is `112beed626b832915e31d1296baa3ce1f8355ce84d16db086c2321c459302369`; current canonical catalog digest is `438591c49cbcea7772b90a5658de4fce3fa406d9b391c965e3195e15139f2aa5`. The dispatcher catches all transition failures as generic invalidTransition. Exact rejected artifact remains unknown; 145 distinct catalogs on local Git refs did not match the accepted digest in the read-only reconstruction.
+- **Scope:** validator diagnostics, read-only authorized query/transport/plugin schema, existing documentation activation UI, focused tests and owning mutable design. Main exclusively owns this ledger and brief. Preserve accepted ADRs, unrelated work and all retained artifacts.
+- **Assignment:** isolated delivery checkout from the committed revision containing this section; Sol/high for cross-component query/error contracts, ceiling Astra/high only for a named unresolved problem. Fresh independent Sol/high reviewer covers authorization, read-only behavior, compatibility, recovery and UI guidance. Verify actual runtime settings and report unavailable labels; no silent assumptions. Use ordinary Codex task routing solely under this explicit exception while the managed route is blocked.
+- **Checks:** test-first regression for detailed invalid transition; authorized project/root scoping and no writes/receipts/acceptance changes; valid transitions and unchanged rejection semantics; malformed/stale input and bounded safe diagnostic fields; app display and focused UI verification. Reuse repository-native checks. No diagnostics framework, snapshot export or raw database dumping.
+- **Architecture:** preserve ADR-001 boundaries and ADR-006 identity/lifecycle enforcement; place any additive read-only contract specification in the owning mutable documentation. No persistence migration or altered acceptance semantics.
+- **Endpoint:** scoped implementation, direct checks, independent review and local commit/PR under existing authorization; owner merges. Standing verified local release delivery applies after checks/review, with canonical installer tracked under dist per the later owner instruction. Only supported connector readback is acceptance evidence. No automatic catalog correction or acceptance retry.
+
+Repository documentation check and diff check passed for prior records at 913757ee; independent validation remains pending. Bootstrap work is not full Outcome 3 completion. Related findings are recorded in issue #99.
+
+## September 19 connector upgrade/recovery correction — current
+
+Issue: [#99](https://github.com/joeroberts/release-radar/issues/99). Owner authorized durable records, their validation, then this correction. This section supersedes connector-completion implications in earlier acceptance notes, not their bounded product results.
+
+### Outcome and scope
+
+Restore and prove the supported Codex connector after app replacement; provide accurate failure diagnostics and visible, recoverable connection health. Preserve signing enforcement and all existing project data. This correction precedes P6-remediation documentation reconciliation, then the approved structured-projection reconstruction feature. No unrelated cleanup or feature work.
+
+### Evidence and unresolved questions
+
+On September 19 at 02:54:52 EDT, supported evidence inventory returned `appUnavailable`. Unified logs identified AgentTools PID 72294 contacting bridge PID 81837; the bridge rejected the message with `Received message forbidden due to code signing requirement`. Read-only `lsof` resolved that client's loaded executable to `/Applications/.ReleaseRadar.backup.78323.17492/Contents/Helpers/ReleaseRadarAgentTools`. Release Radar was running. The stale process survived app replacement; the precise underlying signature-invalidity mechanism is not yet established.
+
+Source inspection: `ReleaseRadarAgentTools/main.swift` converts unsuccessful handshake to generic appUnavailable and discards underlying XPC error; `ReleaseRadarBridgeAgent/main.swift` enforces the tools signing requirement; `ReleaseRadar/Notifications/SettingsView.swift` has static Agent action bridge text, not a live connector-health check. Installed plugin state does not establish running-client health. Supported reconnect availability and safe app-side reporting of rejected clients remain design questions, not implemented capabilities.
+
+Main's fallback audit found two direct-inventory occasions in Build Agent 02 on September 18: five helper launches comprising two successful reads, one rejected request and two schema queries. On September 19 Main again instructed that fallback and directly invoked `--help`; no subsequent inventory execution was found for that instruction. This bounded audit excludes predecessor tasks. These were alternate routes around the connector failure and must not be used as connector acceptance evidence. Main owns the conduct failure.
+
+Release 0.1.20 package/signature and prior product/UI checks retain their actual scope. Fresh release-focused XCTest runs were incomplete. PR #97 merged; full connector upgrade recovery and therefore full Outcome 3 closeout remain unproven. Second-Mac #91 and chooser #92 remain deferred.
+
+### Assignment, authority and endpoint
+
+Standard: shared-execution/1, installed skill 0.1.20 read. Main owns these records and coordination; no product implementation by Main. Documentation baseline: `47bfd29ac7ba2b3c5cd07b051f82145566099ff0` on `codex/outcome3-merge-closeout`, based on merged `5cb47f8dde09032a71a5d003ab41ac0e1c8720cf`. Documentation checkout: `/Users/jroberts/.codex/worktrees/outcome3-merge-closeout`; canonical project: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`. Preserve the canonical untracked config and all branches/worktrees/artifacts.
+
+Implementation assignment remains uncreated until records validation and a working supported assignment route. Use Sol/high for this bounded cross-component recovery, ceiling Astra/high only for a named unresolved boundary. Required independent reviewer: fresh context, Sol/high, covering XPC/signing, recovery and user guidance; independent UI QA must verify the running flow. No direct-helper fallback or alternate full-access task may substitute for failed connector/worker admission. Do not assume effective settings; verify them through the supported worker status.
+
+Authorized endpoint: issue and durable records now; after validation, scoped correction, tests, independent review, commits and PR; owner merges. Existing release authorization applies only after applicable verification. Live owner-data reconstruction, SQLite writes outside the app, permission/trust changes, direct helper invocation, broad process killing, notarization and unrelated publication are excluded. A supported reconnect must be identified before use; if unavailable, report the precise owner action rather than inventing a workaround.
+
+### Dependencies, risks and acceptance
+
+Preserve accepted ADR-001/002 boundaries and existing typed XPC contracts. Resolve any required contract extension in the owning mutable design; do not edit accepted ADRs. No store migration is currently proposed. Existing and future workers and connector clients must retain authentication, lifecycle identity, stale/unknown distinctions and no-replay behavior.
+
+- Confirm supported connector inventory after supported recovery; use the original connector, not a new shell-launched helper.
+- Identify and safely handle clients retained across app upgrade; preserve unrelated tasks and processes.
+- Distinguish broker/handshake/protocol/app-disconnection failures where evidence permits; never label an unobserved client healthy or expose sensitive diagnostics.
+- Show truthful bridge health, actionable recovery and accessible failures in Connections. Compare relevant approved mockups; verify normal/narrow/wide presentation.
+- Test an existing connector across signed app replacement, visible failure, supported reconnection and successful connector call. Verify rejected peers remain rejected, version mismatch, app disconnection and uncertain-write non-replay.
+- Use test-first focused native tests and one appropriate independent review plus independent UI QA; do not rerun unchanged passing acceptance or claim incomplete tests passed.
+- Accumulate findings before fixes except P1/P2, per owner instruction. No supporting framework or generalized monitoring system.
+
+### Record validation status
+
+Pending repository check and independent review. GitHub issue and these records are the concrete scope; proposed recovery behavior is not completion evidence. Connector currently returned appUnavailable; application synchronization is not claimed. Implementation has not begun.
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.

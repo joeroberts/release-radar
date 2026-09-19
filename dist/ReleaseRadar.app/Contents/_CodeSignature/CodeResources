@@ -18,15 +18,15 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		Z/cCytp9BwzUXs5oDHwhH4e/wOk=
+		0xWgN7fzb0nrhm93UhOCIn8qsdY=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
-		0VGowGZ+hvFuOns8m/YlIT+0LMM=
+		eMJ9THLMrBXGy6rt5FpTR/qdRG0=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md</key>
 		<data>
-		+uNXEoVMyyHGAbtgNuQOpRp5QIM=
+		DQl47Tlzby1hmuzL7N/O2zLeKzc=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/shared-execution/SKILL.md</key>
 		<data>
@@ -34,11 +34,23 @@
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		c0JK+K0gp/1+ZT46rYCxp3qAoEE=
+		1KTIvgU4Sg2wls+qKwk+RpVQjVA=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		OURiGAHGUTbQ2LvdgAUNvaIn5lA=
+		QU81mMD7bXPmwacFNVUqhwJWu38=
+		</data>
+		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
+		<data>
+		tUAt3S2m0GvdnA4eU3iWmPqBLBY=
+		</data>
+		<key>Resources/ThirdPartyNotices/libgit2-source.tar.gz</key>
+		<data>
+		Jj7wcG6zrxr2EUuWuJdGy2NfOG8=
+		</data>
+		<key>Resources/ThirdPartyNotices/libgit2.txt</key>
+		<data>
+		n3NS57IIHu/gS+v6VsK7bV8B7X4=
 		</data>
 		<key>Resources/catalog-v1.md</key>
 		<data>
@@ -51,7 +63,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			30Uf1SvdCRui5d/w/8tUtlwZvuQ=
+			fAaWiPjUzQqBN9cTQOKx02301vc=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -60,16 +72,25 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			v05zUYqIjmZkiHt/6VLFBglQMRc=
+			7UeQnebIjOaq5KebcKWFhu20TzE=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarAgentTools" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
+		</dict>
+		<key>Helpers/ReleaseRadarCoordinator</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			dovvcp1G05ISfGjGbyhb1Bl+xIM=
+			</data>
+			<key>requirement</key>
+			<string>identifier "com.rekonlabs.ReleaseRadarCoordinator" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
 		</dict>
 		<key>Helpers/ReleaseRadarDocumentationTool</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			KkCJDSvfxrCWYrwhrRZKUvZpLLE=
+			d+L4D9NcjMsygNGjFB70AsWvxRk=
 			</data>
 			<key>requirement</key>
 			<string>identifier ReleaseRadarDocumentationTool and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -113,21 +134,21 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			AgzkS43VHrxbM7hqpgqgg9R91vj2YmjuAUdQaQY/kQs=
+			QGAQIcUHohY8VMbPzzYASELF6NIYiutjrFQKIgIrKYI=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Ti8y902hxhiZDwtDSsGyMETc0ikt34hSArdsGZhybHE=
+			4G5YVTMvRFU47W6FyJ69rlNAoclye+ZofHXLacYt+lY=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			mWMiGCFu4qyc7CtkpfE7vnoUMXvq4Y7hg2/PyZvwsOw=
+			QW2VeZbQnmgbi0Yk9N7grTL0++MGO5ofAGWp09U1WqU=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/shared-execution/SKILL.md</key>
@@ -141,14 +162,35 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			FaACK7K8l1GEil0Cf6pnNoXQt84dK1d1xL8IEOE3mzs=
+			x5evfpcu85oROdFSnQEgdYQXBkjbIvOwvHw572YbLSE=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Pdpq6wDLbXP1yXKPXX7SYMZ8xmlrKAObKQHl29hSLWQ=
+			hRV8VglGE1tANmjxcQE5rJBGmvTmDU1PSfvUBZzUomQ=
+			</data>
+		</dict>
+		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			4JOBIcBVSYX+Fxlqw4/FkNFJJo6cRuDA56Lq4TVPrnE=
+			</data>
+		</dict>
+		<key>Resources/ThirdPartyNotices/libgit2-source.tar.gz</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			zmHGpmneFPjdP58Xr/43HmnS5Dvdjmo99YxBOAcmYyM=
+			</data>
+		</dict>
+		<key>Resources/ThirdPartyNotices/libgit2.txt</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			K5ICUCL5K1C5ZoXBdT5BH6XtCXIrAP51nqOe0kXK378=
 			</data>
 		</dict>
 		<key>Resources/catalog-v1.md</key>

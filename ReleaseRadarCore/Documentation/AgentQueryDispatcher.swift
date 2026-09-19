@@ -30,6 +30,8 @@ public struct AgentQueryDispatcher: Sendable {
                 projectID = project; rootID = root; extraIdentities = []
             case let .deliveryInventory(project, root):
                 projectID = project; rootID = root; extraIdentities = []
+            case let .documentationCatalogTransition(project, root):
+                projectID = project; rootID = root; extraIdentities = []
             case let .ticketReferences(project, root, ticket):
                 projectID = project; rootID = root; extraIdentities = [ticket]
             case let .ticketDeliveryEvidence(project, root, ticket):
@@ -47,6 +49,37 @@ public struct AgentQueryDispatcher: Sendable {
             switch envelope.query {
             case .inventoryEvidence:
                 break
+            case let .documentationCatalogTransition(project, root):
+                let context = try await store.documentationRead { connection in
+                    try DocumentationRootContext.read(
+                        connection,
+                        path: envelope.projectRoot,
+                        projectID: project,
+                        rootID: root,
+                        schemaVersion: store.schemaVersionForDocumentation
+                    )
+                }
+                return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+                    try context.verifyAuthorization(resolved)
+                    let catalog = try DocumentationCatalogContext(root: context.root)
+                    let candidate = try catalog.managedSnapshot()
+                    let diagnostic = try documentationCatalogTransitionDiagnostic(
+                        context: context,
+                        candidate: candidate
+                    )
+                    try catalog.reader.verifyStable()
+                    try await store.documentationRead { try context.verifyPersisted($0) }
+                    let result = AgentCommandResult(
+                        entityIDs: diagnostic.artifactID.map { [$0] } ?? [],
+                        auditEventID: nil,
+                        error: nil,
+                        documentationCatalogTransition: diagnostic
+                    )
+                    guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                        throw DocumentationOperationError.inventoryTooLarge
+                    }
+                    return result
+                }
             case let .deliveryInventory(project, root):
                 let capture = try await store.documentationRead { connection in
                     let context = try DocumentationRootContext.read(

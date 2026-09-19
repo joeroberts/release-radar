@@ -157,6 +157,7 @@ private struct MCPServer {
         if [
             "release_radar_inventory_evidence",
             "release_radar_delivery_inventory",
+            "release_radar_documentation_catalog_transition",
             "release_radar_ticket_references",
             "release_radar_ticket_delivery_evidence",
             "release_radar_recorded_impacts",
@@ -171,6 +172,11 @@ private struct MCPServer {
                 query = ["inventoryEvidence": value]
             case "release_radar_delivery_inventory":
                 query = ["deliveryInventory": [
+                    "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                    "rootID": try taskString("rootID", in: arguments, maximumBytes: 256),
+                ]]
+            case "release_radar_documentation_catalog_transition":
+                query = ["documentationCatalogTransition": [
                     "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
                     "rootID": try taskString("rootID", in: arguments, maximumBytes: 256),
                 ]]
@@ -1203,6 +1209,12 @@ private struct MCPServer {
              "inputSchema": ["type": "object", "additionalProperties": false, "required": ["version", "projectRoot"],
                              "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string, "projectID": string, "rootID": string]]],
             ["name": "release_radar_delivery_inventory", "description": "Read the complete authorized project-scoped phase, ticket, retirement, task-plan and full task-history inventory for exact task adoption. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID", "rootID"],
+                             "properties": ["version": ["type": "integer", "const": 1],
+                                            "projectRoot": string, "projectID": taskID, "rootID": taskID]]],
+            ["name": "release_radar_documentation_catalog_transition", "description": "Validate the current catalog against the exact accepted project catalog without changing acceptance, receipts, audit history, repository files or delivery state. Returns only bounded transition status, digests, and a safe affected artifact identity/path when available.",
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
              "inputSchema": ["type": "object", "additionalProperties": false,
                              "required": ["version", "projectRoot", "projectID", "rootID"],

@@ -114,6 +114,22 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertTrue(CodexPromptHandoff.prompt(for: .handoffIncomplete(version: 1), projectRoot: root).hasPrefix(binding + "\n\n" + repair + "\n\n"))
     }
 
+    func testLegacyMissingGuidanceBootstrapsWhileOutdatedGuidanceUsesManagedUpgradePrompt() {
+        let root = URL(fileURLWithPath: "/Users/example/Project", isDirectory: true)
+        let missing = ProjectDocumentationState.legacy(.missing)
+        let outdated = ProjectDocumentationState.legacy(.outdated(installed: 2, current: 3))
+
+        XCTAssertEqual(CodexPromptHandoff.kind(for: missing), .repositoryBootstrap)
+        XCTAssertEqual(CodexPromptHandoff.kind(for: outdated), .managedUpgrade)
+
+        let bootstrapPrompt = CodexPromptHandoff.prompt(for: missing, projectRoot: root)
+        let upgradePrompt = CodexPromptHandoff.prompt(for: outdated, projectRoot: root)
+        XCTAssertTrue(bootstrapPrompt.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+        XCTAssertFalse(bootstrapPrompt.contains("Require an existing catalogued"))
+        XCTAssertTrue(upgradePrompt.contains("Require an existing catalogued"))
+        XCTAssertFalse(upgradePrompt.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+    }
+
     func testCodexHandoffPromptRunsInCurrentTaskWithExactInstalledReleaseRadarSkill() {
         let root = URL(fileURLWithPath: "/Users/example/RekonDesignSystem", isDirectory: true)
         let setup = CodexPromptHandoff.prompt(for: .missing, projectRoot: root)
@@ -191,7 +207,10 @@ final class OnboardingAcceptanceTests: XCTestCase {
 
             XCTAssertEqual(resumed.completedProjectID, preview.registration.projectID)
             XCTAssertEqual(resumed.registration, preview.registration)
-            XCTAssertEqual(CodexPromptHandoff.kind(for: resumed.documentationState), .repositoryBootstrap)
+            XCTAssertEqual(
+                CodexPromptHandoff.kind(for: resumed.documentationState),
+                hasExistingDocumentation ? .managedUpgrade : .repositoryBootstrap
+            )
             var copied = ""
             XCTAssertEqual(
                 CodexPromptHandoff.copy(
@@ -202,7 +221,14 @@ final class OnboardingAcceptanceTests: XCTestCase {
                 ),
                 .copied
             )
-            XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+            XCTAssertEqual(
+                copied.localizedCaseInsensitiveContains("lifecycle bootstrap"),
+                !hasExistingDocumentation
+            )
+            XCTAssertEqual(
+                copied.contains("Require an existing catalogued"),
+                hasExistingDocumentation
+            )
             XCTAssertTrue(copied.localizedCaseInsensitiveContains("preserve"))
             XCTAssertTrue(copied.contains(preview.registration.registrationID))
             if hasExistingDocumentation {

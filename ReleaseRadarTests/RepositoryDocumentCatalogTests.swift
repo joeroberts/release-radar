@@ -294,6 +294,25 @@ final class RepositoryDocumentCatalogTests: XCTestCase {
         reject("invalidTransition") { try validator.validateTransition(from: active, to: validator.validateCurrent(authorizedRoot: unsupported)) }
     }
 
+    func testTransitionFailurePreservesSafeArtifactIdentityAndPath() throws {
+        let root = try fixture()
+        let validator = RepositoryDocumentValidator()
+        let prior = try validator.validateCurrent(authorizedRoot: root)
+        try artifact(root, "draft") { $0["lifecycle"] = "completed" }
+
+        XCTAssertThrowsError(
+            try validator.validateTransition(
+                from: prior,
+                to: validator.validateCurrent(authorizedRoot: root)
+            )
+        ) { error in
+            let failure = error as? RepositoryDocumentError
+            XCTAssertEqual(failure?.code, .invalidTransition)
+            XCTAssertEqual(failure?.artifactID, "draft")
+            XCTAssertEqual(failure?.artifactPath, "docs/plans/draft.md")
+        }
+    }
+
     func testDeletionRequiresPermanentRetirementAndIdentityCannotBeReassigned() throws {
         let root = try fixture()
         let validator = RepositoryDocumentValidator()

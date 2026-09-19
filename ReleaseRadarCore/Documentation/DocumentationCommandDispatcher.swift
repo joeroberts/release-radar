@@ -76,6 +76,14 @@ struct DocumentationCommandDispatcher: Sendable {
             }
             return .init(entityIDs: [], auditEventID: nil, error: .internalFailure(error.localizedDescription))
         }
+        catch let rejection as DocumentationTransitionRejection {
+            return .init(
+                entityIDs: rejection.diagnostic.artifactID.map { [$0] } ?? [],
+                auditEventID: nil,
+                error: .documentation(.invalidTransition),
+                documentationCatalogTransition: rejection.diagnostic
+            )
+        }
         catch let error as DocumentationOperationError { return .init(entityIDs: [], auditEventID: nil, error: .documentation(error)) }
         catch { return .init(entityIDs: [], auditEventID: nil, error: .documentation(DocumentationCatalogContext.map(error))) }
     }
@@ -164,10 +172,18 @@ struct DocumentationCommandDispatcher: Sendable {
             guard context.binding == nil else { throw DocumentationOperationError.bindingConflict }
         case let .acceptDocumentationCatalog(_, priorVersion, priorDigest):
             guard let binding = context.binding else { throw DocumentationOperationError.bindingMissing }
-            guard binding.rootID.rawValue == context.rootID, binding.repositoryID == snapshot.catalog.repositoryID.lowercased() else { throw DocumentationOperationError.bindingMismatch }
+            guard binding.rootID.rawValue == context.rootID,
+                  binding.repositoryID == snapshot.catalog.repositoryID.lowercased() else {
+                throw DocumentationOperationError.bindingMismatch
+            }
             guard binding.acceptedCatalogVersion == priorVersion, binding.acceptedCatalogDigest == priorDigest else { throw DocumentationOperationError.catalogUnaccepted }
-            do { try RepositoryDocumentValidator().validateTransition(from: binding.acceptedSnapshot(), to: snapshot) }
-            catch { throw DocumentationOperationError.invalidTransition }
+            let diagnostic = try documentationCatalogTransitionDiagnostic(
+                context: context,
+                candidate: snapshot
+            )
+            guard diagnostic.isValid else {
+                throw DocumentationTransitionRejection(diagnostic: diagnostic)
+            }
         default: try context.requireAccepted(snapshot)
         }
         if case let .addManagedEvidence(_, _, _, artifactID) = command {
@@ -223,3 +239,6 @@ struct DocumentationCommandDispatcher: Sendable {
     }
 }
 private enum DocumentationControl: Error { case requestIDReused, expired, replay(AgentCommandResult) }
+private struct DocumentationTransitionRejection: Error {
+    let diagnostic: DocumentationCatalogTransitionDiagnostic
+}
