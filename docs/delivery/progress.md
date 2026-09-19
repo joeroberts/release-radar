@@ -28,6 +28,332 @@ Propose three phases in the existing sequence: `rr-p6-remediation` / **P6-remedi
 Source: full-product plan owner-corrected P6-remediation grouping and delivery sequence, Outcome 3 correction brief/#99, observed copy-prompt defect, #101, current owner sequencing. Phase 7 and Phase 8 scope is planned future work, not implementation authorization. Explicitly unscheduled #91/#92/#93/#94/#95/#96/#3 and other discovery backlog remain outside this initial phase import. Existing self-onboarding technical setup is complete and is not recreated as a pending ticket. Current PRs #98/#100 are open per fresh GitHub readback. Task decomposition and formal dependency links will be previewed separately before execution; this proposal creates only the phase/ticket list requested by the owner.
 
 
+### Approved import requests — pending
+
+Owner approved the exact 3-phase/16-ticket preview. Fresh supported inventory still has zero phases/tickets, matching registration generation 1. Apply the following requests serially; preserve identities for uncertain replay.
+
+```json
+[
+  {
+    "tool": "phase",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "6c7df542-2ef9-4f46-b0de-1dc8687f3838",
+      "phaseID": "rr-p6-remediation",
+      "name": "P6-remediation",
+      "reason": "Owner-approved existing-project plan import: create the exact approved phase; no execution or completion authorization."
+    }
+  },
+  {
+    "tool": "phase",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "8e53b427-4664-4c27-817f-e16f43b04273",
+      "phaseID": "rr-phase-7",
+      "name": "Phase 7 — Portable continuity",
+      "reason": "Owner-approved existing-project plan import: create the exact approved phase; no execution or completion authorization."
+    }
+  },
+  {
+    "tool": "phase",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "a4740647-814b-4f4b-9de1-5dc51ddb347b",
+      "phaseID": "rr-phase-8",
+      "name": "Phase 8 — Production presentation and package",
+      "reason": "Owner-approved existing-project plan import: create the exact approved phase; no execution or completion authorization."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "12a2342c-3162-4e48-949d-5a850ecd2225",
+      "ticketID": "rr-p6-guidance-prompt",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Correct the v2-to-v3 guidance update prompt",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Outdated guidance selects upgrade, missing guidance retains bootstrap; regression coverage."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "d963dacc-5014-41e3-b27a-73f8af09c655",
+      "ticketID": "rr-p6-connector-recovery",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Recover the Codex connector after app upgrades",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Existing issue #99; supported reconnect and actionable app health; no signing bypass."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "1277b759-0802-4194-9882-22fb01f14c5e",
+      "ticketID": "rr-p6-outcome3-closeout",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Complete remaining Outcome 3 verification and closeout",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Reconcile corrections, reviews, PRs and release evidence; preserve already-delivered 0.1.21; owner merges."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "32f9b232-d274-4813-81ca-b5f981b2dc76",
+      "ticketID": "rr-p6-doc-reconciliation",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Reconcile repository delivery documentation",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: After Outcome 3 closeout; resolve stale/conflicting plans and IDs, preserve history."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "a37186c9-1ede-4c04-b777-49d33609a13e",
+      "ticketID": "rr-p6-plan-reconstruction",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Populate an existing project's plan through an in-app review and Apply flow",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Supported-projection reconstruction after document reconciliation; #101 supplies onboarding entry/experience. No duplicate importer."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "965f8066-3db4-4d7d-bd29-634118fe3495",
+      "ticketID": "rr-p6-metrics",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Correct metric labels, icons and value alignment",
+      "lane": "blocked",
+      "reason": "Owner-approved existing-project plan import. Boundary: Former 6F; BLOCKED/STOPPED, requires explicit owner resume."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "6d4542ca-7202-49da-8aa8-9daa62a8e820",
+      "ticketID": "rr-p6-manage-project",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Consolidate project controls in Manage Project",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Former 6G: documentation activation, shared execution, repository access and evidence controls."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "7ee2121c-df7a-4de6-ac5a-b16b86bdd6e3",
+      "ticketID": "rr-p6-navigation",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Complete Archive/Remove relocation and remaining navigation",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Former 6H; exclude delivered toolbar/search."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "fded707b-048a-4ed2-b38c-a269baf4045f",
+      "ticketID": "rr-p6-guided-setup",
+      "phaseID": "rr-p6-remediation",
+      "outcome": "Assess and deliver the approved remainder of guided shared-execution setup",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Former proposed 6I; first reconcile delivered Outcome 3, implementation remains proposed."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "b86964aa-6b3e-4a8a-9a47-5ca41624df7d",
+      "ticketID": "rr-p7-export",
+      "phaseID": "rr-phase-7",
+      "outcome": "Export a self-contained project continuity package",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: RM5: project records, documents and evidence; exporter-produced fixture."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "f1220bc7-db05-4187-8a6f-10669726df2a",
+      "ticketID": "rr-p7-import",
+      "phaseID": "rr-phase-7",
+      "outcome": "Import and recover a project continuity package",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: RM6; depends on exporter fixture; coordinated file/store recovery and installed round trip."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "b7c80e50-f723-4213-86d4-b00728800045",
+      "ticketID": "rr-p8-presentation",
+      "phaseID": "rr-phase-8",
+      "outcome": "Complete remaining RDS coverage and production wordmark",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Preserve approved AppIcon and existing appearance scope."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "f6095526-4480-4ccf-94dc-c6e3d3144665",
+      "ticketID": "rr-p8-maintenance",
+      "phaseID": "rr-phase-8",
+      "outcome": "Resolve scoped compiler warnings",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: RM4: optional-.none and test actor isolation; no unrelated modernization."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "9cb09268-dbc6-400e-a1a6-d06aeebcba70",
+      "ticketID": "rr-p8-distribution",
+      "phaseID": "rr-phase-8",
+      "outcome": "Decide distribution audience and verify its package lifecycle",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: RM9: owner-only/direct/other decision before wider-distribution work; preserve separate provisioning/signing permissions."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "a85e828f-2105-4564-b2b8-ba6983a8d4df",
+      "ticketID": "rr-p8-version-evidence",
+      "phaseID": "rr-phase-8",
+      "outcome": "Complete verified build and installed-version evidence links",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Remaining P17 scope; reconcile delivered evidence before implementation."
+    }
+  },
+  {
+    "tool": "ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "68bfc5ac-0c72-47b0-b6a9-4f8a5d137776",
+      "ticketID": "rr-p8-stale-helper",
+      "phaseID": "rr-phase-8",
+      "outcome": "Verify Settings Restart helper against a real stale production helper",
+      "lane": "backlog",
+      "reason": "Owner-approved existing-project plan import. Boundary: Existing deferred Phase 8 isolated account/VM acceptance; separate environment authorization required."
+    }
+  }
+]
+```
+
 ## September 19 catalog recovery — accepted and verified
 
 Owner approved verified metadata recovery and acceptance after full transition validation. Canonical repair restores three preserved documents/entries and Outcome 2 completed/nonAuthoritative metadata from `93dff19b`, preserving stable IDs. Main verified exact metadata and restored document bytes; native documentation/diff checks passed. RO Coordinator 05 independently inspected current entries, restored content and generated indexes: PASS, no Required findings; historical equality and app diagnostic were Main-attributed. Supported transition isValid is true for candidate `e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e`. The exact committed acceptance request follows for recovery provenance; do not issue a new request. Earlier blocker descriptions below are superseded by this checkpoint.
