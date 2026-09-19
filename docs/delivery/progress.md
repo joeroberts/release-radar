@@ -39,6 +39,16 @@ production correction; no executed RED is claimed. Build Agent prepared pinned
 libgit2/RDS successfully and is running compilation plus the two existing non-service
 regressions. Native restart, signed upgrade and UI acceptance are not yet verified.
 
+Candidate `ff0d29b2` commits the four-file correction. Build Agent confirmed compile,
+link, signing and both selected non-service tests passed; result/log
+`rr-p6-connector-recovery-race-correction-green-be5d916f-run4` remain under
+canonical `.build/connector-recovery-ff0d29b2-preserved/.build/native-checks/`.
+Ignored outputs were preserved by same-filesystem rename with identity verified;
+no deletion. Two zero-byte detached-launch logs are not test results. Existing
+ActivityView actor-isolation warnings remain unrelated. Delivery connection is
+physically closed; task archival follows preservation of this result. Independent
+correction review remains required.
+
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
 supported recovery acceptance, release delivery, and supported ticket reconciliation.
