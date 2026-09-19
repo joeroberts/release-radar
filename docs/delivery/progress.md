@@ -53,6 +53,13 @@ finish bundled plugin version/digest and corresponding tests. No installation,
 packaging or second-Mac acceptance yet. Existing signing/permissions remain unchanged
 except deletion of the exact retired generated worker profile explicitly approved.
 
+Fresh preparation `f9fe67ac-d7c8-48c7-b023-6eb831a29c64` returned
+`execution.conflict` after the approved retirement. Git worktree readback confirms
+45a9dcbd checkout removed and its commit/branch retained; app menu now shows all
+remaining entries Closed. Do not infer successful admission from retirement.
+No replacement launched. Build Agent assigned bounded read-only source diagnosis;
+no additional retirement, direct state access/repair or implementation authorized.
+
 ## Local integration and completed UI findings
 
 Reviewed candidate `191d1373` is integrated locally at `8ad83218` on
