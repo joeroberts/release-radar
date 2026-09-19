@@ -2,6 +2,8 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Recovery candidate committed: `a43af70b` on `codex/outcome3-task-mismatch-recovery`, exactly the coordinator and two test files. Build Agent passed the native build, three focused cases and nine related regressions. Writer task `01a0bc0a-fca7-7dc0-8cbc-9b75ad19bece` completed and was archived; its worktree `/Users/jroberts/.codex/worktrees/6597/release_radar` and test evidence remain preserved. Fresh independent review requested as **Release Radar — Task mismatch recovery review**, explicitly Sol/high, setup identity `client-new-thread:dd137e9d-05e9-4323-be7f-fe137cf6eaa9`; real task identity and review result remain pending. No installation or production recovery replay has occurred.
+
 Recovery GREEN: Build Agent reports successful native build-for-testing, all3 former RED cases passed and all9 directly related recovery/authority regressions passed, both runs exit0 with complete xcresults. Exact3file candidate awaiting scoped writer commit and fresh independent review. No production install/state replay yet. Existing task-local RED/GREEN/regression evidence retained; no unrelated suite repeated.
 
 Recovery RED confirmed by Build Agent: build-for-testing passed; exact three native tests ran with complete xcresult, dispatcher case passed and two coordinator cases failed as expected on raw task-mismatch refusal and missing no-effects proof. Writer6597 authorized to implement bounded GREEN; no tests rerun yet. Test-only diff preserved. Temporary evidence: worktree `.build/test-output/task-mismatch-red-6597`, pretest profile `/tmp/release-radar-task-mismatch-red-pretest.5CNXzB/default.profraw`; neither deleted.
