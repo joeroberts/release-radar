@@ -40,23 +40,18 @@ Ignored build prerequisites were preserved under `.build/connector-recovery-45a9
 Continue plugin consistency through a fresh correction assignment; no bypass,
 installation or packaging occurred.
 
-## Packaging admission blocker
+## Release recovery resumed after owner approval
 
-Plugin consistency preparation request `a81c6fc2-a5ac-4fe5-b1be-da70c2ff33db`
-returned `execution.conflict`, including one exact replay after committing the
-context documents. No new worker launched. Fresh supported inventory confirms
-registration generation1, phase lifecycle revision1, ticket task-plan revision1,
-In Progress and all three tasks pending. Managed documentation remains current.
-The app's Worker resources menu shows one connector-recovery assignment as Stopped;
-the release worker had been interrupted and physically closed through supported
-controls. Source inspection confirms a Stopped assignment blocks replacement even
-when its connection is closed. The app offers retirement, explicitly removing the
-checkout and matching permission profile. That conflicts with the owner's instruction
-to preserve worktrees, so no retirement or direct state repair was performed.
-Do not bypass admission with Build Agent or another task/role. Assertions are complete;
-plugin metadata completion and packaging await supported assignment recovery that
-respects artifact preservation. Partial metadata commit6690634c remains on its branch.
-No installer/tag/installation or second-Mac acceptance is claimed.
+Owner explicitly approved retirement of only stopped assignment
+`delivery-45a9dcbd-058c-4f47-a1b4-aedb87022f6a`. Manage Project reported
+Resources retired; prior outcome remains recorded. Branch/commit6690634c preserved,
+ignored build artifacts remain in `.build/connector-recovery-45a9dcbd-preserved/`.
+App/script0.1.23 metadata integrated into canonical branch. Earlier conflicting
+preparation requesta81c6fc2 is superseded without execution; its retired parent is
+not a valid baseline. A fresh request uses the integrated canonical baseline to
+finish bundled plugin version/digest and corresponding tests. No installation,
+packaging or second-Mac acceptance yet. Existing signing/permissions remain unchanged
+except deletion of the exact retired generated worker profile explicitly approved.
 
 ## Local integration and completed UI findings
 

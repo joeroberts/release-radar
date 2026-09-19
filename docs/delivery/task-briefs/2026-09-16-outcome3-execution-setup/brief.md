@@ -2549,3 +2549,25 @@ Exact pending preparation:
   "reason": "Complete approved 0.1.23 release metadata consistency: bundled plugin manifest, recognized digest and corresponding existing tests only."
 }
 ```
+
+### Owner-approved retirement and resumed release preparation
+
+Retired only45a9dcbd via Manage Project; branch, commits and artifacts preserved.
+Prior conflicting requesta81c6fc2 not executed and superseded. Integrated6690634c.
+Fresh canonical baseline request:
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "f9fe67ac-d7c8-48c7-b023-6eb831a29c64",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reason": "Complete approved 0.1.23 plugin release metadata from integrated canonical baseline after owner-approved stopped-worker retirement."
+}
+```
