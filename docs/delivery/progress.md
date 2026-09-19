@@ -2,6 +2,8 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Image capability delivery `06457224` completed its bounded two-file source candidate: `WorkerPolicy.swift` review-only flags plus `WorkerAdapterTests.testImageViewingOverridesAreLimitedToReviewAssignments`. Main diff check passed. Worker `AEC1042D-0577-42A7-9C28-49F017AECBE8` is completed and physically connectionClosed. Build Agent now owns focused compilation/testing and scoped candidate commit; independent review and actual image-tool containment verification remain pending. No image capability has been installed or accepted.
+
 PR #108 verified merged at `effc97764b2aae0bce9e5e94e13202f9ce978e3c` from `3cd19a7b25427ddfb37118050a21c92cbdc02205`. Image correction not launched. Closeout task 3 evidence committed at revision 4, audit `96F73412-98DC-4CAD-9BD2-1AB482B84AD8`; readback confirms all three task expectations satisfied. Completion/acceptance still requires the exact reconciliation approval below:
 
 ```json
