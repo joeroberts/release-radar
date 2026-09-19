@@ -93,7 +93,36 @@ Original metrics401907a7 build artifacts are preserved intact under
 `/tmp/release-radar-metrics-401907a7-evidence.6w9UWW/.build` (temporary;
 17,554 files, 541,164 KiB). No artifact deletion occurred.
 
+Permission integration verification is active with Build Agent at canonical
+`07d6a2443962f17f0c7c2d10de07b9d884711580`. It covers the original five permission
+tests plus the renamed native guidance-copy test affected by mechanical integration.
+No metrics changes, installation or source edits are assigned to Build Agent.
+Metrics is Blocked with exact blocker `rr-p6-metrics-assignment-recovery` for the
+supported assignment refusal; plan1 remains pending. Worker status recheck still
+reports assignment/project/checkout/session mismatch. Permission work proceeds
+independently; no alternative metrics writer or parent substitution is authorized.
+
 ### Metrics native verification and assignment recovery
+
+Pending exact correction envelope (refused, no successful receipt):
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "projectID": "project-fffdc0e0b15b9b86",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "ce4f5d1d-cf7a-43b3-8a88-b39aa942a6c4",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-metrics",
+  "taskID": "rr-p6-metrics-task-01",
+  "reason": "Remove the newly introduced metrics per-child AX geometry harness after native inspection proved its child-element assumption invalid. Retain existing rendering/text coverage and independent visual acceptance; preserve production semantics and original scope.",
+  "baselineFromAssignmentID": "delivery-b76cf298-64f5-4f75-a512-4c7bd9c98b74"
+}
+```
 
 73928a11 compiles; its one rendering test executed and failed because the new
 per-child AX geometry helper assumes independently addressable label/value nodes.
