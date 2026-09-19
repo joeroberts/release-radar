@@ -1,5 +1,38 @@
 # Release Radar delivery state
 
+## Delivery Goals — created and assigned September 19
+
+Owner requested creating and assigning Delivery Goals for the existing approved
+three-phase, sixteen-ticket plan. Supported audited phase-plan revisions created
+the following seven goals; Project Plan readback verifies every exact assignment.
+
+| Phase | Goal ID / title | Assigned ticket IDs |
+| --- | --- | --- |
+| P6-remediation | `rr-goal-p6-outcome3` — Complete Outcome 3 corrections and closeout | `rr-p6-guidance-prompt`, `rr-p6-connector-recovery`, `rr-p6-outcome3-closeout` |
+| P6-remediation | `rr-goal-p6-documentation` — Reconcile documentation and reconstruct the project plan | `rr-p6-doc-reconciliation`, `rr-p6-plan-reconstruction` |
+| P6-remediation | `rr-goal-p6-project-controls` — Complete project controls and guided setup | `rr-p6-manage-project`, `rr-p6-navigation`, `rr-p6-guided-setup` |
+| P6-remediation | `rr-goal-p6-metrics` — Correct metric presentation | `rr-p6-metrics` |
+| Phase 7 | `rr-goal-p7-continuity` — Deliver portable project continuity | `rr-p7-export`, `rr-p7-import` |
+| Phase 8 | `rr-goal-p8-presentation` — Complete production presentation and maintenance | `rr-p8-presentation`, `rr-p8-maintenance` |
+| Phase 8 | `rr-goal-p8-release` — Verify distribution and installed release behavior | `rr-p8-distribution`, `rr-p8-version-evidence`, `rr-p8-stale-helper` |
+
+Each goal has an outcome and done criteria derived from the approved ticket scope.
+P6 is Draft revision 10 with 9/9 covered (request
+`57d8e42f-ec2b-42af-83a9-85ff3b211072`, audit
+`3475BFBC-D3B1-4DDE-9F25-52859A36FE74`); Phase 7 is Draft revision 3 with 2/2
+covered (request `ff614ca7-462b-4773-8270-dc4f08c2c303`, audit
+`55E463FD-82F0-4818-A292-70A6C7EC251A`); Phase 8 is Draft revision 6 with 5/5
+covered (request `0cd40f18-825d-4bb7-bc4d-b5c9faecf91d`, audit
+`37902700-54CA-4EF8-8761-3A5146E29681`). Goals and exact ticket membership are
+visible in Goals and Project Plan. Phases remain Unassessed; no finalization,
+execution, ticket-lane change or owner acceptance was performed. Metrics retains
+its owner STOP, also stated in the goal criteria. Prior unsuccessful metrics
+Backlog-to-In-Progress request `bcf74c06-c26e-4bd9-b207-0ca2c6c8a0fb` was rejected
+because the phase plan was not finalized; fresh readback confirmed Backlog and
+zero active tasks. Creation and assignment supersede the initial import's
+historical statement below that no goals exist. Phase finalization remains a
+separate next planning action.
+
 ## RR self-onboarding plan import — created and verified
 
 Owner-approved import applied through supported audited connector operations: 3 phases and all 16 tickets exist with exact approved IDs, outcomes and phase membership. Fresh complete inventory confirms 0 active tasks; phases remain Unassessed and all tickets are in Backlog. Project Plan visibly shows 16 recorded tickets / 3 phases / 0 unplaced; All-phase Board shows Backlog16 and all other lanes0. Metrics has the visible explicit blocker “STOPPED by owner. Do not start metrics work without explicit owner resume.” New-ticket creation directly into Blocked was rejected without effects; the approved STOP is represented by Backlog plus blocker, not an artificial execution transition. No tasks, goals, formal dependencies, execution, phase activation or completion were added. The exact initial requests below are committed except the rejected metrics request; its separately preserved replacement and blocker requests committed successfully (audits `77359E29-10D8-4FD1-9A46-6B88E18F27B3`, `DA0693E0-6466-4F62-AAA4-8418338F654B`). Do not replay the rejected initial request. Prior preview language below is retained as approval provenance.
