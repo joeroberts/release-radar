@@ -1,5 +1,18 @@
 # Release Radar delivery state
 
+## Metrics lane — Blocked September 19
+
+After resolving the blocker, the owner renewed authorization for the metrics
+Backlog → In Progress → Blocked sequence. Both supported transitions committed:
+request `82240e90-ff24-49da-a7f3-19f5d6a81ed2`, audit
+`BE748B78-2A27-4B39-A5D0-92C3CEF1F256`; then request
+`79c272ab-a891-413c-91cb-11c155abf744`, audit
+`03A5E296-F59B-48C2-A3F4-95E232996985`. Fresh complete connector inventory
+confirms `rr-p6-metrics` is Blocked, the other fifteen tickets remain Backlog,
+and active task count is zero. The intermediate lane is the owner-authorized
+workaround, not evidence that implementation ran. The removed owner-STOP blocker
+was not recreated. This supersedes the prior metrics Backlog status below.
+
 ## Metrics blocker resolved — September 19
 
 Owner explicitly requested removing `rr-p6-metrics-owner-stop` from
