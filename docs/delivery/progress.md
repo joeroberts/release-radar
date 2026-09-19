@@ -11,6 +11,18 @@ The active goal's full acceptance endpoint is therefore not yet achieved. Contin
 remaining local verification and record its findings; preserve separate owner
 acceptance and merge boundaries. The already-running UI test may finish naturally.
 
+## Approved assertion correction before packaging
+
+Owner approved correction of the four stale helper label/progress assertions,
+then packaging; second-Mac acceptance remains deferred. Managed assignment
+`delivery-ca3e18cb-082e-46f7-9900-d8b3c861a54e` started from `191d1373`, audit
+`63021D14-F9CF-4510-B2C8-78C446692EE9`, worker
+`AFA91D75-A132-4A3F-A910-19355D2B815F`, task
+`01a0ba50-e416-7650-aaf7-7a765f4b55e3`. Verified Terra/medium,
+workspaceWrite, network disabled. Ownership is exact expected strings in the
+existing UI test only. Build Agent prepares ignored prerequisites, then runs the
+affected UI check. Main owns Git/ledger. Product source review remains terminal.
+
 ## Local integration and completed UI findings
 
 Reviewed candidate `191d1373` is integrated locally at `8ad83218` on
