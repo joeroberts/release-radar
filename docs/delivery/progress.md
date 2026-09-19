@@ -31,6 +31,14 @@ network disabled, on-request/auto_review. It owns source/tests only; Build Agent
 prepares ignored dependencies and runs checks. Main retains Git and ledger ownership.
 Exact preparation envelope remains in the existing Outcome 3 brief.
 
+The correction writer is terminal with four source/test files changed. Health
+refresh now carries the generation-bearing snapshot through host, services and
+AppModel. A new fixture-owned broker restart test pauses the returned health before
+presentation and waits for an OS interruption snapshot. Source authoring preceded
+production correction; no executed RED is claimed. Build Agent prepared pinned
+libgit2/RDS successfully and is running compilation plus the two existing non-service
+regressions. Native restart, signed upgrade and UI acceptance are not yet verified.
+
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
 supported recovery acceptance, release delivery, and supported ticket reconciliation.
