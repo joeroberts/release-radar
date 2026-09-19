@@ -65,6 +65,31 @@ Review worker `B8927ECA-991B-4C85-B83D-4A48E867A1C3`, task
 network disabled. Source review proceeds while Build Agent diagnoses XCTest;
 runtime/UI correctness remains unproven.
 
+### Current corrections and verification limits
+
+Metrics source review found compact long-name truncation from the two-line limit
+and missing icon-adjacency verification. The reviewer completed and connection
+closed. Correction assignment `delivery-43907196-a74b-42cc-b82c-bf1b3fa02e80`
+references closed original delivery at candidate `23e7f775`; preparation request
+`43907196-a74b-42cc-b82c-bf1b3fa02e80`, audit
+`6D430C0F-CE47-4703-B7DA-CD08A4BB0C30`, same phase/task revisions 1.
+Worker `6D7EF370-4027-4882-B73C-9BA9D5F9E090`, task
+`01a0baec-3e14-7da2-8f7c-8a97c597774d`, runs verified Terra/medium with its
+restricted assignment profile and no network. Preserve decorative-icon semantics;
+use simple native verification, not a new testing framework. Original metrics
+build is held pending correction. Source review task is archived; artifacts remain.
+
+Build Agent localized permission XCTest failure to the exact test host's pre-main
+dyld open call, before loading XCTest. Attached-device warnings were later noise.
+The one diagnostic local-arm64 test-without-building reproduced the stall, but
+Xcode did not propagate the requested DYLD logging variables, so the blocking
+pathname is still unknown. Exact orphan PIDs 10729 and 12186 were reconfirmed and
+terminated; no task test hosts remain. No privileged tracing or security changes.
+Diagnostic log/partial xcresult remain in the permission checkout's
+`.build/native-checks/managed-build-permissions-dyld-diagnostic-60955d6a.*`.
+Build Agent is checking supported per-test-host environment propagation only;
+no further identical retry is authorized or underway.
+
 ## Cleanup and deferred verification — September 19
 
 Owner requested branch/task cleanup and current RR board state. Removed 12 local
