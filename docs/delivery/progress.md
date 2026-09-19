@@ -1,6 +1,16 @@
 # Release Radar delivery state
 
 
+## Owner deferral — second-Mac acceptance
+
+The owner directed that clean-environment broker and signed-upgrade acceptance
+wait until Release Radar is deployed on another Mac. Stop further `rekon-test`,
+sudo and account-setup diagnosis; preserve all staged products and results.
+These runtime requirements remain unverified and deferred, not passed or removed.
+The active goal's full acceptance endpoint is therefore not yet achieved. Continue
+remaining local verification and record its findings; preserve separate owner
+acceptance and merge boundaries. The already-running UI test may finish naturally.
+
 ## Connector recovery — current candidate 191d1373
 
 The previous compile defect and review findings were corrected in committed
