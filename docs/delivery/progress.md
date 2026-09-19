@@ -81,6 +81,24 @@ checking the ordinary runner correction of prioritizing the existing signed
 embedded framework. No changed signing, source, entitlements or permissions;
 no passing test result yet.
 
+### Integration and remaining compile correction
+
+Permission commits integrated locally as `35fff464` and `5c29af17`. Mechanical
+conflicts preserved the current guidance-test name with the reviewed temporary
+fixture root, and both the review .build assertion and current finishPreparation
+cleanup. Combined verification must exercise those affected tests before release.
+The permission ticket is In Progress after blocker resolution request
+`79015aec-24ef-476f-b26b-64a0bcb8afdb`, audit
+`1E1E3BE1-990C-453C-B475-1A566D969577`; lane request
+`594b6810-d8a0-4d24-ab6b-f8e87d13a7b4`, audit
+`23E6061B-2432-4D62-8F3D-66D9AB08C2A4`. Complete inventory confirmed plan 1
+unchanged. Metrics is In Progress; programme closeout remains Blocked.
+
+Metrics401907a7 build-for-testing failed at rendering-test line45: escaping closure
+requires explicit `self.assertOverviewMetricAlignment`. No XCTest cases executed.
+Build Agent is preserving ignored outputs outside the closed checkout for supported
+one-line correction preparation. No source changes by Build Agent or false pass.
+
 ### Verified candidate results — September 19
 
 Permission candidate `60955d6a`: Build Agent executed all five scoped tests with
