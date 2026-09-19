@@ -26,12 +26,13 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     $0.lifecycle == .active && $0.authorityLevel == .controlling && $0.kind == .document
                         && !$0.path.hasPrefix(RepositoryDocumentContract.archiveCollectionPath + "/")
                 }.map(\.path))).sorted()
-                let capture = try await store.documentationRead { c in
+                let capture: (ProjectExecutionWork?, AgentCommandResult?) = try await store.documentationRead { c in
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID, registration: registration, connection: c)
                     try context.verifyPersisted(c)
+                    let prior = try replay(c, envelope: envelope, body: body, registration: registration)
+                    if prior?.error != nil, prior?.error != .outcomeUnknown { return (nil, prior) }
                     let work = try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID, taskID: taskID,
                         taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c)
-                    let prior = try replay(c, envelope: envelope, body: body, registration: registration)
                     return (work, prior)
                 }
                 if var prior = capture.1, prior.error != .outcomeUnknown {
@@ -40,6 +41,7 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     }
                     return prior
                 }
+                guard let work = capture.0 else { throw ProjectExecutionError.assignmentNotAuthorized }
                 let intent = AgentCommandResult(entityIDs: [ticketID, taskID], auditEventID: nil, error: .outcomeUnknown)
                 try await store.transact(actor: actor, reason: "Prepare registered project execution assignment",
                     auditScope: .init(projectID: project.projectID, entityType: .ticketTaskPlan, entityID: ticketID)) { c in
@@ -47,7 +49,7 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID, registration: registration, connection: c)
                     try context.verifyPersisted(c)
                     guard try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID, taskID: taskID,
-                        taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c) == capture.0 else { throw ProjectExecutionError.assignmentNotAuthorized }
+                        taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c) == work else { throw ProjectExecutionError.assignmentNotAuthorized }
                     if try replay(c, envelope: envelope, body: body, registration: registration) != nil { return }
                     // A different request cannot replace an uncertain preparation of
                     // this work. Resume its exact request and read back its effects.
@@ -65,11 +67,11 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                 }
                 let assignment: ProjectExecutionAssignment
                 do {
-                    assignment = try await preparer.prepare(project: project, work: capture.0, requestID: envelope.requestID,
+                    assignment = try await preparer.prepare(project: project, work: work, requestID: envelope.requestID,
                         reviewOfAssignmentID: review, baselineFromAssignmentID: baseline, contextPaths: paths)
                 } catch let failure as ProjectExecutionPreparationFailure {
                     do {
-                        guard try await preparer.verifyNoPreparationEffects(project: project, work: capture.0,
+                        guard try await preparer.verifyNoPreparationEffects(project: project, work: work,
                             requestID: envelope.requestID, reviewOfAssignmentID: review,
                             baselineFromAssignmentID: baseline) else { throw failure.error }
                         let auditID = AuditEventID(rawValue: UUID().uuidString)
@@ -84,7 +86,7 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                                 try context.verifyPersisted(c)
                                 guard try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID,
                                     taskID: taskID, taskPlanRevision: taskRevision, phaseRevision: phaseRevision,
-                                    connection: c) == capture.0,
+                                    connection: c) == work,
                                       let row = try c.row("SELECT request_body,result_data,registration_project_id,registration_id,request_generation FROM agent_command_requests WHERE request_id=?",
                                         bindings: [.text(envelope.requestID.uuidString)]),
                                       ProjectLifecycleManager.receiptScopeMatches(row, registration: registration),
@@ -98,10 +100,10 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                                 guard try c.scalarInt("SELECT changes()") == 1 else { throw ProjectExecutionError.assignmentNotAuthorized }
                                 return terminal
                             }
-                        await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                        await preparer.finishPreparation(work: work, requestID: envelope.requestID)
                         return result
                     } catch {
-                        await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                        await preparer.finishPreparation(work: work, requestID: envelope.requestID)
                         throw error
                     }
                 }
@@ -113,7 +115,7 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID, registration: registration, connection: c)
                     try context.verifyPersisted(c)
                     guard try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID, taskID: taskID,
-                        taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c) == capture.0,
+                        taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c) == work,
                           try replay(c, envelope: envelope, body: body, registration: registration)?.error == .outcomeUnknown else { throw ProjectExecutionError.assignmentNotAuthorized }
                     let admitted = try preparer.admitPrepared(assignment)
                     var completed = AgentCommandResult(entityIDs: [projectID, admitted.id], auditEventID: auditID, error: nil)
@@ -122,16 +124,16 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                         bindings: [.blob(try JSONEncoder().encode(completed)), .text(envelope.requestID.uuidString), .blob(body)])
                     return completed
                     }
-                    await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                    await preparer.finishPreparation(work: work, requestID: envelope.requestID)
                     return result
                 } catch {
                     let failure = error
                     do { try preparer.revokePreparation(assignment) }
                     catch {
-                        await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                        await preparer.finishPreparation(work: work, requestID: envelope.requestID)
                         throw StoreError.unavailable("Execution finalization failed: \(failure.localizedDescription). Protected revocation failed: \(error.localizedDescription). Do not launch; recover the exact request.")
                     }
-                    await preparer.finishPreparation(work: capture.0, requestID: envelope.requestID)
+                    await preparer.finishPreparation(work: work, requestID: envelope.requestID)
                     throw failure
                 }
             }

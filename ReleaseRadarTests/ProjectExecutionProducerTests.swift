@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
@@ -446,6 +447,67 @@ final class ProjectExecutionProducerTests: XCTestCase {
             XCTAssertEqual(hookChecks, 0, "Recovery inspection must not configure the checkout")
             await producer.finishPreparation(work: work, requestID: requestID)
         }
+    }
+
+    func testRetiredParentRefusesPersistedPreparingChildBeforeConfiguration() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let parentID = "delivery-retired"
+        let parentPaths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: parentID)
+        var parent = ProjectExecutionAssignment(id: parentID, registration: project.registration!,
+            checkoutPath: parentPaths.checkout.path, role: .delivery, permissionProfile: "rr-" + parentID,
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Previously approved work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .superseded, sessionID: "closed-session",
+            worktree: .init(checkout: parentPaths.checkout.path, baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-project-one-" + parentID, commonGitDirectory: source.path + "/.git",
+                primaryRoot: source.path), work: work)
+        parent.codexContextID = try store.policy(projectID: "project-one").codexContextID
+        parent.connectionClosed = true
+        var retirement = ProjectExecutionAssignment.Retirement(requestID: UUID(), priorState: .closed)
+        retirement.worktreeRemoved = true; retirement.profileRemoved = true; retirement.completed = true
+        parent.retirement = retirement
+        try store.saveAssignment(parent, expected: nil)
+
+        let requestID = UUID()
+        let childID = "delivery-" + requestID.uuidString.lowercased()
+        let childPaths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: childID)
+        let provisioning = Provisioning(source: source, candidate: nil)
+        let tree = try provisioning.prepare(primaryRoot: source, checkout: childPaths.checkout,
+            projectID: "project-one", taskID: childID, baseline: String(repeating: "a", count: 40))
+        let contextBytes = try Data(contentsOf: source.appendingPathComponent("AGENTS.md"))
+        let contextDigest = SHA256.hash(data: contextBytes).map { String(format: "%02x", $0) }.joined()
+        var child = ProjectExecutionAssignment(id: childID, registration: project.registration!,
+            checkoutPath: childPaths.checkout.path, role: .delivery, permissionProfile: "rr-" + childID,
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Approved child work",
+            context: [.init(path: "AGENTS.md", digest: contextDigest)],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .preparing, worktree: tree, work: work, baselineFromAssignmentID: parentID)
+        child.codexContextID = try store.policy(projectID: "project-one").codexContextID
+        try store.saveAssignment(child, expected: nil)
+
+        let configuration = Configuration()
+        await configuration.seedProfile(child.permissionProfile)
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: provisioning)
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: requestID,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: parentID, contextPaths: ["AGENTS.md"])
+            XCTFail("A partial child cannot resume from a retired parent")
+        } catch let failure as ProjectExecutionPreparationFailure {
+            XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+        } catch {
+            XCTFail("Retired-parent refusal must use the typed pre-configuration path, got \(error)")
+        }
+        let preparedProfiles = await configuration.profiles
+        XCTAssertTrue(preparedProfiles.isEmpty, "Retired-parent refusal must precede profile configuration")
+        let hookChecks = await configuration.hookChecks
+        XCTAssertEqual(hookChecks, 0, "Retired-parent refusal must precede hook configuration")
+        let verified = try await producer.verifyNoPreparationEffects(project: project, work: work,
+            requestID: requestID, reviewOfAssignmentID: nil, baselineFromAssignmentID: parentID)
+        XCTAssertFalse(verified, "Persisted child effects must keep the request uncertain")
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: childID), child)
+        await producer.finishPreparation(work: work, requestID: requestID)
     }
 
     func testFreshPreparationCreatesOnlyEmptyProjectLayerBeforeHookDiscovery() async throws {

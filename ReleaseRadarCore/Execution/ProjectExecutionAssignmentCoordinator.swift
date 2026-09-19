@@ -157,6 +157,16 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             $0.retirement?.completed != true && $0.retirement?.replacementAllowed != true &&
             ($0.uncertainOutcome == true || $0.state == .unknown || ($0.sessionID != nil || $0.launchReserved == true) && $0.connectionClosed != true && $0.state != .closed)
         }) else { throw StoreError.unavailable("Close and explicitly retire the previous registration's worker resources in project settings before preparing replacement work. Its unresolved outcome is preserved.") }
+        if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
+            let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
+            if parent.registration == registration, parent.work == work, parent.state == .superseded,
+               parent.retirement?.completed == true, parent.retirement?.connectionCloseUncertain != true,
+               parent.checkoutPath == parentPaths.checkout.path, parent.worktree?.primaryRoot == policy.primaryRoot,
+               reviewOfAssignmentID == nil || parent.role == .delivery {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
+        }
         if let existing = inventory.first(where: { $0.id == id }) {
             guard existing.codexContextID == policy.codexContextID, existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
@@ -182,12 +192,6 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
             let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
-            if parent.registration == registration, parent.work == work, parent.state == .superseded,
-               parent.retirement?.completed == true, parent.retirement?.connectionCloseUncertain != true,
-               parent.checkoutPath == parentPaths.checkout.path, parent.worktree?.primaryRoot == policy.primaryRoot,
-               reviewOfAssignmentID == nil || parent.role == .delivery {
-                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
-            }
             guard parent.registration == registration, parent.work == work, parent.state == .closed, parent.retirement == nil, parent.sessionID != nil,
                   parent.checkoutPath == parentPaths.checkout.path, let tree = parent.worktree,
                   tree.primaryRoot == policy.primaryRoot, reviewOfAssignmentID == nil || parent.role == .delivery else { throw ProjectExecutionError.assignmentNotAuthorized }

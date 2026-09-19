@@ -2027,8 +2027,10 @@ After complete no-effects proof, one app-owned transaction conditionally replace
 only the exact pending receipt result with the existing terminal execution error and
 a new audit identity. It preserves the original request body, registration scope,
 creation record and prior audit history. Exact replay returns that stored terminal
-result without preparing again; changed-body reuse remains rejected. A failed or
-stale resolution transaction leaves the receipt uncertain. The existing preparation
+result without preparing again, even when later task or phase changes make the work
+ineligible; exact scope and body validation therefore precede mutable work
+reconstruction for terminal failures. Changed-body reuse remains rejected. A failed
+or stale resolution transaction leaves the receipt uncertain. The existing preparation
 single-flight now remains held through admission, revocation or terminal settlement,
 so a concurrent replay cannot clear or duplicate live work. This adds no schema,
 public recovery tool, force-clear action or UI contract.
