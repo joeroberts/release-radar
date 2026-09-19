@@ -2,6 +2,28 @@
 
 ## Managed build-permission correction — authorized and running September 19
 
+Current candidate: `2a39a82d9a71a0e0d518d59d657bed4115ae959d`, five files.
+Review gets only assignment-local `.build` write access; delivery write scope is
+unchanged. Two tests use temporaryDirectory rather than home fixtures; focused
+tests cover exact generated-profile acceptance and extra-write rejection. Swift
+parser and diff checks passed; XCTest did not execute. Earlier claims that Xcode
+requires duplicate absolute grants were unsupported and those grants were removed.
+The observed fatal test error was unavailable pinned RDS dependency resolution
+with networking disabled; cache/simulator diagnostics alone did not establish a
+required broader grant. A trusted offline dependency staging path is still absent.
+
+Delivery worker completed and physically closed. Temporary build diagnostics are
+preserved at `/tmp/rr-build-permissions-115a2be4-test-artifacts`; no files deleted.
+Independent security/recovery review assignment
+`review-9a42b40c-6c9d-4a04-87c9-5b3544a4a264` prepared with audit
+`8737B775-6D5D-41A7-9C4D-0144A42C8EC2`, referencing the closed delivery assignment
+below at task-plan revision 1 and phase lifecycle revision 1. Request reason:
+`Independent security/recovery review of the bounded review scratch permission correction; tests remain unexecuted due to offline dependency availability.`
+Worker `DE820814-0F1B-4981-A2DC-290AF6E5CE42`, task
+`01a0b971-5ac8-7483-93f8-c79e8cf1d252`, effective Terra/high, read-only, network
+disabled, is reviewing the exact candidate. No installation, test success or
+completion is claimed.
+
 Owner explicitly approved the narrowly scoped generated build-permission change.
 Controlling brief: September 19 correction section in
 `task-briefs/2026-09-16-outcome3-execution-setup/brief.md` (committed `04c716a1`).
