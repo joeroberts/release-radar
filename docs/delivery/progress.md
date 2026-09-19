@@ -72,7 +72,16 @@ in the assignment `.build/native-checks/`. Native broker test remains unrun.
 Delivery worker physically closed; preserve its branch/worktree and archive its task.
 Build Agent is generating signed build-for-testing products and the xctestrun for
 an isolated test-account handoff. No service or account action is authorized by
-that generation step. Independent correction review remains required.
+that generation step. Signed build-for-testing succeeded; app/helper signatures
+verified. Entire ignored outputs were moved intact to canonical
+`.build/connector-recovery-191d1373-preserved/` with identity verified. Build Agent
+is staging only signed Build products in new temporary
+`/Users/Shared/ReleaseRadar-connector-191d1373`, with no permission changes.
+Independent review assignment `review-8842219a-b3e9-4858-9ca2-795a6c532850`,
+audit `87F291D2-0641-4D16-B191-565D0EDBE12E`, worker
+`DFA744BB-CE33-4DE3-9C6E-5818C021F886`, task
+`01a0ba3f-1ace-74c0-bfb1-2a17c0673b25` is running. Terra/high,
+readOnly, network disabled verified. Runtime test execution remains pending.
 
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
