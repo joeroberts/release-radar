@@ -842,7 +842,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(rootsInvocationCount, 1)
     }
 
-    func testOnboardingNativeCopyUsesTheSameExistingDocumentationBootstrapShownInPreview() async throws {
+    func testOnboardingNativeCopyUsesTheManagedUpgradePromptForOutdatedGuidance() async throws {
         let directory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
         let root = directory.appendingPathComponent("repository", isDirectory: true)
@@ -878,9 +878,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             pressIdentifiers: ["onboarding-initialize-confirm", "onboarding-copy-codex-prompt"]
         )
 
-        XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
-        XCTAssertTrue(copied.localizedCaseInsensitiveContains("existing documentation"))
-        XCTAssertFalse(copied.contains("Require an existing catalogued"))
+        XCTAssertFalse(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+        XCTAssertTrue(copied.contains("Require an existing catalogued"))
     }
 
     func testPhase3ADocumentationCheckingAndFolderRecoveryAtWideAndCompactWidths() async throws {
