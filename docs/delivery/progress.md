@@ -1,5 +1,17 @@
 # Release Radar delivery state
 
+## Metrics blocker resolved — September 19
+
+Owner explicitly requested removing `rr-p6-metrics-owner-stop` from
+`rr-p6-metrics`. Supported resolve-blocker request
+`f0836235-79a6-43e7-a24b-98c041301610` committed with audit
+`E59DB3D0-A591-4FBC-890F-B740EE64AE50`. After project reselection, Phase Board
+shows the metrics ticket in Backlog with zero blockers and no owner attention;
+its inspector retains the resolution audit and prior history. P6 is Ready
+revision 10, lifecycle In delivery. This supersedes the unresolved-blocker
+status below. No lane transition or implementation was performed. The existing
+goal criteria still refer to a separate explicit implementation resume.
+
 ## P6-remediation planning — Ready September 19
 
 Owner explicitly requested finalizing P6-remediation. Supported
