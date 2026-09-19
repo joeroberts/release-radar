@@ -98,6 +98,18 @@ copied module cache is retained as `.build/swiftpm-module-cache.incompatible-45a
 Build Agent used a fresh ignored cache. Installation and live supported recovery
 remain pending; no second-Mac acceptance is claimed.
 
+Release artifacts are committed in48a10e06 with new annotated local tagv0.1.23;
+no push or merge occurred. Build Agent installed through the existing no-launch
+script and verified0.1.23(1), strict signing, staged/installed CDHash equality
+`6a84869dd80afbdfdb6bffaa284cd99357863185` and matching pluginversion/digest.
+Main opened the installed app normally. Settings reports installed/shipped plugin
+0.1.23 and, after Check connection, App bridge Available with no client contact
+observed. Main's existing supported connector still returns `appUnavailable` after
+that check. The original pending preparation request has not been replayed.
+A fresh read-only Codex task was created to load the updated plugin and query the
+exact canonical project's supported inventory; no direct-helper fallback or state
+repair is permitted. Live reconnection/recovery remains unverified.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
