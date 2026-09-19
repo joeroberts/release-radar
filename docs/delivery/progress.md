@@ -2,6 +2,38 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Metrics visual-review blocker and lane envelopes committed with audits
+`EF032891-FDFC-4538-A21A-CC684AD222B2` and
+`0F9DB84F-6104-4EA7-B7C6-5FFDCC4C49F2`, respectively:
+
+```json
+[
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "requestID": "ac779bf3-1ef6-48b4-ba71-117b14f427e8",
+    "ticketID": "rr-p6-metrics",
+    "id": "rr-p6-metrics-image-review",
+    "summary": "Focused metrics test passed at 1100pt and 620pt, but independent visual review is incomplete: RR WorkerPolicy disables features.view_image and tools.view_image for managed workers. Owner approval is pending for review-only image viewing with existing filesystem/network/history/management restrictions preserved.",
+    "reason": "Record the verified image capability limitation without treating passing AX/text tests as visual acceptance. No product failure inferred."
+  },
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "requestID": "090db592-203c-4e51-a02f-dd2ab2f2a9d3",
+    "ticketID": "rr-p6-metrics",
+    "lane": "blocked",
+    "reason": "Independent visual acceptance cannot finish until the pending managed-review image capability decision is resolved. Preserve passed rendering results and candidate9d1f4d78."
+  }
+]
+```
+
 Confirmed visual-review capability blocker: `ReleaseRadarCoordinator/WorkerPolicy.swift`
 explicitly sets both `features.view_image` and `tools.view_image` to false in
 managed-worker overrides. Screenshot conversion cannot provide image access to
