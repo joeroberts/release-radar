@@ -81,6 +81,18 @@ checking the ordinary runner correction of prioritizing the existing signed
 embedded framework. No changed signing, source, entitlements or permissions;
 no passing test result yet.
 
+Metrics compile correction is committed as `73928a11` (one explicit self).
+Supported assignment `delivery-b76cf298-64f5-4f75-a512-4c7bd9c98b74` used closed
+candidate401907a7, phase/task revisions1; request
+`b76cf298-64f5-4f75-a512-4c7bd9c98b74`, audit
+`28E34896-7962-4002-B8BC-EC31FC25F412`. Worker
+`1A306067-9462-4D6B-ABAC-00C6C328C913` ran verified Terra/medium/restricted,
+completed and physically closed. Task `01a0baf5-7b8e-75b3-84ca-df85ba0dbf1c`
+is archived with checkout preserved. Build Agent is verifying this exact candidate.
+Original metrics401907a7 build artifacts are preserved intact under
+`/tmp/release-radar-metrics-401907a7-evidence.6w9UWW/.build` (temporary;
+17,554 files, 541,164 KiB). No artifact deletion occurred.
+
 ### Integration and remaining compile correction
 
 Permission commits integrated locally as `35fff464` and `5c29af17`. Mechanical
