@@ -56,22 +56,27 @@ blocker or guessed-ID mutation was introduced.
 Archival is conversation cleanup, not ticket acceptance or worker-resource deletion.
 
 
-### Proposed GitHub deferral reconciliation — not applied
+### Approved GitHub deferral reconciliation — board update committed
 
-To implement the owner's GitHub-only deferral, propose superseding the earlier
-01/03-Pending disposition. Exact reconciliation approval remains pending. Baseline: connector task-plan revision 2; task02
-Completed unchanged. Supersede only pending01/03, with all remaining verification
-obligations retained in GH106 and no false completion. No additions or definition
-revisions. Then request owner review, not acceptance. Save a separate one-ticket
-withdrawal proposal for the accidental unassigned entry; connector cannot Apply it.
-The save-proposal request below returned appUnavailable with no audit receipt;
-preserve it unchanged for retry. No task supersession or lane transition occurred.
+Owner approved the exact reconciliation. Supported inventory confirmed baseline
+revision 2 before mutation. Tasks 01/03 are now superseded, with their pending
+history retained and remaining obligations exclusively in unscheduled GitHub #106.
+Task 02 remains completed and unchanged. The connector ticket is now Needs Review,
+not Accepted, at task-plan revision 3; supported readback confirmed all three rows.
+
+The initial lane request was rejected without an audit because task-plan revision
+is accepted only for an Accepted transition. The corrected Needs Review request
+omitted that field and succeeded; no product or permission change was needed.
+The exact supersession and corrected transition receipts are recorded below.
+The withdrawal proposal replay again returned appUnavailable without a receipt;
+proposal inventory remains empty. The accidental unassigned ticket is therefore
+not retired. The stale closeout blocker text remains unresolved as described above.
 
 ```json
 [
   {
     "tool": "release_radar_revise_ticket_task_plan",
-    "disposition": "pending",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -86,11 +91,15 @@ preserve it unchanged for retry. No task supersession or lane transition occurre
         "rr-p6-connector-recovery-task-03"
       ],
       "reason": "Owner requested board cleanup and explicitly deferred retained-client second-Mac verification exclusively to GitHub issue106, unscheduled and non-blocking. Supersede pending01/03 without claiming completion; preserve their history and completed task02/evidence unchanged. All remaining verification obligations are retained at https://github.com/joeroberts/release-radar/issues/106."
+    },
+    "receipt": {
+      "ticketTaskPlanRevision": 3,
+      "auditEventID": "9B50679F-4C96-4FC8-9B59-C3A022135FA4"
     }
   },
   {
     "tool": "release_radar_transition_ticket",
-    "disposition": "pending",
+    "disposition": "rejected: invalidEnvelope; no audit; corrected request below committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -102,6 +111,24 @@ preserve it unchanged for retry. No task supersession or lane transition occurre
       "ticketTaskPlanRevision": 3,
       "lane": "needs_review",
       "reason": "Owner-approved cleanup: merged PR105, installed0.1.23, verified implementation task02 and evidence are complete. Owner moved remaining retained-client verification to unscheduled GH106. Request owner review; do not imply owner acceptance or deferred test success."
+    }
+  },
+  {
+    "tool": "release_radar_transition_ticket",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "9d5461ef-b877-4dbb-a73b-fb549453732f",
+      "ticketID": "rr-p6-connector-recovery",
+      "lane": "needs_review",
+      "reason": "Owner-approved cleanup: merged PR105, installed0.1.23, verified implementation task02 and evidence are complete. Owner moved remaining retained-client verification to unscheduled GH106. Request owner review; do not imply owner acceptance or deferred test success."
+    },
+    "receipt": {
+      "auditEventID": "4A6949C7-A3B1-4030-BD46-702877F2E420"
     }
   },
   {
@@ -143,7 +170,9 @@ original-request refusal replay passed. GitHub #99 is closed; remaining retained
 signed-upgrade/native broker verification is deferred exclusively to GitHub #106,
 unscheduled and non-blocking current closeout by owner direction. Independent
 healthy-state UI QA passed. Approved RR reconciliation is committed: evidence
-revision 4, task-plan revision 2, task 02 Completed; tasks 01/03 remain Pending. Earlier no-push/install wording below describes
+revision 4, task-plan revision 3, task 02 Completed; tasks 01/03 superseded under
+the approved GH106 deferral. The ticket is Needs Review, awaiting owner acceptance.
+Earlier no-push/install wording below describes
 prior checkpoints, not this current release state.
 
 Independent installed UI review by RO Coordinator 05
