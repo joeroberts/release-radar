@@ -2,6 +2,24 @@
 
 ## Managed build-permission correction — authorized and running September 19
 
+Corrected candidate: `60955d6a98a1b10f4b849232e1030d8b984ec9cd` preserves old
+review definitions through optional `reviewScratchVersion` (absent is legacy;
+only supported version 1 on a review assignment enables `.build`). Newly prepared
+reviews opt in explicitly. Focused legacy/new/invalid-profile tests were added.
+Task-local parser invocation reached real test syntax errors; the worker fixed
+the two missing dictionary closures and the affected parser check exited 0.
+No XCTest pass is claimed. Correction worker physically closed; temporary parser
+artifacts preserved at `/tmp/rr-build-permissions-85453c11-test-artifacts`.
+Targeted independent correction review request
+`cb7baea5-7bb2-46d5-8c64-c91d378b6f63` references closed delivery
+`delivery-85453c11-57b2-4d66-9fe3-0db9dcc5c106`, same registered task/phase
+revisions 1; reason `Verify only the required saved-profile compatibility correction and affected security boundaries in the corrected candidate.`
+Preparation audit `082F3B27-9BC1-4816-A283-D97F5F884192`; worker
+`34294BF7-6967-4700-BD96-2BABFCBFC52E`, task
+`01a0b979-fb69-7281-a631-30258ff30c1e`, verified Terra/high/read-only/no-network,
+is reviewing the corrected candidate. Earlier candidate statements below are
+superseded by this correction, not release-completion evidence.
+
 Security review of `2a39a82d` found one Required compatibility defect: deriving
 the new review profile for old saved assignments conflicts with their pinned
 permission definitions. Review worker completed and physically closed. Correction
