@@ -34,7 +34,10 @@ assignment-specific restricted profile, on-request/automatic review and no netwo
 It owns only Overview metric composition and focused regression source, following
 `docs/design/phase6-workspace-toolbar-proposal.md` and its visual references.
 Build Agent owns compilation/testing; independent UI review must cover long names,
-compact/wide layouts and accessibility. No implementation completion is claimed.
+compact/wide layouts and accessibility. Source candidate `23e7f775` is committed (two files); direct tests and independent
+review remain pending. Worker completion and physical connection closure are
+confirmed. Its completed Codex task is archived, with checkout/artifacts preserved.
+Build Agent has the exact rendering-test filter queued after the permission tests.
 
 ## Cleanup and deferred verification — September 19
 
