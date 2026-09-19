@@ -1,5 +1,42 @@
 # Release Radar delivery state
 
+## Guidance verification recovery — September 19
+
+Owner accepted candidate `950aa6ea` and directed completion through the board.
+Accepted transition `c943d79c-70c1-4d84-8942-35d6c9c77230` was rejected because
+active tasks remain incomplete; no task completion was fabricated.
+
+Review preparation recovered by preserving generated Xcode directories and ignored
+`default.profraw` outside the managed checkout at
+`/tmp/rr-guidance-722d3858-test-artifacts`. These are temporary test artifacts, not
+delivery records; none were deleted. Both untracked and ignored generated files
+were present. Ordinary Git status missed the ignored profile file; the libgit2
+status used by RR reported it. Exact review request
+`6b5e8a52-5494-4c57-ae20-87aa10dc0097` then succeeded with audit
+`7362AFD5-DEB9-42A5-B8C6-F156E8D90F7A`.
+
+Managed reviewer `7440E14B-3E27-4F94-A552-C213C374F6DB`, task
+`01a0b962-8073-7ff2-8d97-3f4f0b198c8b`, used verified Terra/high and the app-generated
+read-only profile against candidate `950aa6ea5bd67bd39f7b4a0aea670af6c5ea2961`.
+Independent source review found no Required, Optional or out-of-scope findings;
+routing, registration tuple preservation and copy-only semantics were checked.
+The reviewer reported the shared-execution skill unavailable in its catalog and
+used the repository's explicit local fallback. Runtime/UI tests remain unrun.
+Reviewer completed and supported `worker_close` confirmed physical closure.
+
+The remaining barrier is generated build permissions: Xcode cache/temp writes,
+resolved offline dependencies, and the tests' home-relative fixture paths are
+not available under the existing managed profile. Do not run elsewhere to evade
+that boundary or claim successful tests. A supported build-permission correction
+needs explicit authorization under AGENTS.md Guardrail Integrity.
+
+Board blocker `rr-p6-guidance-test-runtime` was recorded with request
+`3117cd76-8acb-4320-8d03-553e3c729978`, audit
+`15B77122-C4EB-465B-9887-CDF18D55D413`; it explicitly preserves owner acceptance
+of the candidate and distinguishes it from unfinished verification. Ticket moved
+to Blocked with request `9db51a37-a466-4d6f-acd4-8348285c087c`, audit
+`2E1FBADA-B3DA-4AF0-A6C6-BB000403D04D`. No installation or publication occurred.
+
 ## Guidance prompt — In Progress September 19
 
 Owner explicitly requested `rr-p6-guidance-prompt` move to In Progress.
