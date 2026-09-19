@@ -1,5 +1,33 @@
 # Release Radar delivery state
 
+
+## Guidance focused verification passed — September 19
+
+At the owner's explicit direction, Build Agent 02 performed compilation and tests;
+RO remains a read-only reviewer. Build Agent reported exact clean guidance candidate
+`950aa6ea5bd67bd39f7b4a0aea670af6c5ea2961`, exact RDS revision
+`f986e85e786f55f1d73d6e429de11370399414f7`, and Xcode 26.6. Its existing access
+covered the pinned local dependency; no permission change was required for this
+build role. The candidate's offline pinned libgit2 prerequisite was built locally.
+
+Focused result: **3 passed, 0 failed, 0 skipped; TEST SUCCEEDED**:
+- `OnboardingAcceptanceTests/testLegacyMissingGuidanceBootstrapsWhileOutdatedGuidanceUsesManagedUpgradePrompt`
+- `OnboardingAcceptanceTests/testBlankAndExistingDocumentationProjectsResumeIntoBootstrapWithoutSyntheticLifecycleState`
+- `ProjectDocumentationRenderingTests/testOnboardingNativeCopyUsesTheManagedUpgradePromptForOutdatedGuidance`
+
+Evidence is Build Agent-attributed. RO confirmed these test scopes cover the pending
+guidance behavior, with no concrete additional gap; it did not independently read
+the inaccessible result files or repeat the existing source review.
+Generated `.build/native-checks/guidance-focused-20260919.xcresult`, matching log,
+and `guidance-libgit2-20260919.log` remain temporary verification resources in
+managed checkout `delivery-722d3858-1574-4c2d-ad6e-71a09e1fd18e`; none were deleted.
+This durable record supersedes the earlier claim that the guidance tests are unrun.
+No source, security configuration, installation, release or RR state was changed.
+The separate permission candidate `60955d6a` is not validated by this run. Board
+completion/acceptance remains pending supported evidence/state reconciliation;
+no acceptance or managed-sandbox validation is inferred from this build result.
+
+
 ## Managed build-permission correction — reviewed candidate, verification blocked September 19
 
 Final source review of `60955d6a` found no Required findings. Legacy profile
