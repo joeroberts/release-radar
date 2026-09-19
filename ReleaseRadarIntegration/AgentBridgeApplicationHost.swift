@@ -25,11 +25,19 @@ enum AgentBridgeApplicationError: Error, LocalizedError, Equatable {
     }
 }
 
+struct AgentBridgeHealthSnapshot: Equatable, Sendable {
+    let generation: UInt64
+    let observedAt: Date
+    let health: BridgeConnectionHealth?
+}
+
 final class AgentBridgeApplicationHost: @unchecked Sendable {
     private let service: SMAppService
     private let callback: AgentBridgeAppCallback
     private let ownedStore: DeliveryStore?
     private let contextHandoff: CodexContextHandoffHost?
+    private let connectionHealthChanged: @Sendable (AgentBridgeHealthSnapshot) -> Void
+    private let requestedWireVersion: Int
     private var connection: NSXPCConnection?
     private var registeredHere = false
     private let healthLock = NSLock()
@@ -41,6 +49,8 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         ownedStore: DeliveryStore? = nil,
         contextHandoff: CodexContextHandoffHost? = nil,
         maintenanceMode: DocumentationMaintenanceMode? = nil,
+        requestedWireVersion: Int = ReleaseRadarBridgeTransport.wireVersion,
+        connectionHealthChanged: @escaping @Sendable (AgentBridgeHealthSnapshot) -> Void = { _ in },
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
         afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
@@ -56,15 +66,19 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         )
         self.ownedStore = ownedStore
         self.contextHandoff = contextHandoff
+        self.connectionHealthChanged = connectionHealthChanged
+        self.requestedWireVersion = requestedWireVersion
     }
 
     static func start(
         databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
         executionAssignments: (any ProjectExecutionAssignmentPreparing)? = nil,
         executionAssignmentRoot: (@Sendable () throws -> URL)? = nil,
+        requestedWireVersion: Int = ReleaseRadarBridgeTransport.wireVersion,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in },
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in },
-        afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
+        afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in },
+        connectionHealthChanged: @escaping @Sendable (AgentBridgeHealthSnapshot) -> Void = { _ in }
     ) async throws -> AgentBridgeApplicationHost {
         guard executionAssignments == nil || executionAssignmentRoot != nil else { throw ProjectExecutionError.unavailable }
         let store = DeliveryStore(databaseURL: databaseURL, executionAssignmentRoot: executionAssignmentRoot)
@@ -79,6 +93,8 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             queries: AgentQueryDispatcher(store: store),
             ownedStore: store,
             contextHandoff: .production,
+            requestedWireVersion: requestedWireVersion,
+            connectionHealthChanged: connectionHealthChanged,
             beforeDispatch: beforeDispatch,
             afterDispatchBeforeReply: afterDispatchBeforeReply,
             afterReply: afterReply
@@ -105,7 +121,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     }
 
     func disconnectCallback() {
-        healthLock.withLock { healthGeneration &+= 1 }
+        publishStaleHealth()
         connection?.invalidate()
         connection = nil
     }
@@ -133,6 +149,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
                 guard health.wireVersion == ReleaseRadarBridgeTransport.wireVersion else {
                     gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Bridge version mismatch")); return
                 }
+                self.publishHealth(health, generation: generation)
                 gate.resume(returning: health)
             }
         }
@@ -205,14 +222,14 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         connection.exportedInterface = NSXPCInterface(with: ReleaseRadarAppCallbackXPC.self)
         connection.exportedObject = callback
         connection.setCodeSigningRequirement(brokerRequirement)
-        connection.resume()
         connection.invalidationHandler = { [weak self] in
-            guard let self else { return }; self.healthLock.withLock { self.healthGeneration &+= 1 }
+            self?.publishStaleHealth()
         }
         connection.interruptionHandler = { [weak self] in
-            guard let self else { return }; self.healthLock.withLock { self.healthGeneration &+= 1 }
+            self?.publishStaleHealth()
         }
         self.connection = connection
+        connection.resume()
 
         do {
             let returnedVersion = try await awaitRegistration(on: connection)
@@ -256,6 +273,22 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         }
     }
 
+    private func publishStaleHealth() {
+        let snapshot = healthLock.withLock { () -> AgentBridgeHealthSnapshot in
+            healthGeneration &+= 1
+            return .init(generation: healthGeneration, observedAt: Date(), health: nil)
+        }
+        connectionHealthChanged(snapshot)
+    }
+
+    private func publishHealth(_ health: BridgeConnectionHealth, generation: UInt64) {
+        let snapshot = healthLock.withLock { () -> AgentBridgeHealthSnapshot? in
+            guard healthGeneration == generation else { return nil }
+            return .init(generation: generation, observedAt: Date(), health: health)
+        }
+        if let snapshot { connectionHealthChanged(snapshot) }
+    }
+
     private func awaitRegistration(on connection: NSXPCConnection) async throws -> Int {
         try await withCheckedThrowingContinuation { continuation in
             let gate = AgentBridgeContinuationGate(continuation)
@@ -268,7 +301,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
                 gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Broker registration timed out"))
             }
-            proxy.registerApp(ReleaseRadarBridgeTransport.wireVersion) { version in
+            proxy.registerApp(requestedWireVersion) { version in
                 gate.resume(returning: version)
             }
         }

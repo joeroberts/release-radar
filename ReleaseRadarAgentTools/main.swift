@@ -28,7 +28,7 @@ private final class BridgeClient: @unchecked Sendable {
 
     init() throws {
         guard let brokerRequirement = ReleaseRadarBridgeTransport.brokerRequirement else {
-            throw ToolFailure.handshakeFailed(handshakeResult)
+            throw ToolFailure.handshakeFailed(.transportFailure(stage: .connection))
         }
 #if DEBUG
         requestedWireVersion = ProcessInfo.processInfo.environment["RELEASE_RADAR_WIRE_VERSION"]
@@ -46,7 +46,7 @@ private final class BridgeClient: @unchecked Sendable {
         let handshakeResult = handshake()
         guard case .compatible = handshakeResult else {
             connection.invalidate()
-            throw ToolFailure.appUnavailable
+            throw ToolFailure.handshakeFailed(handshakeResult)
         }
     }
 
@@ -105,6 +105,27 @@ private final class BridgeClient: @unchecked Sendable {
     }
 }
 
+#if DEBUG
+private final class AppHealthProbeGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private let semaphore = DispatchSemaphore(value: 0)
+    private var outcome: String?
+
+    func settle(_ value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard outcome == nil else { return }
+        outcome = value
+        semaphore.signal()
+    }
+
+    func wait() -> String {
+        guard semaphore.wait(timeout: .now() + 5) == .success else { return "timeout" }
+        return lock.withLock { outcome ?? "timeout" }
+    }
+}
+#endif
+
 private struct MCPServer {
     private var initialized = false
 
@@ -133,6 +154,18 @@ private struct MCPServer {
                   let name = params["name"] as? String,
                   let arguments = params["arguments"] as? [String: Any]
             else { return error(id: id, code: -32602, message: "Invalid tool arguments") }
+#if DEBUG
+            if ProcessInfo.processInfo.environment["RELEASE_RADAR_TEST_APP_HEALTH_PROBE"] == "1" {
+                guard name == "release_radar_transition_ticket" else {
+                    return error(id: id, code: -32602, message: "The fixed app-health probe accepts only the transition-ticket fixture call")
+                }
+                let outcome = Self.appHealthProbeOutcome()
+                return success(id: id, result: [
+                    "content": [["type": "text", "text": outcome]],
+                    "isError": outcome != "denied",
+                ])
+            }
+#endif
             do {
                 let envelope = try Self.makeEnvelope(tool: name, arguments: arguments)
                 let response: Data
@@ -155,6 +188,29 @@ private struct MCPServer {
             return error(id: id, code: -32601, message: "Method not found")
         }
     }
+
+#if DEBUG
+    private static func appHealthProbeOutcome() -> String {
+        guard let brokerRequirement = ReleaseRadarBridgeTransport.brokerRequirement else { return "unavailable" }
+        let connection = NSXPCConnection(
+            machServiceName: ReleaseRadarBridgeTransport.appMachService,
+            options: []
+        )
+        connection.remoteObjectInterface = NSXPCInterface(with: ReleaseRadarAppBrokerXPC.self)
+        connection.setCodeSigningRequirement(brokerRequirement)
+        connection.resume()
+        defer { connection.invalidate() }
+
+        let gate = AppHealthProbeGate()
+        guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
+            gate.settle("denied")
+        }) as? ReleaseRadarAppBrokerXPC else { return "denied" }
+        proxy.connectionHealth(ReleaseRadarBridgeTransport.wireVersion) { data in
+            gate.settle(data.isEmpty ? "denied" : "unexpectedReply")
+        }
+        return gate.wait()
+    }
+#endif
 
     private static func makeEnvelope(tool: String, arguments: [String: Any]) throws -> Data {
         let version = try integer("version", in: arguments)

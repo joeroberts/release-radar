@@ -102,9 +102,14 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     let codexPluginShippedCapability: RecognizedPluginCapability?
     private(set) var recoveryStartupError: String?
     private(set) var recoveryResumedAtLaunch = false
+    private(set) var agentBridgeStartupError: AgentBridgeApplicationError?
     private let codexPluginPackage: CodexPluginPackage?
     private var agentBridgeHost: AgentBridgeApplicationHost?
     private var executionAssignmentPreparer: ProjectExecutionAssignmentCoordinator?
+    private var agentBridgeHealthSnapshot: AgentBridgeHealthSnapshot?
+    private var agentBridgeHealthObserver: (@MainActor (AgentBridgeHealthSnapshot) -> Void)?
+    private var agentBridgeHostID: UUID?
+    private var agentBridgeHealthGeneration: UInt64 = 0
 
     private init() {
         let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
@@ -185,26 +190,61 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         let preparer = executionAssignmentPreparer ?? ProjectExecutionSetupClient.assignments(plugin: codexPluginCoordinator)
         executionAssignmentPreparer = preparer
         let coordinator = notificationCoordinator
-        agentBridgeHost = try await AgentBridgeApplicationHost.start(
-            databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
-            executionAssignments: preparer,
-            executionAssignmentRoot: ProjectExecutionFileStore.applicationRoot,
-            afterReply: { envelope, result in
-                await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
-            }
-        )
+        agentBridgeHealthSnapshot = nil
+        let hostID = UUID()
+        agentBridgeHostID = hostID
+        do {
+            agentBridgeHost = try await AgentBridgeApplicationHost.start(
+                databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
+                executionAssignments: preparer,
+                executionAssignmentRoot: ProjectExecutionFileStore.applicationRoot,
+                afterReply: { envelope, result in
+                    await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+                },
+                connectionHealthChanged: { [weak self] snapshot in
+                    Task { @MainActor [weak self] in
+                        self?.publishAgentBridgeHealth(snapshot, from: hostID)
+                    }
+                }
+            )
+            agentBridgeStartupError = nil
+        } catch {
+            let startupError = (error as? AgentBridgeApplicationError)
+                ?? .connectFailed(error.localizedDescription)
+            agentBridgeHostID = nil
+            agentBridgeStartupError = startupError
+            throw startupError
+        }
     }
 
     func refreshAgentBridgeHealth() async throws -> BridgeConnectionHealth {
         guard let agentBridgeHost else {
+            if let agentBridgeStartupError { throw agentBridgeStartupError }
             throw AgentBridgeApplicationError.connectFailed("Release Radar is not connected to its bridge")
         }
         return try await agentBridgeHost.refreshConnectionHealth()
+    }
+
+    func observeAgentBridgeHealth(_ observer: @escaping @MainActor (AgentBridgeHealthSnapshot) -> Void) {
+        agentBridgeHealthObserver = observer
+        if let agentBridgeHealthSnapshot { observer(agentBridgeHealthSnapshot) }
     }
 
     func stopSharedServices() async {
         await notificationCoordinator.stopAndDrain()
         await agentBridgeHost?.stopAndDrain()
         agentBridgeHost = nil
+    }
+
+    private func publishAgentBridgeHealth(_ snapshot: AgentBridgeHealthSnapshot, from hostID: UUID) {
+        guard agentBridgeHostID == hostID else { return }
+        agentBridgeHealthGeneration &+= 1
+        let published = AgentBridgeHealthSnapshot(
+            generation: agentBridgeHealthGeneration,
+            observedAt: snapshot.observedAt,
+            health: snapshot.health
+        )
+        agentBridgeHealthSnapshot = published
+        agentBridgeHealthObserver?(published)
     }
 }

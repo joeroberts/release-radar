@@ -51,7 +51,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         )
     }
 
-    func testAppHealthRefreshUsesTheAuthenticatedAppBrokerAndToolsCannotQueryIt() async throws {
+    func testAppHealthRefreshPublishesAvailableThenStaleSnapshots() async throws {
         let bridgeService = SMAppService.agent(
             plistName: ReleaseRadarBridgeTransport.launchAgentPlistName
         )
@@ -66,7 +66,11 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         }
 
         let fixture = try await makeTransportFixture()
-        let host = try await AppDelegate().startAgentBridge(databaseURL: fixture.databaseURL)
+        let healthSnapshots = HealthSnapshotCapture()
+        let host = try await AgentBridgeApplicationHost.start(
+            databaseURL: fixture.databaseURL,
+            connectionHealthChanged: { healthSnapshots.append($0) }
+        )
         defer {
             host.disconnectCallback()
             try? host.unregister()
@@ -77,24 +81,31 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(health.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
         XCTAssertTrue(health.isRegisteredAppConnection)
         XCTAssertNil(health.lastAuthenticatedToolsContact)
+        let availableSnapshot = try XCTUnwrap(healthSnapshots.last)
+        XCTAssertEqual(availableSnapshot.health, health)
         let countsAfterRefresh = try await bridgeWriteCounts(fixture.store)
         XCTAssertEqual(countsAfterRefresh, countsBeforeRefresh)
 
-        let packagedTool = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
-        let deniedHealthQuery = try Self.runTool(
-            packagedTool,
-            tool: "release_radar_connection_health",
-            arguments: [
-                "version": 1,
-                "requestID": "99999999-9999-4999-8999-999999999960",
-                "projectRoot": fixture.projectRoot.path,
-                "reason": "Tools must not query app-only connection health",
-            ]
-        )
-        XCTAssertEqual(jsonRPCErrorCode(deniedHealthQuery), -32602)
-        let countsAfterDeniedToolsQuery = try await bridgeWriteCounts(fixture.store)
-        XCTAssertEqual(countsAfterDeniedToolsQuery, countsBeforeRefresh)
+        host.disconnectCallback()
+        let staleSnapshot = try XCTUnwrap(healthSnapshots.last)
+        XCTAssertNil(staleSnapshot.health)
+        XCTAssertGreaterThan(staleSnapshot.generation, availableSnapshot.generation)
+
+        let incompatibleWireVersion = ReleaseRadarBridgeTransport.wireVersion == Int.max
+            ? ReleaseRadarBridgeTransport.wireVersion - 1
+            : ReleaseRadarBridgeTransport.wireVersion + 1
+        do {
+            _ = try await AgentBridgeApplicationHost.start(
+                databaseURL: fixture.databaseURL,
+                requestedWireVersion: incompatibleWireVersion
+            )
+            XCTFail("A registration version mismatch must not create an app bridge host")
+        } catch let error as AgentBridgeApplicationError {
+            guard case let .connectFailed(message) = error else {
+                return XCTFail("Expected a typed app connection failure, got \(error)")
+            }
+            XCTAssertTrue(message.localizedCaseInsensitiveContains("version mismatch"))
+        }
     }
 
     private final class OneShotRequestGate: @unchecked Sendable {
@@ -189,6 +200,19 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             lock.lock()
             defer { lock.unlock() }
             return result
+        }
+    }
+
+    private final class HealthSnapshotCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var snapshots: [AgentBridgeHealthSnapshot] = []
+
+        func append(_ snapshot: AgentBridgeHealthSnapshot) {
+            lock.withLock { snapshots.append(snapshot) }
+        }
+
+        var last: AgentBridgeHealthSnapshot? {
+            lock.withLock { snapshots.last }
         }
     }
 
@@ -503,10 +527,33 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(activePhaseState, expectedActivePhaseState)
 
         let rejectedPeer = try Self.runTool(wrongTool, tool: "release_radar_transition_ticket", arguments: arguments)
-        XCTAssertEqual(try decodeCommandResult(rejectedPeer).error, .appUnavailable)
-        XCTAssertEqual(mcpIsError(rejectedPeer), true)
+        // Transport denial does not identify which admission predicate rejected
+        // the peer; assert only the bounded pre-submission result.
+        XCTAssertEqual(jsonRPCErrorCode(rejectedPeer), -32001)
+        let rejectionMessage = jsonRPCErrorMessage(rejectedPeer) ?? ""
+        XCTAssertTrue(rejectionMessage.contains("connection"))
+        XCTAssertTrue(rejectionMessage.contains("not submitted"))
+        XCTAssertNil(mcpIsError(rejectedPeer))
         let persistedStateAfterRejectedPeer = try await exactPersistedState()
         XCTAssertEqual(persistedStateAfterRejectedPeer, persistedStateBeforeRejectedPeer)
+
+#if DEBUG
+        // The packaged tool has the accepted tools identity but not the app
+        // identity; the fixture's wrong tool has its distinct identifier.
+        // Both run as this test host's UID, so this is not cross-UID evidence.
+        for helper in [packagedTool, wrongTool] {
+            let appHealthProbe = try Self.runTool(
+                helper,
+                tool: "release_radar_transition_ticket",
+                arguments: arguments,
+                environment: ["RELEASE_RADAR_TEST_APP_HEALTH_PROBE": "1"]
+            )
+            XCTAssertEqual(mcpIsError(appHealthProbe), false)
+            XCTAssertEqual(Self.appHealthProbeOutcome(appHealthProbe), "denied")
+        }
+        let persistedStateAfterHealthProbes = try await exactPersistedState()
+        XCTAssertEqual(persistedStateAfterHealthProbes, persistedStateBeforeRejectedPeer)
+#endif
 
         let wrongBridge = try Self.runTool(
             packagedTool,
@@ -1886,6 +1933,10 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
 
     private func mcpIsError(_ response: [String: Any]) -> Bool? {
         (response["result"] as? [String: Any])?["isError"] as? Bool
+    }
+
+    private static func appHealthProbeOutcome(_ response: [String: Any]) -> String? {
+        ((response["result"] as? [String: Any])?["content"] as? [[String: Any]])?.first?["text"] as? String
     }
 
     private func transportCounts(_ store: DeliveryStore) async throws -> [Int64] {

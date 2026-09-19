@@ -354,6 +354,17 @@ struct SettingsView: View {
                 ]
             )
         }
+        .onChange(of: model.connectorHealthAnnouncement) { _, announcement in
+            guard let announcement else { return }
+            NSAccessibility.post(
+                element: NSApp as Any,
+                notification: .announcementRequested,
+                userInfo: [
+                    .announcement: announcement,
+                    .priority: NSAccessibilityPriorityLevel.high.rawValue,
+                ]
+            )
+        }
     }
 
     @ViewBuilder

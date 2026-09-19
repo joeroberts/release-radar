@@ -110,6 +110,9 @@ final class AppModel {
     var connectorHealthDetail = "Check the app bridge to see its current local connection state."
     var connectorLastContact = "Not yet observed"
     var connectorHealthChecking = false
+    var connectorHealthAnnouncement: String?
+    private(set) var connectorHealthSnapshotGeneration: UInt64?
+    private(set) var connectorHealthObservedAt: Date?
     var selectedReviewItemID: ReviewItemID?
     var pushoverAppToken = ""
     var pushoverUserKey = ""
@@ -136,6 +139,7 @@ final class AppModel {
     private var notificationCoordinator: AppNotificationCoordinator
     private var projectOnboarding: FolderProjectOnboarding
     private let recoveryServices: ReleaseRadarAppServices?
+    private let connectorHealthLoader: (() async throws -> BridgeConnectionHealth)?
     private var recoveryStartupError: String?
     private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
@@ -194,6 +198,7 @@ final class AppModel {
         dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
+        connectorHealthLoader: (() async throws -> BridgeConnectionHealth)? = nil,
         recoveryStartupError: String? = nil,
         recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
@@ -234,6 +239,7 @@ final class AppModel {
         }
         self.requestIDGenerator = requestIDGenerator
         self.recoveryServices = recoveryServices
+        self.connectorHealthLoader = connectorHealthLoader
         self.recoveryStartupError = recoveryStartupError
         self.recoveryResumedAtLaunch = recoveryResumedAtLaunch
         self.notificationCoordinator = notificationCoordinator
@@ -241,6 +247,9 @@ final class AppModel {
                 store: store,
                 dispatcher: PushoverNotificationDispatcher(store: store, credentials: resolvedKeychain)
             )
+        recoveryServices?.observeAgentBridgeHealth { [weak self] snapshot in
+            self?.applyConnectorHealthSnapshot(snapshot)
+        }
     }
 
 #if DEBUG
@@ -260,6 +269,7 @@ final class AppModel {
         dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
+        connectorHealthLoader: (() async throws -> BridgeConnectionHealth)? = nil,
         recoveryStartupError: String? = nil,
         recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
@@ -281,6 +291,7 @@ final class AppModel {
             dashboardLoader: dashboardLoader,
             requestIDGenerator: requestIDGenerator,
             recoveryServices: recoveryServices,
+            connectorHealthLoader: connectorHealthLoader,
             recoveryStartupError: recoveryStartupError,
             recoveryResumedAtLaunch: recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
@@ -3761,26 +3772,57 @@ final class AppModel {
         connectorHealthChecking = true
         defer { connectorHealthChecking = false }
         do {
-            let health = try await recoveryServices?.refreshAgentBridgeHealth()
+            let health: BridgeConnectionHealth?
+            if let connectorHealthLoader {
+                health = try await connectorHealthLoader()
+            } else {
+                health = try await recoveryServices?.refreshAgentBridgeHealth()
+            }
             guard let health, health.isRegisteredAppConnection else {
-                connectorHealthStatus = "Connection failed"
-                connectorHealthDetail = "Release Radar is not connected to its bridge. Reopen Release Radar, then check again."
-                connectorLastContact = "Not yet observed"
+                applyConnectorConnectionFailure()
                 return
             }
-            connectorHealthStatus = "App bridge: Available"
-            connectorHealthDetail = "The app can reach its local bridge. This does not certify every Codex client."
-            connectorLastContact = health.lastAuthenticatedToolsContact.map {
-                "Last authenticated connector contact: \($0.formatted(date: .abbreviated, time: .shortened))"
-            } ?? "Not yet observed"
+            applyConnectorHealth(health)
         } catch {
-            let mismatch = error.localizedDescription.localizedCaseInsensitiveContains("version mismatch")
-            connectorHealthStatus = mismatch ? "Version mismatch" : "Connection failed"
-            connectorHealthDetail = mismatch
-                ? "The Release Radar app and bridge use different versions. Reopen Release Radar, then check the connection again."
-                : "The Release Radar connector could not connect. After updating Release Radar, quit and reopen Codex, then check the connection again. Existing tasks should first reach a safe stopping point."
-            connectorLastContact = "Not yet observed"
+            applyConnectorFailure(error)
         }
+    }
+
+    func applyConnectorHealthSnapshot(_ snapshot: AgentBridgeHealthSnapshot) {
+        guard connectorHealthSnapshotGeneration ?? 0 <= snapshot.generation else { return }
+        connectorHealthSnapshotGeneration = snapshot.generation
+        connectorHealthObservedAt = snapshot.observedAt
+        if let health = snapshot.health, health.isRegisteredAppConnection {
+            applyConnectorHealth(health)
+        } else {
+            applyConnectorConnectionFailure()
+        }
+    }
+
+    private func applyConnectorHealth(_ health: BridgeConnectionHealth) {
+        connectorHealthStatus = "App bridge: Available"
+        connectorHealthDetail = "The app can reach its local bridge. This does not certify every Codex client."
+        connectorLastContact = health.lastAuthenticatedToolsContact.map {
+            "Last authenticated connector contact: \($0.formatted(date: .abbreviated, time: .shortened))"
+        } ?? "Not yet observed"
+        connectorHealthAnnouncement = "App bridge available. \(connectorLastContact)"
+    }
+
+    private func applyConnectorConnectionFailure() {
+        connectorHealthStatus = "Connection failed"
+        connectorHealthDetail = "Release Radar is not connected to its bridge. Reopen Release Radar, then check again."
+        connectorLastContact = "Not yet observed"
+        connectorHealthAnnouncement = "Connection failed. \(connectorHealthDetail)"
+    }
+
+    private func applyConnectorFailure(_ error: Error) {
+        let mismatch = error.localizedDescription.localizedCaseInsensitiveContains("version mismatch")
+        connectorHealthStatus = mismatch ? "Version mismatch" : "Connection failed"
+        connectorHealthDetail = mismatch
+            ? "The Release Radar app and bridge use different versions. Reopen Release Radar, then check the connection again."
+            : "The Release Radar connector could not connect. After updating Release Radar, quit and reopen Codex, then check the connection again. Existing tasks should first reach a safe stopping point."
+        connectorLastContact = "Not yet observed"
+        connectorHealthAnnouncement = "\(connectorHealthStatus). \(connectorHealthDetail)"
     }
 
     private func beginCodexPluginOperation(_ operation: CodexPluginOperation) {
