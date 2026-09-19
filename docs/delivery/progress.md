@@ -57,11 +57,19 @@ remains separate.
 It confirmed production health ordering and signing, with two Required test fixes:
 exercise actual app-services publication, and bound waits/release tasks on failure
 so fixture cleanup is reachable. Exact correction request is preserved in the brief.
+Review connection physically closed and its task archived after findings were saved.
+Correction assignment `delivery-9d3d0a04-16e2-4166-8551-184623f2e1cc`, audit
+`A20EEAD8-9C58-4B99-83E6-E2B5C487F2FF`, started from `ff0d29b2`.
+Worker `40A31CC2-FAB8-47E6-ADB2-5843CC32FF85`, task
+`01a0ba37-c117-7951-a588-310caeccd0e7`, verified Terra/medium,
+workspaceWrite, network disabled. It owns bounded test/source corrections;
+Build Agent prepares ignored dependencies. The owner has an additional macOS
+account available; identity and session setup remain pending. No account changes.
 
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
 supported recovery acceptance, release delivery, and supported ticket reconciliation.
-Owner's clean-session availability question remains unanswered. No service, account,
+Owner has offered a test account; its identity and broker/session state await confirmation. No service, account,
 permission, installed app, owner data or ticket completion has been changed.
 
 ### Earlier connector iteration evidence (superseded where above differs)
