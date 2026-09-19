@@ -1,5 +1,33 @@
 # Release Radar delivery state
 
+## Proposed RR self-onboarding plan import — awaiting owner approval
+
+Exact target: canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`; project `project-fffdc0e0b15b9b86`; root `project-fffdc0e0b15b9b86-root-0`; registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1. Fresh supported inventory is complete with zero phases, tickets and active tasks. No app writes are authorized by this preview alone. This records remaining work, not historical completion. Owner conversation corrections override stale historical ledger wording.
+
+Propose three phases in the existing sequence: `rr-p6-remediation` / **P6-remediation**, `rr-phase-7` / **Phase 7 — Portable continuity**, `rr-phase-8` / **Phase 8 — Production presentation and package**. Every ticket starts in Backlog except the explicitly stopped metrics item, which starts Blocked. No phase is activated, task started, prior work accepted, readiness inferred, or completion backfilled by this import. Proposed/future scope remains non-executable without the existing authorization and review requirements. Ticket IDs below are the exact proposed new stable IDs.
+
+| Ticket ID | Phase | Outcome | Boundary |
+| --- | --- | --- | --- |
+| rr-p6-guidance-prompt | P6-remediation | Correct the v2-to-v3 guidance update prompt | Outdated guidance selects upgrade, missing guidance retains bootstrap; regression coverage. |
+| rr-p6-connector-recovery | P6-remediation | Recover the Codex connector after app upgrades | Existing issue #99; supported reconnect and actionable app health; no signing bypass. |
+| rr-p6-outcome3-closeout | P6-remediation | Complete remaining Outcome 3 verification and closeout | Reconcile corrections, reviews, PRs and release evidence; preserve already-delivered 0.1.21; owner merges. |
+| rr-p6-doc-reconciliation | P6-remediation | Reconcile repository delivery documentation | After Outcome 3 closeout; resolve stale/conflicting plans and IDs, preserve history. |
+| rr-p6-plan-reconstruction | P6-remediation | Populate an existing project's plan through an in-app review and Apply flow | Supported-projection reconstruction after document reconciliation; #101 supplies onboarding entry/experience. No duplicate importer. |
+| rr-p6-metrics | P6-remediation | Correct metric labels, icons and value alignment | Former 6F; BLOCKED/STOPPED, requires explicit owner resume. |
+| rr-p6-manage-project | P6-remediation | Consolidate project controls in Manage Project | Former 6G: documentation activation, shared execution, repository access and evidence controls. |
+| rr-p6-navigation | P6-remediation | Complete Archive/Remove relocation and remaining navigation | Former 6H; exclude delivered toolbar/search. |
+| rr-p6-guided-setup | P6-remediation | Assess and deliver the approved remainder of guided shared-execution setup | Former proposed 6I; first reconcile delivered Outcome 3, implementation remains proposed. |
+| rr-p7-export | Phase 7 | Export a self-contained project continuity package | RM5: project records, documents and evidence; exporter-produced fixture. |
+| rr-p7-import | Phase 7 | Import and recover a project continuity package | RM6; depends on exporter fixture; coordinated file/store recovery and installed round trip. |
+| rr-p8-presentation | Phase 8 | Complete remaining RDS coverage and production wordmark | Preserve approved AppIcon and existing appearance scope. |
+| rr-p8-maintenance | Phase 8 | Resolve scoped compiler warnings | RM4: optional-.none and test actor isolation; no unrelated modernization. |
+| rr-p8-distribution | Phase 8 | Decide distribution audience and verify its package lifecycle | RM9: owner-only/direct/other decision before wider-distribution work; preserve separate provisioning/signing permissions. |
+| rr-p8-version-evidence | Phase 8 | Complete verified build and installed-version evidence links | Remaining P17 scope; reconcile delivered evidence before implementation. |
+| rr-p8-stale-helper | Phase 8 | Verify Settings Restart helper against a real stale production helper | Existing deferred Phase 8 isolated account/VM acceptance; separate environment authorization required. |
+
+Source: full-product plan owner-corrected P6-remediation grouping and delivery sequence, Outcome 3 correction brief/#99, observed copy-prompt defect, #101, current owner sequencing. Phase 7 and Phase 8 scope is planned future work, not implementation authorization. Explicitly unscheduled #91/#92/#93/#94/#95/#96/#3 and other discovery backlog remain outside this initial phase import. Existing self-onboarding technical setup is complete and is not recreated as a pending ticket. Current PRs #98/#100 are open per fresh GitHub readback. Task decomposition and formal dependency links will be previewed separately before execution; this proposal creates only the phase/ticket list requested by the owner.
+
+
 ## September 19 catalog recovery — accepted and verified
 
 Owner approved verified metadata recovery and acceptance after full transition validation. Canonical repair restores three preserved documents/entries and Outcome 2 completed/nonAuthoritative metadata from `93dff19b`, preserving stable IDs. Main verified exact metadata and restored document bytes; native documentation/diff checks passed. RO Coordinator 05 independently inspected current entries, restored content and generated indexes: PASS, no Required findings; historical equality and app diagnostic were Main-attributed. Supported transition isValid is true for candidate `e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e`. The exact committed acceptance request follows for recovery provenance; do not issue a new request. Earlier blocker descriptions below are superseded by this checkpoint.
