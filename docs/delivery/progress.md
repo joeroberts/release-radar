@@ -51,7 +51,10 @@ then compiled and passed all 17 selected recovery/production-Git tests (zero fai
 6.035s), plus documentation and diff checks. Temporary results remain in writer
 `.build/native-checks/rr-preparation-recovery-green-r2.{log,xcresult}` and the
 matching `rr-preparation-recovery-green-r2-doc-check.log`. The same independent
-reviewer is assessing closure of the three findings on this exact correction.
+reviewer passed this exact correction: all three findings resolved, no new Required
+or Optional findings. Main integrated both recovery commits without conflict at
+`424f8fdc0118bb28dc4df103b654f14daf1908f3`. Review task is complete and idle;
+archival follows preservation of this result. No installed recovery is claimed.
 
 Build Agent's read-only release assessment confirmed that app/script version0.1.23
 still embeds plugin0.1.22. The staging script can mechanically sign that mismatch,
@@ -59,7 +62,12 @@ but existing package acceptance requires matching versions. Before final packagi
 finish the authorized plugin manifest/digest registry and focused expectations in
 the lifecycle, shared-execution and recognized-capability tests. This is a release
 prerequisite, not permission to bypass the blocked managed launcher. No metadata
-changes or packaging were performed by that assessment.
+changes or packaging were performed by that assessment. Main assigned the minimum
+five-file version/digest consistency change to the same isolated recovery delivery
+task as the packaging prerequisite for installing its fix. No skill content,
+permissions or unrelated implementation is authorized. Build Agent owns focused
+package checks; fresh independent release-metadata review follows. This does not
+authorize other work outside managed execution.
 
 ## Owner deferral — second-Mac acceptance
 
