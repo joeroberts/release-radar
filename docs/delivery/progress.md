@@ -55,6 +55,83 @@ blocker identity is not exposed by the available connector readbacks. No duplica
 blocker or guessed-ID mutation was introduced.
 Archival is conversation cleanup, not ticket acceptance or worker-resource deletion.
 
+
+### Proposed GitHub deferral reconciliation — not applied
+
+To implement the owner's GitHub-only deferral, propose superseding the earlier
+01/03-Pending disposition. Exact reconciliation approval remains pending. Baseline: connector task-plan revision 2; task02
+Completed unchanged. Supersede only pending01/03, with all remaining verification
+obligations retained in GH106 and no false completion. No additions or definition
+revisions. Then request owner review, not acceptance. Save a separate one-ticket
+withdrawal proposal for the accidental unassigned entry; connector cannot Apply it.
+The save-proposal request below returned appUnavailable with no audit receipt;
+preserve it unchanged for retry. No task supersession or lane transition occurred.
+
+```json
+[
+  {
+    "tool": "release_radar_revise_ticket_task_plan",
+    "disposition": "pending",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "8c0316a1-2140-42ea-8919-0e6baa77d18d",
+      "ticketID": "rr-p6-connector-recovery",
+      "expectedRevision": 2,
+      "supersededTaskIDs": [
+        "rr-p6-connector-recovery-task-01",
+        "rr-p6-connector-recovery-task-03"
+      ],
+      "reason": "Owner requested board cleanup and explicitly deferred retained-client second-Mac verification exclusively to GitHub issue106, unscheduled and non-blocking. Supersede pending01/03 without claiming completion; preserve their history and completed task02/evidence unchanged. All remaining verification obligations are retained at https://github.com/joeroberts/release-radar/issues/106."
+    }
+  },
+  {
+    "tool": "release_radar_transition_ticket",
+    "disposition": "pending",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "3e6dce97-1634-4271-b5e8-86acc649431b",
+      "ticketID": "rr-p6-connector-recovery",
+      "ticketTaskPlanRevision": 3,
+      "lane": "needs_review",
+      "reason": "Owner-approved cleanup: merged PR105, installed0.1.23, verified implementation task02 and evidence are complete. Owner moved remaining retained-client verification to unscheduled GH106. Request owner review; do not imply owner acceptance or deferred test success."
+    }
+  },
+  {
+    "tool": "release_radar_save_plan_change_proposal",
+    "disposition": "pending",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "8b7c7cdb-a32c-4e39-8ffb-84715634e723",
+      "proposalID": "rr-cleanup-withdraw-accidental-second-mac-20260919",
+      "expectedPreviousVersion": null,
+      "operations": [
+        {
+          "kind": "retireTicket",
+          "ticketID": "rr-unassigned-second-mac-connector-upgrade",
+          "disposition": "withdrawn",
+          "reason": "Created by Main in error; owner requested GitHub-only issue106. No RR work or phase assignment belongs here. Preserve historical audit, withdraw the unassigned record.",
+          "successorTicketIDs": []
+        }
+      ],
+      "rationale": "Remove the accidental unassigned RR planning entry while preserving history. The only future-work record is GitHub issue106. No other plan changes.",
+      "reason": "Owner cleanup and GitHub-only correction; save exact one-ticket withdrawal for app-owned approval and Apply."
+    }
+  }
+]
+```
+
 ## Current release delivery checkpoint
 
 [PR #105](https://github.com/joeroberts/release-radar/pull/105) was merged by the
