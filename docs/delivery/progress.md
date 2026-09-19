@@ -1,6 +1,34 @@
 # Release Radar delivery state
 
 
+## Connector recovery integration baseline ready
+
+Canonical checkout now uses `codex/connector-recovery-baseline`, baseline
+`6652228c`, combining installed 0.1.22 product source and current delivery records.
+The source comparison against release source `47b86b89` is empty for app, Core,
+Integration, Transport, AgentTools, Bridge, tests and release script. Merges were
+conflict-free; AGENTS.md retained current v3 guidance and unrelated untracked
+`.codex/config.toml` and `.codex/hooks.json` were preserved. Packaged documentation
+check and diff checks passed. No new product behavior or installation occurred.
+
+Main now writes the canonical progress ledger here rather than the historical
+closeout checkout. Earlier branches/worktrees remain preserved.
+
+Standing chief architect `01a0b413-4623-73f3-a3c5-81a1b5bf8c69` was restored for
+the named XPC trust/recovery boundary consultation, explicitly Astra/high. Its
+missing cwd was recreated as a detached worktree at baseline6652228c without
+replacing prior files. This assignment is source/design read-only; it has no
+implementation, compilation, permission or app-state authority. The earlier
+managed diagnostic worker is physically closed and archived.
+
+Managed delivery still selects Terra/medium and review Terra/high. The earlier
+Sol/high implementation preference is not a runtime capability. Main will carry
+the architecture decision into a bounded supported assignment, disclose actual
+settings and retain independent review; no model/profile configuration change or
+alternate unrestricted implementation is authorized.
+
+
+
 ## Connector recovery diagnosis complete — implementation not started
 
 The supported diagnostic worker completed with no file changes and physical
