@@ -2522,3 +2522,30 @@ Exact pending preparation envelope:
   "reason": "Prepare approved 0.1.23 local release metadata after tested helper assertion correction; second-Mac acceptance remains deferred."
 }
 ```
+
+### Plugin version consistency correction
+
+Prior release writer closed, partial metadata committed as6690634c. Complete
+plugin manifest0.1.23, recognized capability digest preserving previous versions,
+and matching existing lifecycle/shared-skill tests. No skill contents, signing
+policy, configuration or feature changes. Main reviews the literal metadata diff;
+Build Agent runs affected checks and packaging. Second-Mac acceptance deferred.
+
+Exact pending preparation:
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "a81c6fc2-a5ac-4fe5-b1be-da70c2ff33db",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-45a9dcbd-058c-4f47-a1b4-aedb87022f6a",
+  "reason": "Complete approved 0.1.23 release metadata consistency: bundled plugin manifest, recognized digest and corresponding existing tests only."
+}
+```

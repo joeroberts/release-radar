@@ -26,6 +26,20 @@ Next: bounded managed 0.1.23 release metadata, then Build Agent signed packaging
 repo `dist/` installer and installation verification. Native second-Mac acceptance
 remains deferred and unverified. No release or installation has occurred yet.
 
+Release metadata assignment `delivery-45a9dcbd-058c-4f47-a1b4-aedb87022f6a`
+(audit `BB59D8AA-8E0E-4A77-A9A1-C36079647257`) started at `7ce55be5`;
+worker `E5AC2F3E-FF7A-4B7C-92D7-B383C0DED9DF`, task
+`01a0ba56-bcce-77a2-a9f9-0454e8949434`, verified Terra/medium workspaceWrite,
+network disabled. App/script version changes are present; shell syntax passes.
+Plugin manifest, exact capability digest and matching tests also require the same
+0.1.23 version update. A supported follow-up was rejected as assignment no longer
+current while status still reported running; Main requested supported interruption.
+Supported interrupt confirmed interrupted, then physical connection closure succeeded.
+The two metadata changes are preserved in commit `6690634c`; task archived.
+Ignored build prerequisites were preserved under `.build/connector-recovery-45a9dcbd-preserved/`.
+Continue plugin consistency through a fresh correction assignment; no bypass,
+installation or packaging occurred.
+
 ## Local integration and completed UI findings
 
 Reviewed candidate `191d1373` is integrated locally at `8ad83218` on
