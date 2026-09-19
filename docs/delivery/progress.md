@@ -2,6 +2,77 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+### Owner-approved permissions acceptance and connector closure
+
+Owner approved permissions task completion and ticket acceptance, and directed connector recovery closure with second-Mac verification deferred to GitHub #106. Fresh complete inventory matches permissions plan 1 and connector plan 3. No task definitions change. Review-only image viewing is separately authorized and remains to be implemented; it is not included in this completed permissions scope.
+
+All four ordered commands committed. Permissions task completed at plan revision 2; permissions and connector recovery both read back Accepted. Audits, in envelope order: `4A86F852-D314-4C12-93E8-30A0EBF895A0`, `354F561E-4142-4D01-ABE3-FE3A9F3AD704`, `F8015F87-8D58-4D2A-A887-CD5B2D16401A`, `90EB8732-B0BA-4DB2-A006-EBBE25912575`. This supersedes older pending owner-acceptance statements below. Deferred second-Mac verification remains https://github.com/joeroberts/release-radar/issues/106; no claim that it passed.
+
+```json
+[
+  {
+    "operation": "complete_ticket_task",
+    "envelope": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "679ab024-c983-4e12-8a23-61220a935387",
+      "ticketID": "rr-p6-managed-build-permissions",
+      "taskID": "rr-p6-managed-build-permissions-task-01",
+      "expectedRevision": 1,
+      "reason": "Owner approved the exact permissions completion and acceptance reconciliation; applicable available successful task-scoped evidence is recorded."
+    }
+  },
+  {
+    "operation": "transition_ticket",
+    "envelope": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "e6b83dd3-ddde-427a-8f99-962b127df37e",
+      "ticketID": "rr-p6-managed-build-permissions",
+      "lane": "needs_review",
+      "reason": "Verified permissions implementation, independent review and installed isolation checks complete; owner approved completion and acceptance."
+    }
+  },
+  {
+    "operation": "transition_ticket",
+    "envelope": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "eead05f4-0b43-4970-b123-8aa436e86e37",
+      "ticketID": "rr-p6-managed-build-permissions",
+      "lane": "accepted",
+      "ticketTaskPlanRevision": 2,
+      "reason": "Explicit owner acceptance: Permissions: Approved. Complete scoped permissions delivery with recorded verification limitations preserved."
+    }
+  },
+  {
+    "operation": "transition_ticket",
+    "envelope": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "requestID": "723c2a55-44ed-4a53-ae7a-c2fb7d1dc08f",
+      "ticketID": "rr-p6-connector-recovery",
+      "lane": "accepted",
+      "ticketTaskPlanRevision": 3,
+      "reason": "Owner explicitly directed Connector Recovery closure. Delivered implementation is accepted; second-Mac verification remains deferred exclusively to GitHub issue #106 and is not claimed passed."
+    }
+  }
+]
+```
+
+
 Metrics visual-review blocker and lane envelopes committed with audits
 `EF032891-FDFC-4538-A21A-CC684AD222B2` and
 `0F9DB84F-6104-4EA7-B7C6-5FFDCC4C49F2`, respectively:
