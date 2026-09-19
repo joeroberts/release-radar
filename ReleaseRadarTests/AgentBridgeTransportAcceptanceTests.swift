@@ -7,6 +7,211 @@ import XCTest
 
 @MainActor
 final class AgentBridgeTransportAcceptanceTests: XCTestCase {
+    func testTypedHandshakeSettlesOnceAndPreservesCompatibleIncompatibleAndFailureStages() {
+        let wireVersion = ReleaseRadarBridgeTransport.wireVersion
+        let incompatibleWireVersion = wireVersion == Int.max ? wireVersion - 1 : wireVersion + 1
+        let compatible = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            compatible.settle(.reply(version: wireVersion)),
+            .compatible(wireVersion: wireVersion)
+        )
+
+        let mismatch = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            mismatch.settle(.reply(version: incompatibleWireVersion)),
+            .incompatible(expectedVersion: wireVersion, observedPeerVersion: incompatibleWireVersion)
+        )
+
+        // A legacy zero reply means that the peer's supported version was not
+        // observed; it must never be presented as support for version zero.
+        let legacyZero = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            legacyZero.settle(.reply(version: 0)),
+            .incompatible(expectedVersion: wireVersion, observedPeerVersion: nil)
+        )
+
+        let timedOut = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(timedOut.settle(.timedOut(stage: .handshake)), .timeout(stage: .handshake))
+        XCTAssertEqual(
+            timedOut.settle(.reply(version: wireVersion)),
+            .timeout(stage: .handshake),
+            "A late callback must not replace the settled handshake outcome."
+        )
+
+        let failedTransport = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            failedTransport.settle(.transportFailure(stage: .connection)),
+            .transportFailure(stage: .connection)
+        )
+
+        let malformed = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            malformed.settle(.invalidProtocolResponse(stage: .handshake)),
+            .invalidProtocolResponse(stage: .handshake)
+        )
+    }
+
+    func testAppHealthRefreshPublishesAvailableThenStaleSnapshots() async throws {
+        let bridgeService = SMAppService.agent(
+            plistName: ReleaseRadarBridgeTransport.launchAgentPlistName
+        )
+        guard bridgeService.status == .notRegistered else {
+            throw TransportTestError.invalidResponse("Controlled health transport requires an initially unregistered bridge")
+        }
+        let otherApps = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.rekonlabs.ReleaseRadar"
+        ).filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        guard otherApps.isEmpty else {
+            throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before controlled health transport")
+        }
+
+        let fixture = try await makeTransportFixture()
+        let healthSnapshots = HealthSnapshotCapture()
+        let host = try await AgentBridgeApplicationHost.start(
+            databaseURL: fixture.databaseURL,
+            connectionHealthChanged: { healthSnapshots.append($0) }
+        )
+        defer {
+            host.disconnectCallback()
+            try? host.unregister()
+        }
+
+        let countsBeforeRefresh = try await bridgeWriteCounts(fixture.store)
+        let health = try await host.refreshConnectionHealth()
+        XCTAssertEqual(health.health?.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
+        XCTAssertTrue(health.health?.isRegisteredAppConnection == true)
+        XCTAssertNil(health.health?.lastAuthenticatedToolsContact)
+        let availableSnapshot = try XCTUnwrap(healthSnapshots.last)
+        XCTAssertEqual(availableSnapshot, health)
+        let countsAfterRefresh = try await bridgeWriteCounts(fixture.store)
+        XCTAssertEqual(countsAfterRefresh, countsBeforeRefresh)
+
+        host.disconnectCallback()
+        let staleSnapshot = try XCTUnwrap(healthSnapshots.last)
+        XCTAssertNil(staleSnapshot.health)
+        XCTAssertGreaterThan(staleSnapshot.generation, availableSnapshot.generation)
+
+        let incompatibleWireVersion = ReleaseRadarBridgeTransport.wireVersion == Int.max
+            ? ReleaseRadarBridgeTransport.wireVersion - 1
+            : ReleaseRadarBridgeTransport.wireVersion + 1
+        do {
+            _ = try await AgentBridgeApplicationHost.start(
+                databaseURL: fixture.databaseURL,
+                requestedWireVersion: incompatibleWireVersion
+            )
+            XCTFail("A registration version mismatch must not create an app bridge host")
+        } catch let error as AgentBridgeApplicationError {
+            guard case let .connectFailed(message) = error else {
+                return XCTFail("Expected a typed app connection failure, got \(error)")
+            }
+            XCTAssertTrue(message.localizedCaseInsensitiveContains("version mismatch"))
+        }
+    }
+
+    func testFixtureBrokerRestartCannotRestoreStaleAvailableHealthInTheApp() async throws {
+        let bridgeService = SMAppService.agent(
+            plistName: ReleaseRadarBridgeTransport.launchAgentPlistName
+        )
+        guard bridgeService.status == .notRegistered else {
+            throw TransportTestError.invalidResponse("Fixture broker restart requires an initially unregistered bridge")
+        }
+        let otherApps = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.rekonlabs.ReleaseRadar"
+        ).filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        guard otherApps.isEmpty else {
+            throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before fixture broker restart")
+        }
+
+        let fixture = try await makeTransportFixture()
+        let snapshots = HealthSnapshotCapture()
+        let hostID = UUID()
+        let serviceRelay = AgentBridgeServiceRelay()
+        let host = try await AgentBridgeApplicationHost.start(
+            databaseURL: fixture.databaseURL,
+            connectionHealthChanged: { snapshot in
+                snapshots.append(snapshot)
+                Task { @MainActor in
+                    serviceRelay.service?.receiveAgentBridgeHealth(snapshot, from: hostID)
+                }
+            }
+        )
+        var hostRegistrationOwned = true
+        defer {
+            host.disconnectCallback()
+            if hostRegistrationOwned {
+                try? host.unregister()
+            }
+            XCTAssertEqual(bridgeService.status, .notRegistered)
+        }
+
+        let refreshReturned = expectation(description: "Bridge health refresh returns before interruption")
+        let releasePresentation = AsyncSignal()
+        let service = ReleaseRadarAppServices(
+            testingStore: fixture.store,
+            agentBridgeHost: host,
+            agentBridgeHostID: hostID,
+            afterAgentBridgeHealthRefresh: {
+                refreshReturned.fulfill()
+                await releasePresentation.wait()
+            }
+        )
+        serviceRelay.service = service
+        let model = AppModel(
+            store: fixture.store,
+            recoveryServices: service,
+            externalServicesSuppressed: true
+        )
+        var refresh: Task<Void, Never>?
+        var serviceStopped = false
+        defer {
+            releasePresentation.signal()
+            refresh?.cancel()
+            if !serviceStopped {
+                Task { @MainActor in
+                    await service.stopSharedServices()
+                }
+            }
+        }
+        refresh = Task { @MainActor in
+            await model.refreshConnectorHealth()
+        }
+        await fulfillment(of: [refreshReturned], timeout: 5)
+        let availableSnapshot = try XCTUnwrap(snapshots.last)
+        XCTAssertNotNil(availableSnapshot.health)
+
+        try host.unregister()
+        hostRegistrationOwned = false
+
+        _ = try await waitForStaleHealthSnapshot(
+            after: availableSnapshot.generation,
+            capture: snapshots
+        )
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline, model.connectorHealthStatus != "Connection failed" {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(model.connectorHealthStatus, "Connection failed")
+
+        releasePresentation.signal()
+        await refresh?.value
+        XCTAssertEqual(
+            model.connectorHealthStatus,
+            "Connection failed",
+            "An available reply returned before an OS broker interruption must not overwrite the newer stale UI state."
+        )
+
+        let restartedHost = try await AgentBridgeApplicationHost.start(databaseURL: fixture.databaseURL)
+        defer {
+            restartedHost.disconnectCallback()
+            try? restartedHost.unregister()
+            XCTAssertEqual(bridgeService.status, .notRegistered)
+        }
+        let restartedHealth = try await restartedHost.refreshConnectionHealth()
+        XCTAssertTrue(restartedHealth.health?.isRegisteredAppConnection == true)
+        await service.stopSharedServices()
+        serviceStopped = true
+    }
+
     private final class OneShotRequestGate: @unchecked Sendable {
         private let lock = NSLock()
         private var requestIDs: Set<UUID> = []
@@ -100,6 +305,43 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             defer { lock.unlock() }
             return result
         }
+    }
+
+    private final class HealthSnapshotCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var snapshots: [AgentBridgeHealthSnapshot] = []
+
+        func append(_ snapshot: AgentBridgeHealthSnapshot) {
+            lock.withLock { snapshots.append(snapshot) }
+        }
+
+        var last: AgentBridgeHealthSnapshot? {
+            lock.withLock { snapshots.last }
+        }
+
+        func firstStale(after generation: UInt64) -> AgentBridgeHealthSnapshot? {
+            lock.withLock {
+                snapshots.first { $0.generation > generation && $0.health == nil }
+            }
+        }
+    }
+
+    private final class AgentBridgeServiceRelay: @unchecked Sendable {
+        @MainActor var service: ReleaseRadarAppServices?
+    }
+
+    private func waitForStaleHealthSnapshot(
+        after generation: UInt64,
+        capture: HealthSnapshotCapture
+    ) async throws -> AgentBridgeHealthSnapshot {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline {
+            if let snapshot = capture.firstStale(after: generation) {
+                return snapshot
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        throw TransportTestError.timedOut
     }
 
     func testPackagedToolRespondsToInitializeWhileInputRemainsOpen() async throws {
@@ -413,10 +655,33 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(activePhaseState, expectedActivePhaseState)
 
         let rejectedPeer = try Self.runTool(wrongTool, tool: "release_radar_transition_ticket", arguments: arguments)
-        XCTAssertEqual(try decodeCommandResult(rejectedPeer).error, .appUnavailable)
-        XCTAssertEqual(mcpIsError(rejectedPeer), true)
+        // Transport denial does not identify which admission predicate rejected
+        // the peer; assert only the bounded pre-submission result.
+        XCTAssertEqual(jsonRPCErrorCode(rejectedPeer), -32001)
+        let rejectionMessage = jsonRPCErrorMessage(rejectedPeer) ?? ""
+        XCTAssertTrue(rejectionMessage.contains("connection"))
+        XCTAssertTrue(rejectionMessage.contains("not submitted"))
+        XCTAssertNil(mcpIsError(rejectedPeer))
         let persistedStateAfterRejectedPeer = try await exactPersistedState()
         XCTAssertEqual(persistedStateAfterRejectedPeer, persistedStateBeforeRejectedPeer)
+
+#if DEBUG
+        // The packaged tool has the accepted tools identity but not the app
+        // identity; the fixture's wrong tool has its distinct identifier.
+        // Both run as this test host's UID, so this is not cross-UID evidence.
+        for helper in [packagedTool, wrongTool] {
+            let appHealthProbe = try Self.runTool(
+                helper,
+                tool: "release_radar_transition_ticket",
+                arguments: arguments,
+                environment: ["RELEASE_RADAR_TEST_APP_HEALTH_PROBE": "1"]
+            )
+            XCTAssertEqual(mcpIsError(appHealthProbe), false)
+            XCTAssertEqual(Self.appHealthProbeOutcome(appHealthProbe), "denied")
+        }
+        let persistedStateAfterHealthProbes = try await exactPersistedState()
+        XCTAssertEqual(persistedStateAfterHealthProbes, persistedStateBeforeRejectedPeer)
+#endif
 
         let wrongBridge = try Self.runTool(
             packagedTool,
@@ -424,8 +689,9 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             arguments: arguments,
             environment: ["RELEASE_RADAR_WIRE_VERSION": "999"]
         )
-        XCTAssertEqual(try decodeCommandResult(wrongBridge).error, .appUnavailable)
-        XCTAssertEqual(mcpIsError(wrongBridge), true)
+        XCTAssertEqual(jsonRPCErrorCode(wrongBridge), -32001)
+        XCTAssertTrue(jsonRPCErrorMessage(wrongBridge)?.contains("version mismatch") == true)
+        XCTAssertTrue(jsonRPCErrorMessage(wrongBridge)?.contains("not submitted") == true)
         var counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
@@ -562,11 +828,35 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let uncertain = try Self.decodeToolResponseData(pending.get())
         XCTAssertEqual(try decodeCommandResult(uncertain).error, .outcomeUnknown)
         XCTAssertEqual(mcpIsError(uncertain), true)
+        do {
+            _ = try await host.refreshConnectionHealth()
+            XCTFail("An invalidated app connection must not report fresh bridge health")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.localizedCaseInsensitiveContains("not registered"))
+        }
         try await Task.sleep(for: .milliseconds(500))
 
         let reconnectDelegate = AppDelegate()
         let reconnect = try await reconnectDelegate.startAgentBridge(databaseURL: fixture.databaseURL)
         defer { reconnect.disconnectCallback() }
+        let countsBeforeHealthRefresh = try await requestCounts(
+            fixture.store,
+            requestID: requestID,
+            reason: "Invalidate the callback after broker handoff"
+        )
+        let refreshedHealth = try await reconnect.refreshConnectionHealth()
+        XCTAssertEqual(refreshedHealth.health?.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
+        XCTAssertTrue(refreshedHealth.health?.isRegisteredAppConnection == true)
+        let countsAfterHealthRefresh = try await requestCounts(
+            fixture.store,
+            requestID: requestID,
+            reason: "Invalidate the callback after broker handoff"
+        )
+        XCTAssertEqual(
+            countsAfterHealthRefresh,
+            countsBeforeHealthRefresh,
+            "Health refresh after an uncertain handoff must not replay its envelope."
+        )
         let replay = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
             "version": 1,
             "requestID": requestID.uuidString,
@@ -1765,8 +2055,16 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         ((response["error"] as? [String: Any])?["code"] as? NSNumber)?.intValue
     }
 
+    private func jsonRPCErrorMessage(_ response: [String: Any]) -> String? {
+        (response["error"] as? [String: Any])?["message"] as? String
+    }
+
     private func mcpIsError(_ response: [String: Any]) -> Bool? {
         (response["result"] as? [String: Any])?["isError"] as? Bool
+    }
+
+    private static func appHealthProbeOutcome(_ response: [String: Any]) -> String? {
+        ((response["result"] as? [String: Any])?["content"] as? [[String: Any]])?.first?["text"] as? String
     }
 
     private func transportCounts(_ store: DeliveryStore) async throws -> [Int64] {
@@ -1774,6 +2072,15 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             [
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Prove the packaged signed transport'") ?? -1,
                 try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '77777777-7777-4777-8777-777777777777'") ?? -1,
+            ]
+        }
+    }
+
+    private func bridgeWriteCounts(_ store: DeliveryStore) async throws -> [Int64] {
+        try await store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
             ]
         }
     }

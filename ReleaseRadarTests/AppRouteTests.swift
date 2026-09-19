@@ -12,6 +12,43 @@ private enum SyntheticBackupScopeError: Error {
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testConnectorHealthKeepsStartupVersionMismatchAndRejectsLateAvailableSnapshot() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ConnectorHealth-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: databaseURL),
+            connectorHealthLoader: {
+                throw AgentBridgeApplicationError.connectFailed("Bridge version mismatch")
+            },
+            externalServicesSuppressed: true
+        )
+
+        await model.refreshConnectorHealth()
+        XCTAssertEqual(model.connectorHealthStatus, "Version mismatch")
+        XCTAssertTrue(model.connectorHealthDetail.localizedCaseInsensitiveContains("different versions"))
+        XCTAssertTrue(model.connectorHealthAnnouncement?.localizedCaseInsensitiveContains("version mismatch") == true)
+
+        let staleAt = Date(timeIntervalSince1970: 1_700_000_000)
+        model.applyConnectorHealthSnapshot(.init(generation: 2, observedAt: staleAt, health: nil))
+        XCTAssertEqual(model.connectorHealthStatus, "Connection failed")
+        XCTAssertEqual(model.connectorHealthSnapshotGeneration, 2)
+        XCTAssertEqual(model.connectorHealthObservedAt, staleAt)
+
+        model.applyConnectorHealthSnapshot(.init(
+            generation: 1,
+            observedAt: staleAt.addingTimeInterval(1),
+            health: .init(
+                wireVersion: ReleaseRadarBridgeTransport.wireVersion,
+                isRegisteredAppConnection: true,
+                lastAuthenticatedToolsContact: staleAt
+            )
+        ))
+        XCTAssertEqual(model.connectorHealthStatus, "Connection failed", "An old reply must not restore Available after a newer disconnect.")
+        XCTAssertEqual(model.connectorHealthSnapshotGeneration, 2)
+    }
+
+    @MainActor
     func testAddProjectWindowUsesRekonChrome() async throws {
         let databaseURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-AddProjectChrome-\(UUID().uuidString).sqlite")
