@@ -2,6 +2,20 @@
 
 ## Managed build-permission correction — authorized and running September 19
 
+Security review of `2a39a82d` found one Required compatibility defect: deriving
+the new review profile for old saved assignments conflicts with their pinned
+permission definitions. Review worker completed and physically closed. Correction
+assignment `delivery-85453c11-57b2-4d66-9fe3-0db9dcc5c106` was prepared from
+closed delivery `delivery-115a2be4-b37c-452f-a828-f4e640932706` using the same
+ticket/task, task-plan revision 1 and phase revision 1. Request
+`85453c11-57b2-4d66-9fe3-0db9dcc5c106`, reason
+`Correct the independent security review finding: preserve existing saved review profiles while enabling bounded scratch only for newly prepared assignments.`
+returned audit `3F4CB74B-D6AD-4F1E-9FA2-7593B2227F4B`.
+Worker `A22487E7-4CC9-4552-AC0B-01107ADED2A9`, task
+`01a0b974-9f8f-7ba1-92fb-fadfb36a5711`, runs verified Terra/medium with the
+assignment-specific restricted profile. It is correcting only that finding and
+affected tests; no migration of live permissions is authorized or occurring.
+
 Current candidate: `2a39a82d9a71a0e0d518d59d657bed4115ae959d`, five files.
 Review gets only assignment-local `.build` write access; delivery write scope is
 unchanged. Two tests use temporaryDirectory rather than home fixtures; focused
