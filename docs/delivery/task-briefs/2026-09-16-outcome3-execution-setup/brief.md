@@ -115,6 +115,28 @@ Exact committed request (do not repeat):
 }
 ```
 
+### Connector candidate review preparation — pending
+
+Candidate `6813481a`; delivery connection physically closed. Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "ea02165d-fe26-440c-882e-802782ea9a4f",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-f3be516e-32db-430d-9cae-b8925bd013a5",
+  "reason": "Independent source review of candidate6813481a for connector trust, recovery, health truthfulness and UI guidance; no compilation or app-state authority."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.

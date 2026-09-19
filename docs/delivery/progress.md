@@ -55,8 +55,10 @@ No recovery/upgrade acceptance follows from these fixture failures.
 Main identified required contract gaps in the initial nine-file candidate:
 bootstrap handshake signature compatibility, externally visible typed diagnostics,
 stale-generation/invalidation health handling, typed truthful initial/UI status,
-wire-gated app health, and actual unauthorized XPC health coverage. The same writer
-is correcting that collected set. Build Agent is investigating the existing
+wire-gated app health, and actual unauthorized XPC health coverage. Corrections are committed as `6813481a` in the delivery checkout; Main committed
+the nine writer-owned files, and supported worker close confirmed connectionClosed.
+Corrected compile/non-service test verification and independent review are pending.
+Build Agent confirmed the existing
 supported controlled-fixture quiesce/restore sequence read-only; no registration,
 owner app-state or permission change is authorized by that investigation.
 
