@@ -1,5 +1,20 @@
 # Release Radar delivery state
 
+## Outcome 3 closeout — Blocked by corrections September 19
+
+Owner corrected closeout from In Progress to Blocked because
+`rr-p6-guidance-prompt` and `rr-p6-connector-recovery` (#99) must be completed and
+verified first. Supported transition `08d866c4-dfa8-4b19-9aae-9d6a4e883b8e`
+committed with audit `C693F453-9194-4AA5-BB45-AD298C94296B`. Blocker
+`rr-p6-closeout-prerequisites` explicitly names both tickets; request
+`824e203e-36a1-4d01-a5f0-e67aeb340145` committed with audit
+`825E46DD-64C4-47EA-8365-2CA0B17BA743`. App readback after project reselection
+shows closeout in Blocked, both existing Requires links, three pending tasks,
+and the named blocker under Owner Attention. Metrics remains Blocked and fourteen
+tickets remain Backlog. No dependency, goal, task definition or completion was
+changed. Resolve this blocker once both corrections are verified before resuming
+closeout. This supersedes earlier In Progress descriptions below.
+
 ## Task and dependency reconciliation v1 — applied and verified September 19
 
 **Current result:** owner approved the exact v1 preview and all 22 supported
