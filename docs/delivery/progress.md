@@ -110,6 +110,17 @@ A fresh read-only Codex task was created to load the updated plugin and query th
 exact canonical project's supported inventory; no direct-helper fallback or state
 repair is permitted. Live reconnection/recovery remains unverified.
 
+Fresh isolated readback task01a0ba9c stopped without a connector call because its
+checkout root differed from the authorized canonical root. Replacement read-only
+task `01a0ba9d-a53c-7b00-9a87-3d9a04420120` runs directly at the owner's exact
+canonical folder; its updated supported connector returned complete inventory,
+matching project/root/registration generation1. P6 lifecycle revision1 remains
+in_delivery; connector-recovery ticket remains in_progress with taskplan1 and all
+three tasks pending. Fresh-client supported reconnection is therefore verified;
+the old Main client failure remains separate. Main authorized exact originala81c6fc2
+preparation replay through the working supported connector to verify audited
+refusal recovery. No replacement request, worker launch or state repair authorized.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
