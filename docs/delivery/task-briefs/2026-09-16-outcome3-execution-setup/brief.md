@@ -243,6 +243,32 @@ source and build outputs preserved. Exact preparation request:
 }
 ```
 
+### Connector regression coverage correction — pending
+
+Independent review of `ff0d29b2` confirms production health ordering and signing.
+Required test corrections: native regression bypasses app-services publication;
+unbounded refresh/presentation signals can hang and prevent fixture cleanup.
+Exercise the production service path with the smallest test seam and bound all
+waits/teardown. No optional findings or new product scope. Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "9d3d0a04-16e2-4166-8551-184623f2e1cc",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-792db90d-04fa-4a30-9216-5554844a21f9",
+  "reason": "Correct ff0d29b2 regression coverage to exercise app-services publication and guarantee bounded test wait and teardown; production ordering passed source review."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.

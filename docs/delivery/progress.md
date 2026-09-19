@@ -47,13 +47,16 @@ Ignored outputs were preserved by same-filesystem rename with identity verified;
 no deletion. Two zero-byte detached-launch logs are not test results. Existing
 ActivityView actor-isolation warnings remain unrelated. Delivery connection is
 physically closed and task archived, with source/branch/artifacts retained.
-Independent correction review is running as assignment
+Independent correction review completed as assignment
 `review-65e95d64-1290-44d3-a504-114728d722f1`, audit
 `BC250351-7D88-495F-8AC6-F1D3D5D66F71`, worker
 `E83AF269-B6B1-4493-B4B1-EDFE10092D9D`, task
 `01a0ba34-32e4-77b2-8555-dd0dafc20330`. Effective Terra/high,
 readOnly, network disabled verified. This is source review; runtime acceptance
 remains separate.
+It confirmed production health ordering and signing, with two Required test fixes:
+exercise actual app-services publication, and bound waits/release tasks on failure
+so fixture cleanup is reachable. Exact correction request is preserved in the brief.
 
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
