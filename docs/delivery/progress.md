@@ -2,6 +2,93 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Metrics recovery succeeded: resolve request `fa3c4884-d07b-43a8-a0f8-a8b377e46abc`
+committed audit `4289DCFB-99F7-472A-83BC-9C06958BBBDF`; In Progress request
+`5df80957-df2d-4a03-9bf8-26f91eeb0e5c` committed audit
+`4B16E5B5-5190-46B9-A052-C48C778D3B16`. Exact preserved preparation
+`ce4f5d1d-cf7a-43b3-8a88-b39aa942a6c4` then succeeded, audit
+`AEA53850-D767-4D10-BA9E-3DB561FD7D62`, baseline
+`73928a11d2dfbee526b383b2dcabdfd1635c568c`. Worker
+`AE685D9B-1350-428B-AAC0-E60371113521`, task
+`01a0bb9d-0063-7353-8334-084cde23a6ae`, runs verified Terra/medium,
+assignment-specific restricted profile, on-request/automatic review, no network.
+Scope is the failed metrics test assumption only; Build Agent retains compilation.
+The pending envelopes below are now committed as recorded here, and the older
+metrics launcher blocker is resolved. Ticket task plan 1 remains pending.
+
+Metrics execution recovery: source `ProjectExecutionWork.read` admits backlog,
+in_progress and needs_review only. Resume itself returned "Resolve the ticket's
+blockers before starting or resuming work." Clear the same execution hold for
+one controlled recovery attempt; restore it on another preparation refusal.
+Pending resolution envelope:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "fa3c4884-d07b-43a8-a0f8-a8b377e46abc",
+  "blockerID": "rr-p6-metrics-assignment-recovery",
+  "reason": "Clear the execution hold for one controlled recovery attempt after successful connector recovery on installed 0.1.24. RR rejects preparation in Blocked and rejects resume with an unresolved blocker; this enables diagnosis, not task completion. Preserve exact original preparation and restore this blocker if preparation still fails."
+}
+```
+
+Metrics execution recovery: source `ProjectExecutionWork.read` admits backlog,
+in_progress and needs_review only; Blocked itself prevents preparation. After
+connector recovery, resume request envelope (pending):
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "5df80957-df2d-4a03-9bf8-26f91eeb0e5c",
+  "ticketID": "rr-p6-metrics",
+  "lane": "in_progress",
+  "reason": "Resume owner-authorized metrics correction after connector recovery. ProjectExecutionWork explicitly rejects Blocked lanes; retry the preserved correction preparation after restoring its execution-eligible lane. No completion or blocker resolution inferred."
+}
+```
+
+Connector availability recovered in this existing Main task: complete supported
+inventory matches the exact root, project and registration generation 1, with
+P6 lifecycle revision 1 and the three existing task plans unchanged at revision 1.
+A replacement Main is no longer necessary. Pending installed-profile review
+preparation envelope:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "projectID": "project-fffdc0e0b15b9b86",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "602d64ff-fca2-4931-986d-b9d022a8f8a3",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-managed-build-permissions",
+  "taskID": "rr-p6-managed-build-permissions-task-01",
+  "reviewOfAssignmentID": "delivery-85453c11-57b2-4d66-9fe3-0db9dcc5c106",
+  "reason": "Verify the installed 0.1.24 generated review profile and bounded scratch/isolation behavior for the already independently reviewed permission correction. Build Agent owns compilation; this fresh reviewer must not compile or change product source."
+}
+```
+
+Owner authorized driving managed-build-permissions, metrics and Outcome 3 closeout
+to completion. Installed-profile preparation above committed with audit
+`048ECB15-842F-4A2A-B7DD-62DC3457A88C`, candidate `60955d6a`,
+reviewScratchVersion 1. Initial conflict was the completed Build Agent's ignored
+`.build`; it was preserved intact at
+`/tmp/release-radar-permissions-60955d6a-evidence.JvGUam/.build` (temporary,
+not deleted), then the exact request replay succeeded. Worker
+`E42FEFB7-F111-4909-BEF5-10AE6F2F06AF`, task
+`01a0bb9a-e264-7be0-94b1-660a698c52b6`, has verified Terra/high,
+on-request/automatic-review, network disabled and only assignment `.build`
+writable. Its bounded runtime verification excludes compilation and product edits.
+
 Owner authorized driving managed-build-permissions, metrics and Outcome 3 closeout
 to completion. Preserve their existing task plans (revision 1) and the separate
 owner-acceptance boundary. Second-Mac verification remains deferred to GH106.
