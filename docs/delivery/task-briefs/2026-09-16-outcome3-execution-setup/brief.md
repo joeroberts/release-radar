@@ -1,5 +1,16 @@
 # Outcome 3 project execution setup
 
+## September 19 approved review image capability correction
+
+- Outcome: enable native image viewing in managed review assignments so the existing metrics screenshots can receive independent visual review. Owner explicitly approved this capability; it supports `rr-p6-metrics-task-02` without changing its definition.
+- Scope: `ReleaseRadarCoordinator/WorkerPolicy.swift` and focused existing worker-policy tests; change only review-role image-viewing tool overrides. Delivery assignments retain their current setting. Preserve all filesystem, network, history, management, browser, image-generation and configuration restrictions. No live profile or governing instruction changes.
+- Dependencies: existing 0.1.24 permissions integration; preserved metrics renders. The image tool must respect the existing assigned read roots. If that cannot be established with current controls, report the specific risk; do not broaden filesystem access.
+- Assignment: one app-prepared delivery worker, Terra/medium, ceiling Sol/high only for a named ambiguity; baseline is the committed revision containing this section. Main owns this brief, ledger and integration; Build Agent owns compilation/test execution. No simultaneous canonical writers.
+- Checks: test-first focused policy coverage for review enabled and delivery disabled, retaining other denied capabilities. Build Agent executes native tests. One independent reviewer covers the authorization boundary and compatibility. After reviewed local release, verify native image viewing in a fresh managed review and finish the existing metrics visual review. Reviewers must not compile.
+- Acceptance: review tool available for permitted image files, delivery behavior unchanged, existing isolation maintained. No new public contract, storage schema or migration; preserve ADR-001 and existing execution authority.
+- Endpoint: scoped local commit, focused Build Agent checks, one independent security/code review and standing local release delivery under `dist/`. Publication of this correction is not included in PR #108 authorization. No RR acceptance is inferred.
+
+
 ## September 19 owner-authorized managed build-permission correction
 
 Outcome: enable the focused macOS guidance tests in managed workers with scoped

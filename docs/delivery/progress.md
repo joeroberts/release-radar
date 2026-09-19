@@ -2,6 +2,12 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Approved image-viewing correction: current controlling section is in `task-briefs/2026-09-16-outcome3-execution-setup/brief.md`. Isolated publication branch `codex/managed-review-image-viewing`; no changes added to PR #108. Metrics plan 1 unchanged; use task 2 for this required verification capability. Ordered resume/preparation envelopes pending:
+
+```json
+[{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"18935f2b-149f-40c6-abd8-a15977d91973","ticketID":"rr-p6-metrics","lane":"in_progress","reason":"Owner approved the review-only image capability correction. Resume work on this prerequisite to existing independent UI verification; image-review blocker remains unresolved until capability works."},{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"06457224-205b-43f6-b251-2020d7a82e9c","projectID":"project-fffdc0e0b15b9b86","ticketID":"rr-p6-metrics","taskID":"rr-p6-metrics-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Implement owner-approved review-only native image viewing under the existing metrics visual-verification task and current brief. Preserve all other worker restrictions; no task-plan changes."}]
+```
+
 Closeout evidence recording committed at evidence revision 3. Ordered audits: `8A2B6B57-5515-4957-A0D9-C0FB80149E67`, `A7E2758C-EA7E-4520-A440-994345EF9AE7`, `258CC5F5-6F9D-48B4-BBE6-0B47E649316D`. Readback confirms tasks 1–2 expectations satisfied by applicable available passed observations; task 3 remains unsatisfied. Tasks 1–2 have supporting reconciliation/verification evidence; task 3 remains pending PR #108 merge disposition. Existing task plan 1 remains unchanged; no completion or acceptance is inferred.
 
 ```json
