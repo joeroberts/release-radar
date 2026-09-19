@@ -81,6 +81,26 @@ checking the ordinary runner correction of prioritizing the existing signed
 embedded framework. No changed signing, source, entitlements or permissions;
 no passing test result yet.
 
+### Verified candidate results — September 19
+
+Permission candidate `60955d6a`: Build Agent executed all five scoped tests with
+0 failures (0.051s) after TEST_RUNNER_DYLD_FRAMEWORK_PATH prioritized the existing
+signed embedded framework. No source, signing, entitlement or configuration change.
+The prior ordinary offline build also passed. Test host exited; Xcode stalled at
+result finalization and was interrupted (exit 130), leaving a partial xcresult.
+Passing test-case output is retained in `.build/native-checks/managed-build-permissions-embedded-tests-60955d6a.log`
+in delivery-85453c11. This is direct behavioral pass evidence with a result-bundle
+limitation, not a successful overall xcodebuild exit. Live installed managed-worker
+permission proof remains outstanding.
+
+Corrected metrics candidate `401907a7`: independent source review found no Required,
+Optional or Out-of-scope findings. The reviewer confirmed unrestricted multiline
+centered values, unchanged glyph/label composition and truthful test coverage.
+Worker `98FBBB72-7BCE-4663-967A-F6464EFBD645` completed and physically closed;
+task `01a0baf0-4fd5-73f2-8b1a-bfd31cd53808` is archived with artifacts preserved.
+Build Agent is now running corrected metrics verification. Native screenshot/UI
+review remains outstanding; the source pass does not substitute for it.
+
 ### Metrics corrected candidate — verification queued
 
 Candidate `401907a7` removes the two-line value limit and corrects the rendering
