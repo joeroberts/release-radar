@@ -1,5 +1,32 @@
 # Release Radar delivery state
 
+## Managed build-permission correction — authorized and running September 19
+
+Owner explicitly approved the narrowly scoped generated build-permission change.
+Controlling brief: September 19 correction section in
+`task-briefs/2026-09-16-outcome3-execution-setup/brief.md` (committed `04c716a1`).
+Separate ticket `rr-p6-managed-build-permissions` is In Progress, task plan 1,
+task `rr-p6-managed-build-permissions-task-01`; it belongs to `rr-goal-p6-outcome3`.
+P6 plan is Ready revision 12, lifecycle remains In delivery revision 1.
+Guidance remains Blocked with its original two pending tasks. An initially added
+duplicate prerequisite task was superseded at guidance task-plan revision 3 when
+the app required a separate unblocked ticket for the prerequisite.
+
+Managed assignment `delivery-115a2be4-b37c-452f-a828-f4e640932706` prepared with
+audit `AF2EC8DB-6062-4B16-BC0B-2164E66700BD`, then launched through the supported
+worker connector. Worker `9B8D8A24-EECD-4D5E-840B-329ACED1E3CB`, task
+`01a0b968-d44b-72b0-8c55-609a3c55634e`, effective Terra/medium, assignment-specific
+profile, on-request/auto_review, isolated workspace, no network; verified from
+start response. App-selected baseline is `3b1e27fec0a936aa52a1e3b64cca4da0393383b7`.
+Worker owns bounded source/tests; Main owns ledger/Git integration. Independent
+security/recovery review and direct verification remain required. No live profile
+edits, unrestricted worker, installation or completion are authorized by preparation.
+
+Exact preparation envelope:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"115a2be4-b37c-452f-a828-f4e640932706","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"ticketID":"rr-p6-managed-build-permissions","taskID":"rr-p6-managed-build-permissions-task-01","reason":"Owner explicitly authorized a narrow correction of generated managed-worker permissions for Xcode caches, temporary files and test fixtures while preserving isolation."}
+```
+
 ## Guidance verification recovery — September 19
 
 Owner accepted candidate `950aa6ea` and directed completion through the board.
