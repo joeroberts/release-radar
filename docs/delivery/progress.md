@@ -1,5 +1,21 @@
 # Release Radar delivery state
 
+## Active goal — remaining blocked P6 tickets
+
+Owner authorized driving managed-build-permissions, metrics and Outcome 3 closeout
+to completion. Preserve their existing task plans (revision 1) and the separate
+owner-acceptance boundary. Second-Mac verification remains deferred to GH106.
+Build Agent 02 is inspecting the existing reviewed permission candidate and exact
+pinned RDS staging prerequisites; no new build or permission change is claimed.
+
+The closeout blocker identity was recovered from its original ledger receipt:
+`rr-p6-closeout-prerequisites`. Supported correction request
+`fa63c48c-c7c9-4f8e-8f74-4f7129484e37` committed with audit
+`37F2404C-23F6-4DF1-91E3-BF36BD360018`. It now states that guidance is Accepted,
+connector recovery is verified and Needs Review awaiting owner acceptance, and
+GH106 is unscheduled/non-blocking. Existing dependencies remain unchanged.
+This supersedes the earlier statement that the blocker identity was unavailable.
+
 ## Cleanup and deferred verification — September 19
 
 Owner requested branch/task cleanup and current RR board state. Removed 12 local
