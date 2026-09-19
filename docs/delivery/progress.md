@@ -10,6 +10,13 @@ Second-Mac acceptance remains deferred. Packaging resumes after this repair.
 
 
 
+Delivery task `01a0ba6d-2eda-7740-9ec1-f5e3c2912ac3` started in isolated
+`/Users/jroberts/.codex/worktrees/34bb/release_radar`, exact clean baseline2415f188.
+Sol/high explicitly requested; task API does not expose independent effective model/
+effort verification. No settings changed. Writer is authoring regression tests;
+production held for chief recovery-contract consultation. Build Agent stages pinned
+ignored prerequisites and owns RED/GREEN. Standing chief01a0b413 consulted read-only.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
