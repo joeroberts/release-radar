@@ -40,6 +40,24 @@ Ignored build prerequisites were preserved under `.build/connector-recovery-45a9
 Continue plugin consistency through a fresh correction assignment; no bypass,
 installation or packaging occurred.
 
+## Packaging admission blocker
+
+Plugin consistency preparation request `a81c6fc2-a5ac-4fe5-b1be-da70c2ff33db`
+returned `execution.conflict`, including one exact replay after committing the
+context documents. No new worker launched. Fresh supported inventory confirms
+registration generation1, phase lifecycle revision1, ticket task-plan revision1,
+In Progress and all three tasks pending. Managed documentation remains current.
+The app's Worker resources menu shows one connector-recovery assignment as Stopped;
+the release worker had been interrupted and physically closed through supported
+controls. Source inspection confirms a Stopped assignment blocks replacement even
+when its connection is closed. The app offers retirement, explicitly removing the
+checkout and matching permission profile. That conflicts with the owner's instruction
+to preserve worktrees, so no retirement or direct state repair was performed.
+Do not bypass admission with Build Agent or another task/role. Assertions are complete;
+plugin metadata completion and packaging await supported assignment recovery that
+respects artifact preservation. Partial metadata commit6690634c remains on its branch.
+No installer/tag/installation or second-Mac acceptance is claimed.
+
 ## Local integration and completed UI findings
 
 Reviewed candidate `191d1373` is integrated locally at `8ad83218` on
