@@ -1,6 +1,33 @@
 # Release Radar delivery state
 
-## Managed build-permission correction — authorized and running September 19
+## Managed build-permission correction — reviewed candidate, verification blocked September 19
+
+Final source review of `60955d6a` found no Required findings. Legacy profile
+definitions remain unchanged, new review scratch is explicit, and exact runtime
+configuration validation retains denials. A downgraded old binary safely refuses
+new scratch-enabled assignments; downgrade resume was not established. Reviewer
+completed and physical connection closure was confirmed. No executable test,
+runtime sandbox check or installed-profile verification passed. All workers for
+this correction are closed; all candidate branches/worktrees are preserved.
+
+Both the permission ticket and guidance ticket are Blocked. Permission blocker
+`rr-p6-managed-build-dependency-bootstrap` records the missing exact offline RDS
+dependency (`f986e85e786f55f1d73d6e429de11370399414f7`) and absent supported staging
+path. Request `20d73b5f-85a6-40ae-b18f-839d79e7c8d1`, audit
+`92E833FA-4A7C-44B2-9CA4-38FE2A22524F`; Blocked transition request
+`c5075b30-7e34-41e0-b37b-38d047cb3bdf`, audit
+`A2480E9A-74EF-4BCF-90F4-5936142CDA82`. Guidance blocker was corrected with
+request `4f0158e4-3f93-45c1-b5a7-d89ffdcf3c6c`, audit
+`1921E189-3642-40D1-97A8-06A4921DFD5B`: observed cache/simulator diagnostics
+alone did not establish that broader permissions were necessary; the fatal run
+failed at offline RDS resolution. Earlier blanket permission diagnosis is superseded.
+
+Next prerequisite is supported exact dependency staging and task-local Xcode
+invocation, followed by actual tests and sandbox checks before installation.
+No unrestricted build fallback, manual profile mutation, dependency download,
+installation, acceptance, push or publication occurred. Temporary artifacts remain
+in the three explicitly recorded `/tmp/rr-...-test-artifacts` locations below;
+they are diagnostic scratch only and were not deleted.
 
 Corrected candidate: `60955d6a98a1b10f4b849232e1030d8b984ec9cd` preserves old
 review definitions through optional `reviewScratchVersion` (absent is legacy;
