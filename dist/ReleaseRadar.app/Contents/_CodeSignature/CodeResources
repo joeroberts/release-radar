@@ -18,7 +18,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		0xWgN7fzb0nrhm93UhOCIn8qsdY=
+		dSC6B0nYO4EgY3WnBkpimlOXXFM=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
@@ -26,7 +26,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md</key>
 		<data>
-		DQl47Tlzby1hmuzL7N/O2zLeKzc=
+		oQ5palJ1sbRVHlFYOLL3nLxOoDY=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/shared-execution/SKILL.md</key>
 		<data>
@@ -34,11 +34,11 @@
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		1KTIvgU4Sg2wls+qKwk+RpVQjVA=
+		x+MbLFKDV7MIvKJeAseluGzp3I8=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		QU81mMD7bXPmwacFNVUqhwJWu38=
+		1ma189FwRcXUOBQylaeuJR5m8Zo=
 		</data>
 		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
 		<data>
@@ -63,7 +63,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			fAaWiPjUzQqBN9cTQOKx02301vc=
+			jOP3u4ySykRF+ReJNQitz2oFbws=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -72,7 +72,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			7UeQnebIjOaq5KebcKWFhu20TzE=
+			ckSjcTrIx1iyr7+dwWvOUgliHcw=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarAgentTools" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -81,7 +81,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			dovvcp1G05ISfGjGbyhb1Bl+xIM=
+			oiBoDicY9SuRz9mLDK6oSqXPwxw=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCoordinator" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -90,7 +90,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			d+L4D9NcjMsygNGjFB70AsWvxRk=
+			+05sGvnBcm5GhJJOaUTVZClTmW8=
 			</data>
 			<key>requirement</key>
 			<string>identifier ReleaseRadarDocumentationTool and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -134,7 +134,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			QGAQIcUHohY8VMbPzzYASELF6NIYiutjrFQKIgIrKYI=
+			nteYruPMALnfMYCt/x5K9yxyT5q67wG5+rZijhdipxQ=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
@@ -148,7 +148,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			QW2VeZbQnmgbi0Yk9N7grTL0++MGO5ofAGWp09U1WqU=
+			sIEdkc+7exxLt+yJet2El6FikOGVsAKs9CevGOeHzGc=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/shared-execution/SKILL.md</key>
@@ -162,14 +162,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			x5evfpcu85oROdFSnQEgdYQXBkjbIvOwvHw572YbLSE=
+			OxNNMdYxJ0N9bIe8RsyAnLHG5zy3kYtsWahcPiA26Ng=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			hRV8VglGE1tANmjxcQE5rJBGmvTmDU1PSfvUBZzUomQ=
+			WPXYc2YW1BulKlu23W/V2ejVYesk2SJMWRm8HNgYzZQ=
 			</data>
 		</dict>
 		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
