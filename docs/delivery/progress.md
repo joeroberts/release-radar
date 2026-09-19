@@ -1,5 +1,35 @@
 # Release Radar delivery state
 
+
+## Guidance local delivery complete — Release Radar 0.1.22
+
+`rr-p6-guidance-prompt` is Accepted at task-plan revision 5; both active tasks
+are completed. Supported inventory readback confirmed the lane and task states.
+Build Agent 02 finished and is idle; no build process or approval remains pending.
+
+Release preserves installed 0.1.21 diagnostic source `72b78c9e`, adds reviewed
+guidance fix `e2523f6c`, and updates release metadata in `47b86b89`. Artifact commit
+`86e490bb86adb6fe278a3f7c6ebd882c3a4cd4b4` contains the signed versioned
+`dist/ReleaseRadar-0.1.22.dmg`; annotated local tag `v0.1.22` identifies that commit.
+Branch: `codex/release-guidance-0.1.22-installed-baseline`.
+DMG SHA-256: `cc171fef78218323fbdc50f9f0d122293ac2d7a07483900c4230a52f284ad8c5`.
+
+Build Agent reports six focused tests passed, zero failed/skipped; mounted DMG
+layout, identity, signing and staged-build checks passed. Installed bundle is
+`/Applications/ReleaseRadar.app`, `com.rekonlabs.ReleaseRadar`, 0.1.22 build 1,
+with bundled plugin 0.1.22 and strict/deep signature verification passed. Main
+independently read back installed identifier and version. Pre-existing actor
+isolation warning remains unrelated. Separate permission candidate `60955d6a`
+was excluded and is not validated by this release. No push, merge, publication,
+notarization or unrelated project-state change occurred.
+
+All earlier guidance verification/acceptance/installation-pending statements below
+are superseded. Temporary ignored build logs/results/staging remain in the release
+worktree; prior temporary diagnostic paths remain preserved. No deletion performed.
+The separate connector-recovery and Outcome 3 programme-closeout work remain open;
+this completed delivery does not imply those outcomes are complete.
+
+
 ## Guidance board completion — accepted September 19
 
 Owner directed completion after accepting the exact guidance candidate. Current
