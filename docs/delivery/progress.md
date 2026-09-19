@@ -2,6 +2,183 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Permission evidence observations committed at revisions 2, 3 and 4, audits
+`809C0531-B962-4E94-A1AC-F4DBE1090734`,
+`0517D276-45A7-406D-BE43-A93397B8205C` and
+`E7CB4D00-9053-453A-8DBA-716D9708BB73`. Supported readback shows all three
+expectations satisfied and observations applicable/available/passed; owner
+acceptance remains notAccepted. The exact envelopes below are committed.
+
+Proposed owner reconciliation: `rr-p6-managed-build-permissions` is already
+planned at revision 1. Complete only `rr-p6-managed-build-permissions-task-01`
+from evidence target 1/revision 4. Retain its title/order; add, revise and
+supersede nothing. Completion will advance plan revision to 2. Move to Needs
+Review; move onward to Accepted only if the owner explicitly selects acceptance.
+No other ticket/task is included in this reconciliation. Owner decision pending.
+
+Permission target committed at evidence revision 1, audit
+`27000D17-4D81-4D2E-9760-8F710E0C7CA1`. Ordered observation envelopes (pending):
+
+```json
+[
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "target": {
+      "projectID": "project-fffdc0e0b15b9b86",
+      "rootID": "project-fffdc0e0b15b9b86-root-0",
+      "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+      "catalogVersion": 1,
+      "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+    },
+    "ticketID": "rr-p6-managed-build-permissions",
+    "requestID": "1b1a10b3-ccf3-428f-83f4-9d8b826ab02a",
+    "expectedEvidenceRevision": 1,
+    "reason": "Record verified evidence for rr-p6-managed-build-permissions-task-01; no owner acceptance inferred.",
+    "observation": {
+      "id": "e43f6362-b128-4a94-9e48-43d7f5850cac",
+      "targetVersion": 1,
+      "fact": {
+        "category": "check",
+        "scope": "rr-p6-managed-build-permissions-task-01"
+      },
+      "source": {
+        "kind": "recordedClaim",
+        "label": "Independent source review passed; five candidate and six integrated permission tests passed. Installed 0.1.24 review-602d64ff runtime scratch/write/read-denial probes passed; no Required findings. Xcode result finalization stalled after passing cases, so overall test-process success is not claimed."
+      },
+      "sourceAvailability": "available",
+      "outcome": "passed",
+      "observedAt": "2026-09-19T21:43:41Z",
+      "recordedAt": "2026-09-19T21:43:41Z"
+    }
+  },
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "target": {
+      "projectID": "project-fffdc0e0b15b9b86",
+      "rootID": "project-fffdc0e0b15b9b86-root-0",
+      "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+      "catalogVersion": 1,
+      "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+    },
+    "ticketID": "rr-p6-managed-build-permissions",
+    "requestID": "8cb4eee4-3419-40e2-a1a0-74b1ac9f9a6e",
+    "expectedEvidenceRevision": 2,
+    "reason": "Record verified evidence for rr-p6-managed-build-permissions-task-01; no owner acceptance inferred.",
+    "observation": {
+      "id": "ace24f0f-e35f-4633-9cd5-45617332e850",
+      "targetVersion": 1,
+      "fact": {
+        "category": "build",
+        "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+        "revision": {
+          "commitSHA": "ad28d7ac7c942c64a7b3ec26f8d5be45366966e4",
+          "checkoutState": "clean"
+        },
+        "buildID": "ReleaseRadar-0.1.24-ad28d7ac",
+        "scope": "rr-p6-managed-build-permissions-task-01"
+      },
+      "source": {
+        "kind": "recordedClaim",
+        "label": "Build Agent: signed 0.1.24 staging succeeded from ad28d7ac; dist/ReleaseRadar-0.1.24.dmg verified, SHA256 8ef9b4c52bc1cc6dab0b479824a98161dbcc0827c0c15bfa5aa6d656805db9b3. Metrics excluded."
+      },
+      "sourceAvailability": "available",
+      "outcome": "passed",
+      "observedAt": "2026-09-19T21:43:41Z",
+      "recordedAt": "2026-09-19T21:43:41Z"
+    }
+  },
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "target": {
+      "projectID": "project-fffdc0e0b15b9b86",
+      "rootID": "project-fffdc0e0b15b9b86-root-0",
+      "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+      "catalogVersion": 1,
+      "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+    },
+    "ticketID": "rr-p6-managed-build-permissions",
+    "requestID": "69586b4f-234e-40a4-be8b-d90a8ebc8725",
+    "expectedEvidenceRevision": 3,
+    "reason": "Record verified evidence for rr-p6-managed-build-permissions-task-01; no owner acceptance inferred.",
+    "observation": {
+      "id": "e95e542a-a19e-4af8-a2fa-7284a661b9f1",
+      "targetVersion": 1,
+      "fact": {
+        "category": "installation",
+        "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+        "revision": {
+          "commitSHA": "ad28d7ac7c942c64a7b3ec26f8d5be45366966e4",
+          "checkoutState": "clean"
+        },
+        "installationID": "/Applications/ReleaseRadar.app:0.1.24:1",
+        "buildID": "ReleaseRadar-0.1.24-ad28d7ac",
+        "context": "Local installed 0.1.24 (1), team 2UA854NLX4, strict deep signature passed, executable SHA256 3a235f8c6d0720f8f4687c0b1484155786356b9151ca83f5e2cc83172223d884 matches staged/mounted package."
+      },
+      "source": {
+        "kind": "recordedClaim",
+        "label": "Build Agent installed identity verification, followed by Main app launch/plugin update and recovered supported RR inventory."
+      },
+      "sourceAvailability": "available",
+      "outcome": "passed",
+      "observedAt": "2026-09-19T21:43:41Z",
+      "recordedAt": "2026-09-19T21:43:41Z"
+    }
+  }
+]
+```
+
+Permission evidence target (pending exact request):
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "target": {
+    "projectID": "project-fffdc0e0b15b9b86",
+    "rootID": "project-fffdc0e0b15b9b86-root-0",
+    "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+    "catalogVersion": 1,
+    "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+  },
+  "ticketID": "rr-p6-managed-build-permissions",
+  "requestID": "3060e1d3-9b11-436c-a11f-5bc4a3982571",
+  "expectedEvidenceRevision": 0,
+  "revision": {
+    "commitSHA": "ad28d7ac7c942c64a7b3ec26f8d5be45366966e4",
+    "checkoutState": "clean"
+  },
+  "expectations": [
+    {
+      "category": "check",
+      "scope": "rr-p6-managed-build-permissions-task-01"
+    },
+    {
+      "category": "build",
+      "scope": "rr-p6-managed-build-permissions-task-01"
+    },
+    {
+      "category": "installation"
+    }
+  ],
+  "reason": "Record the immutable 0.1.24 build-source target for the reviewed permission integration, focused test results, signed local package/install and independent managed runtime isolation verification. Metrics is excluded. This records evidence only, not task completion or owner acceptance."
+}
+```
+
 Installed 0.1.24 managed-review runtime verification passed with no Required
 findings: `.build` create/write/read succeeded; ordinary checkout writes and
 primary/sibling/application-group/management writes were denied; primary
