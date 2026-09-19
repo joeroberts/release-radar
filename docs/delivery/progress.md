@@ -21,6 +21,15 @@ replacing prior files. This assignment is source/design read-only; it has no
 implementation, compilation, permission or app-state authority. The earlier
 managed diagnostic worker is physically closed and archived.
 
+Fresh supported inventory confirms exact registration generation 1, P6 lifecycle
+revision 1 and recovery ticket In Progress with its unchanged three pending tasks.
+The current correction brief now reflects this canonical baseline and role split.
+Chief consultation is waiting on a runtime approval; its details are absent from
+the task API. Main requested the exact card text from the owner after Computer
+Use refused Codex access. No approval was answered or bypassed. Build Agent 02
+is performing read-only build/test prerequisite preparation; no compilation or
+product implementation has started. Packaged documentation and diff checks pass.
+
 Managed delivery still selects Terra/medium and review Terra/high. The earlier
 Sol/high implementation preference is not a runtime capability. Main will carry
 the architecture decision into a bounded supported assignment, disclose actual
