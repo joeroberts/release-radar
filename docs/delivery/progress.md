@@ -17,7 +17,28 @@ baseline `3b1e27fec0a936aa52a1e3b64cca4da0393383b7`. Effective settings verified
 Terra/medium, assignment-specific permission profile, on-request automatic
 approval review, isolated workspace, network disabled. Scope is the routing fix
 and focused regression tests; independent review follows the committed candidate.
-No implementation, test or review completion is claimed.
+Delivery worker finished and its physical connection closed. Main preserved the
+three-file source/test candidate as commit `950aa6ea` on the managed assignment
+branch. Outdated legacy guidance selects managed upgrade; missing retains bootstrap.
+`git diff --check` passed. Focused XCTest never reached compilation because the
+worker lacked Xcode temporary and SwiftPM/Git-cache access; workspace-local build
+paths did not resolve that restriction. No test pass, independent review, ticket
+completion, integration or installation is claimed. Temporary ignored directories
+`.xcode-guidance-prompt-tmp`, `.xcode-guidance-prompt-derived` and
+`.xcode-guidance-prompt-packages` remain in that worktree, preserved.
+
+Independent review preparation is blocked. Request
+`bb764eb8-79c3-4445-bd59-c86b2f15a527` used the same successful preparation envelope
+below except task ID `rr-p6-guidance-prompt-task-02`, added
+`reviewOfAssignmentID: delivery-722d3858-1574-4c2d-ad6e-71a09e1fd18e`, and reason
+`Independently review the closed guidance correction candidate and its copied-prompt regression coverage; report verification limitations.`
+It returned `assignmentNotAuthorized`. Source inspection establishes that a review
+must retain its parent's exact work identity. Corrected request
+`6b5e8a52-5494-4c57-ae20-87aa10dc0097` is identical to that review request except
+task ID `rr-p6-guidance-prompt-task-01`; it returned `conflict`. No review worker
+was launched. Preserve these identities; do not replace uncertain preparation with
+new requests or bypass managed execution. Next action is supported recovery of
+this preparation conflict and the bounded test-runtime limitation.
 
 Preparation request (successful):
 ```json
