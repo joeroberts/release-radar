@@ -269,6 +269,31 @@ waits/teardown. No optional findings or new product scope. Exact request:
 }
 ```
 
+### Connector services regression review — pending
+
+Candidate `191d1373`; delivery connection closed and task archived. Two
+non-service tests and signed build-for-testing passed. Outputs preserved under
+canonical `.build/connector-recovery-191d1373-preserved/`. Native execution pending.
+Exact review request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "8842219a-b3e9-4858-9ca2-795a6c532850",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-9d3d0a04-16e2-4166-8551-184623f2e1cc",
+  "reason": "Review 191d1373 required services-path regression and bounded synchronization corrections; signed build-for-testing and two non-service tests passed, clean-account native execution pending."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
