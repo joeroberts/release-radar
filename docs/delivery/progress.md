@@ -4,7 +4,9 @@
 
 ### Prepared publication — Release Radar 0.1.24
 
-Local branch `codex/release-0.1.24-permissions` preserves the completed release and all existing branches. Proposed PR base: `main`. Publication is awaiting separate owner authorization; no push or PR creation has occurred.
+Local branch `codex/release-0.1.24-permissions` preserves the completed release and all existing branches. Proposed PR base: `main`. Owner explicitly approved pushing this branch and creating the PR. Publication succeeded: [PR #108](https://github.com/joeroberts/release-radar/pull/108), Open, non-draft, targeting `main`. Owner merge remains pending. Annotated tag `v0.1.24` remains local; no tag push was authorized.
+
+Build Agent completed the read-only release disposition audit: existing signed 0.1.24 package/install and runtime isolation evidence satisfies the local packaging portion of closeout; no rebuild, retest or reinstall is required. Metrics and image viewing remain separate unfinished work. The temporary PR body copy is `/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-0.1.24-pr-66ya51ik.md`; canonical text is retained here and on PR #108. It has not been deleted.
 
 PR title: **Release 0.1.24: isolate managed review scratch writes**
 
