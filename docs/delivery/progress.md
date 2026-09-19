@@ -1,5 +1,13 @@
 # Release Radar delivery state
 
+## Guidance prompt — In Progress September 19
+
+Owner explicitly requested `rr-p6-guidance-prompt` move to In Progress.
+Supported request `d056455c-60d2-456b-b59e-799e7627dbb0` committed with audit
+`1581B190-604A-46CC-AACB-C47A1CD3F653`. Complete connector readback confirms
+In Progress, task-plan revision 1 and both tasks still Active/Pending.
+This status change launched no worker and changed no task completion.
+
 ## Outcome 3 closeout — Blocked by corrections September 19
 
 Owner corrected closeout from In Progress to Blocked because
