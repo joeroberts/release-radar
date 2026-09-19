@@ -1,5 +1,121 @@
 # Release Radar delivery state
 
+## Task and dependency reconciliation v1 — owner preview September 19
+
+**Disposition: proposed; no application writes yet.** The owner authorized deriving
+task breakdowns and dependencies from the approved plan, showing the exact
+assignments, then recording the approved set through the supported connector.
+This is a reconciliation of existing work, not implementation authorization or
+a new phase. Standard: shared-execution/1; installed Release Radar 0.1.21 tracking
+and shared-execution skills apply. Main owns this ledger and the proposed records.
+
+### Exact baseline and preservation
+
+Target canonical root: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
+Project `project-fffdc0e0b15b9b86`, root `project-fffdc0e0b15b9b86-root-0`,
+registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
+Fresh supported inventory is complete: sixteen non-Accepted tickets, all with no
+task plan, no task/history rows and no task-plan revision; zero active tasks.
+P6 lifecycle is In delivery revision 1, plan Ready revision 10; Phase 7 and 8
+remain Unassessed, with Draft plan revisions 3 and 6. Closeout is In Progress,
+metrics is Blocked, and fourteen tickets are Backlog. Preserve these lanes,
+goals, phase membership, existing evidence and historical blocker resolution.
+
+All sixteen tickets are classified **non-atomic** for this proposal: each has
+distinct deliverable or verification steps listed below. The metrics Blocked lane
+does not prevent defining its pending tasks; it does not authorize implementation.
+Each new task plan has baseline `null` (omit `expectedRevision` in the connector
+request). There are no existing definitions to revise, supersede, complete or
+delete. All forty-two additions start Active/Pending; prior product delivery does
+not automatically complete a new task. The closeout tasks explicitly reconcile
+existing evidence instead of redoing delivered work.
+
+### Exact task catalog
+
+For each numbered item below, its exact task ID is the ticket ID followed by
+`-task-01`, `-task-02`, etc.; its label is `Task 1`, `Task 2`, etc.; its sortOrder
+is zero-based in the displayed order. Titles are the exact text after the number.
+No additional tasks are implied by this naming rule.
+
+| Ticket ID | Exact ordered task titles | Source / decomposition rationale |
+| --- | --- | --- |
+| `rr-p6-guidance-prompt` | 1. Correct outdated-guidance routing to the upgrade prompt while preserving missing-guidance bootstrap.<br>2. Verify copied prompts for both guidance states with regression tests and independent UI review. | Observed copy-prompt defect; separate routing and copied-output verification. |
+| `rr-p6-connector-recovery` | 1. Reproduce the retained-client upgrade failure and define supported recovery with signing enforcement intact.<br>2. Implement supported connector recovery and accurate, actionable connection-health feedback.<br>3. Verify signed upgrade, reconnection, rejected peers, version mismatch, disconnection and uncertain-write non-replay with independent recovery and UI review. | [Current correction brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-19-connector-upgraderecovery-correction--current), #99; diagnosis, recovery implementation and boundary verification. |
+| `rr-p6-outcome3-closeout` | 1. Reconcile completed release and acceptance evidence with the remaining Outcome 3 correction scope.<br>2. Complete only the remaining authorized release and acceptance checks, preserving explicit deferrals and recording findings.<br>3. Reconcile correction PR disposition, versioned dist installer, installed identity and delivery records, then retire completed idle delivery tasks while preserving artifacts. | Current ledger and correction brief; evidence reconciliation, remaining checks and delivery closeout. Preserve delivered 0.1.21; owner merges. |
+| `rr-p6-doc-reconciliation` | 1. Identify current controlling documents, conflicting status statements and overlapping delivery identifiers.<br>2. Reconcile active documentation and references while preserving stable identities, accepted ADRs and historical records.<br>3. Validate catalog and indexes and independently review that current scope, sequencing and historical boundaries agree. | [Owner-corrected plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#p6-remediation-grouping--owner-correction-2026-09-18); investigation, bounded reconciliation and validation. |
+| `rr-p6-plan-reconstruction` | 1. Specify the supported versioned planning projection and exact source, destination, identity and lane mappings.<br>2. Implement source validation and an owner-editable reconstruction preview with conflicts, exclusions and cancellation.<br>3. Apply the confirmed projection through typed audited operations with stale-baseline rejection and atomic or explicitly approved recovery behavior.<br>4. Verify empty and partially populated projects, duplicate prevention, uncertain replay and accessible compact and wide review flows using disposable data. | [Reviewed reconstruction design](../design/repository-plan-reconstruction-design.md), #101; contract, preview, application and recovery. Preserve structured-source rule; reconcile #101's broader preparation journey rather than interpreting prose directly into runtime state. |
+| `rr-p6-metrics` | 1. Align Overview metric labels beside the existing icons and center values while preserving glyphs, colors and semantics.<br>2. Verify long phase names, compact and wide layouts and accessibility against the approved design through independent UI review. | [Phase 6 design](../design/phase6-workspace-toolbar-proposal.md); layout and separate visual verification. Blocked lane remains unchanged; removed owner-STOP blocker is not recreated. |
+| `rr-p6-manage-project` | 1. Open Manage Project with exact project identity and independently loading sections with local retry feedback.<br>2. Relocate documentation activation, shared execution, repository access and evidence controls into Manage Project.<br>3. Verify authorization, archived and removed project access, partial failures and accessible navigation with independent UI and recovery review. | Phase 6 design; destination behavior, control relocation and authorization/recovery verification. |
+| `rr-p6-navigation` | 1. Relocate Archive and Remove into Manage Project while preserving exact-target confirmations, retention and recovery.<br>2. Complete and verify the remaining approved navigation behavior, excluding delivered toolbar and search, with independent UI review. | Phase 6 design; lifecycle relocation and remaining navigation. Requires the Manage Project destination. |
+| `rr-p6-guided-setup` | 1. Compare the proposed guided setup journey with delivered Outcome 3 and obtain a decision on the exact remaining scope.<br>2. Implement and independently verify only the approved remainder: exact repository-change preview, owner approval, application and recoverable completion. | Phase 6 design plus later owner-corrected grouping; assessment is useful now, implementation remains conditional. |
+| `rr-p7-export` | 1. Settle the versioned package contract for complete records, documents, evidence, identities and formal-state preservation.<br>2. Implement complete self-contained export with required-content validation and exclusions for source checkouts, credentials and device permissions.<br>3. Produce an exporter-generated acceptance fixture and verify completeness, provenance and unavailable-content failures with independent continuity review. | Full-product plan C10/RM5 and D4/D7/D8; contract, exporter and fixture. Do not amend accepted ADRs to resolve contract conflicts. |
+| `rr-p7-import` | 1. Validate and preview the exporter-produced package, destination identities, authorized roots and file conflicts.<br>2. Implement coordinated file placement and store recovery preserving exported domain identities and historical provenance without replaying commands or notifications.<br>3. Verify installed round trips, interrupted recovery, conflicts and data preservation against the exporter fixture with independent recovery review. | Full-product plan C11/RM6; preview, restoration and direct recovery proof. |
+| `rr-p8-presentation` | 1. Identify and complete remaining RDS coverage and the approved production wordmark while preserving the AppIcon.<br>2. Verify light and dark appearance, relevant window sizes and accessibility against approved references with independent UI review. | Full-product plan I4/RM3 and Phase 8; implementation and visual verification. |
+| `rr-p8-maintenance` | 1. Resolve the scoped optional-.none compiler warnings and verify affected behavior.<br>2. Resolve the scoped test actor-isolation warnings and run the affected tests with independent code review. | Full-product plan I4/RM4; two explicitly named warning classes, no unrelated modernization. |
+| `rr-p8-distribution` | 1. Record the owner's distribution-audience decision and the applicable package acceptance requirements.<br>2. Implement only the selected audience's required packaging and portable helper behavior under separate signing and provisioning authority.<br>3. Verify signed installation, upgrade and relaunch on the selected delivered feature set and reconcile release evidence before publication. | Full-product plan I5/RM9; decision, conditional package work and acceptance. Owner-only may conclude wider-distribution work is not required. |
+| `rr-p8-version-evidence` | 1. Reconcile delivered P17 evidence behavior and implement only the remaining build and installed-version links.<br>2. Verify repository and revision applicability, stale or unavailable observations and installed identity without conflating merge, installation or owner acceptance. | Full-product plan P17/D13 and Phase 8; remaining implementation and evidence-meaning verification. |
+| `rr-p8-stale-helper` | 1. Obtain the separately authorized isolated macOS account or VM and prepare signed installed versions for the stale-helper scenario.<br>2. Reproduce a real production helper surviving upgrade and exercise Settings Restart helper before startup recovery consumes the condition.<br>3. Verify old-process termination, replacement identity, exact-version receipts, data preservation and actionable failures with independent runtime review. | Full-product plan's Phase 8 deferred stale-helper acceptance; environment, scenario and acceptance. Existing synthetic or current-helper checks do not substitute. |
+
+### Exact dependency additions
+
+Each row creates one `kind: ticket` dependency with the displayed stable ID.
+`subjectID` is the ticket requiring the prerequisite; `dependsOnID` is its
+prerequisite. The reverse Unlocks view is derived from the same link, not another
+edge. Existing ticket definitions, lanes and goal assignments are not revised.
+
+| Dependency ID | subjectID (Requires) | dependsOnID (prerequisite / Unlocks subject) | Basis |
+| --- | --- | --- | --- |
+| `rr-dep-closeout-guidance` | `rr-p6-outcome3-closeout` | `rr-p6-guidance-prompt` | Remaining guidance correction must be verified before Outcome 3 closeout finishes. |
+| `rr-dep-closeout-connector` | `rr-p6-outcome3-closeout` | `rr-p6-connector-recovery` | #99 and correction brief explicitly prevent full Outcome 3 closeout. |
+| `rr-dep-docs-closeout` | `rr-p6-doc-reconciliation` | `rr-p6-outcome3-closeout` | Explicit owner sequence. |
+| `rr-dep-reconstruction-docs` | `rr-p6-plan-reconstruction` | `rr-p6-doc-reconciliation` | Explicit owner sequence and reviewed reconstruction design. |
+| `rr-dep-navigation-management` | `rr-p6-navigation` | `rr-p6-manage-project` | Archive/Remove relocation uses the completed Manage Project destination. |
+| `rr-dep-import-export` | `rr-p7-import` | `rr-p7-export` | RM6 must use the exporter-produced fixture; importer never precedes it. |
+
+These six links use the existing ticket-dependency semantics. The two closeout
+links identify finish prerequisites even though evidence reconciliation has begun;
+the current runtime may also restrict further lane transitions until prerequisites
+are satisfied. Preserve closeout In Progress; do not falsely accept prerequisites
+to clear a gate. No phase-level links are proposed: they would unnecessarily block
+early assessment, distribution decisions or independent work. The broader Phase
+7/8 sequence remains in the controlling plan.
+
+### Blockers, decisions and conditional gates
+
+**No new blocker records are proposed.** Unstarted work alone is not a blocker.
+Actual required decisions and access are visible in the corresponding first task:
+guided-setup residual scope, portable formal-state contract, distribution audience,
+and authorization/access for the isolated stale-helper test environment. Record an
+explicit blocker when one prevents the currently attempted work, with that exact
+reason. Preserve the metrics Blocked lane by owner request, without recreating its
+resolved STOP blocker or inferring a new impediment.
+
+Do not add an unconditional stale-helper → distribution ticket dependency: the
+distribution audience decision must remain possible first, and stale-helper
+acceptance gates broader distribution specifically. Do not add the unscheduled
+#102–#104 feature issues to this sixteen-ticket plan. No task completions, lane
+changes, goal revisions, phase finalization, notifications or worker assignments
+are part of this reconciliation.
+
+### Apply and verification boundary
+
+Owner approval must identify this exact v1 catalog and six dependency assignments.
+Before application, re-read the supported complete inventory and verify every
+ticket still has the same absent plan and identity. Recheck current dependency
+readback; preserve unrelated links and stop on a conflicting same-ID relation.
+Persist ordered exact mutation envelopes here before execution. Apply sixteen
+`revise_ticket_task_plan` requests and six `set_dependency` requests serially,
+preserving request identities across uncertain outcomes. Record returned task-plan
+revisions and audits. Do not send completion requests. A changed baseline requires
+a revised preview, not overwriting intervening work.
+
+After application, verify all forty-two Active/Pending tasks and full histories
+through complete inventory, the exact Requires/Unlocks paths in the app, and
+preservation of lanes, goals and blockers. Run the packaged documentation check.
+Current endpoint is this durable owner preview only. No exact task catalog had
+previously been shown to the owner, so the earlier approval does not substitute
+for the installed tracking skill's exact-catalog approval step.
+
 ## Outcome 3 closeout — In Progress September 19
 
 Owner approved correcting `rr-p6-outcome3-closeout` from Backlog to In Progress
