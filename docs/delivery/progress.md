@@ -1,5 +1,19 @@
 # Release Radar delivery state
 
+## P6-remediation planning — Ready September 19
+
+Owner explicitly requested finalizing P6-remediation. Supported
+`finalize_phase_plan` committed revision 10 with request
+`93a6a293-6643-4858-9659-a2770f241765` and audit
+`DAFC8767-1ACB-4360-BAA7-2FB9F76889FC`, targeting project
+`project-fffdc0e0b15b9b86`, phase `rr-p6-remediation`, canonical root and
+registration generation 1 recorded below. After reopening the project from
+Projects, Project Plan displays **Ready · revision 10 · 9/9 covered** and four
+Planned goals. The initial open view retained Draft until project reselection.
+Phase lifecycle remains Unassessed, tickets remain Backlog, and metrics STOP
+remains in force. No execution or acceptance occurred. Phase 7 and Phase 8
+remain Draft. This supersedes the earlier pending-finalization status below.
+
 ## Delivery Goals — created and assigned September 19
 
 Owner requested creating and assigning Delivery Goals for the existing approved
