@@ -1,5 +1,60 @@
 # Release Radar delivery state
 
+## Cleanup and deferred verification — September 19
+
+Owner requested branch/task cleanup and current RR board state. Removed 12 local
+merged, unoccupied non-managed branches and 9 remote branches contained in main.
+Local main fast-forwarded to the verified merge cf67b6ae. Unmerged branches,
+worktrees, managed resources, installers and tags remain preserved.
+
+Owner clarified that deferred second-Mac connector verification belongs only in
+GitHub, not RR. Created [issue #106](https://github.com/joeroberts/release-radar/issues/106),
+unscheduled with no delivery phase and explicitly non-blocking current closeout.
+The RR entry below was created in error before that clarification; creation audit
+`0593362A-124E-42C1-9B4D-E2F6E5199769`. The supported connector exposes no ticket
+delete/retire operation; it remains unassigned pending supported removal. Its
+outcome now explicitly says Created in error — do not schedule and points only to
+GitHub #106 (correction request `f1057479-589b-40c5-9c46-b4383375cf89`, audit
+`C96D6B14-CCB3-45E0-88E5-98331AF55D23`). This is not formal retirement. Preserve
+the original request for history:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "7307ce1f-a6ca-4815-bc92-9f6c793f4092",
+  "ticketID": "rr-unassigned-second-mac-connector-upgrade",
+  "outcome": "Verify retained Codex connector recovery across a signed Release Radar upgrade on a second Mac. Preserve the old client through upgrade, observe failure and actionable health, use supported reconnect/recovery, then verify the original connector call succeeds with signing enforcement intact. Record rejected-peer, protocol-mismatch, disconnect and uncertain-write non-replay results and independent recovery/UI evidence applicable to this scenario. Deferred and unscheduled; no delivery phase assigned. Preserve existing local tests/reviews and do not report the unperformed second-Mac test as passed. Related broad second-Mac acceptance: GitHub #91; connector correction: #99.",
+  "reason": "Owner explicitly directed deferred second-Mac connector verification into a new unassigned ticket, not a blocker on delivered connector implementation. Create planning record only; no new phase, worker launch or acceptance claim."
+}
+```
+
+Archived seven completed bounded Codex tasks (all last turns completed;
+worktrees and artifacts preserved):
+
+- `01a0b952-0761-7923-9965-698f689e5548`: guidance writer; accepted guidance delivery is recorded below.
+- `01a0b962-8073-7ff2-8d97-3f4f0b198c8b`: guidance source review; no Required findings, runtime limits preserved.
+- `01a0b968-d44b-72b0-8c55-609a3c55634e`: initial managed-build permission candidate `2a39a82d`, superseded by corrected candidate.
+- `01a0b971-5ac8-7483-93f8-c79e8cf1d252`: initial review found saved-profile compatibility defect, corrected by next candidate.
+- `01a0b974-9f8f-7ba1-92fb-fadfb36a5711`: corrected candidate `60955d6a`; parser correction passed, runtime verification still pending under its existing ticket.
+- `01a0b979-fb69-7281-a631-30258ff30c1e`: corrected candidate source review passed; no live sandbox/XCTest claim.
+- `01a0b8a3-d8d2-7dc2-b117-f4b36e3e841e`: catalog diagnostic/release 0.1.21 completed, PR #100 and tagged installer preserved; no task-owned processes/mounts remain according to its final report.
+
+Main, Restricted Coordinator 03 and Build Agent 02 remain available for ongoing work.
+The current connector branch has post-merge ledger commits and is retained. PR #100
+retains the unique tagged 0.1.21 artifact commit; preserve it pending disposition.
+Worktree-attached local branches, RR-managed branches, unmerged historical branches
+and synthetic-project tasks were not removed. Metrics remains Blocked by the
+owner's earlier lane instruction; no implementation resume is inferred. Managed-build
+permissions retains its actual pinned-dependency/runtime-verification blocker.
+The closeout blocker text still mentions the accepted guidance ticket; its exact
+blocker identity is not exposed by the available connector readbacks. No duplicate
+blocker or guessed-ID mutation was introduced.
+Archival is conversation cleanup, not ticket acceptance or worker-resource deletion.
+
 ## Current release delivery checkpoint
 
 [PR #105](https://github.com/joeroberts/release-radar/pull/105) was merged by the
@@ -7,8 +62,9 @@ owner on September 19 at 17:41:02 UTC, merge commit
 `cf67b6ae0ec1fe6d234db048b74f0daf6f91de76`. Its existing #98/#100 prerequisites
 and branches remain preserved. Local tag v0.1.23 has not been pushed. The verified 0.1.23 DMG is
 committed underdist/ and installed. Fresh-client supported inventory and audited
-original-request refusal replay passed. Overall #99 remains open: retained-client
-signed-upgrade/native broker acceptance is deferred to another Mac; independent
+original-request refusal replay passed. GitHub #99 is closed; remaining retained-client
+signed-upgrade/native broker verification is deferred exclusively to GitHub #106,
+unscheduled and non-blocking current closeout by owner direction. Independent
 healthy-state UI QA passed. Approved RR reconciliation is committed: evidence
 revision 4, task-plan revision 2, task 02 Completed; tasks 01/03 remain Pending. Earlier no-push/install wording below describes
 prior checkpoints, not this current release state.
