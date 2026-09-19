@@ -124,9 +124,16 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
 
         let fixture = try await makeTransportFixture()
         let snapshots = HealthSnapshotCapture()
+        let hostID = UUID()
+        let serviceRelay = AgentBridgeServiceRelay()
         let host = try await AgentBridgeApplicationHost.start(
             databaseURL: fixture.databaseURL,
-            connectionHealthChanged: { snapshots.append($0) }
+            connectionHealthChanged: { snapshot in
+                snapshots.append(snapshot)
+                Task { @MainActor in
+                    serviceRelay.service?.receiveAgentBridgeHealth(snapshot, from: hostID)
+                }
+            }
         )
         var hostRegistrationOwned = true
         defer {
@@ -137,37 +144,56 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             XCTAssertEqual(bridgeService.status, .notRegistered)
         }
 
-        let refreshReturned = AsyncSignal()
+        let refreshReturned = expectation(description: "Bridge health refresh returns before interruption")
         let releasePresentation = AsyncSignal()
+        let service = ReleaseRadarAppServices(
+            testingStore: fixture.store,
+            agentBridgeHost: host,
+            agentBridgeHostID: hostID,
+            afterAgentBridgeHealthRefresh: {
+                refreshReturned.fulfill()
+                await releasePresentation.wait()
+            }
+        )
+        serviceRelay.service = service
         let model = AppModel(
             store: fixture.store,
-            connectorHealthLoader: {
-                let health = try await host.refreshConnectionHealth()
-                refreshReturned.signal()
-                await releasePresentation.wait()
-                return health
-            },
+            recoveryServices: service,
             externalServicesSuppressed: true
         )
-        let refresh = Task { @MainActor in
+        var refresh: Task<Void, Never>?
+        var serviceStopped = false
+        defer {
+            releasePresentation.signal()
+            refresh?.cancel()
+            if !serviceStopped {
+                Task { @MainActor in
+                    await service.stopSharedServices()
+                }
+            }
+        }
+        refresh = Task { @MainActor in
             await model.refreshConnectorHealth()
         }
-        await refreshReturned.wait()
+        await fulfillment(of: [refreshReturned], timeout: 5)
         let availableSnapshot = try XCTUnwrap(snapshots.last)
         XCTAssertNotNil(availableSnapshot.health)
 
         try host.unregister()
         hostRegistrationOwned = false
 
-        let staleSnapshot = try await waitForStaleHealthSnapshot(
+        _ = try await waitForStaleHealthSnapshot(
             after: availableSnapshot.generation,
             capture: snapshots
         )
-        model.applyConnectorHealthSnapshot(staleSnapshot)
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline, model.connectorHealthStatus != "Connection failed" {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         XCTAssertEqual(model.connectorHealthStatus, "Connection failed")
 
         releasePresentation.signal()
-        await refresh.value
+        await refresh?.value
         XCTAssertEqual(
             model.connectorHealthStatus,
             "Connection failed",
@@ -182,6 +208,8 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         }
         let restartedHealth = try await restartedHost.refreshConnectionHealth()
         XCTAssertTrue(restartedHealth.health?.isRegisteredAppConnection == true)
+        await service.stopSharedServices()
+        serviceStopped = true
     }
 
     private final class OneShotRequestGate: @unchecked Sendable {
@@ -296,6 +324,10 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
                 snapshots.first { $0.generation > generation && $0.health == nil }
             }
         }
+    }
+
+    private final class AgentBridgeServiceRelay: @unchecked Sendable {
+        @MainActor var service: ReleaseRadarAppServices?
     }
 
     private func waitForStaleHealthSnapshot(

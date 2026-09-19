@@ -111,6 +111,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     private var agentBridgeHostID: UUID?
     private var agentBridgeHealthGeneration: UInt64 = 0
     private var agentBridgeSourceHealthGeneration: UInt64?
+    private var afterAgentBridgeHealthRefresh: (@MainActor () async -> Void)?
 
     private init() {
         let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
@@ -205,7 +206,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
                 },
                 connectionHealthChanged: { [weak self] snapshot in
                     Task { @MainActor [weak self] in
-                        self?.publishAgentBridgeHealth(snapshot, from: hostID)
+                        self?.receiveAgentBridgeHealth(snapshot, from: hostID)
                     }
                 }
             )
@@ -225,7 +226,8 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
             throw AgentBridgeApplicationError.connectFailed("Release Radar is not connected to its bridge")
         }
         let sourceSnapshot = try await agentBridgeHost.refreshConnectionHealth()
-        if let published = publishAgentBridgeHealth(sourceSnapshot, from: agentBridgeHostID) {
+        if let published = receiveAgentBridgeHealth(sourceSnapshot, from: agentBridgeHostID) {
+            await afterAgentBridgeHealthRefresh?()
             return published
         }
         guard let agentBridgeHealthSnapshot else {
@@ -246,7 +248,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     }
 
     @discardableResult
-    private func publishAgentBridgeHealth(_ snapshot: AgentBridgeHealthSnapshot, from hostID: UUID) -> AgentBridgeHealthSnapshot? {
+    func receiveAgentBridgeHealth(_ snapshot: AgentBridgeHealthSnapshot, from hostID: UUID) -> AgentBridgeHealthSnapshot? {
         guard agentBridgeHostID == hostID else { return nil }
         guard (agentBridgeSourceHealthGeneration ?? 0) <= snapshot.generation else { return nil }
         agentBridgeSourceHealthGeneration = snapshot.generation
@@ -260,4 +262,30 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         agentBridgeHealthObserver?(published)
         return published
     }
+
+#if DEBUG
+    init(
+        testingStore store: DeliveryStore,
+        agentBridgeHost: AgentBridgeApplicationHost,
+        agentBridgeHostID: UUID,
+        afterAgentBridgeHealthRefresh: (@MainActor () async -> Void)? = nil
+    ) {
+        self.store = store
+        keychain = PushoverKeychainStore()
+        notificationCoordinator = AppNotificationCoordinator(
+            store: store,
+            dispatcher: PushoverNotificationDispatcher(store: store, credentials: keychain)
+        )
+        codexPluginCoordinator = nil
+        codexPluginShippedVersion = "Unknown"
+        codexPluginShippedCapability = nil
+        recoveryStartupError = nil
+        recoveryResumedAtLaunch = false
+        agentBridgeStartupError = nil
+        codexPluginPackage = nil
+        self.agentBridgeHost = agentBridgeHost
+        self.agentBridgeHostID = agentBridgeHostID
+        self.afterAgentBridgeHealthRefresh = afterAgentBridgeHealthRefresh
+    }
+#endif
 }
