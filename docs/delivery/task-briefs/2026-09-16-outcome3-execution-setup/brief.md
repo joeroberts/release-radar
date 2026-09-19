@@ -1,5 +1,19 @@
 # Outcome 3 project execution setup
 
+## September 19 owner-approved bootstrap exception — catalog diagnostics
+
+The owner approved a narrowly scoped bootstrap exception after catalog acceptance blocked managed-worker admission. This supersedes the alternate-task prohibition below only for implementing and independently reviewing this diagnostic fix. It does not authorize direct AgentTools invocation, direct database access, catalog reset/rebinding, relaxed validation, trust/configuration changes, or unrelated implementation.
+
+- **Outcome:** preserve the real catalog-transition validation reason and affected artifact/path; expose a read-only transition diagnostic through the supported connector and show actionable detail in the app. Run that diagnostic against this project's saved accepted/current catalogs after verified delivery, then explain the smallest proposed metadata or validator correction before changing catalog state.
+- **Evidence:** owner completed onboarding after enabling the previously disabled hook. Connector reads recovered after Codex restart and use the current 0.1.20 app helper. Accept This Catalog then failed without committing. Accepted digest is `112beed626b832915e31d1296baa3ce1f8355ce84d16db086c2321c459302369`; current canonical catalog digest is `438591c49cbcea7772b90a5658de4fce3fa406d9b391c965e3195e15139f2aa5`. The dispatcher catches all transition failures as generic invalidTransition. Exact rejected artifact remains unknown; 145 distinct catalogs on local Git refs did not match the accepted digest in the read-only reconstruction.
+- **Scope:** validator diagnostics, read-only authorized query/transport/plugin schema, existing documentation activation UI, focused tests and owning mutable design. Main exclusively owns this ledger and brief. Preserve accepted ADRs, unrelated work and all retained artifacts.
+- **Assignment:** isolated delivery checkout from the committed revision containing this section; Sol/high for cross-component query/error contracts, ceiling Astra/high only for a named unresolved problem. Fresh independent Sol/high reviewer covers authorization, read-only behavior, compatibility, recovery and UI guidance. Verify actual runtime settings and report unavailable labels; no silent assumptions. Use ordinary Codex task routing solely under this explicit exception while the managed route is blocked.
+- **Checks:** test-first regression for detailed invalid transition; authorized project/root scoping and no writes/receipts/acceptance changes; valid transitions and unchanged rejection semantics; malformed/stale input and bounded safe diagnostic fields; app display and focused UI verification. Reuse repository-native checks. No diagnostics framework, snapshot export or raw database dumping.
+- **Architecture:** preserve ADR-001 boundaries and ADR-006 identity/lifecycle enforcement; place any additive read-only contract specification in the owning mutable documentation. No persistence migration or altered acceptance semantics.
+- **Endpoint:** scoped implementation, direct checks, independent review and local commit/PR under existing authorization; owner merges. Standing verified local release delivery applies after checks/review, with canonical installer tracked under dist per the later owner instruction. Only supported connector readback is acceptance evidence. No automatic catalog correction or acceptance retry.
+
+Repository documentation check and diff check passed for prior records at 913757ee; independent validation remains pending. Bootstrap work is not full Outcome 3 completion. Related findings are recorded in issue #99.
+
 ## September 19 connector upgrade/recovery correction — current
 
 Issue: [#99](https://github.com/joeroberts/release-radar/issues/99). Owner authorized durable records, their validation, then this correction. This section supersedes connector-completion implications in earlier acceptance notes, not their bounded product results.

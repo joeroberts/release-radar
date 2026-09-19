@@ -1,5 +1,11 @@
 # Release Radar delivery state
 
+## September 19 active bootstrap diagnostic correction
+
+Owner explicitly approved the bounded exception in the [bootstrap diagnostic brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-19-owner-approved-bootstrap-exception--catalog-diagnostics): ordinary isolated Codex delivery/review tasks may implement only the supported read-only catalog-transition diagnostic and detailed UI error while managed-worker admission is blocked. Main owns records. No direct helper/database access, acceptance bypass, catalog changes, permission changes or unrelated work is authorized by this exception.
+
+Connector connectivity recovered after the owner restarted Codex; current helper loads from the installed 0.1.20 application. Owner subsequently completed project onboarding. Catalog acceptance failed without committing, and its actual reason is hidden by generic invalidTransition. Next: diagnostic implementation and independent review, verified delivery, then supported read-only diagnosis of the exact rejected transition. Full Outcome 3 correction and later documentation reconciliation remain pending; historical contradictory status below does not override this section.
+
 ## September 19 correction — overrides prior closeout status
 
 Outcome 3 connector upgrade recovery is **not complete**. [Issue #99](https://github.com/joeroberts/release-radar/issues/99) and the [correction brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-19-connector-upgraderecovery-correction--current) record the confirmed stale AgentTools process, signing rejection, generic error and missing UI health reporting. Direct helper fallbacks were used and do not establish connector acceptance. Package delivery remains valid within its scope; the fresh release-focused test run remains incomplete. PR #98's prior closeout wording is superseded by this correction.
