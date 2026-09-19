@@ -16,6 +16,20 @@ connector recovery is verified and Needs Review awaiting owner acceptance, and
 GH106 is unscheduled/non-blocking. Existing dependencies remain unchanged.
 This supersedes the earlier statement that the blocker identity was unavailable.
 
+### Managed build verification — compilation passed, XCTest unavailable
+
+Build Agent staged the verified offline RDS/libgit2 inputs in the preserved
+`delivery-85453c11-57b2-4d66-9fe3-0db9dcc5c106` checkout and built exact clean
+candidate `60955d6a` successfully. Source remained unchanged. The five-filter test
+invocation did not emit any test cases before the stalled runner was interrupted
+(exit 130); zero tests observed, partial xcresult unreadable. Attached-device
+service warnings do not yet establish the cause. Build Agent is diagnosing the
+macOS test-host launch before a bounded retry; no permissions changed.
+Logs remain under that checkout's `.build/native-checks/`, named
+`managed-build-permissions-build-60955d6a.log` and
+`managed-build-permissions-tests-60955d6a.log`. Live managed sandbox verification
+remains pending and is not established by this trusted build.
+
 ### Metrics delivery resumed
 
 Owner's active goal resumes the named metrics scope, superseding historical STOP
