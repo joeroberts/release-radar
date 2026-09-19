@@ -1,5 +1,18 @@
 # Release Radar delivery state
 
+## Current release delivery checkpoint
+
+Draft [PR #105](https://github.com/joeroberts/release-radar/pull/105) is open against
+main from `codex/connector-recovery-baseline`; branch push is complete. It includes
+the existing #98/#100 prerequisites and explicitly preserves their disposition.
+No merge occurred; local tagv0.1.23 has not been pushed. The verified0.1.23 DMG is
+committed underdist/ and installed. Fresh-client supported inventory and audited
+original-request refusal replay passed. Overall #99 remains open: retained-client
+signed-upgrade/native broker acceptance is deferred to another Mac; independent
+UI QA and exact RR evidence/task reconciliation retain their outstanding status.
+All three RR tasks remain pending. Earlier no-push/install wording below describes
+prior checkpoints, not this current release state.
+
 ## Authorized preparation recovery repair
 
 Owner approved a narrow exception for an isolated Codex delivery task outside RR
