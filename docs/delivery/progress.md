@@ -92,6 +92,15 @@ independent review continues against the untouched original candidate. Remaining
 required review findings will use this same correction assignment. No builds by
 the writer; Main owns ledger/Git and Build Agent owns compilation/tests.
 
+Independent source review of `6813481a` completed with required findings: compile
+failure and discarded typed handshake failure; lost startup wire-mismatch state;
+Settings not invalidated when host connection becomes stale; missing direct XPC
+health-denial/restart/stale-response tests; missing accessible result announcement.
+No optional/out-of-scope findings. Source review is not runtime acceptance.
+Correction worker has fixed the first two and is implementing the remaining set.
+Reviewer's numeric severities are not acceptance or product-priority decisions;
+the compile defect blocks this candidate, not a released production emergency.
+
 The existing signed native fixtures require initial/final exact `.notRegistered`
 and cannot adopt the owner app's registration (ADR-002). Owner was asked whether
 an existing clean macOS test session/VM is available; no account/service change
