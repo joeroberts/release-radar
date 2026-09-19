@@ -1,8 +1,10 @@
 # Release Radar delivery state
 
-## September 19 catalog recovery — acceptance pending
+## September 19 catalog recovery — accepted and verified
 
-Owner approved verified metadata recovery and acceptance after full transition validation. Canonical repair restores three preserved documents/entries and Outcome 2 completed/nonAuthoritative metadata from `93dff19b`, preserving stable IDs. Main verified exact metadata and restored document bytes; native documentation/diff checks passed. RO Coordinator 05 independently inspected current entries, restored content and generated indexes: PASS, no Required findings; historical equality and app diagnostic were Main-attributed. Supported transition isValid is true for candidate `e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e`. The exact pending acceptance request follows; preserve unchanged across uncertain outcomes. Earlier blocker descriptions below are superseded by this checkpoint.
+Owner approved verified metadata recovery and acceptance after full transition validation. Canonical repair restores three preserved documents/entries and Outcome 2 completed/nonAuthoritative metadata from `93dff19b`, preserving stable IDs. Main verified exact metadata and restored document bytes; native documentation/diff checks passed. RO Coordinator 05 independently inspected current entries, restored content and generated indexes: PASS, no Required findings; historical equality and app diagnostic were Main-attributed. Supported transition isValid is true for candidate `e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e`. The exact committed acceptance request follows for recovery provenance; do not issue a new request. Earlier blocker descriptions below are superseded by this checkpoint.
+
+Acceptance succeeded through the supported connector with audit `35538549-4E4D-47C2-B829-D49E4D625904`. Fresh supported inventory is complete and its binding/catalog match candidate digest `e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e`; fresh transition readback is valid with identical accepted/candidate digests. Canonical repairs are committed as `8e5da12e` and `7d5916c4` on `codex/catalog-plan-restoration`. Catalog recovery is complete; broader Outcome 3 connector upgrade/recovery remains separate and open. No validation rules, governing instructions or unrelated configuration were changed.
 
 ```json
 {
