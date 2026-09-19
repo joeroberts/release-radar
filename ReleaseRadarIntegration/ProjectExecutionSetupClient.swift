@@ -262,6 +262,16 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               NSDictionary(dictionary: actual).isEqual(to: desired) else { throw ProjectExecutionError.conflict }
     }
 
+    func workerProfileExists(primaryRoot: String, profileID: String) async throws -> Bool {
+        try ProjectExecutionPaths.component(profileID)
+        let layer = try userLayer(await read(primaryRoot, readback: true))
+        let config = layer["config"] as? [String: Any] ?? [:]
+        guard config["permissions"] == nil || config["permissions"] is [String: Any] else {
+            throw ProjectExecutionError.conflict
+        }
+        return (config["permissions"] as? [String: Any])?[profileID] != nil
+    }
+
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws {
         try await removeWorkerProfile(primaryRoot: primaryRoot, profileID: profileID, expected: expected, beforeWrite: {})
     }

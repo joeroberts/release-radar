@@ -17,4 +17,11 @@ public protocol ExecutionWorktreeProvisioning: Sendable {
     func candidateRevision(worktree: ExecutionWorktree) throws -> String
     func prepare(primaryRoot: URL, checkout: URL, projectID: String, taskID: String, baseline: String) throws -> ExecutionWorktree
     func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws
+    func hasPreparedResources(primaryRoot: URL, checkout: URL, projectID: String, taskID: String) throws -> Bool
+}
+
+public extension ExecutionWorktreeProvisioning {
+    func hasPreparedResources(primaryRoot: URL, checkout: URL, projectID: String, taskID: String) throws -> Bool {
+        throw ProjectExecutionError.unavailable
+    }
 }

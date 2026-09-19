@@ -17,6 +17,7 @@ public protocol ProjectExecutionConfiguring: Sendable {
     func finishConfiguration() async throws
     func recoverConfigurationConnection() async throws
     func prepareWorkerProfile(primaryRoot: String, profile: ProjectExecutionPermissionProfile) async throws
+    func workerProfileExists(primaryRoot: String, profileID: String) async throws -> Bool
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws
 }
@@ -25,6 +26,7 @@ public extension ProjectExecutionConfiguring {
     func selectedCodexContextID() async throws -> UUID? { throw CodexExecutionContextError.selectionRequired }
     func useCodexContext(_ expected: UUID?) async throws { throw CodexExecutionContextError.selectionRequired }
     func validateHandlerIdentity(handlerPath: String) async throws { try await validateInstallation(handlerPath: handlerPath) }
+    func workerProfileExists(primaryRoot: String, profileID: String) async throws -> Bool { throw ProjectExecutionError.unavailable }
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws { throw ProjectExecutionError.unavailable }
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws {
         try await beforeWrite()
