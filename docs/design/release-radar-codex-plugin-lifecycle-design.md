@@ -31,6 +31,86 @@ Codex
 There is no HTTP server, direct SQLite access, generic command layer, periodic
 reconciliation framework, or new ticket command surface.
 
+## Connector recovery correction — September 19, 2026
+
+Implementation contract for `rr-p6-connector-recovery` / issue #99, following
+Chief architecture consultation on baseline `6652228c`. This is intended behavior,
+not a claim of implementation or acceptance. Accepted ADR-001/002 remain unchanged.
+
+### Transport and trust
+
+- Replace Boolean handshake completion with a one-shot typed result: compatible,
+  incompatible (expected version and optional observed peer version), timeout,
+  transport failure, or invalid protocol response. Preserve failure stage. Legacy
+  reply zero means incompatibility with unknown supported version, not version zero.
+  Only bounded, allowlisted diagnostics reach users; generic XPC failure does not
+  prove signature rejection or app absence. Late/racing callbacks settle once.
+- Preserve dispatch certainty independently: a failure before forward is attempted
+  is not submitted; failure after possible handoff remains outcome unknown.
+  Client transport failures use explicit MCP tool errors; successful command-result
+  shapes and existing outcomeUnknown semantics remain intact. Health/recovery never
+  resends an envelope or allocates a replacement request ID.
+- Add one bounded, read-only health query on the app-facing broker interface,
+  restricted to the authenticated Release Radar app. Return current wire version,
+  whether this caller connection is the registered app, and the broker's last
+  authenticated tools contact (or none). Advance the bridge wire version for the
+  added selector, preserve bootstrap handshake/register selectors, and fail closed
+  across mixed versions. Do not change commandEnvelopeVersion or reinterpret its
+  unsupportedVersion as a transport mismatch.
+- Gate snapshots by time and connection generation. Clear observations on broker
+  restart; mark app state stale on interruption/invalidation; ignore old-generation
+  replies. A fresh round trip proves app-to-bridge readiness only. An authenticated
+  tools handshake proves contact, not a successful delivery action or a healthy
+  Codex session. Another client's success cannot certify the retained client.
+- Preserve UID, Team, identifier, anchor and code-sign enforcement. Health is not
+  available to tools or Coordinator peers. Do not accept client-reported rejection,
+  stale or healthy status. Rejected clients may never reach a broker method, so
+  there is no reliable rejection feed; absence of contact must remain unknown.
+  An already-running old helper cannot acquire new diagnostics retroactively.
+
+### Settings and supported recovery
+
+Follow the Connections card/status/last-observation/action pattern in
+`docs/design/mockups/settings.png`, preserving the existing app composition.
+Keep plugin installation, app bridge readiness and connector observations separate:
+
+- Show “App bridge: Available”, “Connection failed” or “Version mismatch”, and
+  separately “Last authenticated connector contact: [time]” or “Not yet observed”.
+  Refresh performs a bounded health read, not a command retry or a second store host.
+- Connection failure guidance: “The Release Radar connector could not connect.
+  After updating Release Radar, quit and reopen Codex, then check the connection
+  again.” Explain that existing tasks should first reach a safe stopping point.
+- Missing app registration: “Release Radar is not connected to its bridge. Reopen
+  Release Radar, then check again.” Do not falsely promise automatic reconnection.
+- Uncertain action: “The result is unknown. Check the action's recorded outcome
+  before taking further action.” No automatic replay.
+- Rename Restart helper to Restart plugin helper, explaining that it refreshes
+  plugin management, not the running connector. No supported per-connector restart
+  has been established; do not invent one or kill processes.
+
+No new MCP tool, database schema, telemetry framework, trust exception or
+lifecycle-helper authority is introduced. Implementation touches only the existing
+transport, AgentTools, broker, application host, app health plumbing, Settings and
+focused tests. Preserve other app behavior and unrelated source.
+
+### Direct acceptance
+
+Test typed handshake outcomes, late/racing callbacks and no forward after failed
+admission; app registration/disconnection, broker restart, stale-generation replies
+and unknown/no-contact observations; and wrong-signer/UID/identifier rejection,
+including denial of the app-only health query. Exercise uncertain handoff with
+zero automatic replay on health refresh/recovery; explicit idempotency replay alone
+is insufficient evidence for that property.
+
+Retain the original Codex connector across a signed app replacement. Observe its
+actual compatible or failed/unknown state honestly, verify visible guidance, perform
+supported owner recovery, then obtain a successful supported inventory and updated
+contact observation. A fresh shell-launched helper cannot substitute for this
+acceptance. Include mixed wire versions and app disconnection. Independent review
+covers trust/recovery and independent UI QA covers normal/narrow/wide layouts,
+keyboard access and announced failures. Build Agent runs compilation/tests; RO
+remains read-only. No completion is inferred from this contract.
+
 ## Plugin package
 
 The signed Release Radar app contains the canonical local marketplace and

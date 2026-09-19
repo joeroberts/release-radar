@@ -102,9 +102,16 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     let codexPluginShippedCapability: RecognizedPluginCapability?
     private(set) var recoveryStartupError: String?
     private(set) var recoveryResumedAtLaunch = false
+    private(set) var agentBridgeStartupError: AgentBridgeApplicationError?
     private let codexPluginPackage: CodexPluginPackage?
     private var agentBridgeHost: AgentBridgeApplicationHost?
     private var executionAssignmentPreparer: ProjectExecutionAssignmentCoordinator?
+    private var agentBridgeHealthSnapshot: AgentBridgeHealthSnapshot?
+    private var agentBridgeHealthObserver: (@MainActor (AgentBridgeHealthSnapshot) -> Void)?
+    private var agentBridgeHostID: UUID?
+    private var agentBridgeHealthGeneration: UInt64 = 0
+    private var agentBridgeSourceHealthGeneration: UInt64?
+    private var afterAgentBridgeHealthRefresh: (@MainActor () async -> Void)?
 
     private init() {
         let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
@@ -185,14 +192,53 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         let preparer = executionAssignmentPreparer ?? ProjectExecutionSetupClient.assignments(plugin: codexPluginCoordinator)
         executionAssignmentPreparer = preparer
         let coordinator = notificationCoordinator
-        agentBridgeHost = try await AgentBridgeApplicationHost.start(
-            databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
-            executionAssignments: preparer,
-            executionAssignmentRoot: ProjectExecutionFileStore.applicationRoot,
-            afterReply: { envelope, result in
-                await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
-            }
-        )
+        agentBridgeHealthSnapshot = nil
+        agentBridgeSourceHealthGeneration = nil
+        let hostID = UUID()
+        agentBridgeHostID = hostID
+        do {
+            agentBridgeHost = try await AgentBridgeApplicationHost.start(
+                databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
+                executionAssignments: preparer,
+                executionAssignmentRoot: ProjectExecutionFileStore.applicationRoot,
+                afterReply: { envelope, result in
+                    await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+                },
+                connectionHealthChanged: { [weak self] snapshot in
+                    Task { @MainActor [weak self] in
+                        self?.receiveAgentBridgeHealth(snapshot, from: hostID)
+                    }
+                }
+            )
+            agentBridgeStartupError = nil
+        } catch {
+            let startupError = (error as? AgentBridgeApplicationError)
+                ?? .connectFailed(error.localizedDescription)
+            agentBridgeHostID = nil
+            agentBridgeStartupError = startupError
+            throw startupError
+        }
+    }
+
+    func refreshAgentBridgeHealth() async throws -> AgentBridgeHealthSnapshot {
+        guard let agentBridgeHost, let agentBridgeHostID else {
+            if let agentBridgeStartupError { throw agentBridgeStartupError }
+            throw AgentBridgeApplicationError.connectFailed("Release Radar is not connected to its bridge")
+        }
+        let sourceSnapshot = try await agentBridgeHost.refreshConnectionHealth()
+        if let published = receiveAgentBridgeHealth(sourceSnapshot, from: agentBridgeHostID) {
+            await afterAgentBridgeHealthRefresh?()
+            return published
+        }
+        guard let agentBridgeHealthSnapshot else {
+            throw AgentBridgeApplicationError.connectFailed("Bridge health reply is stale")
+        }
+        return agentBridgeHealthSnapshot
+    }
+
+    func observeAgentBridgeHealth(_ observer: @escaping @MainActor (AgentBridgeHealthSnapshot) -> Void) {
+        agentBridgeHealthObserver = observer
+        if let agentBridgeHealthSnapshot { observer(agentBridgeHealthSnapshot) }
     }
 
     func stopSharedServices() async {
@@ -200,4 +246,46 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         await agentBridgeHost?.stopAndDrain()
         agentBridgeHost = nil
     }
+
+    @discardableResult
+    func receiveAgentBridgeHealth(_ snapshot: AgentBridgeHealthSnapshot, from hostID: UUID) -> AgentBridgeHealthSnapshot? {
+        guard agentBridgeHostID == hostID else { return nil }
+        guard (agentBridgeSourceHealthGeneration ?? 0) <= snapshot.generation else { return nil }
+        agentBridgeSourceHealthGeneration = snapshot.generation
+        agentBridgeHealthGeneration &+= 1
+        let published = AgentBridgeHealthSnapshot(
+            generation: agentBridgeHealthGeneration,
+            observedAt: snapshot.observedAt,
+            health: snapshot.health
+        )
+        agentBridgeHealthSnapshot = published
+        agentBridgeHealthObserver?(published)
+        return published
+    }
+
+#if DEBUG
+    init(
+        testingStore store: DeliveryStore,
+        agentBridgeHost: AgentBridgeApplicationHost,
+        agentBridgeHostID: UUID,
+        afterAgentBridgeHealthRefresh: (@MainActor () async -> Void)? = nil
+    ) {
+        self.store = store
+        keychain = PushoverKeychainStore()
+        notificationCoordinator = AppNotificationCoordinator(
+            store: store,
+            dispatcher: PushoverNotificationDispatcher(store: store, credentials: keychain)
+        )
+        codexPluginCoordinator = nil
+        codexPluginShippedVersion = "Unknown"
+        codexPluginShippedCapability = nil
+        recoveryStartupError = nil
+        recoveryResumedAtLaunch = false
+        agentBridgeStartupError = nil
+        codexPluginPackage = nil
+        self.agentBridgeHost = agentBridgeHost
+        self.agentBridgeHostID = agentBridgeHostID
+        self.afterAgentBridgeHealthRefresh = afterAgentBridgeHealthRefresh
+    }
+#endif
 }

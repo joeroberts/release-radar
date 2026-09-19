@@ -384,6 +384,19 @@ arbitrary-path command. M3B fixes exact request/result fields and bounds before
 RED. All six additive surfaces are part of the shared contract frozen before
 Task 4B refresh.
 
+The later catalog-transition diagnostic is an additive read-only compatibility
+surface. `release_radar_documentation_catalog_transition` requires the exact
+authorized project root, project ID and root-row ID, compares only the persisted
+accepted snapshot with the validated current catalog, and returns bounded
+accepted/candidate identities plus the validator's exact rejection code and safe
+affected artifact ID/path when available. It exports no catalog snapshot and
+creates no receipt, audit, acceptance, repository or delivery-state change.
+Malformed catalogs, stale roots and identity mismatches retain their existing
+fail-closed errors. The acceptance command keeps the same rejection semantics but
+returns this diagnostic alongside `invalidTransition`; Documentation activation
+shows the code, safe artifact context, repair direction and an explicit statement
+that accepted state did not change.
+
 ## Documentation modes
 
 Release Radar presents one coherent documentation mode:

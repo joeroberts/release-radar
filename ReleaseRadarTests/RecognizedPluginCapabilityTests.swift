@@ -29,6 +29,18 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
                   sharedExecutionStandardVersions: [1]),
             .init(manifestVersion: "0.1.17", normalizedPackageDigest: "94d7c1c3c506e3b62f7710e7e84df8ad4fc671b9029d06b1f0369b2882230a07",
                   sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.18", normalizedPackageDigest: "63f1f25156ff4738894aae72957e853936292e9c6f4299388a453e76701a1168",
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.19", normalizedPackageDigest: "6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35",
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.20", normalizedPackageDigest: "cb4863f28b85e31536cf61fae29c4062602152867ab3c66be98547055f7b5d5d",
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.21", normalizedPackageDigest: "1fc6a145ecde33dfab53d32dad6dc3897e9b90eff39cd17c3cea7eca5eaa81c2",
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.22", normalizedPackageDigest: "06e1dcc8f3f5efda400487cba566d7401dc8025dad7cbef75eedd8a6efe3fd10",
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.23", normalizedPackageDigest: "a30ca6f866d5d192f5c5396fa634ab20f716f043f5a8de601de36612ac60b85c",
+                  sharedExecutionStandardVersions: [1]),
         ])
         XCTAssertEqual(
             RecognizedPluginCapability.recognize(
@@ -98,7 +110,7 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.17")
+        XCTAssertEqual(package.version, "0.1.23")
         XCTAssertEqual(package.relativeFiles, [
             ".codex-plugin/plugin.json",
             ".mcp.json",

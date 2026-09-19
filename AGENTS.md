@@ -435,18 +435,21 @@ the affected material work; unrelated read-only and product work may continue un
 the local instructions.
 <!-- release-radar-shared-execution:end -->
 
-<!-- release-radar-guidance:v2:start -->
+<!-- release-radar-guidance:v3:start -->
 ## Release Radar tracking
 
-This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
+This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, changing tracked delivery state, or adopting generic ticket tasks, invoke the installed `release-radar` skill and follow it.
 
 - Read `docs/catalog.json` and begin documentation discovery at `docs/README.md`. Follow generated local indexes before broad search and load only task-relevant controlling artifacts.
 - The catalog owns documentation identity, lifecycle, authority, and navigation. `docs/delivery/progress.md` remains the durable delivery source of truth; the catalog and indexes never authorize or infer ticket or phase state.
 - Under owner authorization, update the catalog, collection/index metadata, active references, and applicable checksums in the same change as any durable add, move, rename, supersession, closeout, restoration, or deletion. Preserve stable artifact IDs and never reuse retired IDs.
 - Keep only active operational detail in `docs/delivery/progress.md`; move closed detail to `docs/delivery/archive/` and label it historical and non-authoritative. Place implementation plans in `docs/delivery/plans/` and controlling task briefs in `docs/delivery/task-briefs/`.
 - Add no new content under `docs/superpowers/` during transition and never recreate it after cutover.
-- Release Radar is the only SQLite writer. Never edit that database or repair a managed evidence path directly. Use supported read-only inventory and typed, audited evidence operations with exact artifact IDs and request identities.
+- Release Radar is the only SQLite writer. Never edit that database or repair a managed evidence path directly. Use supported read-only inventory and typed, audited operations with exact project identity, request identity, expected revision, and task identity.
 - Managed operations require the exact authorized root and accepted repository ID, catalog version, and digest. Only explicit repository binding establishes a missing binding; only catalog acceptance advances an accepted snapshot. Treat a changed catalog as pending until Release Radar accepts its validated transition.
-- Run the repository documentation check and read back the resulting repository and application state before completion. Do not claim completion while catalog, indexes, lifecycle, authority, references, applicable checksums, evidence resolution, or application readback disagree. Preserve exact requests across uncertain outcomes.
+- Before generic task adoption, require a complete `release_radar_delivery_inventory` result for the exact authorized project and root. Prepare one exact reconciliation for every scoped non-Accepted ticket, classifying it as atomic, non-atomic, already-planned, or blocked, with rationale, exact plan baseline, additions, definition revisions, supersessions, and unchanged rows. Owner approval must identify that exact reconciliation. General approval of code or a delivery task is not approval to mutate Release Radar state.
+- Apply an approved reconciliation only through `release_radar_revise_ticket_task_plan` and `release_radar_complete_ticket_task`. Preserve the exact command envelope for replay after an uncertain outcome, chain subsequent operations from the returned `ticketTaskPlanRevision`, and stop for refreshed inventory and approval if the baseline changes. Omission never deletes a task; Accepted or retired tickets and completed phases are not mutable, and unassigned tickets may receive definitions but cannot complete tasks until placed.
+- Prior completion is explicit only when an applicable Release Radar delivery-evidence target has an explicitly applicable, available, successful observation for the same ticket and task scope. A failed, stale, superseded, unavailable, unknown, or generic observation does not imply task completion. Keep uncertain work pending; runtime commands enforce normal authority, lifecycle, revision, and replay rules rather than conversational approval or evidence sufficiency.
+- Run the repository documentation check and read back the resulting repository and application state before completion. Do not claim completion while catalog, indexes, lifecycle, authority, references, applicable checksums, evidence resolution, task history, or application readback disagree. Preserve exact requests across uncertain outcomes.
 - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state. Repository-local rules outside this block may narrow this contract but must not weaken or duplicate it.
 <!-- release-radar-guidance:end -->

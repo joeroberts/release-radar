@@ -29,6 +29,7 @@ briefs that were accepted or cited as controlling during delivery.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
+| rr-outcome3-simple-workspace-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome3-simple-workspace.md](2026-09-14-outcome3-simple-workspace.md) | document | controlling &#40;delivery.outcome3-simple-workspace&#41; | active | none | none |
 | a8065da2-31dc-45b8-a8a1-f711ae82bd5a | [docs/delivery/task-briefs/README.md](README.md) | collectionIndex | supporting | active | none | none |
 | a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4 | [docs/delivery/task-briefs/SHA256SUMS](SHA256SUMS) | checksumManifest | nonAuthoritative | completed | none | none |
 
@@ -72,6 +73,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation) — leaf; Bounded reconciliation of operative documentation authority
 - [delivery.task-briefs.2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications) — leaf; Outcome 2 current specifications and routine reading paths; progress determines authorization
 - [delivery.task-briefs.2026-09-14-outcome3-runtime-enforcement](2026-09-14-outcome3-runtime-enforcement) — leaf; Outcome 3 runtime enforcement assessment; progress controls authorization
+- [delivery.task-briefs.2026-09-14-shared-execution-v1-adoption](2026-09-14-shared-execution-v1-adoption) — leaf; Exact Shared Execution v1 repository adoption; progress controls authorization
 - [delivery.task-briefs.2026-09-15-installed-plugin-cache-containment](2026-09-15-installed-plugin-cache-containment) — leaf; Installed plugin cache containment; progress controls authorization
 - [delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix](2026-09-15-plugin-verification-sandbox-fix) — leaf; Signed helper verification regression; progress controls authorization
 - [delivery.task-briefs.2026-09-15-release-0.1.17](2026-09-15-release-0.1.17) — leaf; Local 0.1.17 release; progress controls authorization
@@ -857,7 +859,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-outcome2-current-specifications-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md](2026-09-14-outcome2-current-specifications/brief.md) | document | controlling &#40;delivery.outcome2-current-specifications&#41; | active | none | none |
+| rr-outcome2-current-specifications-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md](2026-09-14-outcome2-current-specifications/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -878,6 +880,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-outcome3-runtime-enforcement-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md](2026-09-14-outcome3-runtime-enforcement/brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-14-shared-execution-v1-adoption
+
+- Path: [docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption](2026-09-14-shared-execution-v1-adoption)
+- Purpose: Exact Shared Execution v1 repository adoption; progress controls authorization
+- Allowed contents: Controlling task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-shared-execution-v1-adoption-brief-2026-09-14](2026-09-14-shared-execution-v1-adoption/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-shared-execution-v1-adoption-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md](2026-09-14-shared-execution-v1-adoption/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

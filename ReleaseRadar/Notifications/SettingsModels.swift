@@ -68,7 +68,7 @@ enum CodexPluginOperation: Equatable, Sendable {
         case .update: "Updating plugin"
         case .remove: "Removing plugin"
         case .reinstall: "Reinstalling plugin"
-        case .restartHelper: "Restarting lifecycle helper"
+        case .restartHelper: "Restarting plugin helper"
         case .tryAgain: "Trying plugin status again"
         }
     }

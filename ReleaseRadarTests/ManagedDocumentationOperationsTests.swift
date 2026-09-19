@@ -11,21 +11,45 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         }
         private nonisolated let storage = Storage()
         var prepares = 0
+        var preparesByRequestID: [UUID: Int] = [:]
+        var definiteRefusals: Set<UUID> = []
+        var partialRefusals: Set<UUID> = []
+        var activePreparation: UUID?
         var gate: DocumentationCommitGate?
+        var noEffectsGate: DocumentationCommitGate?
         var value: ProjectExecutionAssignment? {
             get { storage.lock.withLock { storage.value } }
             set { storage.lock.withLock { storage.value = newValue } }
         }
         func setGate(_ gate: DocumentationCommitGate) { self.gate = gate }
+        func setNoEffectsGate(_ gate: DocumentationCommitGate) { noEffectsGate = gate }
+        func refuseBeforeEffects(_ requestID: UUID) { definiteRefusals.insert(requestID) }
+        func refuseAfterPreparing(_ requestID: UUID) { partialRefusals.insert(requestID) }
         func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
+            guard activePreparation == nil else { throw ProjectExecutionError.conflict }
+            activePreparation = requestID
             prepares += 1
+            preparesByRequestID[requestID, default: 0] += 1
+            if definiteRefusals.contains(requestID) {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
             guard reviewOfAssignmentID == nil, baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
             if let gate { await gate.enterAndWait(); self.gate = nil }
             var assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
                 checkoutPath: "/Fixture/Checkout", role: .delivery, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
                 authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
                 excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work)
-            assignment.state = .preparing; value = assignment; return assignment
+            assignment.state = .preparing; value = assignment
+            if partialRefusals.contains(requestID) { throw ProjectExecutionError.assignmentNotAuthorized }
+            return assignment
+        }
+        func finishPreparation(work: ProjectExecutionWork, requestID: UUID) async {
+            if activePreparation == requestID { activePreparation = nil }
+        }
+        func verifyNoPreparationEffects(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
+                                        reviewOfAssignmentID: String?, baselineFromAssignmentID: String?) async -> Bool {
+            if let noEffectsGate { await noEffectsGate.enterAndWait(); self.noEffectsGate = nil }
+            return definiteRefusals.contains(requestID) && !partialRefusals.contains(requestID)
         }
         nonisolated func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
             try storage.lock.withLock {
@@ -134,6 +158,175 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let value = await preparer.value; XCTAssertEqual(value?.state, .revoked)
         let recovered = await dispatcher.dispatch(request)
         XCTAssertNil(recovered.error); XCTAssertEqual(recovered.executionAssignment?.state, .authorized)
+    }
+
+    func testDefinitePreparationRefusalSettlesExactReceiptAndDoesNotStrandFreshWork() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let refusedRequestID = UUID()
+        await preparer.refuseBeforeEffects(refusedRequestID)
+        let refused = AgentCommandEnvelope(version: 1, requestID: refusedRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Retired parent cannot authorize a new assignment",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: "delivery-retired"))
+
+        let first = await dispatcher.dispatch(refused)
+        XCTAssertEqual(first.error, .execution(.assignmentNotAuthorized))
+        let refusalAuditID = try XCTUnwrap(first.auditEventID, "A definite refusal needs an audited terminal receipt")
+
+        let replay = await dispatcher.dispatch(refused)
+        XCTAssertEqual(replay, first)
+        let refusedPrepares = await preparer.preparesByRequestID[refusedRequestID]
+        XCTAssertEqual(refusedPrepares, 1, "Exact replay must not rerun a terminal refusal")
+
+        let changed = AgentCommandEnvelope(version: 1, requestID: refusedRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Changed body", command: refused.command)
+        let changedResult = await dispatcher.dispatch(changed)
+        XCTAssertEqual(changedResult.error, .requestIDReused)
+
+        let freshRequestID = UUID()
+        let fresh = AgentCommandEnvelope(version: 1, requestID: freshRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Fresh canonical baseline",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil))
+        let recovered = await dispatcher.dispatch(fresh)
+        XCTAssertNil(recovered.error)
+        XCTAssertEqual(recovered.executionAssignment?.state, .authorized)
+        let freshPrepares = await preparer.preparesByRequestID[freshRequestID]
+        XCTAssertEqual(freshPrepares, 1)
+
+        let auditCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(refusalAuditID.rawValue)])
+        }
+        XCTAssertEqual(auditCount, 1)
+    }
+
+    func testTerminalPreparationRefusalReplaySurvivesLaterWorkIneligibility() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseBeforeEffects(requestID)
+        let request = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Retired parent cannot authorize a new assignment",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: "delivery-retired"))
+        let terminal = await dispatcher.dispatch(request)
+        XCTAssertEqual(terminal.error, .execution(.assignmentNotAuthorized))
+        XCTAssertNotNil(terminal.auditEventID)
+
+        try await store.transact(actor: .init(id: "fixture"), reason: "Complete work after terminal refusal",
+            auditScope: .init(projectID: registration.projectID, entityType: .ticketTaskPlan, entityID: "ticket")) {
+                try $0.execute("UPDATE ticket_tasks SET completion='completed',completed_at=created_at WHERE project_id='p' AND ticket_id='ticket' AND id='task'")
+                try $0.execute("UPDATE phase_lifecycles SET revision=3 WHERE project_id='p' AND phase_id='phase'")
+            }
+
+        let replay = await dispatcher.dispatch(request)
+        XCTAssertEqual(replay, terminal, "Exact terminal replay must not depend on later mutable work eligibility")
+        let prepares = await preparer.preparesByRequestID[requestID]
+        XCTAssertEqual(prepares, 1)
+        let changed = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Changed body after completion", command: request.command)
+        let reused = await dispatcher.dispatch(changed)
+        XCTAssertEqual(reused.error, .requestIDReused)
+    }
+
+    func testConcurrentExactAndFreshRequestsStayBlockedDuringTerminalSettlement() async throws {
+        let (_, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseBeforeEffects(requestID)
+        let gate = DocumentationCommitGate()
+        await preparer.setNoEffectsGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Retired parent refusal",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: "delivery-retired"))
+        let settlement = Task { await dispatcher.dispatch(request) }
+        await gate.waitUntilEntered()
+
+        let exact = await dispatcher.dispatch(request)
+        XCTAssertEqual(exact.error, .execution(.conflict))
+        let fresh = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path,
+            expectedRegistration: registration, reason: "Fresh request during settlement",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil))
+        let freshResult = await dispatcher.dispatch(fresh)
+        XCTAssertEqual(freshResult.error, .execution(.conflict))
+
+        await gate.release()
+        let terminal = await settlement.value
+        XCTAssertEqual(terminal.error, .execution(.assignmentNotAuthorized))
+        XCTAssertNotNil(terminal.auditEventID)
+        let replay = await dispatcher.dispatch(request)
+        XCTAssertEqual(replay, terminal)
+        let prepares = await preparer.preparesByRequestID[requestID]
+        XCTAssertEqual(prepares, 1)
+    }
+
+    func testPartiallyPreparedRefusalKeepsOutcomeUnknownAndBlocksReplacement() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseAfterPreparing(requestID)
+        let request = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Preparation may have effects",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil))
+
+        let uncertain = await dispatcher.dispatch(request)
+        XCTAssertEqual(uncertain.error, .execution(.assignmentNotAuthorized))
+        XCTAssertNil(uncertain.auditEventID)
+        let partialState = await preparer.value?.state
+        XCTAssertEqual(partialState, .preparing)
+        let persisted = try await store.read { connection -> AgentCommandResult in
+            let bytes = try XCTUnwrap(connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)])?["result_data"])
+            guard case let .blob(data) = bytes else { throw ProjectExecutionError.unavailable }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persisted.error, .outcomeUnknown)
+
+        let replacement = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path,
+            expectedRegistration: registration, reason: "Replacement must remain blocked",
+            command: request.command)
+        let blocked = await dispatcher.dispatch(replacement)
+        XCTAssertEqual(blocked.error, .execution(.conflict))
+    }
+
+    func testChangedWorkBeforeRefusalSettlementPreservesOutcomeUnknown() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseBeforeEffects(requestID)
+        let gate = DocumentationCommitGate()
+        await preparer.setNoEffectsGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Retired parent refusal",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: "delivery-retired"))
+        let operation = Task { await dispatcher.dispatch(request) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change work before refusal settlement",
+            auditScope: .init(projectID: registration.projectID, entityType: .ticketTaskPlan, entityID: "ticket")) {
+                try $0.execute("UPDATE ticket_tasks SET title='Changed task' WHERE project_id='p' AND ticket_id='ticket' AND id='task'")
+            }
+        await gate.release()
+
+        let result = await operation.value
+        XCTAssertEqual(result.error, .execution(.assignmentNotAuthorized))
+        XCTAssertNil(result.auditEventID)
+        let persisted = try await store.read { connection -> AgentCommandResult in
+            guard case let .blob(data)? = try connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)])?["result_data"] else {
+                throw ProjectExecutionError.unavailable
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persisted.error, .outcomeUnknown)
     }
 
     func testManagedEvidenceWriterRejectsCompletedTicketAssociation() async throws {
@@ -806,10 +999,130 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let before = await inventory(f.store, f.root)
         let illegal = await f.dispatcher.dispatch(envelope(f.root, .acceptDocumentationCatalog(target: candidate, priorCatalogVersion: 1, priorCatalogDigest: accepted.catalogDigest)))
         XCTAssertEqual(illegal.error, .documentation(.invalidTransition))
+        XCTAssertEqual(illegal.documentationCatalogTransition?.validationError, .invalidTransition)
+        XCTAssertEqual(illegal.documentationCatalogTransition?.artifactID, "draft")
+        XCTAssertEqual(illegal.documentationCatalogTransition?.artifactPath, "docs/plans/draft.md")
         let stale = await f.dispatcher.dispatch(envelope(f.root, .acceptDocumentationCatalog(target: candidate, priorCatalogVersion: 1, priorCatalogDigest: String(repeating: "0", count: 64))))
         XCTAssertEqual(stale.error, .documentation(.catalogUnaccepted))
         let after = await inventory(f.store, f.root)
         XCTAssertEqual(after, before)
+    }
+
+    func testCatalogAcceptancePreservesRepositoryBindingMismatchWithoutEffects() async throws {
+        let f = try await makeFixture()
+        let accepted = try target(f.root)
+        _ = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: accepted)))
+        try editCatalog(f.root) { catalog in
+            catalog["repositoryID"] = "22222222-2222-4222-8222-222222222222"
+        }
+        let candidate = try target(f.root)
+        let before = await inventory(f.store, f.root)
+
+        let result = await f.dispatcher.dispatch(envelope(
+            f.root,
+            .acceptDocumentationCatalog(
+                target: candidate,
+                priorCatalogVersion: accepted.catalogVersion,
+                priorCatalogDigest: accepted.catalogDigest
+            )
+        ))
+
+        XCTAssertEqual(result.error, .documentation(.bindingMismatch))
+        XCTAssertNil(result.documentationCatalogTransition)
+        let after = await inventory(f.store, f.root)
+        XCTAssertEqual(after, before)
+    }
+
+    func testCatalogTransitionDiagnosticIsAuthorizedReadOnlyBoundedAndReportsValidAndInvalidTransitions() async throws {
+        let f = try await makeFixture()
+        let accepted = try target(f.root)
+        let binding = await f.dispatcher.dispatch(
+            envelope(f.root, .bindDocumentationRepository(target: accepted))
+        )
+        XCTAssertNil(binding.error)
+        let before = try await f.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarText("SELECT accepted_catalog_digest FROM project_documentation_bindings WHERE project_id='p'")
+            )
+        }
+        try editCatalog(f.root) { catalog in
+            var artifacts = catalog["artifacts"] as! [[String: Any]]
+            artifacts[3]["lifecycle"] = "active"
+            catalog["artifacts"] = artifacts
+        }
+        let queries = AgentQueryDispatcher(store: f.store, bookmarkStore: bookmarks(f.root))
+        let valid = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertNil(valid.error)
+        XCTAssertEqual(valid.documentationCatalogTransition?.isValid, true)
+        XCTAssertEqual(valid.documentationCatalogTransition?.acceptedCatalogDigest, accepted.catalogDigest)
+        XCTAssertNil(valid.documentationCatalogTransition?.validationError)
+
+        try editCatalog(f.root) { catalog in
+            var artifacts = catalog["artifacts"] as! [[String: Any]]
+            artifacts[3]["lifecycle"] = "archived"
+            artifacts[3]["authorityLevel"] = "nonAuthoritative"
+            catalog["artifacts"] = artifacts
+        }
+        try Data("# Current\n".utf8).write(to: f.root.appendingPathComponent("docs/plans/current.md"))
+        let invalid = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertNil(invalid.error)
+        XCTAssertEqual(invalid.documentationCatalogTransition?.isValid, false)
+        XCTAssertEqual(invalid.documentationCatalogTransition?.validationError, .invalidTransition)
+        XCTAssertEqual(invalid.documentationCatalogTransition?.artifactID, "draft")
+        XCTAssertEqual(invalid.documentationCatalogTransition?.artifactPath, "docs/plans/draft.md")
+        XCTAssertEqual(invalid.documentationCatalogTransition?.candidateCatalogDigest, try target(f.root).catalogDigest)
+
+        try editCatalog(f.root) { catalog in
+            catalog["repositoryID"] = "22222222-2222-4222-8222-222222222222"
+        }
+        let changedIdentity = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertNil(changedIdentity.error)
+        XCTAssertEqual(changedIdentity.documentationCatalogTransition?.isValid, false)
+        XCTAssertEqual(changedIdentity.documentationCatalogTransition?.validationError, .repositoryIdentityChanged)
+        XCTAssertNil(changedIdentity.documentationCatalogTransition?.artifactID)
+        XCTAssertNil(changedIdentity.documentationCatalogTransition?.artifactPath)
+
+        let wrongRoot = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "other-root")
+        ))
+        XCTAssertEqual(wrongRoot.error, .documentation(.rootMismatch))
+        XCTAssertNil(wrongRoot.documentationCatalogTransition)
+
+        try Data("{".utf8).write(to: f.root.appendingPathComponent("docs/catalog.json"))
+        let malformed = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: f.root.path,
+            query: .documentationCatalogTransition(projectID: "p", rootID: "root")
+        ))
+        XCTAssertEqual(malformed.error, .documentation(.catalogInvalid))
+        XCTAssertNil(malformed.documentationCatalogTransition)
+
+        let after = try await f.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarText("SELECT accepted_catalog_digest FROM project_documentation_bindings WHERE project_id='p'")
+            )
+        }
+        XCTAssertEqual(after.0, before.0)
+        XCTAssertEqual(after.1, before.1)
+        XCTAssertEqual(after.2, before.2)
     }
 
     func testAuthorizationFailuresAndCrossProjectRepositoryCollisionAreZeroEffect() async throws {

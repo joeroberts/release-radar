@@ -3,6 +3,36 @@ import SwiftUI
 import ReleaseRadarCore
 import RekonDesignSystem
 
+private enum DocumentationSetupFeedback: Equatable {
+    case status(String)
+    case previewFailure(String)
+    case actionFailure(ProjectDocumentationSetupAction, String)
+    case catalogTransitionRejected(String)
+
+    var message: String {
+        switch self {
+        case let .status(message), let .previewFailure(message),
+             let .actionFailure(_, message), let .catalogTransitionRejected(message):
+            message
+        }
+    }
+
+    var failureTitle: String? {
+        switch self {
+        case .status, .previewFailure:
+            nil
+        case let .actionFailure(action, _):
+            switch action {
+            case .bind: "Repository was not bound"
+            case .accept: "Catalog acceptance failed"
+            case .current: "Documentation action failed"
+            }
+        case .catalogTransitionRejected:
+            "Catalog was not accepted"
+        }
+    }
+}
+
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
@@ -45,7 +75,10 @@ struct ProjectOverviewView: View {
     @State private var showsHelp = false
     @State private var showsRootManagement = false
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
-    @State private var documentationSetupMessage: String?
+    @State private var documentationSetupFeedback: DocumentationSetupFeedback?
+    @State private var documentationActionErrorGeneration = 0
+    @AccessibilityFocusState private var documentationActionErrorFocused: Bool
+    @FocusState private var documentationActionErrorKeyboardFocused: Bool
     @State private var isPerformingDocumentationSetup = false
     @State private var lifecyclePreview: ProjectLifecyclePreview?
     @State private var lifecyclePreviewError: String?
@@ -54,9 +87,12 @@ struct ProjectOverviewView: View {
     @State private var removalPreview: ProjectRemovalPreview?
     @State private var showsRemovalConfirmation = false
 
+    private let documentationActionErrorAnchor = "project-documentation-action-error-anchor"
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
                     VStack(alignment: .leading, spacing: 12) { projectHeading; projectActions }
@@ -177,9 +213,28 @@ struct ProjectOverviewView: View {
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
                 }
+                }
+                .padding(28)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(28)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .onChange(of: documentationActionErrorGeneration) { _, generation in
+                guard generation > 0,
+                      let feedback = documentationSetupFeedback,
+                      let title = feedback.failureTitle else { return }
+                withAnimation {
+                    proxy.scrollTo(documentationActionErrorAnchor, anchor: .center)
+                }
+                documentationActionErrorFocused = true
+                documentationActionErrorKeyboardFocused = true
+                NSAccessibility.post(
+                    element: NSApp as Any,
+                    notification: .announcementRequested,
+                    userInfo: [
+                        .announcement: "\(title). \(feedback.message)",
+                        .priority: NSAccessibilityPriorityLevel.high.rawValue,
+                    ]
+                )
+            }
         }
         .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
@@ -401,8 +456,25 @@ struct ProjectOverviewView: View {
                             .foregroundStyle(RekonTheme.success)
                     }
                 }
-                if let documentationSetupMessage {
-                    Text(documentationSetupMessage).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                if let feedback = documentationSetupFeedback {
+                    if let title = feedback.failureTitle {
+                        RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                            Text(title)
+                                .font(.headline)
+                                .accessibilityLabel("\(title). \(feedback.message)")
+                                .accessibilityIdentifier("project-documentation-action-error")
+                                .accessibilityFocused($documentationActionErrorFocused)
+                                .focusable()
+                                .focused($documentationActionErrorKeyboardFocused)
+                            Text(feedback.message)
+                                .foregroundStyle(RekonTheme.secondaryText)
+                                .textSelection(.enabled)
+                                .accessibilityHidden(true)
+                        }
+                        .id(documentationActionErrorAnchor)
+                    } else {
+                        Text(feedback.message).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                    }
                 }
             }
         }
@@ -499,14 +571,16 @@ struct ProjectOverviewView: View {
     private func loadDocumentationPreview(_ registration: ProjectRegistration) {
         guard let previewDocumentationSetup else { return }
         isPerformingDocumentationSetup = true
-        documentationSetupMessage = nil
+        documentationSetupFeedback = nil
+        documentationActionErrorFocused = false
+        documentationActionErrorKeyboardFocused = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
                 documentationSetupPreview = try await previewDocumentationSetup(registration)
             } catch {
                 documentationSetupPreview = nil
-                documentationSetupMessage = error.localizedDescription
+                documentationSetupFeedback = .previewFailure(error.localizedDescription)
             }
         }
     }
@@ -514,17 +588,27 @@ struct ProjectOverviewView: View {
     private func performPreviewedDocumentationAction() {
         guard let preview = documentationSetupPreview, let performDocumentationSetup else { return }
         isPerformingDocumentationSetup = true
-        documentationSetupMessage = nil
+        documentationSetupFeedback = nil
+        documentationActionErrorFocused = false
+        documentationActionErrorKeyboardFocused = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
                 let audit = try await performDocumentationSetup(preview)
-                documentationSetupMessage = audit.map { "Owner action committed and audited as \($0.rawValue)." }
-                    ?? "The accepted documentation state is already current."
+                documentationSetupFeedback = .status(
+                    audit.map { "Owner action committed and audited as \($0.rawValue)." }
+                        ?? "The accepted documentation state is already current."
+                )
                 documentationSetupPreview = nil
                 refreshHealth()
             } catch {
-                documentationSetupMessage = error.localizedDescription
+                if let setupError = error as? ProjectDocumentationSetupError,
+                   case .catalogTransitionRejected = setupError {
+                    documentationSetupFeedback = .catalogTransitionRejected(error.localizedDescription)
+                } else {
+                    documentationSetupFeedback = .actionFailure(preview.action, error.localizedDescription)
+                }
+                documentationActionErrorGeneration &+= 1
             }
         }
     }

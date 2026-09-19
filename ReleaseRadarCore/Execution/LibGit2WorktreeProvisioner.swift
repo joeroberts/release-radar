@@ -101,6 +101,38 @@ public struct LibGit2WorktreeProvisioner: ExecutionWorktreeProvisioning, Sendabl
         return .init(checkout: checkout.path, baseline: baseline, branch: branchName, commonGitDirectory: commonPath, primaryRoot: primaryPath)
     }
 
+    public func hasPreparedResources(primaryRoot: URL, checkout: URL, projectID: String, taskID: String) throws -> Bool {
+        guard checkout.standardizedFileURL.path == checkout.path,
+              checkout.resolvingSymlinksInPath().path == checkout.path else { throw ProjectExecutionError.identityMismatch }
+        try check(git_libgit2_init()); defer { git_libgit2_shutdown() }
+        let repo = try repository(primaryRoot); defer { git_repository_free(repo) }
+        guard git_repository_is_worktree(repo) == 0, git_repository_is_bare(repo) == 0,
+              git_repository_workdir(repo).map({ URL(fileURLWithPath: String(cString: $0)).standardizedFileURL.path }) == primaryRoot.path else {
+            throw ProjectExecutionError.identityMismatch
+        }
+        let worktreeName = try name(projectID: projectID, taskID: taskID)
+        var tree: OpaquePointer?
+        let treeLookup = git_worktree_lookup(&tree, repo, worktreeName)
+        if treeLookup == 0, let tree {
+            defer { git_worktree_free(tree) }
+            try check(git_worktree_validate(tree))
+            guard git_worktree_path(tree).map({ URL(fileURLWithPath: String(cString: $0)).standardizedFileURL.path }) == checkout.path else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            return true
+        }
+        guard treeLookup == GIT_ENOTFOUND.rawValue else { try check(treeLookup); return true }
+
+        var branch: OpaquePointer?
+        let branchLookup = git_branch_lookup(&branch, repo, "codex/" + worktreeName, GIT_BRANCH_LOCAL)
+        if branchLookup == 0 {
+            git_reference_free(branch)
+            return true
+        }
+        guard branchLookup == GIT_ENOTFOUND.rawValue else { try check(branchLookup); return true }
+        return FileManager.default.fileExists(atPath: checkout.path)
+    }
+
     public func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws {
         let worktreeName = try name(projectID: projectID, taskID: taskID)
         guard worktree.primaryRoot == primaryRoot.path, worktree.branch == "codex/" + worktreeName,
