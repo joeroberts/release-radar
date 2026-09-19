@@ -11,6 +11,24 @@ The active goal's full acceptance endpoint is therefore not yet achieved. Contin
 remaining local verification and record its findings; preserve separate owner
 acceptance and merge boundaries. The already-running UI test may finish naturally.
 
+## Local integration and completed UI findings
+
+Reviewed candidate `191d1373` is integrated locally at `8ad83218` on
+`codex/connector-recovery-baseline`; four scoped delivery commits, ten product/test
+files, conflict-free. No GitHub merge, release, installation or acceptance occurred.
+Documentation and diff checks passed; unrelated untracked Codex files preserved.
+
+Held UI test completed naturally in 606.239 seconds: one test, four expected
+assertion failures, zero unexpected. Three failures expect old `Restart helper`
+text and one expects old `Restarting lifecycle helper` progress text. Current
+approved wording is `Restart plugin helper`. It continued through disabled and
+unavailable workflow guidance and project lifecycle help. Direct Main CUA
+observations at 760/1100/620 and isolated connection-failure feedback are recorded
+below. Result: `.build/native-checks/rr-p6-settings-ax-inspection-191d1373-r2.xcresult`.
+No product defect established by these four assertions. Findings collected before
+fixes per owner direction; owner prioritization question pending for scoped expected-
+text correction and affected rerun before packaging. No edits made for these findings.
+
 ## Connector recovery — current candidate 191d1373
 
 The previous compile defect and review findings were corrected in committed
