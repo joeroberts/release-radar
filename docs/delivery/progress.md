@@ -81,6 +81,17 @@ Review assignment `review-ea02165d-fe26-440c-882e-802782ea9a4f`, worker
 network disabled. Closed delivery task `01a0b9f3-c324-70b3-a1d4-58bcea51940e`
 was archived after source/result preservation and confirmed physical closure.
 
+Required corrections proceed in supported assignment
+`delivery-a5805a7c-65c8-4170-8cca-c9ae4d557cf8`, baseline `6813481a`, audit
+`17F0166F-A692-484D-BEB4-B5B96E66A429`. Worker
+`D85C606C-0787-4D40-9BBA-859FBFD8D4C4`, task
+`01a0ba0f-8be3-7a82-bcf6-c6ec5d27fb8a`, verifies Terra/medium,
+assignment-only workspace write, network disabled, on-request/auto_review.
+First turn fixes the verified AgentTools compile/typed-error routing defect while
+independent review continues against the untouched original candidate. Remaining
+required review findings will use this same correction assignment. No builds by
+the writer; Main owns ledger/Git and Build Agent owns compilation/tests.
+
 The existing signed native fixtures require initial/final exact `.notRegistered`
 and cannot adopt the owner app's registration (ADR-002). Owner was asked whether
 an existing clean macOS test session/VM is available; no account/service change

@@ -142,9 +142,11 @@ Exact committed request (do not repeat):
 }
 ```
 
-### Connector correction preparation — pending
+### Connector correction preparation — committed
 
-Exact request for required corrections to candidate `6813481a`:
+Prepared from candidate `6813481a`, audit `17F0166F-A692-484D-BEB4-B5B96E66A429`;
+worker `D85C606C-0787-4D40-9BBA-859FBFD8D4C4` started Terra/medium.
+Exact committed request (do not repeat):
 
 ```json
 {
