@@ -1,5 +1,11 @@
 # Release Radar delivery state
 
+## September 19 correction — overrides prior closeout status
+
+Outcome 3 connector upgrade recovery is **not complete**. [Issue #99](https://github.com/joeroberts/release-radar/issues/99) and the [correction brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-19-connector-upgraderecovery-correction--current) record the confirmed stale AgentTools process, signing rejection, generic error and missing UI health reporting. Direct helper fallbacks were used and do not establish connector acceptance. Package delivery remains valid within its scope; the fresh release-focused test run remains incomplete. PR #98's prior closeout wording is superseded by this correction.
+
+Owner authorized records → validation → Outcome 3 correction, followed by repository-doc reconciliation and then the plan-reconstruction feature. Implementation has not started. Main owns records; independent validation and supported connector recovery remain pending. No direct-helper or alternate-worker bypass, signing relaxation, configuration change or SQLite access is authorized. Deferred #91/#92 remain separate. Earlier completion statements below are historical for this disputed connector scope.
+
 ## Main task transition
 
 Main `01a0b54e-8f55-7c62-8bf4-4090f49b0a84` owns the full Outcome 3 goal and this ledger. The owner authorized replacement of the three supporting roles; the [current handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md#september-18-supporting-role-replacement--complete) records exact tasks, settings, retained resources and transfer state.

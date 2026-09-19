@@ -1,5 +1,11 @@
 # Outcome 3 — Main coordination handoff
 
+## September 19 correction — overrides prior closeout status
+
+Outcome 3 connector upgrade recovery is **not complete**. [Issue #99](https://github.com/joeroberts/release-radar/issues/99) and the [correction brief](brief.md#september-19-connector-upgraderecovery-correction--current) record the confirmed stale AgentTools process, signing rejection, generic error and missing UI health reporting. Direct helper fallbacks were used and do not establish connector acceptance. Package delivery remains valid within its scope; the fresh release-focused test run remains incomplete. PR #98's prior closeout wording is superseded by this correction.
+
+Owner authorized records → validation → Outcome 3 correction, followed by repository-doc reconciliation and then the plan-reconstruction feature. Implementation has not started. Main owns records; independent validation and supported connector recovery remain pending. No direct-helper or alternate-worker bypass, signing relaxation, configuration change or SQLite access is authorized. Deferred #91/#92 remain separate. Earlier completion statements below are historical for this disputed connector scope.
+
 Prepared September 18, 2026 at the owner's request to replace the long Main conversation. This is a navigation and operating handoff, not a new authority source. Read `AGENTS.md`, `docs/README.md`, the catalog, and `docs/delivery/progress.md` first. The existing [brief](brief.md) retains detailed results; do not ingest its full historical chronology by default.
 
 ## September 18 supporting-role replacement — complete

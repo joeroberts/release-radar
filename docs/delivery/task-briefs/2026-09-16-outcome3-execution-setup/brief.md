@@ -1,5 +1,47 @@
 # Outcome 3 project execution setup
 
+## September 19 connector upgrade/recovery correction — current
+
+Issue: [#99](https://github.com/joeroberts/release-radar/issues/99). Owner authorized durable records, their validation, then this correction. This section supersedes connector-completion implications in earlier acceptance notes, not their bounded product results.
+
+### Outcome and scope
+
+Restore and prove the supported Codex connector after app replacement; provide accurate failure diagnostics and visible, recoverable connection health. Preserve signing enforcement and all existing project data. This correction precedes P6-remediation documentation reconciliation, then the approved structured-projection reconstruction feature. No unrelated cleanup or feature work.
+
+### Evidence and unresolved questions
+
+On September 19 at 02:54:52 EDT, supported evidence inventory returned `appUnavailable`. Unified logs identified AgentTools PID 72294 contacting bridge PID 81837; the bridge rejected the message with `Received message forbidden due to code signing requirement`. Read-only `lsof` resolved that client's loaded executable to `/Applications/.ReleaseRadar.backup.78323.17492/Contents/Helpers/ReleaseRadarAgentTools`. Release Radar was running. The stale process survived app replacement; the precise underlying signature-invalidity mechanism is not yet established.
+
+Source inspection: `ReleaseRadarAgentTools/main.swift` converts unsuccessful handshake to generic appUnavailable and discards underlying XPC error; `ReleaseRadarBridgeAgent/main.swift` enforces the tools signing requirement; `ReleaseRadar/Notifications/SettingsView.swift` has static Agent action bridge text, not a live connector-health check. Installed plugin state does not establish running-client health. Supported reconnect availability and safe app-side reporting of rejected clients remain design questions, not implemented capabilities.
+
+Main's fallback audit found two direct-inventory occasions in Build Agent 02 on September 18: five helper launches comprising two successful reads, one rejected request and two schema queries. On September 19 Main again instructed that fallback and directly invoked `--help`; no subsequent inventory execution was found for that instruction. This bounded audit excludes predecessor tasks. These were alternate routes around the connector failure and must not be used as connector acceptance evidence. Main owns the conduct failure.
+
+Release 0.1.20 package/signature and prior product/UI checks retain their actual scope. Fresh release-focused XCTest runs were incomplete. PR #97 merged; full connector upgrade recovery and therefore full Outcome 3 closeout remain unproven. Second-Mac #91 and chooser #92 remain deferred.
+
+### Assignment, authority and endpoint
+
+Standard: shared-execution/1, installed skill 0.1.20 read. Main owns these records and coordination; no product implementation by Main. Documentation baseline: `47bfd29ac7ba2b3c5cd07b051f82145566099ff0` on `codex/outcome3-merge-closeout`, based on merged `5cb47f8dde09032a71a5d003ab41ac0e1c8720cf`. Documentation checkout: `/Users/jroberts/.codex/worktrees/outcome3-merge-closeout`; canonical project: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`. Preserve the canonical untracked config and all branches/worktrees/artifacts.
+
+Implementation assignment remains uncreated until records validation and a working supported assignment route. Use Sol/high for this bounded cross-component recovery, ceiling Astra/high only for a named unresolved boundary. Required independent reviewer: fresh context, Sol/high, covering XPC/signing, recovery and user guidance; independent UI QA must verify the running flow. No direct-helper fallback or alternate full-access task may substitute for failed connector/worker admission. Do not assume effective settings; verify them through the supported worker status.
+
+Authorized endpoint: issue and durable records now; after validation, scoped correction, tests, independent review, commits and PR; owner merges. Existing release authorization applies only after applicable verification. Live owner-data reconstruction, SQLite writes outside the app, permission/trust changes, direct helper invocation, broad process killing, notarization and unrelated publication are excluded. A supported reconnect must be identified before use; if unavailable, report the precise owner action rather than inventing a workaround.
+
+### Dependencies, risks and acceptance
+
+Preserve accepted ADR-001/002 boundaries and existing typed XPC contracts. Resolve any required contract extension in the owning mutable design; do not edit accepted ADRs. No store migration is currently proposed. Existing and future workers and connector clients must retain authentication, lifecycle identity, stale/unknown distinctions and no-replay behavior.
+
+- Confirm supported connector inventory after supported recovery; use the original connector, not a new shell-launched helper.
+- Identify and safely handle clients retained across app upgrade; preserve unrelated tasks and processes.
+- Distinguish broker/handshake/protocol/app-disconnection failures where evidence permits; never label an unobserved client healthy or expose sensitive diagnostics.
+- Show truthful bridge health, actionable recovery and accessible failures in Connections. Compare relevant approved mockups; verify normal/narrow/wide presentation.
+- Test an existing connector across signed app replacement, visible failure, supported reconnection and successful connector call. Verify rejected peers remain rejected, version mismatch, app disconnection and uncertain-write non-replay.
+- Use test-first focused native tests and one appropriate independent review plus independent UI QA; do not rerun unchanged passing acceptance or claim incomplete tests passed.
+- Accumulate findings before fixes except P1/P2, per owner instruction. No supporting framework or generalized monitoring system.
+
+### Record validation status
+
+Pending repository check and independent review. GitHub issue and these records are the concrete scope; proposed recovery behavior is not completion evidence. Connector currently returned appUnavailable; application synchronization is not claimed. Implementation has not begun.
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
