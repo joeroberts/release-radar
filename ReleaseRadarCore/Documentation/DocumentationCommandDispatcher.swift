@@ -172,7 +172,10 @@ struct DocumentationCommandDispatcher: Sendable {
             guard context.binding == nil else { throw DocumentationOperationError.bindingConflict }
         case let .acceptDocumentationCatalog(_, priorVersion, priorDigest):
             guard let binding = context.binding else { throw DocumentationOperationError.bindingMissing }
-            guard binding.rootID.rawValue == context.rootID else { throw DocumentationOperationError.bindingMismatch }
+            guard binding.rootID.rawValue == context.rootID,
+                  binding.repositoryID == snapshot.catalog.repositoryID.lowercased() else {
+                throw DocumentationOperationError.bindingMismatch
+            }
             guard binding.acceptedCatalogVersion == priorVersion, binding.acceptedCatalogDigest == priorDigest else { throw DocumentationOperationError.catalogUnaccepted }
             let diagnostic = try documentationCatalogTransitionDiagnostic(
                 context: context,

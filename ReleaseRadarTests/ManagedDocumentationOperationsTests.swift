@@ -815,6 +815,31 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         XCTAssertEqual(after, before)
     }
 
+    func testCatalogAcceptancePreservesRepositoryBindingMismatchWithoutEffects() async throws {
+        let f = try await makeFixture()
+        let accepted = try target(f.root)
+        _ = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: accepted)))
+        try editCatalog(f.root) { catalog in
+            catalog["repositoryID"] = "22222222-2222-4222-8222-222222222222"
+        }
+        let candidate = try target(f.root)
+        let before = await inventory(f.store, f.root)
+
+        let result = await f.dispatcher.dispatch(envelope(
+            f.root,
+            .acceptDocumentationCatalog(
+                target: candidate,
+                priorCatalogVersion: accepted.catalogVersion,
+                priorCatalogDigest: accepted.catalogDigest
+            )
+        ))
+
+        XCTAssertEqual(result.error, .documentation(.bindingMismatch))
+        XCTAssertNil(result.documentationCatalogTransition)
+        let after = await inventory(f.store, f.root)
+        XCTAssertEqual(after, before)
+    }
+
     func testCatalogTransitionDiagnosticIsAuthorizedReadOnlyBoundedAndReportsValidAndInvalidTransitions() async throws {
         let f = try await makeFixture()
         let accepted = try target(f.root)

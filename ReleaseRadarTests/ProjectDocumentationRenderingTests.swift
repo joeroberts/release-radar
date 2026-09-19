@@ -288,9 +288,75 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     "No accepted documentation state changed",
                 ],
                 postActionIdentifiers: ["project-documentation-action-error"],
+                postActionVisibleIdentifiers: ["project-documentation-action-error"],
+                postActionFocusedIdentifier: "project-documentation-action-error",
                 pressTitles: ["Preview Documentation Action", "Accept This Catalog"]
             )
         }
+    }
+
+    func testDocumentationBindFailureRetainsRepositoryActionHeading() async throws {
+        let projectID = ProjectID(rawValue: "repository-bind-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "repository-bind-registration",
+            requestGeneration: 1
+        )
+        let preview = ProjectDocumentationSetupPreview(
+            registration: registration,
+            rootPath: "/Synthetic/RepositoryBind",
+            target: .init(
+                projectID: projectID.rawValue,
+                rootID: "root",
+                repositoryID: "00000000-0000-4000-8000-000000000001",
+                catalogVersion: 1,
+                catalogDigest: String(repeating: "b", count: 64)
+            ),
+            action: .bind
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Repository Binding",
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 1
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: preview.rootPath,
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: []
+        )
+
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.current(version: RepositoryDocumentContract.guidanceVersion)),
+                projectRoot: URL(fileURLWithPath: preview.rootPath),
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectHealth: { health },
+                previewDocumentationSetup: { _ in preview },
+                performDocumentationSetup: { _ in
+                    throw ProjectDocumentationSetupError.command(.documentation(.bindingMismatch))
+                }
+            ),
+            name: "repository-bind-rejection-620",
+            width: 620,
+            expected: nil,
+            expectedText: ["Repository was not bound", "bindingMismatch"],
+            absentText: ["Catalog was not accepted"],
+            postActionIdentifiers: ["project-documentation-action-error"],
+            postActionVisibleIdentifiers: ["project-documentation-action-error"],
+            postActionFocusedIdentifier: "project-documentation-action-error",
+            pressTitles: ["Preview Documentation Action", "Bind This Repository"]
+        )
     }
 
     func testOnboardingDocumentationPreviewAtWideAndCompactWidths() async throws {
@@ -1116,6 +1182,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         absentButtonTitles: [String] = [],
         presentIdentifiers: [String] = [],
         postActionIdentifiers: [String] = [],
+        postActionVisibleIdentifiers: [String] = [],
+        postActionFocusedIdentifier: String? = nil,
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
@@ -1232,6 +1300,30 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 "Missing post-action accessibility element \(identifier)"
             )
         }
+        for identifier in postActionVisibleIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing visible post-action accessibility element \(identifier)"
+            )
+            let elementFrame = try XCTUnwrap(accessibilityFrame(element))
+            let windowFrame = try XCTUnwrap(accessibilityFrame(try XCTUnwrap(ownWindow)))
+            XCTAssertTrue(
+                windowFrame.intersects(elementFrame) && !windowFrame.intersection(elementFrame).isEmpty,
+                "Post-action accessibility element \(identifier) is outside the visible window"
+            )
+        }
+        if let postActionFocusedIdentifier {
+            let focusedElement = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: postActionFocusedIdentifier),
+                "Missing focused post-action element \(postActionFocusedIdentifier)"
+            )
+            var focusedValue: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(focusedElement, kAXFocusedAttribute as CFString, &focusedValue),
+                .success
+            )
+            XCTAssertEqual(focusedValue as? Bool, true)
+        }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
         if let expected {
             XCTAssertTrue(
@@ -1303,6 +1395,20 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         return nil
+    }
+
+    private func accessibilityFrame(_ element: AXUIElement) -> CGRect? {
+        var positionValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue) == .success,
+              let positionValue, CFGetTypeID(positionValue) == AXValueGetTypeID(),
+              let sizeValue, CFGetTypeID(sizeValue) == AXValueGetTypeID() else { return nil }
+        var position = CGPoint.zero
+        var size = CGSize.zero
+        guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &position),
+              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else { return nil }
+        return CGRect(origin: position, size: size)
     }
 
     private func accessibilityButton(_ root: AXUIElement, title: String) -> AXUIElement? {
