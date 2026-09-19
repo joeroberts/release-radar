@@ -1,5 +1,40 @@
 # Outcome 3 project execution setup
 
+## September 19 owner-authorized managed build-permission correction
+
+Outcome: enable the focused macOS guidance tests in managed workers with scoped
+Xcode caches, temporary files and test fixtures. Owner explicitly approved this
+permission-boundary correction after the existing profile blocked all XCTest
+execution. Track as `rr-p6-managed-build-permissions` under the Outcome 3 goal;
+the guidance ticket remains blocked until direct verification succeeds.
+
+Assignment: app-prepared `delivery-115a2be4-b37c-452f-a828-f4e640932706`, baseline
+`3b1e27fec0a936aa52a1e3b64cca4da0393383b7`, Terra/medium as returned by the app.
+Own generated build-profile source, its immediate preparation/verification
+integration, bounded test fixtures and focused regression tests. Main owns Git
+integration, this brief and progress ledger. Preserve all unrelated changes.
+
+Use task-owned scratch paths where supported. Do not grant general home, sibling,
+Git-history, application database, authority/configuration writes or management
+tools; do not enable unrestricted network or an unrestricted worker. Preserve
+read-only review source access, STOP and runtime approval behavior. Do not edit
+live generated profiles or install an unverified candidate to test itself.
+
+Acceptance: focused macOS tests can execute using the generated bounded capability;
+direct negative checks retain isolation, and effective runtime settings match the
+intended profile. Verify source changes with repository-native profile tests and
+the actual Xcode failure scenario. One independent review must cover security,
+compatibility and recovery. Source-only review does not establish runtime success.
+Existing accepted ADRs remain immutable; update the owning mutable execution
+design only if the implemented behavior requires it. Report any bootstrap barrier
+precisely without substituting an unrestricted execution path.
+
+Endpoint: scoped reviewed candidate and ordinary local release delivery once
+checks pass, under standing authorization. Preserve dist installer requirements;
+no merge or unrelated app-state mutation. The permission correction is the only
+newly authorized scope; existing guidance candidate `950aa6ea` is preserved for
+subsequent integration and verification.
+
 ## September 19 owner-approved bootstrap exception — catalog diagnostics
 
 The owner approved a narrowly scoped bootstrap exception after catalog acceptance blocked managed-worker admission. This supersedes the alternate-task prohibition below only for implementing and independently reviewing this diagnostic fix. It does not authorize direct AgentTools invocation, direct database access, catalog reset/rebinding, relaxed validation, trust/configuration changes, or unrelated implementation.
