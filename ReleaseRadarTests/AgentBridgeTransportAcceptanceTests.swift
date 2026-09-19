@@ -78,11 +78,11 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
 
         let countsBeforeRefresh = try await bridgeWriteCounts(fixture.store)
         let health = try await host.refreshConnectionHealth()
-        XCTAssertEqual(health.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
-        XCTAssertTrue(health.isRegisteredAppConnection)
-        XCTAssertNil(health.lastAuthenticatedToolsContact)
+        XCTAssertEqual(health.health?.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
+        XCTAssertTrue(health.health?.isRegisteredAppConnection == true)
+        XCTAssertNil(health.health?.lastAuthenticatedToolsContact)
         let availableSnapshot = try XCTUnwrap(healthSnapshots.last)
-        XCTAssertEqual(availableSnapshot.health, health)
+        XCTAssertEqual(availableSnapshot, health)
         let countsAfterRefresh = try await bridgeWriteCounts(fixture.store)
         XCTAssertEqual(countsAfterRefresh, countsBeforeRefresh)
 
@@ -106,6 +106,82 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             }
             XCTAssertTrue(message.localizedCaseInsensitiveContains("version mismatch"))
         }
+    }
+
+    func testFixtureBrokerRestartCannotRestoreStaleAvailableHealthInTheApp() async throws {
+        let bridgeService = SMAppService.agent(
+            plistName: ReleaseRadarBridgeTransport.launchAgentPlistName
+        )
+        guard bridgeService.status == .notRegistered else {
+            throw TransportTestError.invalidResponse("Fixture broker restart requires an initially unregistered bridge")
+        }
+        let otherApps = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.rekonlabs.ReleaseRadar"
+        ).filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        guard otherApps.isEmpty else {
+            throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before fixture broker restart")
+        }
+
+        let fixture = try await makeTransportFixture()
+        let snapshots = HealthSnapshotCapture()
+        let host = try await AgentBridgeApplicationHost.start(
+            databaseURL: fixture.databaseURL,
+            connectionHealthChanged: { snapshots.append($0) }
+        )
+        var hostRegistrationOwned = true
+        defer {
+            host.disconnectCallback()
+            if hostRegistrationOwned {
+                try? host.unregister()
+            }
+            XCTAssertEqual(bridgeService.status, .notRegistered)
+        }
+
+        let refreshReturned = AsyncSignal()
+        let releasePresentation = AsyncSignal()
+        let model = AppModel(
+            store: fixture.store,
+            connectorHealthLoader: {
+                let health = try await host.refreshConnectionHealth()
+                refreshReturned.signal()
+                await releasePresentation.wait()
+                return health
+            },
+            externalServicesSuppressed: true
+        )
+        let refresh = Task { @MainActor in
+            await model.refreshConnectorHealth()
+        }
+        await refreshReturned.wait()
+        let availableSnapshot = try XCTUnwrap(snapshots.last)
+        XCTAssertNotNil(availableSnapshot.health)
+
+        try host.unregister()
+        hostRegistrationOwned = false
+
+        let staleSnapshot = try await waitForStaleHealthSnapshot(
+            after: availableSnapshot.generation,
+            capture: snapshots
+        )
+        model.applyConnectorHealthSnapshot(staleSnapshot)
+        XCTAssertEqual(model.connectorHealthStatus, "Connection failed")
+
+        releasePresentation.signal()
+        await refresh.value
+        XCTAssertEqual(
+            model.connectorHealthStatus,
+            "Connection failed",
+            "An available reply returned before an OS broker interruption must not overwrite the newer stale UI state."
+        )
+
+        let restartedHost = try await AgentBridgeApplicationHost.start(databaseURL: fixture.databaseURL)
+        defer {
+            restartedHost.disconnectCallback()
+            try? restartedHost.unregister()
+            XCTAssertEqual(bridgeService.status, .notRegistered)
+        }
+        let restartedHealth = try await restartedHost.refreshConnectionHealth()
+        XCTAssertTrue(restartedHealth.health?.isRegisteredAppConnection == true)
     }
 
     private final class OneShotRequestGate: @unchecked Sendable {
@@ -214,6 +290,26 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         var last: AgentBridgeHealthSnapshot? {
             lock.withLock { snapshots.last }
         }
+
+        func firstStale(after generation: UInt64) -> AgentBridgeHealthSnapshot? {
+            lock.withLock {
+                snapshots.first { $0.generation > generation && $0.health == nil }
+            }
+        }
+    }
+
+    private func waitForStaleHealthSnapshot(
+        after generation: UInt64,
+        capture: HealthSnapshotCapture
+    ) async throws -> AgentBridgeHealthSnapshot {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline {
+            if let snapshot = capture.firstStale(after: generation) {
+                return snapshot
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        throw TransportTestError.timedOut
     }
 
     func testPackagedToolRespondsToInitializeWhileInputRemainsOpen() async throws {
@@ -717,8 +813,8 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             reason: "Invalidate the callback after broker handoff"
         )
         let refreshedHealth = try await reconnect.refreshConnectionHealth()
-        XCTAssertEqual(refreshedHealth.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
-        XCTAssertTrue(refreshedHealth.isRegisteredAppConnection)
+        XCTAssertEqual(refreshedHealth.health?.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
+        XCTAssertTrue(refreshedHealth.health?.isRegisteredAppConnection == true)
         let countsAfterHealthRefresh = try await requestCounts(
             fixture.store,
             requestID: requestID,

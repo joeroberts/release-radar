@@ -126,7 +126,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         connection = nil
     }
 
-    func refreshConnectionHealth() async throws -> BridgeConnectionHealth {
+    func refreshConnectionHealth() async throws -> AgentBridgeHealthSnapshot {
         let generation = healthLock.withLock { healthGeneration }
         guard let connection else { throw AgentBridgeApplicationError.connectFailed("Bridge connection is not registered") }
         return try await withCheckedThrowingContinuation { continuation in
@@ -149,8 +149,10 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
                 guard health.wireVersion == ReleaseRadarBridgeTransport.wireVersion else {
                     gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Bridge version mismatch")); return
                 }
-                self.publishHealth(health, generation: generation)
-                gate.resume(returning: health)
+                guard let snapshot = self.publishHealth(health, generation: generation) else {
+                    gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Bridge health reply is stale")); return
+                }
+                gate.resume(returning: snapshot)
             }
         }
     }
@@ -281,12 +283,13 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         connectionHealthChanged(snapshot)
     }
 
-    private func publishHealth(_ health: BridgeConnectionHealth, generation: UInt64) {
+    private func publishHealth(_ health: BridgeConnectionHealth, generation: UInt64) -> AgentBridgeHealthSnapshot? {
         let snapshot = healthLock.withLock { () -> AgentBridgeHealthSnapshot? in
             guard healthGeneration == generation else { return nil }
             return .init(generation: generation, observedAt: Date(), health: health)
         }
         if let snapshot { connectionHealthChanged(snapshot) }
+        return snapshot
     }
 
     private func awaitRegistration(on connection: NSXPCConnection) async throws -> Int {
@@ -310,9 +313,9 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 }
 
 private final class AgentBridgeHealthContinuationGate: @unchecked Sendable {
-    private let lock = NSLock(); private var continuation: CheckedContinuation<BridgeConnectionHealth, Error>?
-    init(_ continuation: CheckedContinuation<BridgeConnectionHealth, Error>) { self.continuation = continuation }
-    func resume(returning value: BridgeConnectionHealth) { lock.withLock { continuation?.resume(returning: value); continuation = nil } }
+    private let lock = NSLock(); private var continuation: CheckedContinuation<AgentBridgeHealthSnapshot, Error>?
+    init(_ continuation: CheckedContinuation<AgentBridgeHealthSnapshot, Error>) { self.continuation = continuation }
+    func resume(returning value: AgentBridgeHealthSnapshot) { lock.withLock { continuation?.resume(returning: value); continuation = nil } }
     func resume(throwing error: Error) { lock.withLock { continuation?.resume(throwing: error); continuation = nil } }
 }
 

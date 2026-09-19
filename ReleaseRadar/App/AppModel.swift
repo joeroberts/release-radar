@@ -139,7 +139,7 @@ final class AppModel {
     private var notificationCoordinator: AppNotificationCoordinator
     private var projectOnboarding: FolderProjectOnboarding
     private let recoveryServices: ReleaseRadarAppServices?
-    private let connectorHealthLoader: (() async throws -> BridgeConnectionHealth)?
+    private let connectorHealthLoader: (() async throws -> AgentBridgeHealthSnapshot)?
     private var recoveryStartupError: String?
     private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
@@ -198,7 +198,7 @@ final class AppModel {
         dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
-        connectorHealthLoader: (() async throws -> BridgeConnectionHealth)? = nil,
+        connectorHealthLoader: (() async throws -> AgentBridgeHealthSnapshot)? = nil,
         recoveryStartupError: String? = nil,
         recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
@@ -269,7 +269,7 @@ final class AppModel {
         dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
-        connectorHealthLoader: (() async throws -> BridgeConnectionHealth)? = nil,
+        connectorHealthLoader: (() async throws -> AgentBridgeHealthSnapshot)? = nil,
         recoveryStartupError: String? = nil,
         recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
@@ -3772,17 +3772,17 @@ final class AppModel {
         connectorHealthChecking = true
         defer { connectorHealthChecking = false }
         do {
-            let health: BridgeConnectionHealth?
+            let snapshot: AgentBridgeHealthSnapshot?
             if let connectorHealthLoader {
-                health = try await connectorHealthLoader()
+                snapshot = try await connectorHealthLoader()
             } else {
-                health = try await recoveryServices?.refreshAgentBridgeHealth()
+                snapshot = try await recoveryServices?.refreshAgentBridgeHealth()
             }
-            guard let health, health.isRegisteredAppConnection else {
+            guard let snapshot else {
                 applyConnectorConnectionFailure()
                 return
             }
-            applyConnectorHealth(health)
+            applyConnectorHealthSnapshot(snapshot)
         } catch {
             applyConnectorFailure(error)
         }

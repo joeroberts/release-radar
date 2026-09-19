@@ -110,6 +110,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     private var agentBridgeHealthObserver: (@MainActor (AgentBridgeHealthSnapshot) -> Void)?
     private var agentBridgeHostID: UUID?
     private var agentBridgeHealthGeneration: UInt64 = 0
+    private var agentBridgeSourceHealthGeneration: UInt64?
 
     private init() {
         let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
@@ -191,6 +192,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         executionAssignmentPreparer = preparer
         let coordinator = notificationCoordinator
         agentBridgeHealthSnapshot = nil
+        agentBridgeSourceHealthGeneration = nil
         let hostID = UUID()
         agentBridgeHostID = hostID
         do {
@@ -217,12 +219,19 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         }
     }
 
-    func refreshAgentBridgeHealth() async throws -> BridgeConnectionHealth {
-        guard let agentBridgeHost else {
+    func refreshAgentBridgeHealth() async throws -> AgentBridgeHealthSnapshot {
+        guard let agentBridgeHost, let agentBridgeHostID else {
             if let agentBridgeStartupError { throw agentBridgeStartupError }
             throw AgentBridgeApplicationError.connectFailed("Release Radar is not connected to its bridge")
         }
-        return try await agentBridgeHost.refreshConnectionHealth()
+        let sourceSnapshot = try await agentBridgeHost.refreshConnectionHealth()
+        if let published = publishAgentBridgeHealth(sourceSnapshot, from: agentBridgeHostID) {
+            return published
+        }
+        guard let agentBridgeHealthSnapshot else {
+            throw AgentBridgeApplicationError.connectFailed("Bridge health reply is stale")
+        }
+        return agentBridgeHealthSnapshot
     }
 
     func observeAgentBridgeHealth(_ observer: @escaping @MainActor (AgentBridgeHealthSnapshot) -> Void) {
@@ -236,8 +245,11 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         agentBridgeHost = nil
     }
 
-    private func publishAgentBridgeHealth(_ snapshot: AgentBridgeHealthSnapshot, from hostID: UUID) {
-        guard agentBridgeHostID == hostID else { return }
+    @discardableResult
+    private func publishAgentBridgeHealth(_ snapshot: AgentBridgeHealthSnapshot, from hostID: UUID) -> AgentBridgeHealthSnapshot? {
+        guard agentBridgeHostID == hostID else { return nil }
+        guard (agentBridgeSourceHealthGeneration ?? 0) <= snapshot.generation else { return nil }
+        agentBridgeSourceHealthGeneration = snapshot.generation
         agentBridgeHealthGeneration &+= 1
         let published = AgentBridgeHealthSnapshot(
             generation: agentBridgeHealthGeneration,
@@ -246,5 +258,6 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         )
         agentBridgeHealthSnapshot = published
         agentBridgeHealthObserver?(published)
+        return published
     }
 }
