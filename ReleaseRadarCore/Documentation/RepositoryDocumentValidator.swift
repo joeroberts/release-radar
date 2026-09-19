@@ -242,29 +242,42 @@ public struct RepositoryDocumentValidator {
         }
         for artifact in old.artifacts {
             guard let replacement = newArtifacts[artifact.artifactID] else {
-                guard artifact.authorityLevel != .controlling else { throw RepositoryDocumentError(.controllingDeletion, path: artifact.path) }
-                guard retired.contains(artifact.artifactID) else { throw RepositoryDocumentError(.retiredIdentity, path: artifact.path) }
+                guard artifact.authorityLevel != .controlling else {
+                    throw RepositoryDocumentError(.controllingDeletion, artifactID: artifact.artifactID, path: artifact.path)
+                }
+                guard retired.contains(artifact.artifactID) else {
+                    throw RepositoryDocumentError(.retiredIdentity, artifactID: artifact.artifactID, path: artifact.path)
+                }
                 continue
             }
-            guard replacement.kind == artifact.kind else { throw RepositoryDocumentError(.invalidTransition, path: replacement.path) }
+            guard replacement.kind == artifact.kind else {
+                throw RepositoryDocumentError(.invalidTransition, artifactID: replacement.artifactID, path: replacement.path)
+            }
             if artifact.authorityLevel == .controlling && replacement.authorityLevel != .controlling && replacement.lifecycle == .active {
-                throw RepositoryDocumentError(.invalidTransition, path: replacement.path)
+                throw RepositoryDocumentError(.invalidTransition, artifactID: replacement.artifactID, path: replacement.path)
             }
             if artifact.lifecycle == replacement.lifecycle { continue }
             switch (artifact.lifecycle, replacement.lifecycle) {
             case (.proposed, .active): break
             case (.active, .completed):
-                guard artifact.kind == .document || artifact.kind == .verificationEvidence else { throw RepositoryDocumentError(.invalidTransition, path: replacement.path) }
+                guard artifact.kind == .document || artifact.kind == .verificationEvidence else {
+                    throw RepositoryDocumentError(.invalidTransition, artifactID: replacement.artifactID, path: replacement.path)
+                }
             case (.active, .superseded):
                 guard new.artifacts.contains(where: {
                     $0.lifecycle == .active && $0.supersedes.contains(artifact.artifactID)
                         && (artifact.authorityLevel != .controlling || ($0.authorityLevel == .controlling && $0.authorityRole == artifact.authorityRole))
-                }) else { throw RepositoryDocumentError(.missingReplacement, path: replacement.path) }
+                }) else {
+                    throw RepositoryDocumentError(.missingReplacement, artifactID: replacement.artifactID, path: replacement.path)
+                }
             case (.completed, .archived):
                 guard let source = old.collections.first(where: { $0.collectionID == artifact.parentCollection }),
                       let archive = source.archiveDestination, replacement.parentCollection == archive,
-                      replacement.path != artifact.path else { throw RepositoryDocumentError(.invalidTransition, path: replacement.path) }
-            default: throw RepositoryDocumentError(.invalidTransition, path: replacement.path)
+                      replacement.path != artifact.path else {
+                    throw RepositoryDocumentError(.invalidTransition, artifactID: replacement.artifactID, path: replacement.path)
+                }
+            default:
+                throw RepositoryDocumentError(.invalidTransition, artifactID: replacement.artifactID, path: replacement.path)
             }
         }
     }

@@ -29,6 +29,7 @@ public enum ProjectDocumentationSetupError: Error, LocalizedError, Equatable, Se
     case staleRegistration
     case catalogUnavailable
     case bindingMismatch
+    case catalogTransitionRejected(DocumentationCatalogTransitionDiagnostic)
     case command(AgentCommandError)
 
     public var errorDescription: String? {
@@ -36,8 +37,34 @@ public enum ProjectDocumentationSetupError: Error, LocalizedError, Equatable, Se
         case .staleRegistration: "This documentation request is stale. Reload Project Health before retrying."
         case .catalogUnavailable: "The repository catalog is not ready. Complete the copied Codex bootstrap and check the repository first."
         case .bindingMismatch: "The saved documentation binding targets a different repository or project root. Recover that binding before accepting a catalog."
+        case let .catalogTransitionRejected(diagnostic):
+            Self.transitionRejectionDescription(diagnostic)
         case let .command(error): "The documentation action was not committed: \(String(describing: error))."
         }
+    }
+
+    private static func transitionRejectionDescription(
+        _ diagnostic: DocumentationCatalogTransitionDiagnostic
+    ) -> String {
+        let code = diagnostic.validationError?.rawValue ?? "invalidTransition"
+        let artifact = diagnostic.artifactID.map { " Artifact \($0)." } ?? ""
+        let path = diagnostic.artifactPath.map { " Path \($0)." } ?? ""
+        let recovery: String
+        switch diagnostic.validationError {
+        case .controllingDeletion:
+            recovery = "Restore the controlling artifact or replace it through an explicit supported supersession."
+        case .missingReplacement:
+            recovery = "Add the required active replacement and its supersession link."
+        case .retiredIdentity:
+            recovery = "Preserve retired identities and retire removed artifacts explicitly without reusing their IDs."
+        case .repositoryIdentityChanged:
+            recovery = "Restore the accepted repository ID; repository replacement requires separate recovery."
+        case .invalidTransitionalSubtree:
+            recovery = "Restore the frozen transitional subtree metadata or complete its supported removal."
+        default:
+            recovery = "Correct the unsupported lifecycle, kind, authority, or path transition for the affected artifact."
+        }
+        return "The catalog transition was rejected (\(code)).\(artifact)\(path) \(recovery) Run the repository documentation check, then preview again. No accepted documentation state changed."
     }
 }
 
@@ -165,7 +192,13 @@ public actor ProjectDocumentationSetupCoordinator {
             admissionDeadline: nil,
             expectedRegistration: preview.registration
         )
-        if let error = result.error { throw ProjectDocumentationSetupError.command(error) }
+        if let error = result.error {
+            if error == .documentation(.invalidTransition),
+               let diagnostic = result.documentationCatalogTransition {
+                throw ProjectDocumentationSetupError.catalogTransitionRejected(diagnostic)
+            }
+            throw ProjectDocumentationSetupError.command(error)
+        }
         return result.auditEventID
     }
 

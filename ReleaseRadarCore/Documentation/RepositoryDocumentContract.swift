@@ -184,9 +184,14 @@ public struct RepositoryDocumentError: Error, Equatable, Sendable, LocalizedErro
         case readFailed
     }
     public let code: Code
+    public let artifactID: String?
     public let artifactPath: String?
-    init(_ code: Code, path: String? = nil) {
+    init(_ code: Code, artifactID: String? = nil, path: String? = nil) {
         self.code = code
+        self.artifactID = artifactID.flatMap {
+            !$0.isEmpty && $0.utf8.count <= 128
+                && !$0.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) ? $0 : nil
+        }
         // Never reflect unsafe input, absolute owner paths, or arbitrary file contents.
         self.artifactPath = path.flatMap {
             $0.hasPrefix("docs/") && $0.utf8.count <= 1_024 && !$0.contains("..") && !$0.contains("%")
@@ -194,6 +199,7 @@ public struct RepositoryDocumentError: Error, Equatable, Sendable, LocalizedErro
         }
     }
     public var errorDescription: String? {
-        "Repository documentation validation failed (\(code.rawValue))\(artifactPath.map { " at \($0)" } ?? ""). Repair the catalog or artifact and retry."
+        let identity = artifactID.map { " for artifact \($0)" } ?? ""
+        return "Repository documentation validation failed (\(code.rawValue))\(identity)\(artifactPath.map { " at \($0)" } ?? ""). Repair the catalog or artifact and retry."
     }
 }

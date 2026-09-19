@@ -46,6 +46,7 @@ struct ProjectOverviewView: View {
     @State private var showsRootManagement = false
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
     @State private var documentationSetupMessage: String?
+    @State private var documentationSetupFailed = false
     @State private var isPerformingDocumentationSetup = false
     @State private var lifecyclePreview: ProjectLifecyclePreview?
     @State private var lifecyclePreviewError: String?
@@ -402,7 +403,17 @@ struct ProjectOverviewView: View {
                     }
                 }
                 if let documentationSetupMessage {
-                    Text(documentationSetupMessage).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                    if documentationSetupFailed {
+                        RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                            Text("Catalog was not accepted").font(.headline)
+                            Text(documentationSetupMessage)
+                                .foregroundStyle(RekonTheme.secondaryText)
+                                .textSelection(.enabled)
+                                .accessibilityIdentifier("project-documentation-action-error")
+                        }
+                    } else {
+                        Text(documentationSetupMessage).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                    }
                 }
             }
         }
@@ -500,6 +511,7 @@ struct ProjectOverviewView: View {
         guard let previewDocumentationSetup else { return }
         isPerformingDocumentationSetup = true
         documentationSetupMessage = nil
+        documentationSetupFailed = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
@@ -515,6 +527,7 @@ struct ProjectOverviewView: View {
         guard let preview = documentationSetupPreview, let performDocumentationSetup else { return }
         isPerformingDocumentationSetup = true
         documentationSetupMessage = nil
+        documentationSetupFailed = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
@@ -525,6 +538,7 @@ struct ProjectOverviewView: View {
                 refreshHealth()
             } catch {
                 documentationSetupMessage = error.localizedDescription
+                documentationSetupFailed = true
             }
         }
     }

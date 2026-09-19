@@ -58,11 +58,95 @@ public struct AgentQueryEnvelope: Codable, Equatable, Sendable {
 public enum AgentQuery: Codable, Equatable, Sendable {
     case inventoryEvidence(projectID: String?, rootID: String?)
     case deliveryInventory(projectID: String, rootID: String)
+    case documentationCatalogTransition(projectID: String, rootID: String)
     case ticketReferences(projectID: String, rootID: String, ticketID: String)
     case ticketDeliveryEvidence(projectID: String, rootID: String, ticketID: String)
     case recordedImpacts(projectID: String, rootID: String, repositoryID: String, artifactID: String)
     case planChangeProposals(projectID: String)
     case phaseLifecycles(projectID: String)
+}
+
+public struct DocumentationCatalogTransitionDiagnostic: Codable, Equatable, Sendable {
+    public let projectID: String
+    public let rootID: String
+    public let repositoryID: String
+    public let acceptedCatalogVersion: Int
+    public let acceptedCatalogDigest: String
+    public let candidateCatalogVersion: Int
+    public let candidateCatalogDigest: String
+    public let isValid: Bool
+    public let validationError: RepositoryDocumentError.Code?
+    public let artifactID: String?
+    public let artifactPath: String?
+
+    public init(
+        projectID: String,
+        rootID: String,
+        repositoryID: String,
+        acceptedCatalogVersion: Int,
+        acceptedCatalogDigest: String,
+        candidateCatalogVersion: Int,
+        candidateCatalogDigest: String,
+        isValid: Bool,
+        validationError: RepositoryDocumentError.Code?,
+        artifactID: String?,
+        artifactPath: String?
+    ) {
+        self.projectID = projectID
+        self.rootID = rootID
+        self.repositoryID = repositoryID
+        self.acceptedCatalogVersion = acceptedCatalogVersion
+        self.acceptedCatalogDigest = acceptedCatalogDigest
+        self.candidateCatalogVersion = candidateCatalogVersion
+        self.candidateCatalogDigest = candidateCatalogDigest
+        self.isValid = isValid
+        self.validationError = validationError
+        self.artifactID = artifactID
+        self.artifactPath = artifactPath
+    }
+}
+
+func documentationCatalogTransitionDiagnostic(
+    context: DocumentationRootContext,
+    candidate: RepositoryDocumentSnapshot
+) throws -> DocumentationCatalogTransitionDiagnostic {
+    guard let binding = context.binding else { throw DocumentationOperationError.bindingMissing }
+    guard binding.rootID.rawValue == context.rootID else {
+        throw DocumentationOperationError.bindingMismatch
+    }
+    let accepted: RepositoryDocumentSnapshot
+    do { accepted = try binding.acceptedSnapshot() }
+    catch { throw DocumentationOperationError.bindingMismatch }
+    do {
+        try RepositoryDocumentValidator().validateTransition(from: accepted, to: candidate)
+        return .init(
+            projectID: context.projectID,
+            rootID: context.rootID,
+            repositoryID: binding.repositoryID,
+            acceptedCatalogVersion: binding.acceptedCatalogVersion,
+            acceptedCatalogDigest: binding.acceptedCatalogDigest,
+            candidateCatalogVersion: candidate.version,
+            candidateCatalogDigest: candidate.digest,
+            isValid: true,
+            validationError: nil,
+            artifactID: nil,
+            artifactPath: nil
+        )
+    } catch let error as RepositoryDocumentError {
+        return .init(
+            projectID: context.projectID,
+            rootID: context.rootID,
+            repositoryID: binding.repositoryID,
+            acceptedCatalogVersion: binding.acceptedCatalogVersion,
+            acceptedCatalogDigest: binding.acceptedCatalogDigest,
+            candidateCatalogVersion: candidate.version,
+            candidateCatalogDigest: candidate.digest,
+            isValid: false,
+            validationError: error.code,
+            artifactID: error.artifactID,
+            artifactPath: error.artifactPath
+        )
+    }
 }
 
 public enum TicketTaskAdoptionEligibility: String, Codable, Equatable, Sendable {
