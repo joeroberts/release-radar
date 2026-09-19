@@ -5,8 +5,9 @@
 Owner authorized driving managed-build-permissions, metrics and Outcome 3 closeout
 to completion. Preserve their existing task plans (revision 1) and the separate
 owner-acceptance boundary. Second-Mac verification remains deferred to GH106.
-Build Agent 02 is inspecting the existing reviewed permission candidate and exact
-pinned RDS staging prerequisites; no new build or permission change is claimed.
+Permission-only release 0.1.24 is committed and installed; live managed-review
+isolation verification is next. Metrics remains blocked on its supported
+correction assignment; Outcome 3 closeout awaits connector owner acceptance.
 
 ### Permission-only local release 0.1.24 — delivered September 19
 
@@ -37,6 +38,20 @@ release was not launched by this workflow.
 No push, pull request, merge, public release or notarization is authorized or
 performed. Live managed-worker scratch/isolation proof remains Main's follow-up;
 this release does not complete the blocked metrics task or programme closeout.
+
+Release artifact/provenance commit is `452330b00b7d6cedb6b37074273d3608d221d196`,
+with annotated local tag `v0.1.24`. Main subsequently stopped only the identified
+old metrics inspection app (PID 15930, preserved temporary Debug bundle) and
+launched `/Applications/ReleaseRadar.app`. The installed 0.1.24 Settings screen
+reports App bridge Available. Plugin verification initially failed; supported
+Try Again also failed. Settings' Restart plugin helper recovered verification
+and reported installed plugin 0.1.23 versus shipped 0.1.24. Supported Update
+now reports installed plugin 0.1.24 matches the app, with the instruction to
+start a new Codex task to load the change. This existing Main task still returns
+bridge transport failure before submission after the update. A fresh coordinator
+task rooted at this exact repository must load the updated plugin before resuming
+the pending supported assignment checks. No managed assignment or ticket
+completion has been inferred; no helper or connector bypass was attempted.
 
 The closeout blocker identity was recovered from its original ledger receipt:
 `rr-p6-closeout-prerequisites`. Supported correction request
