@@ -34,8 +34,17 @@ Task 02 prepared from committed contract baseline `6197c062`, audit
 `61226F01-A079-4841-A1C6-E910D4334205`, task
 `01a0b9f3-c324-70b3-a1d4-58bcea51940e`, is authoring regression tests first.
 Returned effective settings verify Terra/medium, assignment-only workspace write,
-network disabled, on-request/auto_review. Build Agent executes RED before this
-same writer proceeds to product behavior; no compilation has occurred yet.
+network disabled, on-request/auto_review. Build Agent completed RED: focused build
+failed on the missing production handshake/health APIs, with no dependency failure
+and no tests executed. One independent ProcessInfo test typo requires correction.
+Result remains in the assignment checkout at
+`.build/native-checks/rr-p6-connector-recovery-red-6197c062.xcresult`.
+The same managed writer is now implementing the complete contract and correcting
+the typo; Build Agent remains the sole compiler/test runner.
+
+Chief confirmed no actual pending approval: its optional skill read was denied,
+local fallback applied, and the architectural report completed. The app task-status
+label was misleading; no owner approval action is needed for that consultation.
 Packaged documentation and diff checks pass.
 
 Managed delivery still selects Terra/medium and review Terra/high. The earlier
