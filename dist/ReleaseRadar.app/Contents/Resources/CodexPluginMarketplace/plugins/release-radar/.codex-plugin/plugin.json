@@ -1,6 +1,6 @@
 {
   "name": "release-radar",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "description": "Keep durable Release Radar tracking and typed delivery state consistent.",
   "author": {
     "name": "Rekon Labs"

@@ -8,6 +8,36 @@ owner-acceptance boundary. Second-Mac verification remains deferred to GH106.
 Build Agent 02 is inspecting the existing reviewed permission candidate and exact
 pinned RDS staging prerequisites; no new build or permission change is claimed.
 
+### Permission-only local release 0.1.24 — delivered September 19
+
+The reviewed permission integration is locally released as **0.1.24 (1)** from
+source commit `e83580a367057de0c3475bb890b630ef4001310e`; metrics remains excluded
+and blocked. Six focused permission/integration tests passed with zero failures,
+and 31 app/plugin version, package-integrity, capability and shared-execution
+tests passed with zero failures. In both runs the test host exited after reporting
+the successful cases, but Xcode stalled while finalizing its result bundle and
+was interrupted, so no complete xcresult or successful overall `xcodebuild` exit
+is claimed.
+
+Metadata commit `ad28d7ac7c942c64a7b3ec26f8d5be45366966e4` advances the app and bundled
+plugin to 0.1.24 and registers normalized plugin digest
+`91d4832283c38a4a0acb3af1c6618910e990859ec6c8ae4a8352260808eab251` while
+preserving prior recognized versions. The repository-staged and installed apps
+are `com.rekonlabs.ReleaseRadar`, 0.1.24 `(1)`, signed by Apple Development team
+`2UA854NLX4` with Hardened Runtime 26.5.0; strict deep verification passed and
+their main executable hashes match. The APFS installer
+`dist/ReleaseRadar-0.1.24.dmg` has SHA-256
+`8ef9b4c52bc1cc6dab0b479824a98161dbcc0827c0c15bfa5aa6d656805db9b3`
+(18,950,907 bytes); `hdiutil verify`, read-only mounted identity/signing/plugin
+checks, and the `Applications -> /Applications` layout passed. The verified app
+is installed at `/Applications/ReleaseRadar.app` without launching it. A separate
+debug build owned by the active managed delivery remains running; the installed
+release was not launched by this workflow.
+
+No push, pull request, merge, public release or notarization is authorized or
+performed. Live managed-worker scratch/isolation proof remains Main's follow-up;
+this release does not complete the blocked metrics task or programme closeout.
+
 The closeout blocker identity was recovered from its original ledger receipt:
 `rr-p6-closeout-prerequisites`. Supported correction request
 `fa63c48c-c7c9-4f8e-8f74-4f7129484e37` committed with audit
