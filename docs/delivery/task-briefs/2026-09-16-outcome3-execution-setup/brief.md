@@ -220,6 +220,29 @@ Exact request:
 }
 ```
 
+### Connector health race correction review — pending
+
+Candidate `ff0d29b2`; delivery connection physically closed, task archived,
+source and build outputs preserved. Exact preparation request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "65e95d64-1290-44d3-a504-114728d722f1",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-792db90d-04fa-4a30-9216-5554844a21f9",
+  "reason": "Review ff0d29b2 health freshness correction and native fixture interruption restart scenario; compilation and two non-service tests passed, native runtime acceptance pending."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
