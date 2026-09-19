@@ -16,6 +16,26 @@ connector recovery is verified and Needs Review awaiting owner acceptance, and
 GH106 is unscheduled/non-blocking. Existing dependencies remain unchanged.
 This supersedes the earlier statement that the blocker identity was unavailable.
 
+### Metrics delivery resumed
+
+Owner's active goal resumes the named metrics scope, superseding historical STOP
+wording for this ticket. Existing two-task plan revision 1 is unchanged. The lane
+transition to In Progress committed under request
+`7ec17187-fc37-45a1-9ecb-d08d60ac8b61`, audit
+`D91DB5B8-3A38-4369-A7C8-B55F33C38935`.
+Supported preparation request `81cffae0-cb4f-4f99-a0c8-5d5b2407af2b` for task 01,
+phase revision 1/task-plan revision 1, produced assignment
+`delivery-81cffae0-cb4f-4f99-a0c8-5d5b2407af2b`, audit
+`94CC84A7-6C6F-4D24-8331-71DE39581B04`, baseline
+`5747c343574b6b41a909698b857a3fd119a2d0a5`.
+Worker `806DB840-F645-4CD2-B613-A59DB244EDAE`, task
+`01a0badf-ddfb-7bb0-9817-3f88b0e7392f`, started with verified Terra/medium,
+assignment-specific restricted profile, on-request/automatic review and no network.
+It owns only Overview metric composition and focused regression source, following
+`docs/design/phase6-workspace-toolbar-proposal.md` and its visual references.
+Build Agent owns compilation/testing; independent UI review must cover long names,
+compact/wide layouts and accessibility. No implementation completion is claimed.
+
 ## Cleanup and deferred verification — September 19
 
 Owner requested branch/task cleanup and current RR board state. Removed 12 local
