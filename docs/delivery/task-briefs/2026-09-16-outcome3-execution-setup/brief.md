@@ -1,5 +1,18 @@
 # Outcome 3 project execution setup
 
+## September 19 approved task-mismatch preparation recovery correction
+
+Owner explicitly approved the bounded extension and isolated-task exception after exact request `9e4730d5-95a7-4829-80f0-e16f75934f83` again returned assignmentNotAuthorized without an audit, while fresh review5683 returned conflict. That request named metrics task02 with a task01 parent. The dispatcher persists outcomeUnknown before producer checks; raw parent-work mismatch bypasses the existing terminal no-effects settlement.
+
+Outcome: exact replay can settle this definite task-mismatch refusal only after proving request-scoped absence of assignment, worktree/branch/provisioning and profile/configuration effects. Keep partial, unreadable, reserved, live and genuinely uncertain outcomes pending. Preserve original request/body, audit history, registration/root/revision checks, replay and changed-body rejection, and single-flight settlement. No blanket error catch, force-clear, direct SQLite/control-file repair, new schema or broader permission grants.
+
+Scope: existing preparation coordinator/dispatcher proof path and focused repository-native regression tests; mutable execution design only if required. Preserve accepted ADRs and unrelated image candidate31ffcf72. Main owns ledger/brief/integration; fresh isolated delivery task owns source/tests, Sol/high for persistence/recovery risk, ceiling Astra/high only with named escalation. Baseline is the committed revision containing this section. Build Agent compiles/runs tests; writer authors failing regressions first and hands RED to Build Agent before implementing GREEN. Fresh independent Sol/high review covers recovery, authority, audit and compatibility. Prior chief constraints below remain controlling; no new public recovery contract is intended.
+
+Acceptance: historical mismatch exact replay gains a terminal audited refusal only with complete no-effects proof; fresh correct review can subsequently prepare; uncertain/resource-present cases stay blocked. Relevant existing recovery/authority regressions pass. No owner-state test writes; real request replay occurs only after reviewed signed local release.
+
+Endpoint: scoped local commit and review, then standing signed local release under dist and supported exact-request recovery. No push, PR, merge or owner acceptance is inferred. The isolated-task exception authorizes source delivery/review routing only, not bypassing runtime controls or editing application state.
+
+
 ## September 19 approved review image capability correction
 
 - Outcome: enable native image viewing in managed review assignments so the existing metrics screenshots can receive independent visual review. Owner explicitly approved this capability; it supports `rr-p6-metrics-task-02` without changing its definition.
