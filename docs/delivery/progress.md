@@ -19,6 +19,14 @@ running the two initial RED regressions; writer may implement after RED, preserv
 verified no-effects versus uncertain-effects separation and audited exact replay.
 Chief01a0b413 consultation completed read-only; independent code review remains.
 
+Build Agent established RED: two focused dispatcher tests compiled; partial-effect
+uncertainty passed, definite-refusal recovery failed with missing audited terminal
+receipt (two executed, one ordinary failure, zero unexpected). An initial test-only
+force-unwrap crash was corrected before this characterization. Results remain in
+writer `.build/native-checks/rr-preparation-receipts-red-r2.{log,xcresult}`. Writer
+released for bounded production correction under the recorded chief constraints.
+Chief consultation task archived after source advice was preserved.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
