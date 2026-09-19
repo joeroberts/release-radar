@@ -1,6 +1,20 @@
 # Release Radar delivery state
 
-## Task and dependency reconciliation v1 — owner preview September 19
+## Task and dependency reconciliation v1 — applied and verified September 19
+
+**Current result:** owner approved the exact v1 preview and all 22 supported
+operations committed. Complete connector readback matches all 42 task IDs, titles,
+labels, sort orders and Active/Pending states across all sixteen task plans at
+revision 1. It also confirms unchanged ticket outcomes, phase membership and lanes:
+closeout In Progress, metrics Blocked, fourteen Backlog. The inventory's
+`activeTaskCount: 42` counts active task definitions; no worker was launched.
+App readback verifies all six Requires/Unlocks relationships through the closeout,
+documentation, navigation and import inspectors, with the approved task rows and
+audits visible. History shows the new task-plan and dependency audit events.
+P6 remains Ready revision 10 and In delivery; no blocker, completion, acceptance,
+goal-change or phase-finalization operation was sent. The exact envelopes and
+committed receipts below are retained for recovery, not new execution. Earlier
+preview wording in this section is historical approval provenance.
 
 **Disposition: proposed; no application writes yet.** The owner authorized deriving
 task breakdowns and dependencies from the approved plan, showing the exact
@@ -115,6 +129,660 @@ preservation of lanes, goals and blockers. Run the packaged documentation check.
 Current endpoint is this durable owner preview only. No exact task catalog had
 previously been shown to the owner, so the earlier approval does not substitute
 for the installed tracking skill's exact-catalog approval step.
+
+
+### Reconciliation v1 application results
+
+All 22 approved operations committed successfully. The exact requests below are
+committed, not pending; do not replay them as new operations. Application readback
+passed as recorded above. No completion or lane-transition commands were sent.
+
+| Ticket / dependency | Disposition | Task-plan revision | Audit ID |
+| --- | --- | --- | --- |
+| `rr-p6-guidance-prompt` | Committed | 1 | `C6227A80-C663-4F18-807E-2648FCB17B6F` |
+| `rr-p6-connector-recovery` | Committed | 1 | `747C95C4-CC1A-434B-9160-3469684E9E03` |
+| `rr-p6-outcome3-closeout` | Committed | 1 | `CC965AFE-DDC6-4344-8A47-87B28B5D6864` |
+| `rr-p6-doc-reconciliation` | Committed | 1 | `C1262B83-6E3B-4DDE-9DA1-BE2E35126E28` |
+| `rr-p6-plan-reconstruction` | Committed | 1 | `24CEE098-690A-4128-B77A-06466C0FB172` |
+| `rr-p6-metrics` | Committed | 1 | `00CAD172-04AF-497B-9919-50B7EC77CF97` |
+| `rr-p6-manage-project` | Committed | 1 | `6F191363-03C0-4334-8724-6ACC0D29B563` |
+| `rr-p6-navigation` | Committed | 1 | `19D8DB68-4084-4056-B9BA-8D583955ED4B` |
+| `rr-p6-guided-setup` | Committed | 1 | `3278FD52-A2D4-422D-8DFF-0E32F205CBA5` |
+| `rr-p7-export` | Committed | 1 | `F745061A-C773-4AF9-8693-129755E0CBD5` |
+| `rr-p7-import` | Committed | 1 | `364045EB-74DE-49B2-8257-CB47FD6C0D1C` |
+| `rr-p8-presentation` | Committed | 1 | `29D58821-9394-4162-A319-B0EF778AF6C1` |
+| `rr-p8-maintenance` | Committed | 1 | `1CE10777-87CA-4939-933A-2FBEF8C94C02` |
+| `rr-p8-distribution` | Committed | 1 | `B9443B6F-5480-4F88-A1A3-138E7C48DFD5` |
+| `rr-p8-version-evidence` | Committed | 1 | `C9B55E5A-6FEF-4BCB-B9EE-2532F5E39064` |
+| `rr-p8-stale-helper` | Committed | 1 | `1E48FCDB-7A52-4958-8DF7-0EDCECFE8887` |
+| `rr-dep-closeout-guidance` | Committed | n/a | `71B32194-D9A7-4967-861B-15B0B72AC7FF` |
+| `rr-dep-closeout-connector` | Committed | n/a | `63B6FD97-B9A4-4E5C-9B12-4F219BDC8856` |
+| `rr-dep-docs-closeout` | Committed | n/a | `0C9451E4-F27B-493A-8A9D-1D0BF4D2AAC7` |
+| `rr-dep-reconstruction-docs` | Committed | n/a | `46A6B729-C714-408A-BFD3-82588C4EB9CD` |
+| `rr-dep-navigation-management` | Committed | n/a | `1769D254-2DB9-488F-A43C-8A6B3CF5090E` |
+| `rr-dep-import-export` | Committed | n/a | `8E682917-25A1-4F18-8BA3-0B8827DAE212` |
+
+### Approved reconciliation v1 — exact application envelopes
+
+Owner approved implementation of the exact v1 preview. All 22 operations below
+are initially pending. Task-plan baselines are absent; expectedRevision is omitted.
+Use these exact requests for uncertain replay. The preview wording above is retained
+as provenance and is superseded by this approval and the dispositions recorded here.
+
+```json
+[
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "a13d101e-1273-46fd-9507-d10bc4890509",
+      "ticketID": "rr-p6-guidance-prompt",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-guidance-prompt-task-01",
+          "label": "Task 1",
+          "title": "Correct outdated-guidance routing to the upgrade prompt while preserving missing-guidance bootstrap.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-guidance-prompt-task-02",
+          "label": "Task 2",
+          "title": "Verify copied prompts for both guidance states with regression tests and independent UI review.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "4c8eb62a-b166-4de4-becb-1f9074a59ea4",
+      "ticketID": "rr-p6-connector-recovery",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-connector-recovery-task-01",
+          "label": "Task 1",
+          "title": "Reproduce the retained-client upgrade failure and define supported recovery with signing enforcement intact.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-connector-recovery-task-02",
+          "label": "Task 2",
+          "title": "Implement supported connector recovery and accurate, actionable connection-health feedback.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p6-connector-recovery-task-03",
+          "label": "Task 3",
+          "title": "Verify signed upgrade, reconnection, rejected peers, version mismatch, disconnection and uncertain-write non-replay with independent recovery and UI review.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "4ad9cd79-08ee-4e58-b1f4-6ba5083625d0",
+      "ticketID": "rr-p6-outcome3-closeout",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-outcome3-closeout-task-01",
+          "label": "Task 1",
+          "title": "Reconcile completed release and acceptance evidence with the remaining Outcome 3 correction scope.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-outcome3-closeout-task-02",
+          "label": "Task 2",
+          "title": "Complete only the remaining authorized release and acceptance checks, preserving explicit deferrals and recording findings.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p6-outcome3-closeout-task-03",
+          "label": "Task 3",
+          "title": "Reconcile correction PR disposition, versioned dist installer, installed identity and delivery records, then retire completed idle delivery tasks while preserving artifacts.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "ea108957-ce0a-4166-b6fc-007a21a59492",
+      "ticketID": "rr-p6-doc-reconciliation",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-doc-reconciliation-task-01",
+          "label": "Task 1",
+          "title": "Identify current controlling documents, conflicting status statements and overlapping delivery identifiers.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-doc-reconciliation-task-02",
+          "label": "Task 2",
+          "title": "Reconcile active documentation and references while preserving stable identities, accepted ADRs and historical records.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p6-doc-reconciliation-task-03",
+          "label": "Task 3",
+          "title": "Validate catalog and indexes and independently review that current scope, sequencing and historical boundaries agree.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "e848cfd4-08ce-437f-9445-e25a7e2114dc",
+      "ticketID": "rr-p6-plan-reconstruction",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-plan-reconstruction-task-01",
+          "label": "Task 1",
+          "title": "Specify the supported versioned planning projection and exact source, destination, identity and lane mappings.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-plan-reconstruction-task-02",
+          "label": "Task 2",
+          "title": "Implement source validation and an owner-editable reconstruction preview with conflicts, exclusions and cancellation.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p6-plan-reconstruction-task-03",
+          "label": "Task 3",
+          "title": "Apply the confirmed projection through typed audited operations with stale-baseline rejection and atomic or explicitly approved recovery behavior.",
+          "sortOrder": 2
+        },
+        {
+          "id": "rr-p6-plan-reconstruction-task-04",
+          "label": "Task 4",
+          "title": "Verify empty and partially populated projects, duplicate prevention, uncertain replay and accessible compact and wide review flows using disposable data.",
+          "sortOrder": 3
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "470f9529-dcb7-4544-896d-053fcb0198ec",
+      "ticketID": "rr-p6-metrics",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-metrics-task-01",
+          "label": "Task 1",
+          "title": "Align Overview metric labels beside the existing icons and center values while preserving glyphs, colors and semantics.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-metrics-task-02",
+          "label": "Task 2",
+          "title": "Verify long phase names, compact and wide layouts and accessibility against the approved design through independent UI review.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "f9f7afca-61cc-4750-a108-76326411df12",
+      "ticketID": "rr-p6-manage-project",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-manage-project-task-01",
+          "label": "Task 1",
+          "title": "Open Manage Project with exact project identity and independently loading sections with local retry feedback.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-manage-project-task-02",
+          "label": "Task 2",
+          "title": "Relocate documentation activation, shared execution, repository access and evidence controls into Manage Project.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p6-manage-project-task-03",
+          "label": "Task 3",
+          "title": "Verify authorization, archived and removed project access, partial failures and accessible navigation with independent UI and recovery review.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "cef95c8f-20c6-4e91-83cf-c233a6ae4745",
+      "ticketID": "rr-p6-navigation",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-navigation-task-01",
+          "label": "Task 1",
+          "title": "Relocate Archive and Remove into Manage Project while preserving exact-target confirmations, retention and recovery.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-navigation-task-02",
+          "label": "Task 2",
+          "title": "Complete and verify the remaining approved navigation behavior, excluding delivered toolbar and search, with independent UI review.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "40f063b2-26ad-4cd7-b92a-e6ed5ca42cbb",
+      "ticketID": "rr-p6-guided-setup",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p6-guided-setup-task-01",
+          "label": "Task 1",
+          "title": "Compare the proposed guided setup journey with delivered Outcome 3 and obtain a decision on the exact remaining scope.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p6-guided-setup-task-02",
+          "label": "Task 2",
+          "title": "Implement and independently verify only the approved remainder: exact repository-change preview, owner approval, application and recoverable completion.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "56e091f7-4cf6-4c80-a3d4-925682488d69",
+      "ticketID": "rr-p7-export",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p7-export-task-01",
+          "label": "Task 1",
+          "title": "Settle the versioned package contract for complete records, documents, evidence, identities and formal-state preservation.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p7-export-task-02",
+          "label": "Task 2",
+          "title": "Implement complete self-contained export with required-content validation and exclusions for source checkouts, credentials and device permissions.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p7-export-task-03",
+          "label": "Task 3",
+          "title": "Produce an exporter-generated acceptance fixture and verify completeness, provenance and unavailable-content failures with independent continuity review.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "b9311095-689a-4577-b1e2-50060b751de4",
+      "ticketID": "rr-p7-import",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p7-import-task-01",
+          "label": "Task 1",
+          "title": "Validate and preview the exporter-produced package, destination identities, authorized roots and file conflicts.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p7-import-task-02",
+          "label": "Task 2",
+          "title": "Implement coordinated file placement and store recovery preserving exported domain identities and historical provenance without replaying commands or notifications.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p7-import-task-03",
+          "label": "Task 3",
+          "title": "Verify installed round trips, interrupted recovery, conflicts and data preservation against the exporter fixture with independent recovery review.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "cba30e55-d07a-469a-b30e-7289da05a6b8",
+      "ticketID": "rr-p8-presentation",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p8-presentation-task-01",
+          "label": "Task 1",
+          "title": "Identify and complete remaining RDS coverage and the approved production wordmark while preserving the AppIcon.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p8-presentation-task-02",
+          "label": "Task 2",
+          "title": "Verify light and dark appearance, relevant window sizes and accessibility against approved references with independent UI review.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "f71c9982-7ed5-42f8-a1d4-e5c52fa35c80",
+      "ticketID": "rr-p8-maintenance",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p8-maintenance-task-01",
+          "label": "Task 1",
+          "title": "Resolve the scoped optional-.none compiler warnings and verify affected behavior.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p8-maintenance-task-02",
+          "label": "Task 2",
+          "title": "Resolve the scoped test actor-isolation warnings and run the affected tests with independent code review.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "c04bd5d1-af36-4c55-8234-b6dfe27d098e",
+      "ticketID": "rr-p8-distribution",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p8-distribution-task-01",
+          "label": "Task 1",
+          "title": "Record the owner's distribution-audience decision and the applicable package acceptance requirements.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p8-distribution-task-02",
+          "label": "Task 2",
+          "title": "Implement only the selected audience's required packaging and portable helper behavior under separate signing and provisioning authority.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p8-distribution-task-03",
+          "label": "Task 3",
+          "title": "Verify signed installation, upgrade and relaunch on the selected delivered feature set and reconcile release evidence before publication.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "c8bea6d4-212f-4cfd-9372-30661f72a0e1",
+      "ticketID": "rr-p8-version-evidence",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p8-version-evidence-task-01",
+          "label": "Task 1",
+          "title": "Reconcile delivered P17 evidence behavior and implement only the remaining build and installed-version links.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p8-version-evidence-task-02",
+          "label": "Task 2",
+          "title": "Verify repository and revision applicability, stale or unavailable observations and installed identity without conflating merge, installation or owner acceptance.",
+          "sortOrder": 1
+        }
+      ]
+    }
+  },
+  {
+    "tool": "revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "05ca6f89-5f8a-4076-9d28-99b300f7bfa7",
+      "ticketID": "rr-p8-stale-helper",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Add only these pending task definitions; preserve lanes, goals, evidence and acceptance.",
+      "additions": [
+        {
+          "id": "rr-p8-stale-helper-task-01",
+          "label": "Task 1",
+          "title": "Obtain the separately authorized isolated macOS account or VM and prepare signed installed versions for the stale-helper scenario.",
+          "sortOrder": 0
+        },
+        {
+          "id": "rr-p8-stale-helper-task-02",
+          "label": "Task 2",
+          "title": "Reproduce a real production helper surviving upgrade and exercise Settings Restart helper before startup recovery consumes the condition.",
+          "sortOrder": 1
+        },
+        {
+          "id": "rr-p8-stale-helper-task-03",
+          "label": "Task 3",
+          "title": "Verify old-process termination, replacement identity, exact-version receipts, data preservation and actionable failures with independent runtime review.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  },
+  {
+    "tool": "set_dependency",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "5c13b252-4462-49e0-82da-3f5489962a62",
+      "id": "rr-dep-closeout-guidance",
+      "kind": "ticket",
+      "subjectID": "rr-p6-outcome3-closeout",
+      "dependsOnID": "rr-p6-guidance-prompt",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Remaining guidance correction must be verified before Outcome 3 closeout finishes."
+    }
+  },
+  {
+    "tool": "set_dependency",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "0ac5e527-8be0-4e0b-b7d1-61da50149edd",
+      "id": "rr-dep-closeout-connector",
+      "kind": "ticket",
+      "subjectID": "rr-p6-outcome3-closeout",
+      "dependsOnID": "rr-p6-connector-recovery",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. #99 and correction brief explicitly prevent full Outcome 3 closeout."
+    }
+  },
+  {
+    "tool": "set_dependency",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "09335e53-8ace-4aa2-b925-8fb8c0d2feec",
+      "id": "rr-dep-docs-closeout",
+      "kind": "ticket",
+      "subjectID": "rr-p6-doc-reconciliation",
+      "dependsOnID": "rr-p6-outcome3-closeout",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Explicit owner sequence."
+    }
+  },
+  {
+    "tool": "set_dependency",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "8eb5e652-4000-4aa5-aa25-84ed0ab361b3",
+      "id": "rr-dep-reconstruction-docs",
+      "kind": "ticket",
+      "subjectID": "rr-p6-plan-reconstruction",
+      "dependsOnID": "rr-p6-doc-reconciliation",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Explicit owner sequence and reviewed reconstruction design."
+    }
+  },
+  {
+    "tool": "set_dependency",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "ff102da9-db57-483f-a20e-9658ae814d2b",
+      "id": "rr-dep-navigation-management",
+      "kind": "ticket",
+      "subjectID": "rr-p6-navigation",
+      "dependsOnID": "rr-p6-manage-project",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. Archive/Remove relocation uses the completed Manage Project destination."
+    }
+  },
+  {
+    "tool": "set_dependency",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0b54e-8f55-7c62-8bf4-4090f49b0a84",
+      "requestID": "4428ba0e-fcba-430b-91e8-bc3e6c845d2f",
+      "id": "rr-dep-import-export",
+      "kind": "ticket",
+      "subjectID": "rr-p7-import",
+      "dependsOnID": "rr-p7-export",
+      "reason": "Owner approved exact Task and dependency reconciliation v1. RM6 must use the exporter-produced fixture; importer never precedes it."
+    }
+  }
+]
+```
 
 ## Outcome 3 closeout — In Progress September 19
 
