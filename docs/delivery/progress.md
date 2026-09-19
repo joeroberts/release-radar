@@ -2,6 +2,34 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Closeout prerequisite blocker resolved (audit `DBF169E6-4534-4ECD-959D-7D14573F4FA9`) and ticket moved In Progress (audit `EFCF01E4-CD5B-4F7A-9EA4-05638C00B799`). Both named dependencies are Accepted; no task definition or completion changes. PR #107 is verified MERGED at `e6f50b5bbb1d4e8b685bd4abd2379be76227ae59`, with PR head `38daddbdec4f67cc7b4c1b335c1e02381c145baa`; earlier claims that it remains open are superseded. Local 0.1.24 permission implementation/package and later records remain unpublished. Build Agent is reconciling existing local release evidence without rebuilding or rerunning tests.
+
+```json
+[
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "requestID": "bc5f1807-9b03-486a-b4a6-ed9b6d5de369",
+    "blockerID": "rr-p6-closeout-prerequisites",
+    "reason": "Both named prerequisites, guidance prompt and connector recovery, are now owner Accepted. Second-Mac verification remains deferred exclusively to GH106 and non-blocking."
+  },
+  {
+    "version": 1,
+    "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+    "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+    "registrationProjectID": "project-fffdc0e0b15b9b86",
+    "requestGeneration": 1,
+    "requestID": "5c132ed0-f97a-4a36-8169-0969d099fd60",
+    "ticketID": "rr-p6-outcome3-closeout",
+    "lane": "in_progress",
+    "reason": "Resume authorized Outcome 3 closeout after both named prerequisite corrections were accepted. Reconcile existing evidence without rerunning completed checks; preserve publication and owner acceptance boundaries."
+  }
+]
+```
+
 ### Owner-approved permissions acceptance and connector closure
 
 Owner approved permissions task completion and ticket acceptance, and directed connector recovery closure with second-Mac verification deferred to GitHub #106. Fresh complete inventory matches permissions plan 1 and connector plan 3. No task definitions change. Review-only image viewing is separately authorized and remains to be implemented; it is not included in this completed permissions scope.
