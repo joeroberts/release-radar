@@ -234,6 +234,7 @@ Leaf: no child collections.
 | cd044b85-6519-4330-ae3c-dc0d9c20a65e | [docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md](plans/2026-08-29-delivery-goals-roadmap-readiness.md) | document | controlling &#40;delivery.rr-r10-implementation&#41; | active | none | none |
 | rr-full-product-architecture-plan-2026-09-06 | [docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md](plans/2026-09-06-full-product-architecture-and-delivery-plan.md) | document | supporting | proposed | none | none |
 | rr-phase6-plan-2026-09-10 | [docs/delivery/plans/2026-09-10-phase6-outcomes-tasks-history.md](plans/2026-09-10-phase6-outcomes-tasks-history.md) | document | nonAuthoritative | completed | none | none |
+| rr-current-documentation-execution-enforcement-plan-2026-09-13 | [docs/delivery/plans/2026-09-13-current-documentation-and-execution-enforcement.md](plans/2026-09-13-current-documentation-and-execution-enforcement.md) | document | supporting | proposed | none | none |
 
 ### Children
 

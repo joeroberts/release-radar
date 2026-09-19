@@ -964,6 +964,21 @@
   ],
   "artifacts": [
     {
+      "artifactID": "rr-current-documentation-execution-enforcement-plan-2026-09-13",
+      "path": "docs/delivery/plans/2026-09-13-current-documentation-and-execution-enforcement.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-outcome3-execution-setup-brief-2026-09-16",
       "path": "docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md",
       "kind": "document",
