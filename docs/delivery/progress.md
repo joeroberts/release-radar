@@ -32,9 +32,24 @@ unexpected results (5.833s). Candidate documentation and diff checks passed.
 Temporary direct evidence remains under writer `.build/native-checks/` as
 `rr-preparation-recovery-green.{log,xcresult}` and
 `rr-preparation-recovery-doc-check.log`. Fresh independent recovery/authority review
-was dispatched with Sol/high on this exact candidate; setup is pending. The fix is
-not integrated, installed or verified against live pending requests. No direct
+was dispatched with Sol/high on this exact candidate. Reviewer task
+`01a0ba7d-3050-7580-add7-908020f01f7e` verified clean candidate checkout and reported
+three Required findings: retired-parent validation must precede partial-child
+recovery (P1); terminal refusal replay must preserve its stored result after mutable
+work eligibility changes (P2); production Git absence and concurrent/unreadable
+recovery paths need direct regression coverage (P2). Effective model/effort were
+not exposed. Original writer is assigned bounded corrections, with Build Agent
+RED/GREEN and the same independent reviewer for the corrected candidate.
+The fix is not integrated, installed or verified against live pending requests. No direct
 owner-state repair, native broker testing or second-Mac acceptance occurred.
+
+Build Agent's read-only release assessment confirmed that app/script version0.1.23
+still embeds plugin0.1.22. The staging script can mechanically sign that mismatch,
+but existing package acceptance requires matching versions. Before final packaging,
+finish the authorized plugin manifest/digest registry and focused expectations in
+the lifecycle, shared-execution and recognized-capability tests. This is a release
+prerequisite, not permission to bypass the blocked managed launcher. No metadata
+changes or packaging were performed by that assessment.
 
 ## Owner deferral — second-Mac acceptance
 
