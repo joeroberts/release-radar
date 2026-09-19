@@ -69,6 +69,15 @@ permissions or unrelated implementation is authorized. Build Agent owns focused
 package checks; fresh independent release-metadata review follows. This does not
 authorize other work outside managed execution.
 
+Release metadata candidate `ad05d424ac8d9468e351c593152bd0de612fbe13` is committed
+separately in the clean writer checkout. Exactly five files align plugin0.1.23 and
+normalized digest `a30ca6f866d5d192f5c5396fa634ab20f716f043f5a8de601de36612ac60b85c`,
+preserving historical recognized pairs and standard1. Build Agent passed all31
+focused package/capability tests (zero failures,1.340s); temporary evidence is writer
+`.build/native-checks/rr-plugin-0.1.23-metadata-green.{log,xcresult}`. Fresh limited
+independent metadata review was dispatched with Terra/high. No package, installation
+or live recovery has occurred.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
