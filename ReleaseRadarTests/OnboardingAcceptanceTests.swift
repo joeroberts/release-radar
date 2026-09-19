@@ -1884,8 +1884,8 @@ private final class FolderFixture {
     let bookmarks = TestBookmarkStore()
 
     init() throws {
-        directory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".release-radar-onboarding-test-\(UUID().uuidString)", isDirectory: true)
+        directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("release-radar-onboarding-test-\(UUID().uuidString)", isDirectory: true)
         root = directory.appendingPathComponent("project", isDirectory: true)
         symlinkedRoot = directory.appendingPathComponent("project-link", isDirectory: true)
         descendant = root.appendingPathComponent("Sources/Feature", isDirectory: true)

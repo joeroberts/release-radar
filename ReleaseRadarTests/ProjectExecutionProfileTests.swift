@@ -31,12 +31,15 @@ final class ProjectExecutionProfileTests: XCTestCase {
             let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
             XCTAssertEqual(profile.workspace["."], role == .delivery ? "write" : "read")
             XCTAssertEqual(profile.workspace[".codex"], "deny")
+            XCTAssertEqual(profile.workspace[".build"], role == .review ? "write" : nil)
+            XCTAssertNil(profile.workspace["DerivedData"])
             XCTAssertEqual(profile.absolute[paths.assignment.path], "read")
             XCTAssertEqual(profile.absolute[paths.projectPolicy.path], "read")
             XCTAssertEqual(profile.absolute["/Primary/.git"], "deny")
             XCTAssertEqual(profile.absolute["/Primary"], "deny")
             XCTAssertEqual(profile.absolute["/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools"], "deny")
             XCTAssertNil(profile.absolute[root.path]); XCTAssertNil(profile.absolute["/Users"])
+            XCTAssertNil(profile.absolute["/tmp"]); XCTAssertNil(profile.absolute[":tmpdir"])
             XCTAssertFalse(profile.absolute.values.contains("write"))
         }
     }

@@ -162,7 +162,8 @@ final class WorkerAdapterTests: XCTestCase {
             return try RPCObject([:])
         }
     }
-    private func fixture(primaryRoot: String? = nil, includeProgress: Bool = false) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
+    private func fixture(primaryRoot: String? = nil, includeProgress: Bool = false,
+                         role: ProjectExecutionAssignment.Role = .delivery) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let store = try ProjectExecutionFileStore(root: root, create: true)
         let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "task-one")
@@ -187,7 +188,7 @@ final class WorkerAdapterTests: XCTestCase {
         policy.consent = .init(); policy.hookReceipt = .init(command: "\"" + handler + "\" --hook", inline: false, beforeDigest: nil, intendedDigest: String(repeating: "a", count: 64), installed: true)
         policy.codexContextID = codex.id
         try store.savePolicy(policy, expected: nil)
-        var assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .delivery,
+        var assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: role,
             permissionProfile: "rr-worker", model: "gpt-5.6-sol", effort: "high", authorization: "Implement the approved slice",
             context: contexts,
             excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
@@ -317,6 +318,33 @@ final class WorkerAdapterTests: XCTestCase {
                 XCTAssertEqual($0 as? CodexExecutionContextError, .routingUnsupported)
             }
         }
+    }
+
+    func testReviewEffectiveProfilePermitsOnlyTaskLocalBuildScratch() throws {
+        let fixture = try fixture(role: .review)
+        let assignment = fixture.policy.assignment
+        let paths = try ProjectExecutionPaths(storageRoot: fixture.store.root, projectID: "project-one", taskID: "task-one")
+        let fs = try ProjectExecutionPermissionProfile(assignment: assignment, policy: fixture.policy.policy, paths: paths).filesystemObject
+        XCTAssertEqual(fs[":workspace_roots"] as? [String: String], [
+            ".": "read", ".build": "write", ".codex": "deny",
+            ".git": "deny", ".codegraph": "deny", ".superpowers/sdd": "deny", "docs/delivery/archive": "deny"
+        ])
+        let profile: [String: Any] = ["filesystem": fs, "network": ["enabled": false]]
+        XCTAssertNoThrow(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: profile]]))
+
+        for extraWrite in ["DerivedData", "test-output"] {
+            var widenedRoots = try XCTUnwrap(fs[":workspace_roots"] as? [String: String])
+            widenedRoots[extraWrite] = "write"
+            var widenedFilesystem = fs; widenedFilesystem[":workspace_roots"] = widenedRoots
+            XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: [
+                "filesystem": widenedFilesystem, "network": ["enabled": false]
+            ]]]), extraWrite)
+        }
+        var widenedFilesystem = fs
+        widenedFilesystem[paths.checkout.appendingPathComponent("DerivedData").path] = "write"
+        XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: [
+            "filesystem": widenedFilesystem, "network": ["enabled": false]
+        ]]]))
     }
 
     func testEffectiveProfileAcceptsCodexConfigReadNullMetadataOnly() throws {

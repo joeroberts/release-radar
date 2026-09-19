@@ -843,8 +843,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
     }
 
     func testOnboardingNativeCopyUsesTheManagedUpgradePromptForOutdatedGuidance() async throws {
-        let directory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
         let root = directory.appendingPathComponent("repository", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
