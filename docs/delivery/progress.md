@@ -65,6 +65,22 @@ Review worker `B8927ECA-991B-4C85-B83D-4A48E867A1C3`, task
 network disabled. Source review proceeds while Build Agent diagnoses XCTest;
 runtime/UI correctness remains unproven.
 
+### Metrics corrected candidate — verification queued
+
+Candidate `401907a7` removes the two-line value limit and corrects the rendering
+test's claimed coverage. Direct diff check passed; no XCTest result yet.
+Correction worker completed and physically closed; task
+`01a0baec-3e14-7da2-8f7c-8a97c597774d` is archived with worktree preserved.
+Build Agent now targets `delivery-43907196-a74b-42cc-b82c-bf1b3fa02e80` and
+`testOverviewMetricsCenterUntruncatedLongValuesAtWideAndCompactWidths` after the
+loader diagnostic. Independent review must inspect native screenshots for
+icon-label adjacency while preserving decorative-icon accessibility semantics.
+
+Build Agent confirmed documented TEST_RUNNER_ environment forwarding from local
+Xcode manuals. A corrected bounded diagnostic uses that channel; no signing,
+entitlement or security changes are authorized. Earlier plain DYLD variables were
+not delivered to the test host and did not test the intended diagnostic input.
+
 ### Current corrections and verification limits
 
 Metrics source review found compact long-name truncation from the two-line limit
