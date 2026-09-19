@@ -1,6 +1,34 @@
 # Release Radar delivery state
 
 
+## Connector recovery diagnosis complete — implementation not started
+
+The supported diagnostic worker completed with no file changes and physical
+connection closure confirmed. Findings on the mapped unchanged transport paths:
+AgentTools maps handshake XPC errors, timeout and wire-version mismatch to the
+same `appUnavailable`; bridge signature/UID enforcement remains fail-closed;
+Settings Restart helper rebinds only the plugin lifecycle helper; Connections
+has no live bridge/client health. Existing tests cover rejected signing, protocol
+mismatch and unavailable stores, but not a retained client across signed upgrade.
+Owner restart restored this task's supported connector, directly observed.
+
+Source pointers: `ReleaseRadarAgentTools/main.swift` handshake;
+`ReleaseRadarTransport/BridgeXPCContracts.swift` trust contract;
+`ReleaseRadarBridgeAgent/main.swift` listener;
+`ReleaseRadarIntegration/AgentBridgeApplicationHost.swift` connection lifecycle;
+`ReleaseRadarIntegration/CodexPluginLifecycleClient.swift` helper restart;
+`ReleaseRadar/Notifications/SettingsView.swift` Connections.
+No tests or product corrections were performed by the diagnostic worker.
+
+Required product outcome remains the existing three-task scope: precise bounded
+failure reporting, truthful visible connection health and supported owner recovery,
+with rejected peers still rejected and uncertain writes never replayed. Do not
+infer that signature rejection proves its exact underlying invalidity mechanism.
+Implementation prerequisites remain current source/brief baseline and explicit
+model selection through the supported assignment route. No new ticket was added.
+
+
+
 ## Connector recovery resumed — supported assignment active
 
 After owner restart/resume, the same supported inventory returned complete,
