@@ -540,6 +540,11 @@ public struct RecognizedPluginCapability: Equatable, Sendable {
             normalizedPackageDigest: "1fc6a145ecde33dfab53d32dad6dc3897e9b90eff39cd17c3cea7eca5eaa81c2",
             sharedExecutionStandardVersions: [1]
         ),
+        Self(
+            manifestVersion: "0.1.22",
+            normalizedPackageDigest: "06e1dcc8f3f5efda400487cba566d7401dc8025dad7cbef75eedd8a6efe3fd10",
+            sharedExecutionStandardVersions: [1]
+        ),
     ]
 
     public static func recognize(
