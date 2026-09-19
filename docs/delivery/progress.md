@@ -9,9 +9,26 @@ No merge occurred; local tagv0.1.23 has not been pushed. The verified0.1.23 DMG 
 committed underdist/ and installed. Fresh-client supported inventory and audited
 original-request refusal replay passed. Overall #99 remains open: retained-client
 signed-upgrade/native broker acceptance is deferred to another Mac; independent
-UI QA and exact RR evidence/task reconciliation retain their outstanding status.
+healthy-state UI QA passed; exact RR evidence/task reconciliation remains pending.
 All three RR tasks remain pending. Earlier no-push/install wording below describes
 prior checkpoints, not this current release state.
+
+Independent installed UI review by RO Coordinator 05
+(`01a0b55a-5031-7eb3-987c-773d896dfcb9`) passed normal 1092×768, narrow 768×882
+and expanded 1224×768 captures (capture pixels, not native window dimensions).
+Required findings: none; optional findings: none. Plugin installation, bridge availability and last authenticated client
+contact are distinct; Check connection refreshed contact, and the guidance states
+that checking never retries an action. Narrow visible cards wrap without observed
+horizontal clipping. Below-fold bridge presentation passed narrow and expanded
+inspection after a fresh supported query recovered from `noWindowsAvailable`.
+Meaningful accessibility control names and helper-specific Help were observed;
+VoiceOver announcements were not tested. No unhealthy bridge state was manufactured;
+failure/reopen evidence remains attributed to Main and Build Agent, not this review.
+RO relinquished the UI in a standard narrow Connections window; exact original-size
+restoration was unavailable and is not claimed.
+No permission denial was observed; the earlier Codex approval flag was misleading.
+Owner clarified sequencing: finish this ticket's closeout before returning to the
+blocked ticket. No blocked-ticket implementation has started.
 
 ## Authorized preparation recovery repair
 
