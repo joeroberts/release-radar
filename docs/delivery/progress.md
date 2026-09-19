@@ -53,6 +53,22 @@ The [owning brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#sept
 
 Main confirmed completed reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092` archived after its known temporary files were preserved; the delivery branch remains retained, with the replacement documentation checkout recorded above. Main owns this ledger update. No product source change, build, installation or live assignment was started by activating the goal. RR self-onboarding is unscheduled; Jira ticket creation is pending.
 
+**Outcome 3 release candidate:** Main independently reviewed release commits
+`528c19d` and `6a4b17b`. Annotated tag `v0.1.20` points to the verified
+artifact commit. `dist/ReleaseRadar-0.1.20.dmg` (SHA-256
+`3ea7a407db57e0bd93754a6bfa6aaa62dc8b4826d5302ce682cacf652ac07b28`)
+passed disk-image, mounted-layout, metadata and strict signature checks; the
+matching Downloads copy has the same digest. The staged bundle was installed at
+`/Applications/ReleaseRadar.app` and verified as
+`com.rekonlabs.ReleaseRadar` 0.1.20 (build 1). Repository documentation check
+and scoped diff check passed. The fresh focused Xcode test invocation is
+**incomplete**, not passing evidence: after restoring its pinned local libgit2
+build dependency, Xcode reached test-observer completion but did not emit a
+complete result bundle; no failure was reported and no further retry is planned.
+Prior terminal native product and UI acceptance evidence remains applicable.
+Push and the release PR remain pending owner merge; no GitHub Release or
+notarization is authorized.
+
 
 ## Historical context — non-authoritative for current state
 

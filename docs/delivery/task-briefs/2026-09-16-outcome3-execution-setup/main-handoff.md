@@ -24,6 +24,19 @@ The owner authorized and Main applied only two precise `rr-project-ro` user-conf
 
 The old b5a9 checkout is absent/unregistered; its cause and uncommitted/generated artifact disposition are unverified. Committed handoff/ledger and branch remain intact. Current documentation closeout checkout is `/Users/jroberts/.codex/worktrees/outcome3-closeout/release_radar`, clean on `codex/outcome3-closeout` from merged `ac75d0df`. Main owns its documentation; Build Agent owns Git. No deletion/recovery or main mutation was performed.
 
+Release candidate commits `528c19d` and `6a4b17b` passed Main's independent
+review. Annotated `v0.1.20` names the verified artifact commit. The tracked
+installer `dist/ReleaseRadar-0.1.20.dmg` and matching Downloads copy have
+SHA-256 `3ea7a407db57e0bd93754a6bfa6aaa62dc8b4826d5302ce682cacf652ac07b28`;
+the mounted application and installed `/Applications/ReleaseRadar.app` verified
+as `com.rekonlabs.ReleaseRadar` 0.1.20 (build 1) with strict signatures. The
+fresh focused Xcode test invocation is incomplete—not passing evidence—because
+after restoring its pinned local libgit2 build dependency Xcode did not emit a
+complete result bundle; no failure was reported and no further retry is planned.
+Prior terminal native product and UI acceptance evidence remains applicable.
+Push and PR creation are the remaining release endpoint; owner merge is
+required. No GitHub Release or notarization is authorized.
+
 The sections below preserve the original handoff snapshot and role prompts. Their old task IDs, checkout availability and dispatch status are historical; use the current sections above and ledger for operational state.
 
 ## Stopping boundary
