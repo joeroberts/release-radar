@@ -14,9 +14,9 @@ Main is `01a0b54e-8f55-7c62-8bf4-4090f49b0a84`. The owner explicitly authorized 
 
 All three are rooted at the canonical project for their standing roles, with no authority to write or commit main. Creation explicitly requested Astra/medium for the coordinators and Terra/medium for Build Agent; effective model/effort is not exposed to the agents and is not independently confirmed. The task API cannot select a permission profile. The owner selected both coordinator profiles. Fresh runtime confirms their filesystem boundaries; Restricted routing recovered after owner approval-mode selection and successful message delivery. RO05 and Build Agent 02 ownership transfers are recorded and accepted; their idle predecessors are archived with supported success receipts. Restricted03 ownership transfer is recorded and accepted; its idle predecessor is archived with a supported success receipt. All three predecessors had no attached managed worktree; known retained checkout paths were verified present after the first two archives, and no resource cleanup was requested or performed. No product work has been released during transfer.
 
-## Current correction and checkout state
+## September 18 correction and checkout snapshot
 
-Coordination [PR #89](https://github.com/joeroberts/release-radar/pull/89) merged as `e4600a23de15d2613271cb3ec7924dc3393509`; correction [PR #90](https://github.com/joeroberts/release-radar/pull/90) merged as current `main` `ac75d0df9615ed4f11eac23c1e4d387c29651b47`. GitHub content readback confirms all six correction files on `main` exactly match reviewed `2827a059b80ce0e0401feaa48ca69f8b0537d932`. Correction writer `01a0b553-0483-7613-b708-46972e116258` delivered the candidate in `/Users/jroberts/.codex/worktrees/bf75/release_radar`; Build Agent 02 completed four focused native tests with zero failures/skips after causal RED and bounded test-fixture corrections. Results remain in that checkout's `.build/native-checks/`.
+Coordination [PR #89](https://github.com/joeroberts/release-radar/pull/89) merged as `e4600a23de15d2613271cb3ec7924dc3393509`; correction [PR #90](https://github.com/joeroberts/release-radar/pull/90) merged as `ac75d0df9615ed4f11eac23c1e4d387c29651b47`. GitHub content readback confirmed all six correction files on `main` exactly match reviewed `2827a059b80ce0e0401feaa48ca69f8b0537d932`. Correction writer `01a0b553-0483-7613-b708-46972e116258` delivered the candidate in `/Users/jroberts/.codex/worktrees/bf75/release_radar`; Build Agent 02 completed four focused native tests with zero failures/skips after causal RED and bounded test-fixture corrections. The writer completed its terminal `notLoaded` correction turn and was archived successfully; its branch, checkout and retained resources remain preserved. Results remain in that checkout's `.build/native-checks/`.
 
 Independent reviewer `01a0b56b-637e-7bd0-a781-b554de66a373` passed corrected source `2827a059b80ce0e0401feaa48ca69f8b0537d932` after the one missing presentation-test case was added and passed in isolation. No other source findings remain. Build Agent signed/staged/installed this acceptance candidate as 0.1.19/build 1; source/stage/installed executable identity matched. Main observed the corrected disabled Update message in the installed app after one Remove. The disposable workflow is currently disabled; no Save or Resume followed.
 
@@ -34,8 +34,34 @@ fresh focused Xcode test invocation is incomplete—not passing evidence—becau
 after restoring its pinned local libgit2 build dependency Xcode did not emit a
 complete result bundle; no failure was reported and no further retry is planned.
 Prior terminal native product and UI acceptance evidence remains applicable.
-Push and PR creation are the remaining release endpoint; owner merge is
-required. No GitHub Release or notarization is authorized.
+GitHub merged [PR #97](https://github.com/joeroberts/release-radar/pull/97) as
+`5cb47f8dde09032a71a5d003ab41ac0e1c8720cf`. No GitHub Release or notarization
+is authorized.
+
+## Current post-merge state
+
+Outcome 3 is merged and locally released as 0.1.20. The installed application
+is verified as `com.rekonlabs.ReleaseRadar` 0.1.20 (build 1), and the tracked
+installer digest remains
+`3ea7a407db57e0bd93754a6bfa6aaa62dc8b4826d5302ce682cacf652ac07b28`.
+The fresh focused Xcode run remains incomplete, not passing evidence: after its
+pinned local libgit2 dependency was restored, Xcode did not finalize a result
+bundle; no failure was reported and no retry is planned. Prior native and UI
+acceptance results remain terminal. The supported application-inventory
+connector returned `appUnavailable`; no missing binding was inferred and no
+application repair or mutation occurred.
+
+The local `codex/outcome3-closeout` ref is advanced to published `64fc431`,
+which remote `main` contains through PR #97. The correction writer and reviewer
+are archived with their branches, worktrees and retained resources preserved;
+standing coordinator and Build Agent tasks remain available. Deferred follow-ups
+remain [#91](https://github.com/joeroberts/release-radar/issues/91) and
+[#92](https://github.com/joeroberts/release-radar/issues/92). Within
+P6-remediation, next authorized work is repository-documentation reconciliation,
+then the separately scoped supported-projection reconstruction feature. The
+reconciliation preserves history and does not parse prose into application state;
+live owner-data reconstruction remains separately authorized. Former 6F, 6G, 6H
+and proposed 6I remain unstarted.
 
 The sections below preserve the original handoff snapshot and role prompts. Their old task IDs, checkout availability and dispatch status are historical; use the current sections above and ledger for operational state.
 
