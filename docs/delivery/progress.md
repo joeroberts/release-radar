@@ -121,6 +121,16 @@ the old Main client failure remains separate. Main authorized exact originala81c
 preparation replay through the working supported connector to verify audited
 refusal recovery. No replacement request, worker launch or state repair authorized.
 
+Installed supported recovery verified: exact original requesta81c6fc2 returned
+terminal `execution.assignmentNotAuthorized` with audit
+`0279DB16-35B1-430C-BB5B-B64F91774784` and exact ticket/task entity IDs. One identical
+replay returned the same terminal error and audit. Follow-up complete inventory
+confirmed unchanged phase revision1, ticketin_progress/taskplan1 and all three
+tasks pending. This is an app-owned audited settlement of the old refusal, not a
+direct state repair or worker launch. Fresh-client reconnection and exact stable
+refusal replay passed; second-Mac acceptance and broader ticket acceptance remain
+deferred/unverified as recorded. The readback task has finished its bounded check.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
