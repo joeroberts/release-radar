@@ -1,5 +1,16 @@
 # Release Radar delivery state
 
+## Outcome 3 closeout — In Progress September 19
+
+Owner approved correcting `rr-p6-outcome3-closeout` from Backlog to In Progress
+to reflect delivery and verification already performed while corrections and
+closeout remain. Supported transition request
+`ea8a5e25-45f4-4294-bb99-703b85ff3cfa` committed with audit
+`8F33B68A-566F-448B-8916-3E74AA7DF332`. Fresh complete connector inventory
+confirms closeout In Progress, metrics Blocked, the remaining fourteen tickets
+Backlog, and zero active tasks. No worker was launched or work accepted. This
+supersedes the earlier all-other-tickets-Backlog statement below.
+
 ## Metrics lane — Blocked September 19
 
 After resolving the blocker, the owner renewed authorization for the metrics
