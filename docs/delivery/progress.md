@@ -8,6 +8,25 @@ Supported request `d056455c-60d2-456b-b59e-799e7627dbb0` committed with audit
 In Progress, task-plan revision 1 and both tasks still Active/Pending.
 This status change launched no worker and changed no task completion.
 
+Owner subsequently authorized implementation. Managed assignment
+`delivery-722d3858-1574-4c2d-ad6e-71a09e1fd18e` was prepared through the supported
+connector (audit `CC35FAE8-85ED-4358-AF9D-7C6EA04537A2`) and launched through
+`coordinator_workers.worker_start`. Worker `40E1941B-ECD8-4D35-B83E-3458120C5160`,
+task `01a0b952-0761-7923-9965-698f689e5548`, is running on the app-selected
+baseline `3b1e27fec0a936aa52a1e3b64cca4da0393383b7`. Effective settings verified:
+Terra/medium, assignment-specific permission profile, on-request automatic
+approval review, isolated workspace, network disabled. Scope is the routing fix
+and focused regression tests; independent review follows the committed candidate.
+No implementation, test or review completion is claimed.
+
+Preparation request (successful):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"722d3858-1574-4c2d-ad6e-71a09e1fd18e","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"ticketID":"rr-p6-guidance-prompt","taskID":"rr-p6-guidance-prompt-task-01","reason":"Owner authorized starting the guidance-prompt correction: route outdated guidance to the upgrade prompt while retaining missing-guidance bootstrap."}
+```
+The earlier request `efcb69c5-6b76-47d9-9bb2-b7d21b00c817` incorrectly supplied
+plan revision 10 instead of lifecycle revision 1 and was rejected before preparation.
+No permission or hook change was needed.
+
 ## Outcome 3 closeout — Blocked by corrections September 19
 
 Owner corrected closeout from In Progress to Blocked because
