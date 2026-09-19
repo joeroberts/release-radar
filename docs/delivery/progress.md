@@ -1,6 +1,33 @@
 # Release Radar delivery state
 
 
+## Connector recovery authorized — fresh failure reproduced September 19
+
+Owner approved `rr-p6-connector-recovery` next, within the existing September 19
+connector correction brief and issue #99. Skills 0.1.22 were read. The supported
+inventory failed with `appUnavailable` while Release Radar was open. UI readback
+showed the existing three pending tasks, Backlog, zero dependencies/blockers.
+No ticket mutation or implementation assignment has been attempted.
+
+At 09:16:47 EDT and again after Settings Connections → Restart helper, at
+09:17:35 EDT, the bridge PID 45578 rejected tools peer PID 7268 with
+`Received message forbidden due to code signing requirement`, status -67065.
+Read-only lsof resolved PID 7268 to
+`/Applications/.ReleaseRadar.backup.44526.24190/Contents/Helpers/ReleaseRadarAgentTools`.
+Installed plugin UI reports 0.1.22 matching shipped version, but this task retains
+an older running executable. Helper restart did not recover this connector call.
+No direct helper invocation, process killing, profile change or alternate worker
+was used. The connection must be refreshed through Codex before supported worker
+admission; app-owned lifecycle-helper restart alone is insufficient in this case.
+
+Current release baseline remains 0.1.22 source `47b86b89`, artifact `86e490bb`.
+Implementation must preserve its fixes and must not silently start from stale
+canonical HEAD `3b1e27fe`. Build Agent owns compilation/tests; independent RO
+review must not acquire build-write permissions. Continue from the existing
+three-task plan; do not add another prerequisite ticket.
+
+
+
 ## Guidance local delivery complete — Release Radar 0.1.22
 
 `rr-p6-guidance-prompt` is Accepted at task-plan revision 5; both active tasks
