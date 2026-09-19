@@ -11,17 +11,20 @@ The active goal's full acceptance endpoint is therefore not yet achieved. Contin
 remaining local verification and record its findings; preserve separate owner
 acceptance and merge boundaries. The already-running UI test may finish naturally.
 
-## Approved assertion correction before packaging
+## Approved assertion correction and release preparation
 
-Owner approved correction of the four stale helper label/progress assertions,
-then packaging; second-Mac acceptance remains deferred. Managed assignment
-`delivery-ca3e18cb-082e-46f7-9900-d8b3c861a54e` started from `191d1373`, audit
-`63021D14-F9CF-4510-B2C8-78C446692EE9`, worker
-`AFA91D75-A132-4A3F-A910-19355D2B815F`, task
-`01a0ba50-e416-7650-aaf7-7a765f4b55e3`. Verified Terra/medium,
-workspaceWrite, network disabled. Ownership is exact expected strings in the
-existing UI test only. Build Agent prepares ignored prerequisites, then runs the
-affected UI check. Main owns Git/ledger. Product source review remains terminal.
+Owner-approved expected-label correction is committed as `7ce55be5` and integrated
+locally. Build Agent's affected UI test passed: one test, zero failures, 5.437s,
+with `RR_TASK7A_INSPECT_SECONDS=2`; signed compile/link and Xcode test succeeded.
+Main independently inspected the two-line expectation-only diff. Production source
+review remains terminal. Results/log and ignored prerequisites are preserved under
+`.build/connector-recovery-ca3e18cb-preserved/.build/native-checks/`
+(`rr-p6-lifecycle-assertions-2s-ca3e18cb`). These are temporary verification artifacts.
+Worker `AFA91D75-A132-4A3F-A910-19355D2B815F` physically closed and task
+`01a0ba50-e416-7650-aaf7-7a765f4b55e3` archived; branch/worktree preserved.
+Next: bounded managed 0.1.23 release metadata, then Build Agent signed packaging,
+repo `dist/` installer and installation verification. Native second-Mac acceptance
+remains deferred and unverified. No release or installation has occurred yet.
 
 ## Local integration and completed UI findings
 
@@ -37,9 +40,9 @@ approved wording is `Restart plugin helper`. It continued through disabled and
 unavailable workflow guidance and project lifecycle help. Direct Main CUA
 observations at 760/1100/620 and isolated connection-failure feedback are recorded
 below. Result: `.build/native-checks/rr-p6-settings-ax-inspection-191d1373-r2.xcresult`.
-No product defect established by these four assertions. Findings collected before
-fixes per owner direction; owner prioritization question pending for scoped expected-
-text correction and affected rerun before packaging. No edits made for these findings.
+No product defect established by these four assertions. Findings were collected before
+fixes per owner direction; the subsequent approved correction and passing rerun are
+recorded above.
 
 ## Connector recovery — current candidate 191d1373
 

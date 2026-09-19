@@ -2495,3 +2495,30 @@ Build Agent directly verified the four initial regressions failed before product
 CMake was unavailable in fresh dependency preparation. Build Agent reused the previously verified pinned arm64 libgit2 artifact after exact archive/source-pin matching and extracted pinned headers locally; no dependency change or install/download. Native runners exited; Build Agent reported zero remaining worktree test processes. Temporary build logs/result bundles and ignored .build/DerivedData are retained, excluded from staging, with no deletion authorized. Independent containment/recovery review and scoped commit remain pending; Main retains signed runtime acceptance and canonical integration.
 
 RO04's single fresh independent reviewer 01a0b401 completed review of the full six-file candidate atop 355d27ca: Required none, Optional none. It verified directory containment, fresh/exact-recovery identities and freshness, and unchanged permitOwnedTrust:false; source/tests require no correction. Review is terminal. The authorized scoped commit proceeds through Build Agent after final documentation/diff checks; Main retains canonical integration, signed installation and same-request 67a32 runtime acceptance. Hook-discovery preparation does not itself establish assignment admission or host/runtime delegation approval.
+
+## Approved connector release metadata — September 19
+
+Owner approved stale UI assertion corrections before packaging; those passed.
+Prepare only 0.1.23 version metadata and matching established packaging gates.
+Main owns Git/ledger; Build Agent owns native build/package/sign/install checks.
+Preserve signing, entitlement, trust and protocol controls; no broker/account tests.
+Second-Mac acceptance remains deferred and unverified.
+
+Exact pending preparation envelope:
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "45a9dcbd-058c-4f47-a1b4-aedb87022f6a",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-ca3e18cb-082e-46f7-9900-d8b3c861a54e",
+  "reason": "Prepare approved 0.1.23 local release metadata after tested helper assertion correction; second-Mac acceptance remains deferred."
+}
+```
