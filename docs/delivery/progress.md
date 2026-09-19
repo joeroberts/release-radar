@@ -24,11 +24,13 @@ managed diagnostic worker is physically closed and archived.
 Fresh supported inventory confirms exact registration generation 1, P6 lifecycle
 revision 1 and recovery ticket In Progress with its unchanged three pending tasks.
 The current correction brief now reflects this canonical baseline and role split.
-Chief consultation is waiting on a runtime approval; its details are absent from
-the task API. Main requested the exact card text from the owner after Computer
-Use refused Codex access. No approval was answered or bypassed. Build Agent 02
-is performing read-only build/test prerequisite preparation; no compilation or
-product implementation has started. Packaged documentation and diff checks pass.
+Chief consultation completed read-only; its bounded transport/health/recovery
+contract is recorded in the owning plugin lifecycle design. No runtime approval
+was answered by Main. Build Agent confirmed Xcode 26.6 and pinned RDS availability;
+the assigned checkout needs the repository's offline libgit2 build before tests.
+No product implementation or compilation has started. Main will prepare task 02
+through the supported connector from the committed current brief/design baseline.
+Packaged documentation and diff checks pass.
 
 Managed delivery still selects Terra/medium and review Terra/high. The earlier
 Sol/high implementation preference is not a runtime capability. Main will carry

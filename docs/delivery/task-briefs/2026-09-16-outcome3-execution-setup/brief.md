@@ -89,7 +89,28 @@ Preserve accepted ADR-001/002 boundaries and existing typed XPC contracts. Resol
 
 ### Record validation status
 
-Canonical packaged documentation check passed after baseline integration. Following the owner's Codex restart, the original supported connector returned complete inventory for the exact project/root/registration generation 1: recovery ticket In Progress, task-plan revision 1, all three tasks pending; phase lifecycle revision 1. Chief architecture consultation is pending a runtime approval whose details are not exposed by the task API. Build Agent is preparing test prerequisites without compilation. GitHub issue and this brief retain the full scope; implementation, independent correction review and recovery acceptance remain incomplete.
+Canonical packaged documentation check passed after baseline integration. Following the owner's Codex restart, the original supported connector returned complete inventory for the exact project/root/registration generation 1: recovery ticket In Progress, task-plan revision 1, all three tasks pending; phase lifecycle revision 1. Chief architecture consultation is complete; apply the September 19 connector recovery contract in `docs/design/release-radar-codex-plugin-lifecycle-design.md`. Build Agent verified Xcode/RDS prerequisites; build the repository-native offline libgit2 prerequisite in the assigned checkout before tests. No compilation has occurred. GitHub issue and this brief retain the full scope; implementation, independent correction review and recovery acceptance remain incomplete.
+
+### Connector implementation preparation — pending
+
+Exact supported request; preserve unchanged if outcome is uncertain:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "f3be516e-32db-430d-9cae-b8925bd013a5",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reason": "Implement authorized connector recovery and truthful connection health under the September 19 contract; managed writer authors tests/code, Build Agent runs compilation/tests, preserve trust and no replay."
+}
+```
 
 ## September 18 hook update, removal and explicit recovery acceptance
 
