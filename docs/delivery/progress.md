@@ -87,6 +87,18 @@ Test bundle staging completed and copied signatures/path macros verified. Owner
 completed first login and received the exact native command in the brief; no result
 has been received yet. Review connection closure and task archival follow recording.
 
+Independent runtime UI inspection by Main used signed candidate `191d1373` in
+an isolated XCTest model (temporary database, external services suppressed).
+CUA screenshots/accessibility readback of held Settings windows at 760, 1100 and
+620 pixels show readable Connections cards and no observed horizontal clipping.
+At 760/620, only Check connection was invoked: Not yet checked became Connection
+failed with the Reopen Release Radar recovery instruction and retry retained.
+No actual broker health or VoiceOver announcement delivery is inferred. The initial
+unheld rendering test failed to locate its AX window and produced no screenshots;
+changed-condition held inspection exposed the windows without permission changes.
+The held run found an outdated expected Restart helper label after the approved
+Restart plugin helper rename; collect terminal findings before correction. No fix yet.
+
 Still required: signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
 supported recovery acceptance, release delivery, and supported ticket reconciliation.
