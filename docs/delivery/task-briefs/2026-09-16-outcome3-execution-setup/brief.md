@@ -2617,3 +2617,21 @@ and exact supported live recovery after validation. No external merge/acceptance
 Architectural references: ADR-001 and ADR-002 boundaries remain controlling;
 existing execution setup contract and plugin lifecycle design own mutable details.
 No new schema or breaking contract unless demonstrably necessary and surfaced.
+
+### Chief preparation-recovery constraints
+
+Keep the existing prepare command and audited receipt lifecycle. Error categories
+are not certainty: terminalize only an explicitly proven no-effects refusal, never
+a generic caught conflict. Exact terminal-error replay returns the stored outcome
+without preparing again; changed-body reuse stays rejected. Preserve original
+request/body/scope, intent history and an appended atomic resolution audit.
+Historical pending replay requires authoritative request-scoped absence of assignment,
+worktree/branch/provisioning and profile/configuration effects; missing assignment
+alone is insufficient. Unreadable, partial, live, reserved or uncertain evidence
+stays pending. Retired-parent recovery must retain the original parent/request and
+never replay effects. Extend existing single-flight ownership through settlement
+and finalization; no SQLite transaction across async work. No external force-clear
+operation, new schema or UI is needed if internal exact-replay recovery suffices.
+Test historical no-effects recovery, partial resources/unreadable state, concurrent
+requests, failed resolution commit, and existing authority/replay guarantees.
+Chief source advice is terminal; independent implementation review remains required.
