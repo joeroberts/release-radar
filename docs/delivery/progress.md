@@ -62,6 +62,30 @@ Build Agent confirmed the existing
 supported controlled-fixture quiesce/restore sequence read-only; no registration,
 owner app-state or permission change is authorized by that investigation.
 
+Corrected candidate `6813481a` fails compilation at AgentTools/main.swift:31:
+handshakeResult is referenced before its declaration at line 46. No corrected
+XCTest case ran. Independent source review is now active to collect the complete
+required correction set, not to claim runtime acceptance.
+
+Review preparation initially conflicted: the app uses libgit2 default status flags
+that include ignored artifacts. Main preserved the closed delivery checkout's
+`.build` and `default.profraw` by same-filesystem rename (identity verified) under
+canonical `.build/connector-recovery-6813481a-preserved/`; no artifact was deleted.
+All prior result/log paths in that checkout now resolve beneath this preservation
+folder's `.build`. These are temporary build artifacts; retain them. Source and
+branch remain intact. Exact same review request then succeeded, audit
+`F9840213-6091-4181-AAEB-6F0D256A2DAA`.
+Review assignment `review-ea02165d-fe26-440c-882e-802782ea9a4f`, worker
+`54AC194D-2FB1-4013-BBB0-2B34FEE4D30A`, task
+`01a0ba0c-e3da-7522-865a-f037cae4828b` verifies Terra/high, readOnly,
+network disabled. Closed delivery task `01a0b9f3-c324-70b3-a1d4-58bcea51940e`
+was archived after source/result preservation and confirmed physical closure.
+
+The existing signed native fixtures require initial/final exact `.notRegistered`
+and cannot adopt the owner app's registration (ADR-002). Owner was asked whether
+an existing clean macOS test session/VM is available; no account/service change
+has been performed. Source correction/review can continue independently.
+
 Packaged documentation and diff checks pass.
 
 Managed delivery still selects Terra/medium and review Terra/high. The earlier

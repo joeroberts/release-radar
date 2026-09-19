@@ -115,9 +115,14 @@ Exact committed request (do not repeat):
 }
 ```
 
-### Connector candidate review preparation — pending
+### Connector candidate review preparation — committed
 
-Candidate `6813481a`; delivery connection physically closed. Exact request:
+Candidate `6813481a`; delivery connection physically closed. Preparation committed
+after preserving ignored build artifacts outside the candidate checkout; audit
+`F9840213-6091-4181-AAEB-6F0D256A2DAA`. Review worker
+`54AC194D-2FB1-4013-BBB0-2B34FEE4D30A` is active, Terra/high readOnly.
+Known compilation failure and remaining runtime checks are disclosed to the reviewer.
+Exact committed request (do not repeat):
 
 ```json
 {
