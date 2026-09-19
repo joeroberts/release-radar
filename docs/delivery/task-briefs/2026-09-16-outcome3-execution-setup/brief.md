@@ -294,6 +294,31 @@ Exact review request:
 }
 ```
 
+### Fresh account native test handoff — prepared, not executed
+
+Owner created `rekon-test` (UID503) and completed first GUI login. Build Agent
+staged only the signed Build products for `191d1373` at temporary
+`/Users/Shared/ReleaseRadar-connector-191d1373/DerivedData/Build` (353 MB).
+Copied app deep/strict and bridge/tool strict signature checks passed; runfile
+format 2 uses macro paths, with no source repository path. Standard read/execute
+modes preserved; no permission/account/service change. Original outputs remain
+in canonical `.build/connector-recovery-191d1373-preserved/`. Preserve both.
+Run from Terminal inside the test GUI account, with Release Radar closed:
+
+```sh
+mkdir -p "$HOME/ReleaseRadar-test-results" &&
+xcodebuild test-without-building \
+  -xctestrun /Users/Shared/ReleaseRadar-connector-191d1373/DerivedData/Build/Products/ReleaseRadar_ReleaseRadar_macosx26.5-arm64.xctestrun \
+  -destination 'platform=macOS,arch=arm64' \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/AgentBridgeTransportAcceptanceTests/testFixtureBrokerRestartCannotRestoreStaleAvailableHealthInTheApp \
+  -resultBundlePath "$HOME/ReleaseRadar-test-results/rr-p6-fixture-broker-restart.xcresult"
+```
+
+This runs the fixture-owned broker interruption/restart case only; no signed
+upgrade or original retained Codex connector acceptance is inferred. Review of
+services-path/cleanup correction remains in progress. No runtime result yet.
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
