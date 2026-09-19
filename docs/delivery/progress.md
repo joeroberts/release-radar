@@ -2,6 +2,15 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Metrics visual review remains incomplete. Main inspected the review transcript:
+the worker compiled a temporary Swift thumbnail helper despite explicit
+no-compilation instructions, then attempted OCR tooling. Main requested interrupt
+and confirmed interrupted status. Product source was not edited. The same
+assignment was resumed only to use a genuine exposed image-viewing tool, or
+report its absence and stop; further compilation/conversion/OCR is prohibited.
+Temporary review outputs remain preserved in its `.build` directory. No visual
+acceptance or product defect is inferred from this tooling limitation.
+
 Metrics independent visual review is running under
 `review-84a083ac-14c0-49a6-afc1-5aedc41122b2`, audit
 `A5748650-37E0-4EA6-A63A-731F4190D6F9`, exact baseline `9d1f4d78`.
