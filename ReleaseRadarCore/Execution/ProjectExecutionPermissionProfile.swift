@@ -14,7 +14,8 @@ public struct ProjectExecutionPermissionProfile: Equatable, Sendable {
               policy.handlerPath.hasSuffix("/Contents/Helpers/ReleaseRadarCoordinator") else { throw ProjectExecutionError.identityMismatch }
         id = assignment.permissionProfile
         var workspace = [".": assignment.role == .review ? "read" : "write", ".codex": "deny"]
-        if assignment.role == .review {
+        if assignment.role == .review,
+           assignment.reviewScratchVersion == ProjectExecutionAssignment.xcodeBuildScratchVersion {
             // Reviews retain a read-only candidate while Xcode writes only its
             // task-local caches, temporary files, result bundles and products.
             workspace[".build"] = "write"

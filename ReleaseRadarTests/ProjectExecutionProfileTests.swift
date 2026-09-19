@@ -3,6 +3,35 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionProfileTests: XCTestCase {
+    func testLegacyDecodedReviewRemainsReadOnlyAndRejectsUnsupportedScratchVersions() throws {
+        let root = URL(fileURLWithPath: "/Execution")
+        let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "task-one")
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
+        let policy = ProjectExecutionPolicy(registration: registration, primaryRoot: "/Primary", appServerExecutable: CodexExecutionIdentity.executable, handlerPath: "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator")
+        let tree = ExecutionWorktree(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: "/Primary/.git", primaryRoot: "/Primary")
+        let review = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .review,
+            permissionProfile: "rr-worker", model: "gpt-5.6-terra", effort: "high", authorization: "Existing authorized work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], worktree: tree)
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(review)) as? [String: Any])
+        legacyObject.removeValue(forKey: "reviewScratchVersion")
+        let legacy = try JSONDecoder().decode(ProjectExecutionAssignment.self, from: JSONSerialization.data(withJSONObject: legacyObject))
+        XCTAssertNil(legacy.reviewScratchVersion)
+        let legacyProfile = try ProjectExecutionPermissionProfile(assignment: legacy, policy: policy, paths: paths)
+        XCTAssertNil(legacyProfile.workspace[".build"])
+        XCTAssertEqual(try legacyProfile.definition, try ProjectExecutionPermissionProfile(assignment: review, policy: policy, paths: paths).definition)
+
+        let unsupported = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .review,
+            permissionProfile: "rr-worker", model: "gpt-5.6-terra", effort: "high", authorization: "Existing authorized work",
+            context: review.context, excludedPaths: review.excludedPaths, worktree: tree, reviewScratchVersion: 2)
+        XCTAssertThrowsError(try unsupported.validated())
+        let deliveryScratch = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .delivery,
+            permissionProfile: "rr-worker", model: "gpt-5.6-terra", effort: "medium", authorization: "Existing authorized work",
+            context: review.context, excludedPaths: review.excludedPaths, worktree: tree,
+            reviewScratchVersion: ProjectExecutionAssignment.xcodeBuildScratchVersion)
+        XCTAssertThrowsError(try deliveryScratch.validated())
+    }
+
     func testOwnedProfileRemovalPreservesUnrelatedProfilesAndOwnerRemovalButRefusesEdits() throws {
         let owned: [String: Any] = ["filesystem": [":root": "deny"], "network": ["enabled": false]]
         let expected = try JSONSerialization.data(withJSONObject: owned, options: [.sortedKeys])
@@ -23,11 +52,13 @@ final class ProjectExecutionProfileTests: XCTestCase {
         let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
         let policy = ProjectExecutionPolicy(registration: registration, primaryRoot: "/Primary", appServerExecutable: CodexExecutionIdentity.executable, handlerPath: "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator")
         let tree = ExecutionWorktree(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: "/Primary/.git", primaryRoot: "/Primary")
-        for role in [ProjectExecutionAssignment.Role.delivery, .review] {
+        let profiles: [(ProjectExecutionAssignment.Role, Int?)] = [(.delivery, nil), (.review, ProjectExecutionAssignment.xcodeBuildScratchVersion)]
+        for (role, reviewScratchVersion) in profiles {
             let assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: role,
                 permissionProfile: "rr-worker", model: "gpt-5.6-terra", effort: role == .delivery ? "medium" : "high", authorization: "Existing authorized work",
                 context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
-                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], worktree: tree)
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], worktree: tree,
+                reviewScratchVersion: reviewScratchVersion)
             let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
             XCTAssertEqual(profile.workspace["."], role == .delivery ? "write" : "read")
             XCTAssertEqual(profile.workspace[".codex"], "deny")

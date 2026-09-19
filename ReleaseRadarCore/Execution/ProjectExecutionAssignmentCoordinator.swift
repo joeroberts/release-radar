@@ -217,7 +217,8 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 permissionProfile: "rr-" + id, model: "gpt-5.6-terra", effort: role == .review ? "high" : "medium",
                 authorization: authorization, context: contexts,
                 excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive", tree.commonGitDirectory, policy.primaryRoot],
-                worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID)
+                worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID,
+                reviewScratchVersion: role == .review ? ProjectExecutionAssignment.xcodeBuildScratchVersion : nil)
             assignment.codexContextID = policy.codexContextID
             try assignment.verifyContext() // Pins must match committed checkout, not dirty primary edits.
             try reader.verifyStable()
