@@ -30,6 +30,43 @@ No permission denial was observed; the earlier Codex approval flag was misleadin
 Owner clarified sequencing: finish this ticket's closeout before returning to the
 blocked ticket. No blocked-ticket implementation has started.
 
+### Connector closeout reconciliation — proposed, not applied
+
+Supported RO readback confirms the exact canonical root, project
+`project-fffdc0e0b15b9b86`, registration
+`8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1, and root
+`project-fffdc0e0b15b9b86-root-0`. Inventory is complete. P6-remediation is
+in_delivery at lifecycle revision 1; connector-recovery is in_progress at task-plan
+revision 1. All three tasks are active and Pending. Delivery evidence revision is
+0, with no targets, observations or expectations; owner acceptance is notAccepted.
+Missing registered evidence is not a failed test and cannot establish completion.
+
+Exact proposed reconciliation for `rr-p6-connector-recovery`: already-planned;
+retain all three definitions and ordering, with no additions, revisions or
+supersessions. Record the scoped implementation, test/review and installed UI
+evidence summarized above against packaged product source
+`1fa2dc4d7f850b5d05f30f7b912c8f92953af3b7`, preserving source attribution and
+verification limitations. After supported readback establishes current, applicable,
+available successful evidence for task 02, complete only task 02 at expected
+task-plan revision 1. Task 01 and task 03 remain Pending; ticket lane, phase and
+owner acceptance remain unchanged. Exact task definitions:
+
+- `rr-p6-connector-recovery-task-01`: Reproduce the retained-client upgrade failure
+  and define supported recovery with signing enforcement intact. Unchanged/Pending:
+  retained-client upgrade acceptance remains deferred.
+- `rr-p6-connector-recovery-task-02`: Implement supported connector recovery and
+  accurate, actionable connection-health feedback. Proposed completion after the
+  evidence registration/readback above; implementation and independent reviews
+  are delivered, with fresh-client recovery verified.
+- `rr-p6-connector-recovery-task-03`: Verify signed upgrade, reconnection, rejected
+  peers, version mismatch, disconnection and uncertain-write non-replay with
+  independent recovery and UI review. Unchanged/Pending: the complete verification
+  scope is not established by the narrower successful checks.
+
+Owner approval of this exact reconciliation is pending. Persist exact ordered
+command envelopes before execution; refresh baseline first and stop if it changed.
+This proposal does not close GitHub #99, merge PR #105 or claim deferred acceptance.
+
 ## Authorized preparation recovery repair
 
 Owner approved a narrow exception for an isolated Codex delivery task outside RR
