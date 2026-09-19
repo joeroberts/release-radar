@@ -4,6 +4,22 @@
   "retiredArtifactIDs": [],
   "collections": [
     {
+      "collectionID": "delivery.task-briefs.2026-09-14-shared-execution-v1-adoption",
+      "path": "docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Exact Shared Execution v1 repository adoption; progress controls authorization",
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-shared-execution-v1-adoption-brief-2026-09-14",
+      "archiveDestination": "delivery.archive"
+    },
+    {
       "collectionID": "delivery.task-briefs.2026-09-16-outcome3-execution-setup",
       "path": "docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup",
       "parentCollection": "delivery.task-briefs",
@@ -963,6 +979,37 @@
     }
   ],
   "artifacts": [
+    {
+      "artifactID": "rr-shared-execution-v1-adoption-brief-2026-09-14",
+      "path": "docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-14-shared-execution-v1-adoption",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-outcome3-simple-workspace-brief-2026-09-14",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome3-simple-workspace.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.outcome3-simple-workspace",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
     {
       "artifactID": "rr-current-documentation-execution-enforcement-plan-2026-09-13",
       "path": "docs/delivery/plans/2026-09-13-current-documentation-and-execution-enforcement.md",
@@ -7075,9 +7122,8 @@
       "artifactID": "rr-outcome2-current-specifications-brief-2026-09-14",
       "path": "docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.outcome2-current-specifications",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-14-outcome2-current-specifications",
       "supersedes": [],
       "applicationSensitivity": [
