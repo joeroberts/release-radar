@@ -1,7 +1,7 @@
 # Release Radar delivery state
 
 
-## Connector recovery — current candidate be5d916f
+## Connector recovery — current candidate ff0d29b2
 
 The previous compile defect and review findings were corrected in committed
 candidate `be5d916f` (parent `6813481a`). Build Agent verified compilation and two
@@ -36,7 +36,7 @@ refresh now carries the generation-bearing snapshot through host, services and
 AppModel. A new fixture-owned broker restart test pauses the returned health before
 presentation and waits for an OS interruption snapshot. Source authoring preceded
 production correction; no executed RED is claimed. Build Agent prepared pinned
-libgit2/RDS successfully and is running compilation plus the two existing non-service
+libgit2/RDS successfully and completed compilation plus the two existing non-service
 regressions. Native restart, signed upgrade and UI acceptance are not yet verified.
 
 Candidate `ff0d29b2` commits the four-file correction. Build Agent confirmed compile,
@@ -46,8 +46,14 @@ canonical `.build/connector-recovery-ff0d29b2-preserved/.build/native-checks/`.
 Ignored outputs were preserved by same-filesystem rename with identity verified;
 no deletion. Two zero-byte detached-launch logs are not test results. Existing
 ActivityView actor-isolation warnings remain unrelated. Delivery connection is
-physically closed; task archival follows preservation of this result. Independent
-correction review remains required.
+physically closed and task archived, with source/branch/artifacts retained.
+Independent correction review is running as assignment
+`review-65e95d64-1290-44d3-a504-114728d722f1`, audit
+`BC250351-7D88-495F-8AC6-F1D3D5D66F71`, worker
+`E83AF269-B6B1-4493-B4B1-EDFE10092D9D`, task
+`01a0ba34-32e4-77b2-8555-dd0dafc20330`. Effective Terra/high,
+readOnly, network disabled verified. This is source review; runtime acceptance
+remains separate.
 
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
