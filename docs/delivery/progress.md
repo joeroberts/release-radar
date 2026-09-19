@@ -1,7 +1,7 @@
 # Release Radar delivery state
 
 
-## Connector recovery — current candidate ff0d29b2
+## Connector recovery — current candidate 191d1373
 
 The previous compile defect and review findings were corrected in committed
 candidate `be5d916f` (parent `6813481a`). Build Agent verified compilation and two
@@ -64,7 +64,15 @@ Worker `40A31CC2-FAB8-47E6-ADB2-5843CC32FF85`, task
 `01a0ba37-c117-7951-a588-310caeccd0e7`, verified Terra/medium,
 workspaceWrite, network disabled. It owns bounded test/source corrections;
 Build Agent prepares ignored dependencies. The owner has an additional macOS
-account available; identity and session setup remain pending. No account changes.
+account available: `rekon-test` (UID503 verified), first GUI login confirmation pending.
+No account changes. Test/source correction is committed as `191d1373`; Build Agent
+confirmed compilation/link/sign and both selected non-service tests passed. The
+result/log `rr-p6-connector-recovery-services-correction-green-ff0d29b2` is retained
+in the assignment `.build/native-checks/`. Native broker test remains unrun.
+Delivery worker physically closed; preserve its branch/worktree and archive its task.
+Build Agent is generating signed build-for-testing products and the xctestrun for
+an isolated test-account handoff. No service or account action is authorized by
+that generation step. Independent correction review remains required.
 
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
