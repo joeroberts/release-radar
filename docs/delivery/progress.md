@@ -1,5 +1,14 @@
 # Release Radar delivery state
 
+## Authorized preparation recovery repair
+
+Owner approved a narrow exception for an isolated Codex delivery task outside RR
+launcher to fix failed preparation recovery. Build Agent tests; independent recovery
+and authority review required. Existing Outcome3 brief now contains the bounded
+assignment. Preserve audit/uncertainty and owner data; no direct state repair.
+Second-Mac acceptance remains deferred. Packaging resumes after this repair.
+
+
 
 ## Owner deferral — second-Mac acceptance
 

@@ -2571,3 +2571,49 @@ Fresh canonical baseline request:
   "reason": "Complete approved 0.1.23 plugin release metadata from integrated canonical baseline after owner-approved stopped-worker retirement."
 }
 ```
+
+## Owner-authorized preparation recovery exception — September 19
+
+Objective: safely resolve failed execution preparation requests, including the
+current conflict/retired-parent dead end, without losing uncertain outcomes or
+audited history. Owner explicitly permits an isolated Codex delivery task outside
+RR's blocked launcher solely for this repair. This is not a general bypass.
+
+Standard: shared-execution/1, installed skill read and available to Main.
+Root: canonical release_radar; delivery task uses its own exact isolated checkout.
+Baseline: canonical branch codex/connector-recovery-baseline after this brief commit.
+Scope: execution preparation dispatcher/coordinator, minimal supported recovery
+operation or UI only if necessary, owning mutable design and focused regressions.
+Preserve accepted ADRs, runtime signing, authorization and configuration. No direct
+owner database/control-file editing, deletion of receipts, automatic replay of
+uncertain effects, alternate task identities, unrelated permission repair or
+second-Mac/account tests. Packaging metadata completion remains separate.
+
+Current evidence: original a81c6fc2 request returned conflict then, after expressly
+approved retirement of parent45a9dcbd, exact replay returned assignmentNotAuthorized.
+Fresh f9fe67ac request returned conflict. Dispatcher writes outcomeUnknown intent
+before preparer invocation; outer errors do not settle it, and other requests are
+blocked by unresolved intents. Treat persisted cause as unverified until supported
+readback establishes it. Known request envelopes are above; preserve them.
+
+Acceptance: definite pre-execution refusal does not permanently strand work;
+uncertain/partially prepared/live work remains blocked with accurate recovery;
+exact replay and changed-body rejection remain correct; retired-parent requests
+can reach an explicit audited terminal disposition through supported app behavior
+without replaying effects or fabricating successful preparation; current-work,
+root/registration/revision and physical-closure checks remain enforced.
+
+Test strategy: writer authors focused regression tests first; Build Agent runs
+RED then GREEN against exact checkout and relevant existing producer/dispatcher
+tests. No owner-state tests. Independent reviewer covers recovery, authority,
+persistence/audit and public-contract risks in one fresh context; consult chief
+architecture for cross-component recovery contract. UI QA only if a UI changes.
+
+Assignment: delivery Sol/high for ambiguity and persistence/recovery risk, ceiling
+Astra/high if specifically justified. Main owns ledger and integration; writer owns
+scoped source/tests/design. Build Agent owns compilation/tests, not implementation.
+Endpoint: reviewed scoped local commit, then existing authorized release workflow
+and exact supported live recovery after validation. No external merge/acceptance.
+Architectural references: ADR-001 and ADR-002 boundaries remain controlling;
+existing execution setup contract and plugin lifecycle design own mutable details.
+No new schema or breaking contract unless demonstrably necessary and surfaced.
