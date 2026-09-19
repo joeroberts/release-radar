@@ -1,5 +1,27 @@
 # Release Radar delivery state
 
+## September 19 catalog recovery — acceptance pending
+
+Owner approved verified metadata recovery and acceptance after full transition validation. Canonical repair restores three preserved documents/entries and Outcome 2 completed/nonAuthoritative metadata from `93dff19b`, preserving stable IDs. Main verified exact metadata and restored document bytes; native documentation/diff checks passed. RO Coordinator 05 independently inspected current entries, restored content and generated indexes: PASS, no Required findings; historical equality and app diagnostic were Main-attributed. Supported transition isValid is true for candidate `e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e`. The exact pending acceptance request follows; preserve unchanged across uncertain outcomes. Earlier blocker descriptions below are superseded by this checkpoint.
+
+```json
+{
+  "version": 1,
+  "requestID": "d2621251-be01-47e4-a7e0-5817bc7df0fa",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "priorCatalogDigest": "112beed626b832915e31d1296baa3ce1f8355ce84d16db086c2321c459302369",
+  "priorCatalogVersion": 1,
+  "target": {
+    "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e",
+    "catalogVersion": 1,
+    "projectID": "project-fffdc0e0b15b9b86",
+    "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+    "rootID": "project-fffdc0e0b15b9b86-root-0"
+  },
+  "reason": "Owner-approved recovery: restore preserved document identities and completed Outcome 2 metadata; supported transition validation passes."
+}
+```
+
 ## September 19 active bootstrap diagnostic correction
 
 Owner explicitly approved the bounded exception in the [bootstrap diagnostic brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-19-owner-approved-bootstrap-exception--catalog-diagnostics): ordinary isolated Codex delivery/review tasks may implement only the supported read-only catalog-transition diagnostic and detailed UI error while managed-worker admission is blocked. Main owns records. Delivery task `01a0b8a3-d8d2-7dc2-b117-f4b36e3e841e` produced its candidate in `/Users/jroberts/.codex/worktrees/1d70/release_radar` from committed baseline `548d0213033abd2802d4f5ec968ef99009bc893e`, requested Sol/high. It reports unrestricted filesystem and approval never; actual model/effort labels are unavailable. This ordinary task execution is limited to the explicit diagnostic bootstrap exception. No direct helper/database access, acceptance bypass, catalog changes, permission changes or unrelated work is authorized by this exception.
