@@ -142,6 +142,28 @@ Exact committed request (do not repeat):
 }
 ```
 
+### Connector correction preparation — pending
+
+Exact request for required corrections to candidate `6813481a`:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "a5805a7c-65c8-4170-8cca-c9ae4d557cf8",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-f3be516e-32db-430d-9cae-b8925bd013a5",
+  "reason": "Required corrections to candidate6813481a in the same connector recovery scope; first fix compile failure, then apply independent review findings, Build Agent runs checks."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
