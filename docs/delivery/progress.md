@@ -2,6 +2,64 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Metrics independent visual review is running under
+`review-84a083ac-14c0-49a6-afc1-5aedc41122b2`, audit
+`A5748650-37E0-4EA6-A63A-731F4190D6F9`, exact baseline `9d1f4d78`.
+A leftover `default.profraw` was also preserved alongside the metrics temporary
+build evidence before replay succeeded. Worker `86FC684F-3216-49D0-8008-053938686B41`,
+task `01a0bba8-5bc6-7d13-8371-2d1db77d266a`, has verified Terra/high,
+read-only checkout with `.build` scratch, on-request/automatic-review, no network.
+The two native PNGs and test log were copied into its `.build/metrics-visual-evidence`
+for bounded review; no additional compilation is assigned.
+
+Visual review request `9e4730d5-95a7-4829-80f0-e16f75934f83` was refused:
+its task-02 identity did not match the closed task-01 delivery. Corrected bounded
+request retains the same candidate and visual scope but matches its task identity:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "projectID": "project-fffdc0e0b15b9b86",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "84a083ac-14c0-49a6-afc1-5aedc41122b2",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-metrics",
+  "taskID": "rr-p6-metrics-task-01",
+  "reviewOfAssignmentID": "delivery-ce4f5d1d-cf7a-43b3-8a88-b39aa942a6c4",
+  "reason": "Independent visual/accessibility review of exact metrics candidate 9d1f4d78 and its passing 1100pt/620pt native screenshots; no compilation or product edits."
+}
+```
+
+Metrics `9d1f4d78` native build and focused rendering test passed: one case,
+zero failures, 60.991 seconds, both 1100pt and 620pt AX checks. Native screenshots
+captured. Xcode result finalization stalled after test-host exit; no successful
+overall process exit or complete xcresult claimed. All build artifacts preserved
+at `/tmp/release-radar-metrics-9d1f4d78-evidence.bHWKwh/.build` (temporary,
+not deleted), leaving the closed candidate clean for supported review.
+Pending visual-review preparation:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "projectID": "project-fffdc0e0b15b9b86",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "9e4730d5-95a7-4829-80f0-e16f75934f83",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-metrics",
+  "taskID": "rr-p6-metrics-task-02",
+  "reviewOfAssignmentID": "delivery-ce4f5d1d-cf7a-43b3-8a88-b39aa942a6c4",
+  "reason": "Independent visual/accessibility review of exact metrics candidate 9d1f4d78 and its passing 1100pt/620pt native screenshots; no compilation or product edits."
+}
+```
+
 Permission evidence observations committed at revisions 2, 3 and 4, audits
 `809C0531-B962-4E94-A1AC-F4DBE1090734`,
 `0517D276-45A7-406D-BE43-A93397B8205C` and
