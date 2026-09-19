@@ -43,6 +43,16 @@ RED/GREEN and the same independent reviewer for the corrected candidate.
 The fix is not integrated, installed or verified against live pending requests. No direct
 owner-state repair, native broker testing or second-Mac acceptance occurred.
 
+Correction candidate `3213df4bc2877cec194746828604ef882ae24f99` is committed in
+the clean writer checkout. Targeted RED reproduced configuration before retired-
+parent refusal and loss of saved terminal replay after eligibility changes; fixture
+setup failures were corrected before claiming that evidence. Build Agent GREEN-r2
+then compiled and passed all 17 selected recovery/production-Git tests (zero failures,
+6.035s), plus documentation and diff checks. Temporary results remain in writer
+`.build/native-checks/rr-preparation-recovery-green-r2.{log,xcresult}` and the
+matching `rr-preparation-recovery-green-r2-doc-check.log`. The same independent
+reviewer is assessing closure of the three findings on this exact correction.
+
 Build Agent's read-only release assessment confirmed that app/script version0.1.23
 still embeds plugin0.1.22. The staging script can mechanically sign that mismatch,
 but existing package acceptance requires matching versions. Before final packaging,
