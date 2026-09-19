@@ -15,13 +15,21 @@ Ignored `.build` and `default.profraw` were preserved by same-filesystem rename
 The two-test result/log are in that folder's `.build/native-checks/`, named
 `rr-p6-connector-recovery-correction2-green-6813481a`. Retain all temporary artifacts.
 
-Independent correction review is active: assignment
-`review-6501f8c9-9bb9-4219-a76e-428899269f95`, audit
-`2A85BD36-7995-456D-8305-BEBB3CD9DE22`, worker
-`6838D734-2251-4DD4-8BC6-3A4FE64B39FC`, task
-`01a0ba22-83e0-7733-b70b-31873a10144e`; verified Terra/high, readOnly, no network.
-It covers the required fixes and bounded DEBUG-only signed helper health probe.
-The previous reviewer was physically closed and archived after findings were saved.
+Independent review of `be5d916f` completed with two Required findings: a late
+refresh reply can bypass generation-aware publication and restore Available in
+AppModel; native interruption/restart coverage must exercise OS callbacks rather
+than manual host disconnection. Other reviewed corrections passed source review.
+Review worker `6838D734-2251-4DD4-8BC6-3A4FE64B39FC`, task
+`01a0ba22-83e0-7733-b70b-31873a10144e` physically closed and archived after
+findings were preserved. Its branch, worktree and artifacts remain intact.
+
+Correction assignment `delivery-792db90d-04fa-4a30-9216-5554844a21f9` started from
+`be5d916f`, audit `14E5E8B6-F22C-4BF1-AE38-5D5ECB59570E`. Worker
+`B6E2E4F6-6C49-419D-A267-62270270E6EF`, task
+`01a0ba2a-a054-7840-9705-c218cf5b61de`, verified Terra/medium, workspaceWrite,
+network disabled, on-request/auto_review. It owns source/tests only; Build Agent
+prepares ignored dependencies and runs checks. Main retains Git and ledger ownership.
+Exact preparation envelope remains in the existing Outcome 3 brief.
 
 Still required: passing correction review, signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /

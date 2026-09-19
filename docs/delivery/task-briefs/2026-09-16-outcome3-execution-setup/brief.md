@@ -191,11 +191,15 @@ Verified Terra/high readOnly. Exact committed request (do not repeat):
 }
 ```
 
-### Connector health race correction — pending
+### Connector health race correction — active
 
 Review of `be5d916f` requires eliminating stale Available return after generation
 validation/publication races, and exercising native interruption/restart handlers.
 Other reviewed corrections passed source inspection, not runtime acceptance.
+Prepared audit `14E5E8B6-F22C-4BF1-AE38-5D5ECB59570E`; worker
+`B6E2E4F6-6C49-419D-A267-62270270E6EF`, task
+`01a0ba2a-a054-7840-9705-c218cf5b61de`, verified Terra/medium,
+workspaceWrite with network disabled. Baseline `be5d916f`.
 Exact request:
 
 ```json
