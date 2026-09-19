@@ -13,11 +13,8 @@ Second-Mac acceptance remains deferred. Packaging resumes after this repair.
 Delivery task `01a0ba6d-2eda-7740-9ec1-f5e3c2912ac3` started in isolated
 `/Users/jroberts/.codex/worktrees/34bb/release_radar`, exact clean baseline2415f188.
 Sol/high explicitly requested; task API does not expose independent effective model/
-effort verification. No settings changed. Writer is authoring regression tests;
-chief recovery constraints received and recorded in the brief. Build Agent is
-running the two initial RED regressions; writer may implement after RED, preserving
-verified no-effects versus uncertain-effects separation and audited exact replay.
-Chief01a0b413 consultation completed read-only; independent code review remains.
+effort verification. No settings changed. Chief recovery constraints were recorded
+in the brief; consultation completed read-only and its task was archived.
 
 Build Agent established RED: two focused dispatcher tests compiled; partial-effect
 uncertainty passed, definite-refusal recovery failed with missing audited terminal
@@ -26,6 +23,18 @@ force-unwrap crash was corrected before this characterization. Results remain in
 writer `.build/native-checks/rr-preparation-receipts-red-r2.{log,xcresult}`. Writer
 released for bounded production correction under the recorded chief constraints.
 Chief consultation task archived after source advice was preserved.
+
+Candidate `dacf4dcff52ea17cfe26274c376c434a7f611035` is committed in the clean
+writer checkout: conditional audited refusal settlement, authoritative resource
+absence checks and preparation exclusion through finalization. Build Agent compiled
+and ran all 12 selected receipt/coordinator tests: 12 passed, zero failures or
+unexpected results (5.833s). Candidate documentation and diff checks passed.
+Temporary direct evidence remains under writer `.build/native-checks/` as
+`rr-preparation-recovery-green.{log,xcresult}` and
+`rr-preparation-recovery-doc-check.log`. Fresh independent recovery/authority review
+was dispatched with Sol/high on this exact candidate; setup is pending. The fix is
+not integrated, installed or verified against live pending requests. No direct
+owner-state repair, native broker testing or second-Mac acceptance occurred.
 
 ## Owner deferral — second-Mac acceptance
 
