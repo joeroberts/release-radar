@@ -1,6 +1,32 @@
 # Release Radar delivery state
 
 
+## Connector recovery resumed — supported assignment active
+
+After owner restart/resume, the same supported inventory returned complete,
+matching registration generation 1 and P6 lifecycle revision 1. Ticket
+`rr-p6-connector-recovery` moved to In Progress, audit
+`BE61733D-11E8-4549-8661-55B5E9B18E96`, request
+`1de1fd8b-38eb-4265-9e50-6da34382e461`; the three-task plan stays revision 1.
+
+Task 01 assignment `delivery-9f62d240-5032-4b3b-837e-32a3dd3cf38c` is limited to
+read-only factual source mapping. Worker `484FE41F-0696-420D-B0FC-78308EB91D22`,
+task `01a0b9d3-2d5f-72a3-a632-b8eaa7c2c730`, verified Terra/medium,
+assignment-specific restricted workspace, network disabled, on-request/auto_review.
+Preparation audit `E80E8AC9-E387-4EBC-9254-644300F6A218`. Skills absent in worker;
+repository local fallback reported. No code or tests authorized in this assignment.
+
+The app fixes delivery settings to Terra/medium and takes canonical HEAD3b1e27fe.
+The planned Sol/high recovery implementation has not silently been substituted.
+Relevant source comparison against installed source47b86b89 shows only additive
+catalog-diagnostic routing/schema in AgentTools; bridge/transport/Settings paths
+are unchanged. Findings must retain this baseline qualification. Before product
+implementation, reconcile current release source and supported model selection;
+no live profile changes, alternate unrestricted worker or new prerequisite ticket.
+Main owns these prerequisites and Build Agent owns compilation/tests.
+
+
+
 ## Connector recovery authorized — fresh failure reproduced September 19
 
 Owner approved `rr-p6-connector-recovery` next, within the existing September 19
