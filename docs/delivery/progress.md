@@ -93,6 +93,26 @@ Original metrics401907a7 build artifacts are preserved intact under
 `/tmp/release-radar-metrics-401907a7-evidence.6w9UWW/.build` (temporary;
 17,554 files, 541,164 KiB). No artifact deletion occurred.
 
+### Metrics native verification and assignment recovery
+
+73928a11 compiles; its one rendering test executed and failed because the new
+per-child AX geometry helper assumes independently addressable label/value nodes.
+Native inspection found all text present but card identifiers flattened across
+children. No missing visual content was established. Simplify that new helper,
+retain existing render text/card coverage, and use independent native screenshots
+for visual alignment/wrapping; do not alter production accessibility for test IDs.
+Build outputs and profiling data remain intact in temporary
+`/tmp/release-radar-metrics-73928a11-evidence.SJK4Db/`; checkout is clean.
+
+Supported correction request `ce4f5d1d-cf7a-43b3-8a88-b39aa942a6c4`, parent
+`delivery-b76cf298-64f5-4f75-a512-4c7bd9c98b74`, returned assignmentNotAuthorized.
+No writer started. Complete inventory still confirms project/registration generation1,
+P6 in_delivery revision1, metrics In Progress with its unchanged pending plan1.
+The closed worker status call reports assignment/project/checkout/session mismatch.
+Read-only app inspection shows matching project health and closed worker rows but
+no exact failed-authority reason. Project settings were cancelled without mutation.
+Do not bypass this refusal or retry with a different parent/request to evade it.
+
 ### Integration and remaining compile correction
 
 Permission commits integrated locally as `35fff464` and `5c29af17`. Mechanical
