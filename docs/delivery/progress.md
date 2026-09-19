@@ -2,7 +2,7 @@
 
 ## Active goal — remaining blocked P6 tickets
 
-Owner approved bounded task-mismatch recovery repair and isolated-task exception. Controlling current section is in `task-briefs/2026-09-16-outcome3-execution-setup/brief.md`. No state repair or force-clear authorized. Restored metrics blocker/lane audits: `79D3450A-3EC5-462C-BA33-55C1F06460A9`, `4D90E49B-0706-40DF-8BDB-7E82D971CE66`.
+Owner approved bounded task-mismatch recovery repair and isolated-task exception. Fresh isolated worktree task creation requested with explicit Sol/high, title `Release Radar — Task mismatch preparation recovery`, client setup identity `client-new-thread:4e26b359-d273-4eb9-a9c7-a82a99426a50`; task setup is pending, not a running writer claim. Assigned committed baseline `771cc056`; no duplicate creation authorized. Controlling current section is in `task-briefs/2026-09-16-outcome3-execution-setup/brief.md`. No state repair or force-clear authorized. Restored metrics blocker/lane audits: `79D3450A-3EC5-462C-BA33-55C1F06460A9`, `4D90E49B-0706-40DF-8BDB-7E82D971CE66`.
 
 Diagnostic replay complete: original9e4730d5 again assignmentNotAuthorized with no audit. Temporary resume audits AD191578-CA24-4C91-B544-0B36124EE0B6 / 96158CE4-D092-4377-85E3-B42B0B7CDC1C. Source diagnosis supports orphaned outcomeUnknown at raw parent-work mismatch, not proven direct database inspection. No supported terminal settlement for this case; owner asked for bounded recovery correction/isolated-task exception. Restore blocker/lane requests:
 ```json
