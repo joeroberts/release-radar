@@ -40,7 +40,7 @@ work eligibility changes (P2); production Git absence and concurrent/unreadable
 recovery paths need direct regression coverage (P2). Effective model/effort were
 not exposed. Original writer is assigned bounded corrections, with Build Agent
 RED/GREEN and the same independent reviewer for the corrected candidate.
-The fix is not integrated, installed or verified against live pending requests. No direct
+The fix is integrated as recorded below, but not installed or verified against live pending requests. No direct
 owner-state repair, native broker testing or second-Mac acceptance occurred.
 
 Correction candidate `3213df4bc2877cec194746828604ef882ae24f99` is committed in
@@ -53,8 +53,8 @@ then compiled and passed all 17 selected recovery/production-Git tests (zero fai
 matching `rr-preparation-recovery-green-r2-doc-check.log`. The same independent
 reviewer passed this exact correction: all three findings resolved, no new Required
 or Optional findings. Main integrated both recovery commits without conflict at
-`424f8fdc0118bb28dc4df103b654f14daf1908f3`. Review task is complete and idle;
-archival follows preservation of this result. No installed recovery is claimed.
+`424f8fdc0118bb28dc4df103b654f14daf1908f3`. Review task completed, was confirmed idle,
+and is archived with its worktree preserved. No installed recovery is claimed.
 
 Build Agent's read-only release assessment confirmed that app/script version0.1.23
 still embeds plugin0.1.22. The staging script can mechanically sign that mismatch,
