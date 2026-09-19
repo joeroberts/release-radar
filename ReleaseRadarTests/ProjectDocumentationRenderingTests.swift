@@ -543,7 +543,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 expectedText: [
                     "Release Radar Codex Plugin",
                     "Installed",
-                    "Restart helper",
+                    "Restart plugin helper",
                     "Lifecycle helper restarted. Plugin status refreshed.",
                 ],
                 minimumElementSizes: ["codex-plugin-restart-helper": .init(width: 44, height: 24)]
@@ -557,7 +557,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             name: "codex-helper-restart-progress",
             width: 620,
             expected: nil,
-            expectedText: ["Restarting lifecycle helper", "Restart helper"],
+            expectedText: ["Restarting plugin helper", "Restart plugin helper"],
             disabledIdentifiers: ["codex-plugin-restart-helper"]
         )
         helperModel.codexPluginOperation = nil
