@@ -99,6 +99,15 @@ changed-condition held inspection exposed the windows without permission changes
 The held run found an outdated expected Restart helper label after the approved
 Restart plugin helper rename; collect terminal findings before correction. No fix yet.
 
+Owner ran the staged native restart test in fresh `rekon-test`. Its supplied log
+confirms isolated XCTest host PID77557 and one failure at the initial service-status
+guard, before host start/registration/restart. The guard does not print the actual
+SMAppService enum, so enabled registration is not established; notFound or other
+states remain possible. Result path reported by Xcode is
+`/Users/rekon-test/ReleaseRadar-test-results/rr-p6-fixture-broker-restart.xcresult`.
+No repeat or owner-service change requested. Build Agent is checking the staged
+bundle and the smallest exact-status observation; source/runtime diagnosis pending.
+
 Still required: signed broker tests in a clean service
 session, independent runtime UI QA, original retained-connector signed-upgrade /
 supported recovery acceptance, release delivery, and supported ticket reconciliation.
