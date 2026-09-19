@@ -2,6 +2,8 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Recovery GREEN: Build Agent reports successful native build-for-testing, all3 former RED cases passed and all9 directly related recovery/authority regressions passed, both runs exit0 with complete xcresults. Exact3file candidate awaiting scoped writer commit and fresh independent review. No production install/state replay yet. Existing task-local RED/GREEN/regression evidence retained; no unrelated suite repeated.
+
 Recovery RED confirmed by Build Agent: build-for-testing passed; exact three native tests ran with complete xcresult, dispatcher case passed and two coordinator cases failed as expected on raw task-mismatch refusal and missing no-effects proof. Writer6597 authorized to implement bounded GREEN; no tests rerun yet. Test-only diff preserved. Temporary evidence: worktree `.build/test-output/task-mismatch-red-6597`, pretest profile `/tmp/release-radar-task-mismatch-red-pretest.5CNXzB/default.profraw`; neither deleted.
 
 Recovery task setup visibility resolved: task `01a0bc0a-fca7-7dc0-8cbc-9b75ad19bece` reported from exact isolated checkout6597 at baseline771cc056. Supported wait confirms active task. Test-only RED candidate handed to Build Agent02 for three focused recovery cases; production edits wait for RED. Earlier setup blocker is superseded. Sol/high explicitly configured at creation; task-status API does not independently expose effective model/effort. No duplicate writer created.
