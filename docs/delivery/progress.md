@@ -84,6 +84,20 @@ were confirmed idle; their results are preserved here for archival. Build Agent
 is released for signed stage and verified `dist/ReleaseRadar-0.1.23.dmg` packaging
 from that integrated source. No installation or live recovery has occurred.
 
+Build Agent completed signed staging and DMG verification for0.1.23 build1. Source
+product baseline `1fa2dc4d7f850b5d05f30f7b912c8f92953af3b7`; canonical build-time
+HEAD94f7438d differs only in this ledger. App and embedded plugin versions agree,
+normalized package digest matches `a30ca6f866d5d192f5c5396fa634ab20f716f043f5a8de601de36612ac60b85c`.
+Strict signing/hardened-runtime and expected entitlements passed for staged and
+read-only mounted app. `dist/ReleaseRadar-0.1.23.dmg` is18,949,738bytes; SHA256
+`92226c3d873b13d6aff30ff22ee00ef5a828bd9b3a46cae8ff977e2f5c280da4`,
+confirmed by Main; hdiutil verification passed. Existing installers are preserved.
+The staged bundle matches repository package source. Source/review tasks are
+archived with worktrees and temporary test artifacts retained. An incompatible
+copied module cache is retained as `.build/swiftpm-module-cache.incompatible-45a9dcbd`;
+Build Agent used a fresh ignored cache. Installation and live supported recovery
+remain pending; no second-Mac acceptance is claimed.
+
 ## Owner deferral — second-Mac acceptance
 
 The owner directed that clean-environment broker and signed-upgrade acceptance
