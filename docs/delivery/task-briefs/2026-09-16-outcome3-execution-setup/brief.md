@@ -166,6 +166,28 @@ Exact committed request (do not repeat):
 }
 ```
 
+### Connector corrected-candidate review — pending
+
+Candidate `be5d916f`; closed delivery connection and preserved outputs. Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "6501f8c9-9bb9-4219-a76e-428899269f95",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-a5805a7c-65c8-4170-8cca-c9ae4d557cf8",
+  "reason": "Review required connector corrections in be5d916f, including truthful invalidation/version health and bounded Debug-only authorization fixture; compilation/two non-service tests passed, runtime acceptance pending."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
