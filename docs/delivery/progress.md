@@ -2,6 +2,22 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Installed 0.1.24 managed-review runtime verification passed with no Required
+findings: `.build` create/write/read succeeded; ordinary checkout writes and
+primary/sibling/application-group/management writes were denied; primary
+AGENTS.md, primary `.git/HEAD` and sibling AGENTS.md O_RDONLY opens were denied.
+Directory metadata visibility did not grant file-content access. Reviewer
+`E42FEFB7-F111-4909-BEF5-10AE6F2F06AF` completed and physically closed. Its
+temporary canary remains at assignment `.build/rr-review-602d64ff-permission-canary-20260919-v1/created.txt`.
+
+Metrics correction worker `AE685D9B-1350-428B-AAC0-E60371113521` completed and
+physically closed. Main committed its scoped correction as
+`9d1f4d7818d5da0363e7102fb11b7f0662ea983d` in the prepared `delivery-ce4f5d1d-cf7a-43b3-8a88-b39aa942a6c4`
+checkout. It removes only the invalid per-child AX test helper/callback/IDs;
+ordinary card/text and compact/wide rendering remain. Build Agent has the exact
+focused rendering test and screenshot capture assignment. Direct rendering
+results and independent visual review remain pending.
+
 Metrics recovery succeeded: resolve request `fa3c4884-d07b-43a8-a0f8-a8b377e46abc`
 committed audit `4289DCFB-99F7-472A-83BC-9C06958BBBDF`; In Progress request
 `5df80957-df2d-4a03-9bf8-26f91eeb0e5c` committed audit
