@@ -195,6 +195,13 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         )
     }
 
+    func refreshAgentBridgeHealth() async throws -> BridgeConnectionHealth {
+        guard let agentBridgeHost else {
+            throw AgentBridgeApplicationError.connectFailed("Release Radar is not connected to its bridge")
+        }
+        return try await agentBridgeHost.refreshConnectionHealth()
+    }
+
     func stopSharedServices() async {
         await notificationCoordinator.stopAndDrain()
         await agentBridgeHost?.stopAndDrain()

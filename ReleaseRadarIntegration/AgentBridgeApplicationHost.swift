@@ -32,6 +32,8 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     private let contextHandoff: CodexContextHandoffHost?
     private var connection: NSXPCConnection?
     private var registeredHere = false
+    private let healthLock = NSLock()
+    private var healthGeneration: UInt64 = 0
 
     private init(
         dispatcher: AgentCommandDispatcher?,
@@ -103,8 +105,37 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     }
 
     func disconnectCallback() {
+        healthLock.withLock { healthGeneration &+= 1 }
         connection?.invalidate()
         connection = nil
+    }
+
+    func refreshConnectionHealth() async throws -> BridgeConnectionHealth {
+        let generation = healthLock.withLock { healthGeneration }
+        guard let connection else { throw AgentBridgeApplicationError.connectFailed("Bridge connection is not registered") }
+        return try await withCheckedThrowingContinuation { continuation in
+            let gate = AgentBridgeHealthContinuationGate(continuation)
+            guard let proxy = connection.remoteObjectProxyWithErrorHandler({ error in
+                gate.resume(throwing: AgentBridgeApplicationError.connectFailed(error.localizedDescription))
+            }) as? ReleaseRadarAppBrokerXPC else {
+                gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Broker health proxy unavailable")); return
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
+                gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Broker health check timed out"))
+            }
+            proxy.connectionHealth(ReleaseRadarBridgeTransport.wireVersion) { data in
+                guard self.healthLock.withLock({ self.healthGeneration == generation }) else {
+                    gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Bridge health reply is stale")); return
+                }
+                guard let health = try? JSONDecoder().decode(BridgeConnectionHealth.self, from: data) else {
+                    gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Broker health response was invalid")); return
+                }
+                guard health.wireVersion == ReleaseRadarBridgeTransport.wireVersion else {
+                    gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Bridge version mismatch")); return
+                }
+                gate.resume(returning: health)
+            }
+        }
     }
 
     func stopAndDrain() async {
@@ -175,6 +206,12 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         connection.exportedObject = callback
         connection.setCodeSigningRequirement(brokerRequirement)
         connection.resume()
+        connection.invalidationHandler = { [weak self] in
+            guard let self else { return }; self.healthLock.withLock { self.healthGeneration &+= 1 }
+        }
+        connection.interruptionHandler = { [weak self] in
+            guard let self else { return }; self.healthLock.withLock { self.healthGeneration &+= 1 }
+        }
         self.connection = connection
 
         do {
@@ -237,6 +274,13 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         }
     }
 
+}
+
+private final class AgentBridgeHealthContinuationGate: @unchecked Sendable {
+    private let lock = NSLock(); private var continuation: CheckedContinuation<BridgeConnectionHealth, Error>?
+    init(_ continuation: CheckedContinuation<BridgeConnectionHealth, Error>) { self.continuation = continuation }
+    func resume(returning value: BridgeConnectionHealth) { lock.withLock { continuation?.resume(returning: value); continuation = nil } }
+    func resume(throwing error: Error) { lock.withLock { continuation?.resume(throwing: error); continuation = nil } }
 }
 
 final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unchecked Sendable {

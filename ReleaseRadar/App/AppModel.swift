@@ -106,6 +106,10 @@ final class AppModel {
     var codexPluginOperation: CodexPluginOperation?
     var codexPluginSettingsMessage: String?
     var codexPluginAnnouncement: String?
+    var connectorHealthStatus = "Not yet checked"
+    var connectorHealthDetail = "Check the app bridge to see its current local connection state."
+    var connectorLastContact = "Not yet observed"
+    var connectorHealthChecking = false
     var selectedReviewItemID: ReviewItemID?
     var pushoverAppToken = ""
     var pushoverUserKey = ""
@@ -3745,10 +3749,37 @@ final class AppModel {
         let result = await codexPluginCoordinator.restartHelper()
         await applyCodexPluginResult(result, operation: .restartHelper)
         guard case .failed = result.state else {
-            let message = "Lifecycle helper restarted. Plugin status refreshed."
+            let message = "Plugin helper restarted. Plugin status refreshed."
             codexPluginSettingsMessage = message
             codexPluginAnnouncement = message
             return
+        }
+    }
+
+    func refreshConnectorHealth() async {
+        guard !connectorHealthChecking else { return }
+        connectorHealthChecking = true
+        defer { connectorHealthChecking = false }
+        do {
+            let health = try await recoveryServices?.refreshAgentBridgeHealth()
+            guard let health, health.isRegisteredAppConnection else {
+                connectorHealthStatus = "Connection failed"
+                connectorHealthDetail = "Release Radar is not connected to its bridge. Reopen Release Radar, then check again."
+                connectorLastContact = "Not yet observed"
+                return
+            }
+            connectorHealthStatus = "App bridge: Available"
+            connectorHealthDetail = "The app can reach its local bridge. This does not certify every Codex client."
+            connectorLastContact = health.lastAuthenticatedToolsContact.map {
+                "Last authenticated connector contact: \($0.formatted(date: .abbreviated, time: .shortened))"
+            } ?? "Not yet observed"
+        } catch {
+            let mismatch = error.localizedDescription.localizedCaseInsensitiveContains("version mismatch")
+            connectorHealthStatus = mismatch ? "Version mismatch" : "Connection failed"
+            connectorHealthDetail = mismatch
+                ? "The Release Radar app and bridge use different versions. Reopen Release Radar, then check the connection again."
+                : "The Release Radar connector could not connect. After updating Release Radar, quit and reopen Codex, then check the connection again. Existing tasks should first reach a safe stopping point."
+            connectorLastContact = "Not yet observed"
         }
     }
 

@@ -4,11 +4,20 @@ import Darwin
 private enum ToolFailure: Error, LocalizedError {
     case invalidRequest(String)
     case appUnavailable
+    case handshakeFailed(BridgeHandshakeResult)
 
     var errorDescription: String? {
         switch self {
         case let .invalidRequest(message): message
         case .appUnavailable: "Release Radar app is unavailable"
+        case let .handshakeFailed(result):
+            switch result {
+            case let .incompatible(expected, observed): "Release Radar bridge version mismatch (expected \(expected), observed \(observed.map(String.init) ?? "unknown")). The request was not submitted."
+            case let .timeout(stage): "Release Radar bridge handshake timed out during \(stage.rawValue). The request was not submitted."
+            case let .transportFailure(stage): "Release Radar bridge transport failed during \(stage.rawValue). The request was not submitted."
+            case let .invalidProtocolResponse(stage): "Release Radar bridge returned an invalid response during \(stage.rawValue). The request was not submitted."
+            case .compatible: "Release Radar bridge handshake failed. The request was not submitted."
+            }
         }
     }
 }
@@ -19,7 +28,7 @@ private final class BridgeClient: @unchecked Sendable {
 
     init() throws {
         guard let brokerRequirement = ReleaseRadarBridgeTransport.brokerRequirement else {
-            throw ToolFailure.appUnavailable
+            throw ToolFailure.handshakeFailed(handshakeResult)
         }
 #if DEBUG
         requestedWireVersion = ProcessInfo.processInfo.environment["RELEASE_RADAR_WIRE_VERSION"]
@@ -34,7 +43,8 @@ private final class BridgeClient: @unchecked Sendable {
         connection.remoteObjectInterface = NSXPCInterface(with: ReleaseRadarToolsBrokerXPC.self)
         connection.setCodeSigningRequirement(brokerRequirement)
         connection.resume()
-        guard handshake() else {
+        let handshakeResult = handshake()
+        guard case .compatible = handshakeResult else {
             connection.invalidate()
             throw ToolFailure.appUnavailable
         }
@@ -79,27 +89,19 @@ private final class BridgeClient: @unchecked Sendable {
         return response
     }
 
-    private func handshake() -> Bool {
+    private func handshake() -> BridgeHandshakeResult {
         let semaphore = DispatchSemaphore(value: 0)
-        let lock = NSLock()
-        var returnedVersion = 0
-        var failed = false
+        let settler = BridgeHandshakeSettler(expectedWireVersion: requestedWireVersion)
         guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
-            lock.lock()
-            failed = true
-            lock.unlock()
+            _ = settler.settle(.transportFailure(stage: .connection))
             semaphore.signal()
-        }) as? ReleaseRadarToolsBrokerXPC else { return false }
+        }) as? ReleaseRadarToolsBrokerXPC else { return .transportFailure(stage: .connection) }
         proxy.handshake(requestedWireVersion) { version in
-            lock.lock()
-            returnedVersion = version
-            lock.unlock()
+            _ = settler.settle(.reply(version: version))
             semaphore.signal()
         }
-        guard semaphore.wait(timeout: .now() + 5) == .success else { return false }
-        lock.lock()
-        defer { lock.unlock() }
-        return !failed && returnedVersion == requestedWireVersion
+        guard semaphore.wait(timeout: .now() + 5) == .success else { return settler.settle(.timedOut(stage: .handshake)) }
+        return settler.settle(.invalidProtocolResponse(stage: .handshake))
     }
 }
 
@@ -138,6 +140,8 @@ private struct MCPServer {
                     response = try BridgeClient().forward(envelope)
                 } catch ToolFailure.appUnavailable {
                     response = ReleaseRadarBridgeTransport.appUnavailableResultData()
+                } catch let failure as ToolFailure {
+                    return error(id: id, code: -32001, message: failure.localizedDescription)
                 }
                 let isError = try Self.isDomainError(response)
                 return success(id: id, result: [

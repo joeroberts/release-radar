@@ -5,6 +5,7 @@ private final class BridgeBrokerState: @unchecked Sendable {
     private let lock = NSLock()
     private var appConnection: NSXPCConnection?
     private var contextEndpoint: NSXPCListenerEndpoint?
+    private var lastAuthenticatedToolsContact: Date?
 
     func registerApp(_ connection: NSXPCConnection) {
         lock.lock()
@@ -29,6 +30,14 @@ private final class BridgeBrokerState: @unchecked Sendable {
         }
     }
     func selectedContextEndpoint() -> NSXPCListenerEndpoint? { lock.withLock { contextEndpoint } }
+    func recordToolsContact() { lock.withLock { lastAuthenticatedToolsContact = Date() } }
+    func health(for connection: NSXPCConnection) -> BridgeConnectionHealth {
+        lock.withLock {
+            .init(wireVersion: ReleaseRadarBridgeTransport.wireVersion,
+                  isRegisteredAppConnection: appConnection === connection,
+                  lastAuthenticatedToolsContact: lastAuthenticatedToolsContact)
+        }
+    }
 
     func forward(
         wireVersion: Int,
@@ -95,6 +104,7 @@ private final class ToolsEndpoint: NSObject, ReleaseRadarToolsBrokerXPC, @unchec
     }
 
     func handshake(_ version: Int, withReply reply: @escaping (Int) -> Void) {
+        state.recordToolsContact()
         reply(version == ReleaseRadarBridgeTransport.wireVersion ? ReleaseRadarBridgeTransport.wireVersion : 0)
     }
 
@@ -134,6 +144,10 @@ private final class AppEndpoint: NSObject, ReleaseRadarAppBrokerXPC, @unchecked 
                                  withReply reply: @escaping (Int) -> Void) {
         reply(wireVersion == ReleaseRadarBridgeTransport.wireVersion && state.registerContextEndpoint(endpoint, connection: connection)
             ? ReleaseRadarBridgeTransport.wireVersion : 0)
+    }
+    func connectionHealth(_ wireVersion: Int, withReply reply: @escaping (Data) -> Void) {
+        guard wireVersion == ReleaseRadarBridgeTransport.wireVersion else { reply(Data()); return }
+        reply((try? JSONEncoder().encode(state.health(for: connection))) ?? Data())
     }
 }
 

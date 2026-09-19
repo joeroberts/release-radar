@@ -7,6 +7,96 @@ import XCTest
 
 @MainActor
 final class AgentBridgeTransportAcceptanceTests: XCTestCase {
+    func testTypedHandshakeSettlesOnceAndPreservesCompatibleIncompatibleAndFailureStages() {
+        let wireVersion = ReleaseRadarBridgeTransport.wireVersion
+        let incompatibleWireVersion = wireVersion == Int.max ? wireVersion - 1 : wireVersion + 1
+        let compatible = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            compatible.settle(.reply(version: wireVersion)),
+            .compatible(wireVersion: wireVersion)
+        )
+
+        let mismatch = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            mismatch.settle(.reply(version: incompatibleWireVersion)),
+            .incompatible(expectedVersion: wireVersion, observedPeerVersion: incompatibleWireVersion)
+        )
+
+        // A legacy zero reply means that the peer's supported version was not
+        // observed; it must never be presented as support for version zero.
+        let legacyZero = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            legacyZero.settle(.reply(version: 0)),
+            .incompatible(expectedVersion: wireVersion, observedPeerVersion: nil)
+        )
+
+        let timedOut = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(timedOut.settle(.timedOut(stage: .handshake)), .timeout(stage: .handshake))
+        XCTAssertEqual(
+            timedOut.settle(.reply(version: wireVersion)),
+            .timeout(stage: .handshake),
+            "A late callback must not replace the settled handshake outcome."
+        )
+
+        let failedTransport = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            failedTransport.settle(.transportFailure(stage: .connection)),
+            .transportFailure(stage: .connection)
+        )
+
+        let malformed = BridgeHandshakeSettler(expectedWireVersion: wireVersion)
+        XCTAssertEqual(
+            malformed.settle(.invalidProtocolResponse(stage: .handshake)),
+            .invalidProtocolResponse(stage: .handshake)
+        )
+    }
+
+    func testAppHealthRefreshUsesTheAuthenticatedAppBrokerAndToolsCannotQueryIt() async throws {
+        let bridgeService = SMAppService.agent(
+            plistName: ReleaseRadarBridgeTransport.launchAgentPlistName
+        )
+        guard bridgeService.status == .notRegistered else {
+            throw TransportTestError.invalidResponse("Controlled health transport requires an initially unregistered bridge")
+        }
+        let otherApps = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.rekonlabs.ReleaseRadar"
+        ).filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        guard otherApps.isEmpty else {
+            throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before controlled health transport")
+        }
+
+        let fixture = try await makeTransportFixture()
+        let host = try await AppDelegate().startAgentBridge(databaseURL: fixture.databaseURL)
+        defer {
+            host.disconnectCallback()
+            try? host.unregister()
+        }
+
+        let countsBeforeRefresh = try await bridgeWriteCounts(fixture.store)
+        let health = try await host.refreshConnectionHealth()
+        XCTAssertEqual(health.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
+        XCTAssertTrue(health.isRegisteredAppConnection)
+        XCTAssertNil(health.lastAuthenticatedToolsContact)
+        let countsAfterRefresh = try await bridgeWriteCounts(fixture.store)
+        XCTAssertEqual(countsAfterRefresh, countsBeforeRefresh)
+
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let deniedHealthQuery = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_connection_health",
+            arguments: [
+                "version": 1,
+                "requestID": "99999999-9999-4999-8999-999999999960",
+                "projectRoot": fixture.projectRoot.path,
+                "reason": "Tools must not query app-only connection health",
+            ]
+        )
+        XCTAssertEqual(jsonRPCErrorCode(deniedHealthQuery), -32602)
+        let countsAfterDeniedToolsQuery = try await bridgeWriteCounts(fixture.store)
+        XCTAssertEqual(countsAfterDeniedToolsQuery, countsBeforeRefresh)
+    }
+
     private final class OneShotRequestGate: @unchecked Sendable {
         private let lock = NSLock()
         private var requestIDs: Set<UUID> = []
@@ -424,8 +514,9 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             arguments: arguments,
             environment: ["RELEASE_RADAR_WIRE_VERSION": "999"]
         )
-        XCTAssertEqual(try decodeCommandResult(wrongBridge).error, .appUnavailable)
-        XCTAssertEqual(mcpIsError(wrongBridge), true)
+        XCTAssertEqual(jsonRPCErrorCode(wrongBridge), -32001)
+        XCTAssertTrue(jsonRPCErrorMessage(wrongBridge)?.contains("version mismatch") == true)
+        XCTAssertTrue(jsonRPCErrorMessage(wrongBridge)?.contains("not submitted") == true)
         var counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
@@ -562,11 +653,35 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let uncertain = try Self.decodeToolResponseData(pending.get())
         XCTAssertEqual(try decodeCommandResult(uncertain).error, .outcomeUnknown)
         XCTAssertEqual(mcpIsError(uncertain), true)
+        do {
+            _ = try await host.refreshConnectionHealth()
+            XCTFail("An invalidated app connection must not report fresh bridge health")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.localizedCaseInsensitiveContains("not registered"))
+        }
         try await Task.sleep(for: .milliseconds(500))
 
         let reconnectDelegate = AppDelegate()
         let reconnect = try await reconnectDelegate.startAgentBridge(databaseURL: fixture.databaseURL)
         defer { reconnect.disconnectCallback() }
+        let countsBeforeHealthRefresh = try await requestCounts(
+            fixture.store,
+            requestID: requestID,
+            reason: "Invalidate the callback after broker handoff"
+        )
+        let refreshedHealth = try await reconnect.refreshConnectionHealth()
+        XCTAssertEqual(refreshedHealth.wireVersion, ReleaseRadarBridgeTransport.wireVersion)
+        XCTAssertTrue(refreshedHealth.isRegisteredAppConnection)
+        let countsAfterHealthRefresh = try await requestCounts(
+            fixture.store,
+            requestID: requestID,
+            reason: "Invalidate the callback after broker handoff"
+        )
+        XCTAssertEqual(
+            countsAfterHealthRefresh,
+            countsBeforeHealthRefresh,
+            "Health refresh after an uncertain handoff must not replay its envelope."
+        )
         let replay = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
             "version": 1,
             "requestID": requestID.uuidString,
@@ -1765,6 +1880,10 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         ((response["error"] as? [String: Any])?["code"] as? NSNumber)?.intValue
     }
 
+    private func jsonRPCErrorMessage(_ response: [String: Any]) -> String? {
+        (response["error"] as? [String: Any])?["message"] as? String
+    }
+
     private func mcpIsError(_ response: [String: Any]) -> Bool? {
         (response["result"] as? [String: Any])?["isError"] as? Bool
     }
@@ -1774,6 +1893,15 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             [
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Prove the packaged signed transport'") ?? -1,
                 try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '77777777-7777-4777-8777-777777777777'") ?? -1,
+            ]
+        }
+    }
+
+    private func bridgeWriteCounts(_ store: DeliveryStore) async throws -> [Int64] {
+        try await store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
             ]
         }
     }
