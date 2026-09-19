@@ -319,6 +319,30 @@ This runs the fixture-owned broker interruption/restart case only; no signed
 upgrade or original retained Codex connector acceptance is inferred. Review of
 services-path/cleanup correction remains in progress. No runtime result yet.
 
+### Approved UI assertion correction — pending
+
+Owner approved only stale helper label/progress assertions before packaging.
+Second-Mac acceptance remains deferred; production source review remains terminal.
+Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "ca3e18cb-082e-46f7-9900-d8b3c861a54e",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-9d3d0a04-16e2-4166-8551-184623f2e1cc",
+  "reason": "Owner approved correcting four stale helper label/progress assertions before packaging; second-Mac acceptance remains deferred. No product behavior change."
+}
+```
+
 ## September 18 hook update, removal and explicit recovery acceptance
 
 Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
