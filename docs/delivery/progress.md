@@ -1,6 +1,36 @@
 # Release Radar delivery state
 
 
+## Connector recovery — current candidate be5d916f
+
+The previous compile defect and review findings were corrected in committed
+candidate `be5d916f` (parent `6813481a`). Build Agent verified compilation and two
+non-service tests passed: typed handshake classification and startup mismatch /
+late available-snapshot rejection. No other runtime acceptance is inferred.
+
+Delivery worker `D85C606C-0787-4D40-9BBA-859FBFD8D4C4` physically closed; its task
+`01a0ba0f-8be3-7a82-bcf6-c6ec5d27fb8a` is archived. Source checkout and branch remain.
+Ignored `.build` and `default.profraw` were preserved by same-filesystem rename
+(identity checked) under canonical `.build/connector-recovery-be5d916f-preserved/`.
+The two-test result/log are in that folder's `.build/native-checks/`, named
+`rr-p6-connector-recovery-correction2-green-6813481a`. Retain all temporary artifacts.
+
+Independent correction review is active: assignment
+`review-6501f8c9-9bb9-4219-a76e-428899269f95`, audit
+`2A85BD36-7995-456D-8305-BEBB3CD9DE22`, worker
+`6838D734-2251-4DD4-8BC6-3A4FE64B39FC`, task
+`01a0ba22-83e0-7733-b70b-31873a10144e`; verified Terra/high, readOnly, no network.
+It covers the required fixes and bounded DEBUG-only signed helper health probe.
+The previous reviewer was physically closed and archived after findings were saved.
+
+Still required: passing correction review, signed broker tests in a clean service
+session, independent runtime UI QA, original retained-connector signed-upgrade /
+supported recovery acceptance, release delivery, and supported ticket reconciliation.
+Owner's clean-session availability question remains unanswered. No service, account,
+permission, installed app, owner data or ticket completion has been changed.
+
+### Earlier connector iteration evidence (superseded where above differs)
+
 ## Connector recovery managed implementation started
 
 Canonical checkout now uses `codex/connector-recovery-baseline`, baseline

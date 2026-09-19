@@ -166,9 +166,12 @@ Exact committed request (do not repeat):
 }
 ```
 
-### Connector corrected-candidate review — pending
+### Connector corrected-candidate review — committed
 
-Candidate `be5d916f`; closed delivery connection and preserved outputs. Exact request:
+Candidate `be5d916f`; delivery connection physically closed and outputs preserved.
+Preparation audit `2A85BD36-7995-456D-8305-BEBB3CD9DE22`; review worker
+`6838D734-2251-4DD4-8BC6-3A4FE64B39FC`, task `01a0ba22-83e0-7733-b70b-31873a10144e`.
+Verified Terra/high readOnly. Exact committed request (do not repeat):
 
 ```json
 {
