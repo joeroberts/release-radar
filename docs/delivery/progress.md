@@ -75,8 +75,14 @@ normalized digest `a30ca6f866d5d192f5c5396fa634ab20f716f043f5a8de601de36612ac60b
 preserving historical recognized pairs and standard1. Build Agent passed all31
 focused package/capability tests (zero failures,1.340s); temporary evidence is writer
 `.build/native-checks/rr-plugin-0.1.23-metadata-green.{log,xcresult}`. Fresh limited
-independent metadata review was dispatched with Terra/high. No package, installation
-or live recovery has occurred.
+independent metadata review by `01a0ba91-c18d-79e2-85c5-270016809f01` passed with
+no findings; it independently recomputed the matching digest and verified historical
+capability preservation. Terra/high requested; effective settings not exposed.
+Main integrated metadata without conflict at
+`1fa2dc4d7f850b5d05f30f7b912c8f92953af3b7`. Writer and reviewer completed and
+were confirmed idle; their results are preserved here for archival. Build Agent
+is released for signed stage and verified `dist/ReleaseRadar-0.1.23.dmg` packaging
+from that integrated source. No installation or live recovery has occurred.
 
 ## Owner deferral — second-Mac acceptance
 
