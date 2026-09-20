@@ -540,6 +540,36 @@ public struct RecognizedPluginCapability: Equatable, Sendable {
             normalizedPackageDigest: "1fc6a145ecde33dfab53d32dad6dc3897e9b90eff39cd17c3cea7eca5eaa81c2",
             sharedExecutionStandardVersions: [1]
         ),
+        Self(
+            manifestVersion: "0.1.22",
+            normalizedPackageDigest: "06e1dcc8f3f5efda400487cba566d7401dc8025dad7cbef75eedd8a6efe3fd10",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.23",
+            normalizedPackageDigest: "a30ca6f866d5d192f5c5396fa634ab20f716f043f5a8de601de36612ac60b85c",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.24",
+            normalizedPackageDigest: "91d4832283c38a4a0acb3af1c6618910e990859ec6c8ae4a8352260808eab251",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.25",
+            normalizedPackageDigest: "791ae2b6d18cf06fcec7e22f7c4c68080561800946d94d1885ed70a0e5bb2aa5",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.26",
+            normalizedPackageDigest: "9e23c922a4273449154699ec3063c3a3ecb8a35facf37de8be1e13d0eb7f793b",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.27",
+            normalizedPackageDigest: "3855b92985d62b2b87544ff0d35eeda8cb998c76b7d6e3a831b8099d20ba7107",
+            sharedExecutionStandardVersions: [1]
+        ),
     ]
 
     public static func recognize(

@@ -96,7 +96,8 @@ struct CodexPromptHandoff: Sendable {
         switch state {
         case let .legacy(guidance):
             switch guidance {
-            case .missing, .outdated: .repositoryBootstrap
+            case .missing: .repositoryBootstrap
+            case .outdated: .managedUpgrade
             case .needsRepair: .repositoryRepair
             case .handoffIncomplete: .handoffRepair
             case .current, .unavailable: nil

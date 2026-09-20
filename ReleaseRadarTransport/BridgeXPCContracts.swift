@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum ReleaseRadarBridgeTransport {
-    static let wireVersion = 2
+    static let wireVersion = 3
     static let commandEnvelopeVersion = 1
     static let maximumEnvelopeBytes = 131_072
     static let maximumLineBytes = 196_608
@@ -99,6 +99,41 @@ enum ReleaseRadarBridgeTransport {
     }
 }
 
+enum BridgeHandshakeStage: String, Codable, Equatable, Sendable { case connection, handshake }
+enum BridgeHandshakeEvent: Equatable, Sendable {
+    case reply(version: Int), timedOut(stage: BridgeHandshakeStage)
+    case transportFailure(stage: BridgeHandshakeStage), invalidProtocolResponse(stage: BridgeHandshakeStage)
+}
+enum BridgeHandshakeResult: Equatable, Sendable {
+    case compatible(wireVersion: Int), incompatible(expectedVersion: Int, observedPeerVersion: Int?)
+    case timeout(stage: BridgeHandshakeStage), transportFailure(stage: BridgeHandshakeStage)
+    case invalidProtocolResponse(stage: BridgeHandshakeStage)
+}
+
+final class BridgeHandshakeSettler: @unchecked Sendable {
+    private let lock = NSLock(); private let expectedWireVersion: Int; private var result: BridgeHandshakeResult?
+    init(expectedWireVersion: Int) { self.expectedWireVersion = expectedWireVersion }
+    func settle(_ event: BridgeHandshakeEvent) -> BridgeHandshakeResult {
+        lock.lock(); defer { lock.unlock() }
+        if let result { return result }
+        let resolved: BridgeHandshakeResult
+        switch event {
+        case let .reply(version) where version == expectedWireVersion: resolved = .compatible(wireVersion: version)
+        case let .reply(version): resolved = .incompatible(expectedVersion: expectedWireVersion, observedPeerVersion: version == 0 ? nil : version)
+        case let .timedOut(stage): resolved = .timeout(stage: stage)
+        case let .transportFailure(stage): resolved = .transportFailure(stage: stage)
+        case let .invalidProtocolResponse(stage): resolved = .invalidProtocolResponse(stage: stage)
+        }
+        result = resolved; return resolved
+    }
+}
+
+struct BridgeConnectionHealth: Codable, Equatable, Sendable {
+    let wireVersion: Int
+    let isRegisteredAppConnection: Bool
+    let lastAuthenticatedToolsContact: Date?
+}
+
 @objc(ReleaseRadarToolsBrokerXPC)
 protocol ReleaseRadarToolsBrokerXPC {
     func handshake(_ version: Int, withReply reply: @escaping (Int) -> Void)
@@ -115,6 +150,7 @@ protocol ReleaseRadarAppBrokerXPC {
     func registerApp(_ wireVersion: Int, withReply reply: @escaping (Int) -> Void)
     func registerContextEndpoint(_ wireVersion: Int, endpoint: NSXPCListenerEndpoint,
                                 withReply reply: @escaping (Int) -> Void)
+    func connectionHealth(_ wireVersion: Int, withReply reply: @escaping (Data) -> Void)
 }
 
 // Coordinator's broker connection cannot register RR or forward commands.

@@ -4,11 +4,20 @@ import Darwin
 private enum ToolFailure: Error, LocalizedError {
     case invalidRequest(String)
     case appUnavailable
+    case handshakeFailed(BridgeHandshakeResult)
 
     var errorDescription: String? {
         switch self {
         case let .invalidRequest(message): message
         case .appUnavailable: "Release Radar app is unavailable"
+        case let .handshakeFailed(result):
+            switch result {
+            case let .incompatible(expected, observed): "Release Radar bridge version mismatch (expected \(expected), observed \(observed.map(String.init) ?? "unknown")). The request was not submitted."
+            case let .timeout(stage): "Release Radar bridge handshake timed out during \(stage.rawValue). The request was not submitted."
+            case let .transportFailure(stage): "Release Radar bridge transport failed during \(stage.rawValue). The request was not submitted."
+            case let .invalidProtocolResponse(stage): "Release Radar bridge returned an invalid response during \(stage.rawValue). The request was not submitted."
+            case .compatible: "Release Radar bridge handshake failed. The request was not submitted."
+            }
         }
     }
 }
@@ -19,7 +28,7 @@ private final class BridgeClient: @unchecked Sendable {
 
     init() throws {
         guard let brokerRequirement = ReleaseRadarBridgeTransport.brokerRequirement else {
-            throw ToolFailure.appUnavailable
+            throw ToolFailure.handshakeFailed(.transportFailure(stage: .connection))
         }
 #if DEBUG
         requestedWireVersion = ProcessInfo.processInfo.environment["RELEASE_RADAR_WIRE_VERSION"]
@@ -34,9 +43,10 @@ private final class BridgeClient: @unchecked Sendable {
         connection.remoteObjectInterface = NSXPCInterface(with: ReleaseRadarToolsBrokerXPC.self)
         connection.setCodeSigningRequirement(brokerRequirement)
         connection.resume()
-        guard handshake() else {
+        let handshakeResult = handshake()
+        guard case .compatible = handshakeResult else {
             connection.invalidate()
-            throw ToolFailure.appUnavailable
+            throw ToolFailure.handshakeFailed(handshakeResult)
         }
     }
 
@@ -79,29 +89,42 @@ private final class BridgeClient: @unchecked Sendable {
         return response
     }
 
-    private func handshake() -> Bool {
+    private func handshake() -> BridgeHandshakeResult {
         let semaphore = DispatchSemaphore(value: 0)
-        let lock = NSLock()
-        var returnedVersion = 0
-        var failed = false
+        let settler = BridgeHandshakeSettler(expectedWireVersion: requestedWireVersion)
         guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
-            lock.lock()
-            failed = true
-            lock.unlock()
+            _ = settler.settle(.transportFailure(stage: .connection))
             semaphore.signal()
-        }) as? ReleaseRadarToolsBrokerXPC else { return false }
+        }) as? ReleaseRadarToolsBrokerXPC else { return .transportFailure(stage: .connection) }
         proxy.handshake(requestedWireVersion) { version in
-            lock.lock()
-            returnedVersion = version
-            lock.unlock()
+            _ = settler.settle(.reply(version: version))
             semaphore.signal()
         }
-        guard semaphore.wait(timeout: .now() + 5) == .success else { return false }
-        lock.lock()
-        defer { lock.unlock() }
-        return !failed && returnedVersion == requestedWireVersion
+        guard semaphore.wait(timeout: .now() + 5) == .success else { return settler.settle(.timedOut(stage: .handshake)) }
+        return settler.settle(.invalidProtocolResponse(stage: .handshake))
     }
 }
+
+#if DEBUG
+private final class AppHealthProbeGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private let semaphore = DispatchSemaphore(value: 0)
+    private var outcome: String?
+
+    func settle(_ value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard outcome == nil else { return }
+        outcome = value
+        semaphore.signal()
+    }
+
+    func wait() -> String {
+        guard semaphore.wait(timeout: .now() + 5) == .success else { return "timeout" }
+        return lock.withLock { outcome ?? "timeout" }
+    }
+}
+#endif
 
 private struct MCPServer {
     private var initialized = false
@@ -131,6 +154,18 @@ private struct MCPServer {
                   let name = params["name"] as? String,
                   let arguments = params["arguments"] as? [String: Any]
             else { return error(id: id, code: -32602, message: "Invalid tool arguments") }
+#if DEBUG
+            if ProcessInfo.processInfo.environment["RELEASE_RADAR_TEST_APP_HEALTH_PROBE"] == "1" {
+                guard name == "release_radar_transition_ticket" else {
+                    return error(id: id, code: -32602, message: "The fixed app-health probe accepts only the transition-ticket fixture call")
+                }
+                let outcome = Self.appHealthProbeOutcome()
+                return success(id: id, result: [
+                    "content": [["type": "text", "text": outcome]],
+                    "isError": outcome != "denied",
+                ])
+            }
+#endif
             do {
                 let envelope = try Self.makeEnvelope(tool: name, arguments: arguments)
                 let response: Data
@@ -138,6 +173,8 @@ private struct MCPServer {
                     response = try BridgeClient().forward(envelope)
                 } catch ToolFailure.appUnavailable {
                     response = ReleaseRadarBridgeTransport.appUnavailableResultData()
+                } catch let failure as ToolFailure {
+                    return error(id: id, code: -32001, message: failure.localizedDescription)
                 }
                 let isError = try Self.isDomainError(response)
                 return success(id: id, result: [
@@ -151,6 +188,29 @@ private struct MCPServer {
             return error(id: id, code: -32601, message: "Method not found")
         }
     }
+
+#if DEBUG
+    private static func appHealthProbeOutcome() -> String {
+        guard let brokerRequirement = ReleaseRadarBridgeTransport.brokerRequirement else { return "unavailable" }
+        let connection = NSXPCConnection(
+            machServiceName: ReleaseRadarBridgeTransport.appMachService,
+            options: []
+        )
+        connection.remoteObjectInterface = NSXPCInterface(with: ReleaseRadarAppBrokerXPC.self)
+        connection.setCodeSigningRequirement(brokerRequirement)
+        connection.resume()
+        defer { connection.invalidate() }
+
+        let gate = AppHealthProbeGate()
+        guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
+            gate.settle("denied")
+        }) as? ReleaseRadarAppBrokerXPC else { return "denied" }
+        proxy.connectionHealth(ReleaseRadarBridgeTransport.wireVersion) { data in
+            gate.settle(data.isEmpty ? "denied" : "unexpectedReply")
+        }
+        return gate.wait()
+    }
+#endif
 
     private static func makeEnvelope(tool: String, arguments: [String: Any]) throws -> Data {
         let version = try integer("version", in: arguments)

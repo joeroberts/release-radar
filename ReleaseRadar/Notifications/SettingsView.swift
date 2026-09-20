@@ -284,8 +284,21 @@ struct SettingsView: View {
             }
             RekonSectionPanel {
                 settingsSectionHeader("Agent action bridge", systemImage: "arrow.left.arrow.right")
-                Text("Typed, authenticated delivery actions are handled by the app and audited locally.")
-                    .foregroundStyle(RekonTheme.secondaryText)
+                LabeledContent("Status", value: model.connectorHealthStatus)
+                    .accessibilityIdentifier("connector-health-status")
+                Text(model.connectorHealthDetail)
+                    .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                Text(model.connectorLastContact)
+                    .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                    .accessibilityIdentifier("connector-health-contact")
+                Button(model.connectorHealthChecking ? "Checking connection…" : "Check connection") {
+                    Task { await model.refreshConnectorHealth() }
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(model.connectorHealthChecking)
+                .accessibilityIdentifier("connector-health-refresh")
+                Text("A connection check never retries an action. If a result is unknown, check the action's recorded outcome before taking further action.")
+                    .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
             }
             RekonSectionPanel {
                 settingsSectionHeader("Pushover", systemImage: "bell")
@@ -331,6 +344,17 @@ struct SettingsView: View {
             }
         }
         .onChange(of: model.codexPluginAnnouncement) { _, announcement in
+            guard let announcement else { return }
+            NSAccessibility.post(
+                element: NSApp as Any,
+                notification: .announcementRequested,
+                userInfo: [
+                    .announcement: announcement,
+                    .priority: NSAccessibilityPriorityLevel.high.rawValue,
+                ]
+            )
+        }
+        .onChange(of: model.connectorHealthAnnouncement) { _, announcement in
             guard let announcement else { return }
             NSAccessibility.post(
                 element: NSApp as Any,
@@ -404,12 +428,12 @@ struct SettingsView: View {
                     .accessibilityIdentifier("codex-plugin-retry")
             }
         }
-        Button("Restart helper") { Task { await model.restartCodexPluginHelper() } }
+        Button("Restart plugin helper") { Task { await model.restartCodexPluginHelper() } }
             .buttonStyle(RekonSecondaryButtonStyle())
             .disabled(!canRestartHelper)
             .accessibilityIdentifier("codex-plugin-restart-helper")
-            .accessibilityLabel("Restart helper")
-            .accessibilityHint("Re-registers the helper and refreshes plugin status without reinstalling the plugin.")
+            .accessibilityLabel("Restart plugin helper")
+            .accessibilityHint("Refreshes plugin management and plugin status without restarting the running connector.")
     }
 
     private func cancelPluginConfirmation() {

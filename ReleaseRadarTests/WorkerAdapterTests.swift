@@ -162,7 +162,8 @@ final class WorkerAdapterTests: XCTestCase {
             return try RPCObject([:])
         }
     }
-    private func fixture(primaryRoot: String? = nil, includeProgress: Bool = false) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
+    private func fixture(primaryRoot: String? = nil, includeProgress: Bool = false,
+                         role: ProjectExecutionAssignment.Role = .delivery, reviewScratchVersion: Int? = nil) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let store = try ProjectExecutionFileStore(root: root, create: true)
         let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "task-one")
@@ -187,15 +188,34 @@ final class WorkerAdapterTests: XCTestCase {
         policy.consent = .init(); policy.hookReceipt = .init(command: "\"" + handler + "\" --hook", inline: false, beforeDigest: nil, intendedDigest: String(repeating: "a", count: 64), installed: true)
         policy.codexContextID = codex.id
         try store.savePolicy(policy, expected: nil)
-        var assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .delivery,
+        var assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: role,
             permissionProfile: "rr-worker", model: "gpt-5.6-sol", effort: "high", authorization: "Implement the approved slice",
             context: contexts,
             excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
-            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: primary + "/.git", primaryRoot: primary))
+            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: primary + "/.git", primaryRoot: primary),
+            reviewScratchVersion: reviewScratchVersion)
         assignment.codexContextID = codex.id
         try store.saveAssignment(assignment, expected: nil)
         return (store, try WorkerPolicy(store: store, projectID: "project-one", taskID: "task-one"))
     }
+
+    func testImageViewingOverridesAreLimitedToReviewAssignments() throws {
+        let delivery = try fixture()
+        let review = try fixture(role: .review)
+
+        let deliveryOverrides = try delivery.policy.overrides(config: [:])
+        let reviewOverrides = try review.policy.overrides(config: [:])
+
+        XCTAssertEqual(deliveryOverrides["features.view_image"] as? Bool, false)
+        XCTAssertEqual(deliveryOverrides["tools.view_image"] as? Bool, false)
+        XCTAssertEqual(reviewOverrides["features.view_image"] as? Bool, true)
+        XCTAssertEqual(reviewOverrides["tools.view_image"] as? Bool, true)
+        XCTAssertEqual(reviewOverrides["features.image_generation"] as? Bool, false)
+        XCTAssertEqual(reviewOverrides["features.browser_use"] as? Bool, false)
+        XCTAssertEqual(reviewOverrides["web_search"] as? String, "disabled")
+        XCTAssertEqual(reviewOverrides["permissions.rr-worker.network.enabled"] as? Bool, false)
+    }
+
     func testSelectedHomeGlobalAndProjectGuidanceAdmitFirstTurnWithoutProgressInstructionSource() async throws {
         let valid = try fixture(includeProgress: true)
         let global = valid.store.root.appendingPathComponent("AGENTS.md")
@@ -317,6 +337,50 @@ final class WorkerAdapterTests: XCTestCase {
                 XCTAssertEqual($0 as? CodexExecutionContextError, .routingUnsupported)
             }
         }
+    }
+
+    func testReviewEffectiveProfilePermitsOnlyTaskLocalBuildScratch() throws {
+        let fixture = try fixture(role: .review, reviewScratchVersion: ProjectExecutionAssignment.xcodeBuildScratchVersion)
+        let assignment = fixture.policy.assignment
+        let paths = try ProjectExecutionPaths(storageRoot: fixture.store.root, projectID: "project-one", taskID: "task-one")
+        let fs = try ProjectExecutionPermissionProfile(assignment: assignment, policy: fixture.policy.policy, paths: paths).filesystemObject
+        XCTAssertEqual(fs[":workspace_roots"] as? [String: String], [
+            ".": "read", ".build": "write", ".codex": "deny",
+            ".git": "deny", ".codegraph": "deny", ".superpowers/sdd": "deny", "docs/delivery/archive": "deny"
+        ])
+        let profile: [String: Any] = ["filesystem": fs, "network": ["enabled": false]]
+        XCTAssertNoThrow(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: profile]]))
+
+        for extraWrite in ["DerivedData", "test-output"] {
+            var widenedRoots = try XCTUnwrap(fs[":workspace_roots"] as? [String: String])
+            widenedRoots[extraWrite] = "write"
+            var widenedFilesystem = fs; widenedFilesystem[":workspace_roots"] = widenedRoots
+            XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: [
+                "filesystem": widenedFilesystem, "network": ["enabled": false]
+            ]]]), extraWrite)
+        }
+        var widenedFilesystem = fs
+        widenedFilesystem[paths.checkout.appendingPathComponent("DerivedData").path] = "write"
+        XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: [
+            "filesystem": widenedFilesystem, "network": ["enabled": false]
+        ]]]))
+    }
+
+    func testLegacyReviewRuntimeResumeRejectsNewBuildScratchGrant() throws {
+        let fixture = try fixture(role: .review)
+        let assignment = fixture.policy.assignment
+        let paths = try ProjectExecutionPaths(storageRoot: fixture.store.root, projectID: "project-one", taskID: "task-one")
+        let legacy = try ProjectExecutionPermissionProfile(assignment: assignment, policy: fixture.policy.policy, paths: paths).filesystemObject
+        XCTAssertNil((legacy[":workspace_roots"] as? [String: String])?[".build"])
+        XCTAssertNoThrow(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: [
+            "filesystem": legacy, "network": ["enabled": false]
+        ]]]))
+        var widenedRoots = try XCTUnwrap(legacy[":workspace_roots"] as? [String: String])
+        widenedRoots[".build"] = "write"
+        var widened = legacy; widened[":workspace_roots"] = widenedRoots
+        XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: [
+            "filesystem": widened, "network": ["enabled": false]
+        ]]]))
     }
 
     func testEffectiveProfileAcceptsCodexConfigReadNullMetadataOnly() throws {

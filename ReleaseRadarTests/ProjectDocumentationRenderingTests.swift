@@ -7,6 +7,41 @@ import XCTest
 
 @MainActor
 final class ProjectDocumentationRenderingTests: XCTestCase {
+    func testOverviewMetricsCenterUntruncatedLongValuesAtWideAndCompactWidths() async throws {
+        let longPhaseName = "Phase 6: persistent workspace toolbar and project-management recovery"
+        let project = ProjectDashboardProjection(
+            id: .init(rawValue: "overview-metrics-rendering"),
+            name: "Overview metrics",
+            activePhaseName: longPhaseName,
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 12,
+            attentionCount: 3
+        )
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ProjectOverviewView(
+                    project: project,
+                    board: nil,
+                    documentationState: .legacy(.unavailable),
+                    projectRoot: nil,
+                    phaseSelectionStatus: .idle,
+                    openBoard: {},
+                    selectActivePhase: { _ in },
+                    reloadActivePhase: {},
+                    reauthorizeActivePhase: { _ in }
+                ),
+                name: "overview-metrics-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Active phase", "Current work", "Owner attention", longPhaseName, "12", "3"],
+                presentIdentifiers: [
+                    "overview-metric-active-phase", "overview-metric-current-work", "overview-metric-owner-attention",
+                ]
+            )
+        }
+    }
+
     func testProjectRemovalConfirmationAndRemovedHistoryAtWideAndCompactWidths() async throws {
         let projectID = ProjectID(rawValue: "project-removal-rendering")
         let registration = ProjectRegistration(
@@ -543,7 +578,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 expectedText: [
                     "Release Radar Codex Plugin",
                     "Installed",
-                    "Restart helper",
+                    "Restart plugin helper",
                     "Lifecycle helper restarted. Plugin status refreshed.",
                 ],
                 minimumElementSizes: ["codex-plugin-restart-helper": .init(width: 44, height: 24)]
@@ -557,7 +592,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             name: "codex-helper-restart-progress",
             width: 620,
             expected: nil,
-            expectedText: ["Restarting lifecycle helper", "Restart helper"],
+            expectedText: ["Restarting plugin helper", "Restart plugin helper"],
             disabledIdentifiers: ["codex-plugin-restart-helper"]
         )
         helperModel.codexPluginOperation = nil
@@ -842,9 +877,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(rootsInvocationCount, 1)
     }
 
-    func testOnboardingNativeCopyUsesTheSameExistingDocumentationBootstrapShownInPreview() async throws {
-        let directory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
+    func testOnboardingNativeCopyUsesTheManagedUpgradePromptForOutdatedGuidance() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
         let root = directory.appendingPathComponent("repository", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
@@ -878,9 +913,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             pressIdentifiers: ["onboarding-initialize-confirm", "onboarding-copy-codex-prompt"]
         )
 
-        XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
-        XCTAssertTrue(copied.localizedCaseInsensitiveContains("existing documentation"))
-        XCTAssertFalse(copied.contains("Require an existing catalogued"))
+        XCTAssertFalse(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+        XCTAssertTrue(copied.contains("Require an existing catalogued"))
     }
 
     func testPhase3ADocumentationCheckingAndFolderRecoveryAtWideAndCompactWidths() async throws {
@@ -1188,7 +1222,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
         pressTitles: [String] = [],
-        minimumElementSizes: [String: CGSize] = [:]
+        minimumElementSizes: [String: CGSize] = [:],
+        verifyAccessibility: @escaping (AXUIElement) throws -> Void = { _ in }
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
@@ -1241,6 +1276,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         let initialActual = accessibilityText(try XCTUnwrap(ownWindow))
+        try verifyAccessibility(try XCTUnwrap(ownWindow))
         for identifier in presentIdentifiers {
             XCTAssertNotNil(
                 accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),

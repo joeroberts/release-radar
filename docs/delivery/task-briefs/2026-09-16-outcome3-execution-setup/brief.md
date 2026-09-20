@@ -1,5 +1,64 @@
 # Outcome 3 project execution setup
 
+## September 19 approved task-mismatch preparation recovery correction
+
+Owner explicitly approved the bounded extension and isolated-task exception after exact request `9e4730d5-95a7-4829-80f0-e16f75934f83` again returned assignmentNotAuthorized without an audit, while fresh review5683 returned conflict. That request named metrics task02 with a task01 parent. The dispatcher persists outcomeUnknown before producer checks; raw parent-work mismatch bypasses the existing terminal no-effects settlement.
+
+Outcome: exact replay can settle this definite task-mismatch refusal only after proving request-scoped absence of assignment, worktree/branch/provisioning and profile/configuration effects. Keep partial, unreadable, reserved, live and genuinely uncertain outcomes pending. Preserve original request/body, audit history, registration/root/revision checks, replay and changed-body rejection, and single-flight settlement. No blanket error catch, force-clear, direct SQLite/control-file repair, new schema or broader permission grants.
+
+Scope: existing preparation coordinator/dispatcher proof path and focused repository-native regression tests; mutable execution design only if required. Preserve accepted ADRs and unrelated image candidate31ffcf72. Main owns ledger/brief/integration; fresh isolated delivery task owns source/tests, Sol/high for persistence/recovery risk, ceiling Astra/high only with named escalation. Baseline is the committed revision containing this section. Build Agent compiles/runs tests; writer authors failing regressions first and hands RED to Build Agent before implementing GREEN. Fresh independent Sol/high review covers recovery, authority, audit and compatibility. Prior chief constraints below remain controlling; no new public recovery contract is intended.
+
+Acceptance: historical mismatch exact replay gains a terminal audited refusal only with complete no-effects proof; fresh correct review can subsequently prepare; uncertain/resource-present cases stay blocked. Relevant existing recovery/authority regressions pass. No owner-state test writes; real request replay occurs only after reviewed signed local release.
+
+Endpoint: scoped local commit and review, then standing signed local release under dist and supported exact-request recovery. No push, PR, merge or owner acceptance is inferred. The isolated-task exception authorizes source delivery/review routing only, not bypassing runtime controls or editing application state.
+
+
+## September 19 approved review image capability correction
+
+- Outcome: enable native image viewing in managed review assignments so the existing metrics screenshots can receive independent visual review. Owner explicitly approved this capability; it supports `rr-p6-metrics-task-02` without changing its definition.
+- Scope: `ReleaseRadarCoordinator/WorkerPolicy.swift` and focused existing worker-policy tests; change only review-role image-viewing tool overrides. Delivery assignments retain their current setting. Preserve all filesystem, network, history, management, browser, image-generation and configuration restrictions. No live profile or governing instruction changes.
+- Dependencies: existing 0.1.24 permissions integration; preserved metrics renders. The image tool must respect the existing assigned read roots. If that cannot be established with current controls, report the specific risk; do not broaden filesystem access.
+- Assignment: one app-prepared delivery worker, Terra/medium, ceiling Sol/high only for a named ambiguity; baseline is the committed revision containing this section. Main owns this brief, ledger and integration; Build Agent owns compilation/test execution. No simultaneous canonical writers.
+- Checks: test-first focused policy coverage for review enabled and delivery disabled, retaining other denied capabilities. Build Agent executes native tests. One independent reviewer covers the authorization boundary and compatibility. After reviewed local release, verify native image viewing in a fresh managed review and finish the existing metrics visual review. Reviewers must not compile.
+- Acceptance: review tool available for permitted image files, delivery behavior unchanged, existing isolation maintained. No new public contract, storage schema or migration; preserve ADR-001 and existing execution authority.
+- Endpoint: scoped local commit, focused Build Agent checks, one independent security/code review and standing local release delivery under `dist/`. Publication of this correction is not included in PR #108 authorization. No RR acceptance is inferred.
+
+
+## September 19 owner-authorized managed build-permission correction
+
+Outcome: enable the focused macOS guidance tests in managed workers with scoped
+Xcode caches, temporary files and test fixtures. Owner explicitly approved this
+permission-boundary correction after the existing profile blocked all XCTest
+execution. Track as `rr-p6-managed-build-permissions` under the Outcome 3 goal;
+the guidance ticket remains blocked until direct verification succeeds.
+
+Assignment: app-prepared `delivery-115a2be4-b37c-452f-a828-f4e640932706`, baseline
+`3b1e27fec0a936aa52a1e3b64cca4da0393383b7`, Terra/medium as returned by the app.
+Own generated build-profile source, its immediate preparation/verification
+integration, bounded test fixtures and focused regression tests. Main owns Git
+integration, this brief and progress ledger. Preserve all unrelated changes.
+
+Use task-owned scratch paths where supported. Do not grant general home, sibling,
+Git-history, application database, authority/configuration writes or management
+tools; do not enable unrestricted network or an unrestricted worker. Preserve
+read-only review source access, STOP and runtime approval behavior. Do not edit
+live generated profiles or install an unverified candidate to test itself.
+
+Acceptance: focused macOS tests can execute using the generated bounded capability;
+direct negative checks retain isolation, and effective runtime settings match the
+intended profile. Verify source changes with repository-native profile tests and
+the actual Xcode failure scenario. One independent review must cover security,
+compatibility and recovery. Source-only review does not establish runtime success.
+Existing accepted ADRs remain immutable; update the owning mutable execution
+design only if the implemented behavior requires it. Report any bootstrap barrier
+precisely without substituting an unrestricted execution path.
+
+Endpoint: scoped reviewed candidate and ordinary local release delivery once
+checks pass, under standing authorization. Preserve dist installer requirements;
+no merge or unrelated app-state mutation. The permission correction is the only
+newly authorized scope; existing guidance candidate `950aa6ea` is preserved for
+subsequent integration and verification.
+
 ## September 19 owner-approved bootstrap exception — catalog diagnostics
 
 The owner approved a narrowly scoped bootstrap exception after catalog acceptance blocked managed-worker admission. This supersedes the alternate-task prohibition below only for implementing and independently reviewing this diagnostic fix. It does not authorize direct AgentTools invocation, direct database access, catalog reset/rebinding, relaxed validation, trust/configuration changes, or unrelated implementation.
@@ -34,9 +93,9 @@ Release 0.1.20 package/signature and prior product/UI checks retain their actual
 
 ### Assignment, authority and endpoint
 
-Standard: shared-execution/1, installed skill 0.1.20 read. Main owns these records and coordination; no product implementation by Main. Documentation baseline: `47bfd29ac7ba2b3c5cd07b051f82145566099ff0` on `codex/outcome3-merge-closeout`, based on merged `5cb47f8dde09032a71a5d003ab41ac0e1c8720cf`. Documentation checkout: `/Users/jroberts/.codex/worktrees/outcome3-merge-closeout`; canonical project: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`. Preserve the canonical untracked config and all branches/worktrees/artifacts.
+Standard: shared-execution/1; installed tracking and shared-execution skills 0.1.22 read. Main owns records and coordination; no product implementation by Main. Current canonical project and ledger root: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`, branch `codex/connector-recovery-baseline`. Integration baseline `6652228c` combines installed 0.1.22 source `47b86b89` and current delivery records; product-source comparison is empty. Prepare the managed assignment from the committed HEAD containing this brief. The former documentation checkout and all branches/worktrees/artifacts remain preserved, including unrelated untracked canonical configuration.
 
-Implementation assignment remains uncreated until records validation and a working supported assignment route. Use Sol/high for this bounded cross-component recovery, ceiling Astra/high only for a named unresolved boundary. Required independent reviewer: fresh context, Sol/high, covering XPC/signing, recovery and user guidance; independent UI QA must verify the running flow. No direct-helper fallback or alternate full-access task may substitute for failed connector/worker admission. Do not assume effective settings; verify them through the supported worker status.
+Implementation remains unstarted. The supported route fixes delivery to Terra/medium and review to Terra/high; the earlier Sol/high preference was not an available runtime selection. Use a bounded managed implementation after the standing Chief architecture consultation (Astra/high) resolves the named XPC trust/recovery contract. Build Agent 02 executes compilation and RED/GREEN tests; the managed writer authors tests and product changes, and RO remains read-only. Required independent review has fresh context and covers XPC/signing, recovery and user guidance; independent UI QA verifies the running flow. Report actual worker settings and any review-capacity limitation. No profile/configuration change, direct-helper fallback or alternate full-access implementation may substitute for failed managed admission. The default escalation ceiling remains Astra/high for a named unresolved boundary.
 
 Authorized endpoint: issue and durable records now; after validation, scoped correction, tests, independent review, commits and PR; owner merges. Existing release authorization applies only after applicable verification. Live owner-data reconstruction, SQLite writes outside the app, permission/trust changes, direct helper invocation, broad process killing, notarization and unrelated publication are excluded. A supported reconnect must be identified before use; if unavailable, report the precise owner action rather than inventing a workaround.
 
@@ -54,7 +113,259 @@ Preserve accepted ADR-001/002 boundaries and existing typed XPC contracts. Resol
 
 ### Record validation status
 
-Pending repository check and independent review. GitHub issue and these records are the concrete scope; proposed recovery behavior is not completion evidence. Connector currently returned appUnavailable; application synchronization is not claimed. Implementation has not begun.
+Canonical packaged documentation check passed after baseline integration. Following the owner's Codex restart, the original supported connector returned complete inventory for the exact project/root/registration generation 1: recovery ticket In Progress, task-plan revision 1, all three tasks pending; phase lifecycle revision 1. Chief architecture consultation is complete; apply the September 19 connector recovery contract in `docs/design/release-radar-codex-plugin-lifecycle-design.md`. Build Agent verified Xcode/RDS prerequisites; build the repository-native offline libgit2 prerequisite in the assigned checkout before tests. No compilation has occurred. GitHub issue and this brief retain the full scope; implementation, independent correction review and recovery acceptance remain incomplete.
+
+### Connector implementation preparation — committed
+
+Prepared on baseline `6197c062`; audit `209E53C6-FC38-456C-A1C1-5FB5822C524C`.
+Assignment `delivery-f3be516e-32db-430d-9cae-b8925bd013a5` started as worker
+`61226F01-A079-4841-A1C6-E910D4334205`, task `01a0b9f3-c324-70b3-a1d4-58bcea51940e`.
+Exact committed request (do not repeat):
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "f3be516e-32db-430d-9cae-b8925bd013a5",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reason": "Implement authorized connector recovery and truthful connection health under the September 19 contract; managed writer authors tests/code, Build Agent runs compilation/tests, preserve trust and no replay."
+}
+```
+
+### Connector candidate review preparation — committed
+
+Candidate `6813481a`; delivery connection physically closed. Preparation committed
+after preserving ignored build artifacts outside the candidate checkout; audit
+`F9840213-6091-4181-AAEB-6F0D256A2DAA`. Review worker
+`54AC194D-2FB1-4013-BBB0-2B34FEE4D30A` is active, Terra/high readOnly.
+Known compilation failure and remaining runtime checks are disclosed to the reviewer.
+Exact committed request (do not repeat):
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "ea02165d-fe26-440c-882e-802782ea9a4f",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-f3be516e-32db-430d-9cae-b8925bd013a5",
+  "reason": "Independent source review of candidate6813481a for connector trust, recovery, health truthfulness and UI guidance; no compilation or app-state authority."
+}
+```
+
+### Connector correction preparation — committed
+
+Prepared from candidate `6813481a`, audit `17F0166F-A692-484D-BEB4-B5B96E66A429`;
+worker `D85C606C-0787-4D40-9BBA-859FBFD8D4C4` started Terra/medium.
+Exact committed request (do not repeat):
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "a5805a7c-65c8-4170-8cca-c9ae4d557cf8",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-f3be516e-32db-430d-9cae-b8925bd013a5",
+  "reason": "Required corrections to candidate6813481a in the same connector recovery scope; first fix compile failure, then apply independent review findings, Build Agent runs checks."
+}
+```
+
+### Connector corrected-candidate review — committed
+
+Candidate `be5d916f`; delivery connection physically closed and outputs preserved.
+Preparation audit `2A85BD36-7995-456D-8305-BEBB3CD9DE22`; review worker
+`6838D734-2251-4DD4-8BC6-3A4FE64B39FC`, task `01a0ba22-83e0-7733-b70b-31873a10144e`.
+Verified Terra/high readOnly. Exact committed request (do not repeat):
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "6501f8c9-9bb9-4219-a76e-428899269f95",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-a5805a7c-65c8-4170-8cca-c9ae4d557cf8",
+  "reason": "Review required connector corrections in be5d916f, including truthful invalidation/version health and bounded Debug-only authorization fixture; compilation/two non-service tests passed, runtime acceptance pending."
+}
+```
+
+### Connector health race correction — active
+
+Review of `be5d916f` requires eliminating stale Available return after generation
+validation/publication races, and exercising native interruption/restart handlers.
+Other reviewed corrections passed source inspection, not runtime acceptance.
+Prepared audit `14E5E8B6-F22C-4BF1-AE38-5D5ECB59570E`; worker
+`B6E2E4F6-6C49-419D-A267-62270270E6EF`, task
+`01a0ba2a-a054-7840-9705-c218cf5b61de`, verified Terra/medium,
+workspaceWrite with network disabled. Baseline `be5d916f`.
+Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "792db90d-04fa-4a30-9216-5554844a21f9",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-a5805a7c-65c8-4170-8cca-c9ae4d557cf8",
+  "reason": "Correct independently identified late-health-result race in be5d916f and add native interruption/restart regression within the existing connector recovery contract."
+}
+```
+
+### Connector health race correction review — pending
+
+Candidate `ff0d29b2`; delivery connection physically closed, task archived,
+source and build outputs preserved. Exact preparation request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "65e95d64-1290-44d3-a504-114728d722f1",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-792db90d-04fa-4a30-9216-5554844a21f9",
+  "reason": "Review ff0d29b2 health freshness correction and native fixture interruption restart scenario; compilation and two non-service tests passed, native runtime acceptance pending."
+}
+```
+
+### Connector regression coverage correction — pending
+
+Independent review of `ff0d29b2` confirms production health ordering and signing.
+Required test corrections: native regression bypasses app-services publication;
+unbounded refresh/presentation signals can hang and prevent fixture cleanup.
+Exercise the production service path with the smallest test seam and bound all
+waits/teardown. No optional findings or new product scope. Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "9d3d0a04-16e2-4166-8551-184623f2e1cc",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-792db90d-04fa-4a30-9216-5554844a21f9",
+  "reason": "Correct ff0d29b2 regression coverage to exercise app-services publication and guarantee bounded test wait and teardown; production ordering passed source review."
+}
+```
+
+### Connector services regression review — pending
+
+Candidate `191d1373`; delivery connection closed and task archived. Two
+non-service tests and signed build-for-testing passed. Outputs preserved under
+canonical `.build/connector-recovery-191d1373-preserved/`. Native execution pending.
+Exact review request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "8842219a-b3e9-4858-9ca2-795a6c532850",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reviewOfAssignmentID": "delivery-9d3d0a04-16e2-4166-8551-184623f2e1cc",
+  "reason": "Review 191d1373 required services-path regression and bounded synchronization corrections; signed build-for-testing and two non-service tests passed, clean-account native execution pending."
+}
+```
+
+### Fresh account native test handoff — prepared, not executed
+
+Owner created `rekon-test` (UID503) and completed first GUI login. Build Agent
+staged only the signed Build products for `191d1373` at temporary
+`/Users/Shared/ReleaseRadar-connector-191d1373/DerivedData/Build` (353 MB).
+Copied app deep/strict and bridge/tool strict signature checks passed; runfile
+format 2 uses macro paths, with no source repository path. Standard read/execute
+modes preserved; no permission/account/service change. Original outputs remain
+in canonical `.build/connector-recovery-191d1373-preserved/`. Preserve both.
+Run from Terminal inside the test GUI account, with Release Radar closed:
+
+```sh
+mkdir -p "$HOME/ReleaseRadar-test-results" &&
+xcodebuild test-without-building \
+  -xctestrun /Users/Shared/ReleaseRadar-connector-191d1373/DerivedData/Build/Products/ReleaseRadar_ReleaseRadar_macosx26.5-arm64.xctestrun \
+  -destination 'platform=macOS,arch=arm64' \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/AgentBridgeTransportAcceptanceTests/testFixtureBrokerRestartCannotRestoreStaleAvailableHealthInTheApp \
+  -resultBundlePath "$HOME/ReleaseRadar-test-results/rr-p6-fixture-broker-restart.xcresult"
+```
+
+This runs the fixture-owned broker interruption/restart case only; no signed
+upgrade or original retained Codex connector acceptance is inferred. Review of
+services-path/cleanup correction remains in progress. No runtime result yet.
+
+### Approved UI assertion correction — pending
+
+Owner approved only stale helper label/progress assertions before packaging.
+Second-Mac acceptance remains deferred; production source review remains terminal.
+Exact request:
+
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "ca3e18cb-082e-46f7-9900-d8b3c861a54e",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-9d3d0a04-16e2-4166-8551-184623f2e1cc",
+  "reason": "Owner approved correcting four stale helper label/progress assertions before packaging; second-Mac acceptance remains deferred. No product behavior change."
+}
+```
 
 ## September 18 hook update, removal and explicit recovery acceptance
 
@@ -2208,3 +2519,143 @@ Build Agent directly verified the four initial regressions failed before product
 CMake was unavailable in fresh dependency preparation. Build Agent reused the previously verified pinned arm64 libgit2 artifact after exact archive/source-pin matching and extracted pinned headers locally; no dependency change or install/download. Native runners exited; Build Agent reported zero remaining worktree test processes. Temporary build logs/result bundles and ignored .build/DerivedData are retained, excluded from staging, with no deletion authorized. Independent containment/recovery review and scoped commit remain pending; Main retains signed runtime acceptance and canonical integration.
 
 RO04's single fresh independent reviewer 01a0b401 completed review of the full six-file candidate atop 355d27ca: Required none, Optional none. It verified directory containment, fresh/exact-recovery identities and freshness, and unchanged permitOwnedTrust:false; source/tests require no correction. Review is terminal. The authorized scoped commit proceeds through Build Agent after final documentation/diff checks; Main retains canonical integration, signed installation and same-request 67a32 runtime acceptance. Hook-discovery preparation does not itself establish assignment admission or host/runtime delegation approval.
+
+## Approved connector release metadata — September 19
+
+Owner approved stale UI assertion corrections before packaging; those passed.
+Prepare only 0.1.23 version metadata and matching established packaging gates.
+Main owns Git/ledger; Build Agent owns native build/package/sign/install checks.
+Preserve signing, entitlement, trust and protocol controls; no broker/account tests.
+Second-Mac acceptance remains deferred and unverified.
+
+Exact pending preparation envelope:
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "45a9dcbd-058c-4f47-a1b4-aedb87022f6a",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-ca3e18cb-082e-46f7-9900-d8b3c861a54e",
+  "reason": "Prepare approved 0.1.23 local release metadata after tested helper assertion correction; second-Mac acceptance remains deferred."
+}
+```
+
+### Plugin version consistency correction
+
+Prior release writer closed, partial metadata committed as6690634c. Complete
+plugin manifest0.1.23, recognized capability digest preserving previous versions,
+and matching existing lifecycle/shared-skill tests. No skill contents, signing
+policy, configuration or feature changes. Main reviews the literal metadata diff;
+Build Agent runs affected checks and packaging. Second-Mac acceptance deferred.
+
+Exact pending preparation:
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "a81c6fc2-a5ac-4fe5-b1be-da70c2ff33db",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "baselineFromAssignmentID": "delivery-45a9dcbd-058c-4f47-a1b4-aedb87022f6a",
+  "reason": "Complete approved 0.1.23 release metadata consistency: bundled plugin manifest, recognized digest and corresponding existing tests only."
+}
+```
+
+### Owner-approved retirement and resumed release preparation
+
+Retired only45a9dcbd via Manage Project; branch, commits and artifacts preserved.
+Prior conflicting requesta81c6fc2 not executed and superseded. Integrated6690634c.
+Fresh canonical baseline request:
+```json
+{
+  "version": 1,
+  "projectID": "project-fffdc0e0b15b9b86",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "requestID": "f9fe67ac-d7c8-48c7-b023-6eb831a29c64",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "ticketID": "rr-p6-connector-recovery",
+  "taskID": "rr-p6-connector-recovery-task-02",
+  "reason": "Complete approved 0.1.23 plugin release metadata from integrated canonical baseline after owner-approved stopped-worker retirement."
+}
+```
+
+## Owner-authorized preparation recovery exception — September 19
+
+Objective: safely resolve failed execution preparation requests, including the
+current conflict/retired-parent dead end, without losing uncertain outcomes or
+audited history. Owner explicitly permits an isolated Codex delivery task outside
+RR's blocked launcher solely for this repair. This is not a general bypass.
+
+Standard: shared-execution/1, installed skill read and available to Main.
+Root: canonical release_radar; delivery task uses its own exact isolated checkout.
+Baseline: canonical branch codex/connector-recovery-baseline after this brief commit.
+Scope: execution preparation dispatcher/coordinator, minimal supported recovery
+operation or UI only if necessary, owning mutable design and focused regressions.
+Preserve accepted ADRs, runtime signing, authorization and configuration. No direct
+owner database/control-file editing, deletion of receipts, automatic replay of
+uncertain effects, alternate task identities, unrelated permission repair or
+second-Mac/account tests. Packaging metadata completion remains separate.
+
+Current evidence: original a81c6fc2 request returned conflict then, after expressly
+approved retirement of parent45a9dcbd, exact replay returned assignmentNotAuthorized.
+Fresh f9fe67ac request returned conflict. Dispatcher writes outcomeUnknown intent
+before preparer invocation; outer errors do not settle it, and other requests are
+blocked by unresolved intents. Treat persisted cause as unverified until supported
+readback establishes it. Known request envelopes are above; preserve them.
+
+Acceptance: definite pre-execution refusal does not permanently strand work;
+uncertain/partially prepared/live work remains blocked with accurate recovery;
+exact replay and changed-body rejection remain correct; retired-parent requests
+can reach an explicit audited terminal disposition through supported app behavior
+without replaying effects or fabricating successful preparation; current-work,
+root/registration/revision and physical-closure checks remain enforced.
+
+Test strategy: writer authors focused regression tests first; Build Agent runs
+RED then GREEN against exact checkout and relevant existing producer/dispatcher
+tests. No owner-state tests. Independent reviewer covers recovery, authority,
+persistence/audit and public-contract risks in one fresh context; consult chief
+architecture for cross-component recovery contract. UI QA only if a UI changes.
+
+Assignment: delivery Sol/high for ambiguity and persistence/recovery risk, ceiling
+Astra/high if specifically justified. Main owns ledger and integration; writer owns
+scoped source/tests/design. Build Agent owns compilation/tests, not implementation.
+Endpoint: reviewed scoped local commit, then existing authorized release workflow
+and exact supported live recovery after validation. No external merge/acceptance.
+Architectural references: ADR-001 and ADR-002 boundaries remain controlling;
+existing execution setup contract and plugin lifecycle design own mutable details.
+No new schema or breaking contract unless demonstrably necessary and surfaced.
+
+### Chief preparation-recovery constraints
+
+Keep the existing prepare command and audited receipt lifecycle. Error categories
+are not certainty: terminalize only an explicitly proven no-effects refusal, never
+a generic caught conflict. Exact terminal-error replay returns the stored outcome
+without preparing again; changed-body reuse stays rejected. Preserve original
+request/body/scope, intent history and an appended atomic resolution audit.
+Historical pending replay requires authoritative request-scoped absence of assignment,
+worktree/branch/provisioning and profile/configuration effects; missing assignment
+alone is insufficient. Unreadable, partial, live, reserved or uncertain evidence
+stays pending. Retired-parent recovery must retain the original parent/request and
+never replay effects. Extend existing single-flight ownership through settlement
+and finalization; no SQLite transaction across async work. No external force-clear
+operation, new schema or UI is needed if internal exact-replay recovery suffices.
+Test historical no-effects recovery, partial resources/unreadable state, concurrent
+requests, failed resolution commit, and existing authority/replay guarantees.
+Chief source advice is terminal; independent implementation review remains required.

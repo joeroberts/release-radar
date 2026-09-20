@@ -61,6 +61,38 @@ final class ExecutionWorktreeTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: fixture.checkout.appendingPathComponent("owner.txt"), encoding: .utf8), "keep")
     }
 
+    func testPreparationResourceInspectionCoversAbsentBranchWorktreeCheckoutAndInvalidState() throws {
+        let fixture = try fixture()
+        let provisioner = LibGit2WorktreeProvisioner()
+        let absent = fixture.checkout.deletingLastPathComponent().appendingPathComponent("absent")
+        XCTAssertFalse(try provisioner.hasPreparedResources(primaryRoot: fixture.root, checkout: absent,
+            projectID: "project-one", taskID: "absent"))
+
+        let tree = try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout,
+            projectID: "project-one", taskID: "task-one", baseline: fixture.baseline)
+        XCTAssertTrue(try provisioner.hasPreparedResources(primaryRoot: fixture.root, checkout: fixture.checkout,
+            projectID: "project-one", taskID: "task-one"), "A registered worktree is a preparation effect")
+        try provisioner.remove(primaryRoot: fixture.root, worktree: tree, projectID: "project-one", taskID: "task-one")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.checkout.path))
+        XCTAssertTrue(try provisioner.hasPreparedResources(primaryRoot: fixture.root, checkout: fixture.checkout,
+            projectID: "project-one", taskID: "task-one"), "The retained branch is still a preparation effect")
+
+        let checkoutOnly = fixture.checkout.deletingLastPathComponent().appendingPathComponent("checkout-only")
+        try FileManager.default.createDirectory(at: checkoutOnly, withIntermediateDirectories: true)
+        XCTAssertTrue(try provisioner.hasPreparedResources(primaryRoot: fixture.root, checkout: checkoutOnly,
+            projectID: "project-one", taskID: "checkout-only"), "An orphaned checkout path must fail closed")
+
+        let aliased = fixture.checkout.deletingLastPathComponent().appendingPathComponent("aliased")
+        try FileManager.default.createSymbolicLink(at: aliased, withDestinationURL: fixture.root)
+        XCTAssertThrowsError(try provisioner.hasPreparedResources(primaryRoot: fixture.root, checkout: aliased,
+            projectID: "project-one", taskID: "aliased"), "A symlinked resource path cannot prove absence")
+        let notRepository = fixture.root.deletingLastPathComponent().appendingPathComponent("not-a-repository")
+        try FileManager.default.createDirectory(at: notRepository, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try provisioner.hasPreparedResources(primaryRoot: notRepository,
+            checkout: notRepository.appendingPathComponent("worktree"), projectID: "project-one", taskID: "unreadable"),
+            "Unavailable Git metadata cannot prove absence")
+    }
+
     func testUntrackedDataAndWrongCommonGitIdentityCannotBePruned() throws {
         let fixture = try fixture(); let provisioner = LibGit2WorktreeProvisioner()
         let tree = try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline)

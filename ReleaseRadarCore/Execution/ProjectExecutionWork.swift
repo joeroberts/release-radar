@@ -42,10 +42,30 @@ public struct ProjectExecutionWork: Codable, Equatable, Sendable {
     }
 }
 
+/// Internal signal only: the coordinator reached a refusal before this attempt
+/// created request-owned resources. A historical pending receipt still requires
+/// an authoritative no-effects inspection before it can be settled.
+enum ProjectExecutionPreparationFailure: Error {
+    case noEffectsCandidate(ProjectExecutionError)
+
+    var error: ProjectExecutionError {
+        switch self { case let .noEffectsCandidate(error): error }
+    }
+}
+
 public protocol ProjectExecutionAssignmentPreparing: Sendable {
     func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment
     func revokePreparation(_ assignment: ProjectExecutionAssignment) throws
     func readCurrent(project: AuthorizedProject, assignmentID: String) async throws -> ProjectExecutionAssignment
     func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
                  reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment
+    func verifyNoPreparationEffects(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
+                                    reviewOfAssignmentID: String?, baselineFromAssignmentID: String?) async throws -> Bool
+    func finishPreparation(work: ProjectExecutionWork, requestID: UUID) async
+}
+
+public extension ProjectExecutionAssignmentPreparing {
+    func verifyNoPreparationEffects(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
+                                    reviewOfAssignmentID: String?, baselineFromAssignmentID: String?) async throws -> Bool { false }
+    func finishPreparation(work: ProjectExecutionWork, requestID: UUID) async {}
 }

@@ -8,7 +8,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     private let configuration: any ProjectExecutionConfiguring
     private let provisioning: any ExecutionWorktreeProvisioning
     private let handlerPath: String
-    private var preparing: Set<String> = []
+    private var preparing: [String: UUID] = [:]
 
     public init(root: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
                 configuration: any ProjectExecutionConfiguring, handlerPath: String,
@@ -29,6 +29,27 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     private nonisolated static func policyDigest(_ policy: ProjectExecutionPolicy) throws -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         return SHA256.hash(data: try encoder.encode(policy)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private nonisolated static func isClosedTaskMismatch(
+        parent: ProjectExecutionAssignment,
+        requestedWork: ProjectExecutionWork,
+        registration: ProjectRegistration,
+        parentCheckoutPath: String,
+        primaryRoot: String,
+        reviewOfAssignmentID: String?
+    ) -> Bool {
+        guard let parentWork = parent.work else { return false }
+        return parent.registration == registration
+            && parentWork.projectID == requestedWork.projectID
+            && parentWork.ticketID == requestedWork.ticketID
+            && parentWork.taskID != requestedWork.taskID
+            && parent.state == .closed
+            && parent.retirement == nil
+            && parent.sessionID != nil
+            && parent.checkoutPath == parentCheckoutPath
+            && parent.worktree?.primaryRoot == primaryRoot
+            && (reviewOfAssignmentID == nil || parent.role == .delivery)
     }
 
     /// Called synchronously by the app while its final current-work transaction
@@ -71,15 +92,70 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     public func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
                         reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
         let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
-        guard preparing.insert(key).inserted else { throw ProjectExecutionError.conflict }
-        defer { preparing.remove(key) }
+        guard preparing[key] == nil else { throw ProjectExecutionError.conflict }
+        preparing[key] = requestID
         do {
             let result = try await prepareOperation(project: project, work: work, requestID: requestID,
                 reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID, contextPaths: contextPaths)
             try await configuration.finishConfiguration()
             return result
         } catch {
-            let failure = error; try await configuration.finishConfiguration(); throw failure
+            let failure = error
+            do { try await configuration.finishConfiguration() }
+            catch {
+                if preparing[key] == requestID { preparing.removeValue(forKey: key) }
+                throw error
+            }
+            if !(failure is ProjectExecutionPreparationFailure), preparing[key] == requestID {
+                preparing.removeValue(forKey: key)
+            }
+            throw failure
+        }
+    }
+
+    public func finishPreparation(work: ProjectExecutionWork, requestID: UUID) async {
+        let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
+        if preparing[key] == requestID { preparing.removeValue(forKey: key) }
+    }
+
+    public func verifyNoPreparationEffects(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
+                                           reviewOfAssignmentID: String?, baselineFromAssignmentID: String?) async throws -> Bool {
+        let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
+        guard preparing[key] == requestID, let registration = project.registration,
+              work.projectID == project.projectID,
+              reviewOfAssignmentID == nil || baselineFromAssignmentID == nil else { return false }
+        let store = try ProjectExecutionFileStore(root: root(), create: false)
+        let policy = try store.policy(projectID: project.projectID.rawValue)
+        guard policy.registration == registration, policy.primaryRoot == project.canonicalRoot.path,
+              policy.enabled, policy.bindingRecoveryPending != true else { return false }
+        let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review
+        let id = role.rawValue + "-" + requestID.uuidString.lowercased()
+        let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: id)
+        guard try store.assignmentIfPresent(projectID: project.projectID.rawValue, taskID: id) == nil,
+              try !provisioning.hasPreparedResources(primaryRoot: project.canonicalRoot, checkout: paths.checkout,
+                projectID: project.projectID.rawValue, taskID: id) else { return false }
+        if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
+            let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
+                projectID: project.projectID.rawValue, taskID: parentID)
+            let retiredParent = parent.registration == registration && parent.work == work && parent.state == .superseded
+                && parent.retirement?.completed == true && parent.retirement?.connectionCloseUncertain != true
+                && parent.checkoutPath == parentPaths.checkout.path && parent.worktree?.primaryRoot == policy.primaryRoot
+                && (reviewOfAssignmentID == nil || parent.role == .delivery)
+            guard retiredParent || Self.isClosedTaskMismatch(parent: parent, requestedWork: work,
+                registration: registration, parentCheckoutPath: parentPaths.checkout.path,
+                primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID) else { return false }
+        }
+        do {
+            try await configuration.useCodexContext(policy.codexContextID)
+            let profileExists = try await configuration.workerProfileExists(primaryRoot: policy.primaryRoot,
+                profileID: "rr-" + id)
+            try await configuration.finishConfiguration()
+            return !profileExists
+        } catch {
+            let failure = error
+            try await configuration.finishConfiguration()
+            throw failure
         }
     }
 
@@ -94,6 +170,16 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
               policy.handlerPath == handlerPath, policy.appServerExecutable == CodexExecutionIdentity.executable,
               policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(), policy.hookReceipt?.installed == true,
               policy.hookReceipt?.command == "\"" + handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
+        if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
+            let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
+                projectID: project.projectID.rawValue, taskID: parentID)
+            if Self.isClosedTaskMismatch(parent: parent, requestedWork: work, registration: registration,
+                parentCheckoutPath: parentPaths.checkout.path, primaryRoot: policy.primaryRoot,
+                reviewOfAssignmentID: reviewOfAssignmentID) {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
+        }
         try await configuration.useCodexContext(policy.codexContextID)
         try await configuration.validateInstallation(handlerPath: handlerPath)
         let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review
@@ -105,6 +191,16 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             $0.retirement?.completed != true && $0.retirement?.replacementAllowed != true &&
             ($0.uncertainOutcome == true || $0.state == .unknown || ($0.sessionID != nil || $0.launchReserved == true) && $0.connectionClosed != true && $0.state != .closed)
         }) else { throw StoreError.unavailable("Close and explicitly retire the previous registration's worker resources in project settings before preparing replacement work. Its unresolved outcome is preserved.") }
+        if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
+            let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
+            if parent.registration == registration, parent.work == work, parent.state == .superseded,
+               parent.retirement?.completed == true, parent.retirement?.connectionCloseUncertain != true,
+               parent.checkoutPath == parentPaths.checkout.path, parent.worktree?.primaryRoot == policy.primaryRoot,
+               reviewOfAssignmentID == nil || parent.role == .delivery {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
+        }
         if let existing = inventory.first(where: { $0.id == id }) {
             guard existing.codexContextID == policy.codexContextID, existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
@@ -155,7 +251,8 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 permissionProfile: "rr-" + id, model: "gpt-5.6-terra", effort: role == .review ? "high" : "medium",
                 authorization: authorization, context: contexts,
                 excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive", tree.commonGitDirectory, policy.primaryRoot],
-                worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID)
+                worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID,
+                reviewScratchVersion: role == .review ? ProjectExecutionAssignment.xcodeBuildScratchVersion : nil)
             assignment.codexContextID = policy.codexContextID
             try assignment.verifyContext() // Pins must match committed checkout, not dirty primary edits.
             try reader.verifyStable()
