@@ -301,14 +301,14 @@ verify_bundle() {
     if ! version="$(bundle_version "$bundle")" || [[ -z "$version" ]]; then report_error "missing bundle version"; return 1; fi
     case "$role" in
         candidate)
-            if ! require_value "$version" "0.1.28" "candidate version"; then return 1; fi
+            if ! require_value "$version" "0.1.29" "candidate version"; then return 1; fi
             ;;
         prior-destination)
             case "$version" in
                 0.1.7|0.1.8|0.1.9|0.1.10|0.1.11|0.1.12|0.1.13|0.1.14|0.1.15|0.1.16|0.1.17|0.1.18)
                     requires_coordinator=false
                     ;;
-                0.1.19|0.1.20|0.1.21|0.1.22|0.1.23|0.1.24|0.1.25|0.1.26|0.1.27|0.1.28) ;;
+                0.1.19|0.1.20|0.1.21|0.1.22|0.1.23|0.1.24|0.1.25|0.1.26|0.1.27|0.1.28|0.1.29) ;;
                 *) report_error "unsupported prior destination version $version"; return 1 ;;
             esac
             ;;
