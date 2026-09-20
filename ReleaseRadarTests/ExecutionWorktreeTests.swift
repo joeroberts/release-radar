@@ -117,6 +117,34 @@ final class ExecutionWorktreeTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.checkout.path))
         XCTAssertEqual(try head(at: fixture.checkout).revision, fixture.baseline)
     }
+
+    func testIgnoredBuildArtifactsDoNotBlockCandidateRevision() throws {
+        let fixture = try fixture(); let provisioner = LibGit2WorktreeProvisioner()
+        let tree = try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout,
+            projectID: "project-one", taskID: "task-one", baseline: fixture.baseline)
+        try FileManager.default.createDirectory(at: fixture.root.appendingPathComponent(".git/info"), withIntermediateDirectories: true)
+        try Data(".build/\nDerivedData/\ndefault.profraw\n".utf8).write(to: fixture.root.appendingPathComponent(".git/info/exclude"))
+        let buildOutput = fixture.checkout.appendingPathComponent(".build/test-output/result")
+        let derivedOutput = fixture.checkout.appendingPathComponent("DerivedData/Build/result")
+        try FileManager.default.createDirectory(at: buildOutput.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: derivedOutput.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("build output".utf8).write(to: buildOutput)
+        try Data("derived output".utf8).write(to: derivedOutput)
+        try Data("profile output".utf8).write(to: fixture.checkout.appendingPathComponent("default.profraw"))
+
+        XCTAssertEqual(try provisioner.candidateRevision(worktree: tree), fixture.baseline)
+        try Data("tracked edit".utf8).write(to: fixture.checkout.appendingPathComponent("source.txt"))
+        XCTAssertThrowsError(try provisioner.candidateRevision(worktree: tree)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .conflict)
+        }
+        try Data("baseline".utf8).write(to: fixture.checkout.appendingPathComponent("source.txt"))
+        XCTAssertEqual(try provisioner.candidateRevision(worktree: tree), fixture.baseline)
+        try Data("untracked owner data".utf8).write(to: fixture.checkout.appendingPathComponent("owner.txt"))
+        XCTAssertThrowsError(try provisioner.candidateRevision(worktree: tree)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .conflict)
+        }
+    }
+
     private func executionFixture(_ fixture: (root: URL, checkout: URL, baseline: String)) throws
         -> (root: URL, project: AuthorizedProject, work: ProjectExecutionWork, store: ProjectExecutionFileStore) {
         let root = fixture.root.deletingLastPathComponent().appendingPathComponent("Execution")

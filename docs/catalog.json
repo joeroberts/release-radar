@@ -36,6 +36,22 @@
       "archiveDestination": "delivery.archive"
     },
     {
+      "collectionID": "delivery.task-briefs.2026-09-20-execution-preparation-conflict-repair",
+      "path": "docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Bounded execution-preparation conflict diagnosis and recovery repair; progress controls authorization",
+      "allowedContents": [
+        "Controlling implementation brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-execution-preparation-conflict-repair-brief-2026-09-20",
+      "archiveDestination": "delivery.archive"
+    },
+    {
       "collectionID": "delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix",
       "path": "docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix",
       "parentCollection": "delivery.task-briefs",
@@ -1033,6 +1049,22 @@
       "authorityLevel": "controlling",
       "authorityRole": "delivery.outcome3-execution-setup",
       "parentCollection": "delivery.task-briefs.2026-09-16-outcome3-execution-setup",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-execution-preparation-conflict-repair-brief-2026-09-20",
+      "path": "docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.execution-preparation-conflict-repair",
+      "parentCollection": "delivery.task-briefs.2026-09-20-execution-preparation-conflict-repair",
       "supersedes": [],
       "applicationSensitivity": [
         "guidance"

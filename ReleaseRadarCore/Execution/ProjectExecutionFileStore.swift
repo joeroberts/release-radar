@@ -157,16 +157,20 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     /// Validate selection before materializing a checkout, then persist its intent
     /// before allowing a different-home selection to inspect the resource inventory.
     public func createAssignment(codexContextID: UUID?, prepare: () throws -> ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
-        try withAuthorityLock(["context-selection"]) {
-            try lock.withLock { try requireSelectedCodexContext(codexContextID) }
-            let value = try prepare() // Keep the instance mutex available to STOP/closure.
-            try value.validated()
-            guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
-            try lock.withLock {
-                let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
-                try withAuthorityLock(path) { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
+        try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
+            try withAuthorityLock(["context-selection"]) {
+                try lock.withLock { try requireSelectedCodexContext(codexContextID) }
+                let value = try prepare() // Keep the instance mutex available to STOP/closure.
+                try value.validated()
+                guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
+                try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
+                    try lock.withLock {
+                        let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
+                        try withAuthorityLock(path) { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
+                    }
+                }
+                return value
             }
-            return value
         }
     }
 

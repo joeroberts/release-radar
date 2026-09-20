@@ -12,6 +12,8 @@ final class ProjectExecutionProducerTests: XCTestCase {
         var rejectHook = false
         var hookChecks = 0
         var afterProfile: (@Sendable () throws -> Void)?
+        var afterHook: (@Sendable () throws -> Void)?
+        var profileError: ProjectExecutionError?
         var finishes = 0
         var profiles: [ProjectExecutionPermissionProfile] = []
         var seededProfileIDs: Set<String> = []
@@ -26,12 +28,14 @@ final class ProjectExecutionProducerTests: XCTestCase {
                       !permitOwnedTrust else { throw ProjectExecutionError.hookNotReady }
             }
             if rejectHook { throw ProjectExecutionError.hookNotReady }
+            try afterHook?()
             try await beforeWrite()
         }
         func requireLayer(rejectHook: Bool = false) { requireProjectLayer = true; self.rejectHook = rejectHook }
         func finishConfiguration() { finishes += 1 }
         func prepareWorkerProfile(primaryRoot: String, profile: ProjectExecutionPermissionProfile) throws {
             profiles.append(profile); if failProfile { throw ProjectExecutionError.hookNotReady }
+            if let profileError { throw profileError }
             try afterProfile?()
         }
         func workerProfileExists(primaryRoot: String, profileID: String) -> Bool {
@@ -39,7 +43,9 @@ final class ProjectExecutionProducerTests: XCTestCase {
         }
         func seedProfile(_ id: String) { seededProfileIDs.insert(id) }
         func setFailure(_ value: Bool) { failProfile = value }
+        func setProfileError(_ value: ProjectExecutionError?) { profileError = value }
         func onProfile(_ action: @escaping @Sendable () throws -> Void) { afterProfile = action }
+        func onHook(_ action: @escaping @Sendable () throws -> Void) { afterHook = action }
     }
     struct Provisioning: ExecutionWorktreeProvisioning {
         let source: URL
@@ -67,6 +73,34 @@ final class ProjectExecutionProducerTests: XCTestCase {
         }
         func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws {
             try base.remove(primaryRoot: primaryRoot, worktree: worktree, projectID: projectID, taskID: taskID)
+        }
+    }
+    struct ConflictProvisioning: ExecutionWorktreeProvisioning {
+        enum Site: Equatable { case parentCandidate, targetPreparation }
+        let base: Provisioning
+        let site: Site
+        func revision(at root: URL, requireClean: Bool) throws -> String {
+            try base.revision(at: root, requireClean: requireClean)
+        }
+        func candidateRevision(worktree: ExecutionWorktree) throws -> String {
+            if site == .parentCandidate { throw ProjectExecutionError.conflict }
+            return try base.candidateRevision(worktree: worktree)
+        }
+        func prepare(primaryRoot: URL, checkout: URL, projectID: String, taskID: String,
+                     baseline: String) throws -> ExecutionWorktree {
+            if site == .targetPreparation { throw ProjectExecutionError.conflict }
+            return try base.prepare(primaryRoot: primaryRoot, checkout: checkout,
+                projectID: projectID, taskID: taskID, baseline: baseline)
+        }
+        func hasPreparedResources(primaryRoot: URL, checkout: URL, projectID: String,
+                                  taskID: String) throws -> Bool {
+            try base.hasPreparedResources(primaryRoot: primaryRoot, checkout: checkout,
+                projectID: projectID, taskID: taskID)
+        }
+        func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String,
+                    taskID: String) throws {
+            try base.remove(primaryRoot: primaryRoot, worktree: worktree,
+                projectID: projectID, taskID: taskID)
         }
     }
     private let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
@@ -212,7 +246,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let producerConfiguration = Configuration()
         let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: producerConfiguration, handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("Replacement remains blocked") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic.kind, .blockingAssignment)
+            XCTAssertEqual(conflict.diagnostic.blockingAssignmentID, value.id)
+        }
         let producerCloses = await producerConfiguration.finishes; XCTAssertEqual(producerCloses, 1)
         let lostHandle = ProjectExecutionResourceLifecycle(root: { root }, configuration: CleanupConfiguration(), provisioning: provisioning)
         do { _ = try await lostHandle.retire(project: project, expected: pending, requestID: UUID()); XCTFail("A different request cannot recover the original connection") } catch {}
@@ -407,6 +444,157 @@ final class ProjectExecutionProducerTests: XCTestCase {
         try store.savePolicy(policy, expected: nil)
         let work = ProjectExecutionWork(projectID: registration.projectID, ticketID: "ticket-one", taskID: "work-one", outcome: "Bounded outcome", title: "Approved task", taskPlanRevision: 1, phaseID: "phase-one", phaseRevision: 2)
         return (root, source, .init(registration: registration, canonicalRoot: source, authorizedRoots: [source]), work, store)
+    }
+
+    func testParentCandidateConflictReportsNarrowPreparationStage() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let configuration = Configuration()
+        let base = Provisioning(source: source, candidate: nil)
+        let deliveryProducer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: base)
+        let deliveryRequestID = UUID()
+        let pending = try await deliveryProducer.prepare(project: project, work: work,
+            requestID: deliveryRequestID, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil,
+            contextPaths: ["AGENTS.md"])
+        let admitted = try deliveryProducer.admitPrepared(pending)
+        await deliveryProducer.finishPreparation(work: work, requestID: deliveryRequestID)
+        var closed = admitted
+        closed.state = .closed
+        closed.sessionID = "closed-delivery"
+        try store.saveAssignment(closed, expected: admitted)
+
+        let reviewProducer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: ConflictProvisioning(
+                base: .init(source: source, candidate: URL(fileURLWithPath: closed.checkoutPath)),
+                site: .parentCandidate))
+        do {
+            _ = try await reviewProducer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: closed.id, baselineFromAssignmentID: nil,
+                contextPaths: ["AGENTS.md"])
+            XCTFail("Parent candidate conflict must remain typed")
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .causeUnavailable,
+                stage: .parentCandidateValidation,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
+    }
+
+    func testTargetProvisioningConflictReportsNarrowPreparationStage() async throws {
+        let (root, source, project, work, _) = try fixture()
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: Configuration(),
+            handlerPath: handler, provisioning: ConflictProvisioning(
+                base: .init(source: source, candidate: nil), site: .targetPreparation))
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("Target provisioning conflict must remain typed")
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .causeUnavailable,
+                stage: .targetProvisioning,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
+    }
+
+    func testPreparedAssignmentConfigurationConflictReportsNarrowPreparationStage() async throws {
+        let (root, source, project, work, _) = try fixture()
+        let configuration = Configuration()
+        await configuration.setProfileError(.conflict)
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("Prepared assignment configuration conflict must remain typed")
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .causeUnavailable,
+                stage: .preparedAssignmentConfiguration,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
+    }
+
+    func testAssignmentStoreIntegrityConflictReportsNarrowPreparationStage() async throws {
+        let (root, source, project, work, _) = try fixture()
+        try Data("{".utf8).write(to: root.appendingPathComponent("Projects/project-one/policy.json"))
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: Configuration(),
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("Assignment-store integrity conflict must remain typed")
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .causeUnavailable,
+                stage: .assignmentStoreIntegrity,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
+    }
+
+    func testAssignmentStoreCompareAndSwapConflictReportsNarrowPreparationStage() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let configuration = Configuration()
+        let requestID = UUID()
+        let assignmentID = "delivery-" + requestID.uuidString.lowercased()
+        await configuration.onHook {
+            let current = try store.assignment(projectID: project.projectID.rawValue, taskID: assignmentID)
+            var changed = current
+            changed.finalizationFailed = true
+            try store.saveAssignment(changed, expected: current)
+        }
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: requestID,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("Assignment-store compare-and-swap conflict must remain typed")
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .causeUnavailable,
+                stage: .assignmentStoreCompareAndSwap,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: assignmentID).finalizationFailed, true)
+    }
+
+    func testNarrowPreparationStageWrapperPreservesNestedStoreStage() throws {
+        do {
+            let _: Void = try withProjectExecutionPreparationStage(.preparedAssignmentConfiguration) {
+                let _: Void = try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
+                    throw ProjectExecutionError.conflict
+                }
+            }
+            XCTFail("Nested store stage must remain typed")
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .causeUnavailable,
+                stage: .assignmentStoreCompareAndSwap,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
     }
 
     func testRetiredParentRefusalRequiresAuthoritativeAbsenceOfEveryChildResource() async throws {
@@ -683,7 +871,14 @@ final class ProjectExecutionProducerTests: XCTestCase {
             _ = try await producer.prepare(project: project, work: work, requestID: request,
                 reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
             XCTFail("Preparation must remain single-flight until finalization")
-        } catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .preparationInProgress,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
         await producer.finishPreparation(work: work, requestID: request)
         let content = URL(fileURLWithPath: recovered.checkoutPath + "/.codex/owner.txt")
         try Data("preserve".utf8).write(to: content)
@@ -847,12 +1042,23 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let deliveryRequestID = UUID()
         let delivery = try await producer.prepare(project: project, work: work, requestID: deliveryRequestID, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: delivery.id, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("Live writer must not become a review candidate") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic.kind, .preparationInProgress)
+            XCTAssertNil(conflict.diagnostic.blockingRequestID)
+            XCTAssertNil(conflict.diagnostic.blockingAssignmentID)
+        }
         await producer.finishPreparation(work: work, requestID: deliveryRequestID)
         var unknown = delivery; unknown.state = .unknown
         try store.saveAssignment(unknown, expected: delivery)
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("A new request must not replace an unknown launch") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .blockingAssignment,
+                blockingRequestID: nil,
+                blockingAssignmentID: delivery.id,
+                evidence: .observedAtFailure
+            ))
+        }
         XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
     }
 
@@ -867,7 +1073,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let revoked = try store.assignment(projectID: "project-one", taskID: prepared.id)
         XCTAssertEqual(revoked.state, .revoked)
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("A different request cannot replace failed finalization") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic.kind, .blockingAssignment)
+            XCTAssertEqual(conflict.diagnostic.blockingAssignmentID, prepared.id)
+        }
         let resumed = try await producer.prepare(project: project, work: work, requestID: request, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
         XCTAssertEqual(resumed.id, prepared.id); XCTAssertEqual(resumed.state, .preparing)
         await producer.finishPreparation(work: work, requestID: request)
