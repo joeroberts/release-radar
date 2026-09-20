@@ -1,8 +1,22 @@
 # Release Radar delivery state
 
-## Paused — helper session handoff
+## Paused — post-merge cleanup
 
-Owner paused product and managed-feature delivery, then separately authorized bounded Git publication and installation before helper reset. Build Agent completed those endpoints: Release Radar 0.1.30 build 1 is installed and verified, and the owner must restart Codex before any live reviewer replay. PR [#100](https://github.com/joeroberts/release-radar/pull/100) is reconciled to preserve only the historical 0.1.21 installer and is open, non-draft and mergeable; release/recovery PR [#110](https://github.com/joeroberts/release-radar/pull/110) is open and non-draft. Neither PR was merged, and local tags remain unpublished. Build Agent, RO and Restricted have no active assignment after this record. Current role prompts and exact continuation boundaries are in the [September 20 helper handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md#september-20-helper-session-reset--current). The pause still overrides older product/release-start instructions below; readiness does not resume delivery or grant a new mutation.
+PR [#100](https://github.com/joeroberts/release-radar/pull/100) and PR [#110](https://github.com/joeroberts/release-radar/pull/110) are merged; the owner has restarted Codex. Product and managed-feature delivery remain paused: this does not authorize live reviewer replay, Release Radar mutation, or new feature work. Canonical `main` is fast-forwarded to `origin/main` at `a1d2e91c`; the preserved untracked Codex configuration remains untouched.
+
+Owner-authorized local cleanup removed 19 audited redundant worktrees (about 4.57 GiB), generated canonical build outputs (`.build`, `DerivedData`, and the obsolete C8 app; about 9.27 GiB), 23 integrated local branches, and five merged remote feature branches. Ninety-one exact synthetic `/Users/Shared` fixtures/build artifacts (about 431 MiB) were moved to Trash for recoverable removal. `/Users/Shared/out.rtf` remains because its `rekon-test` ownership denied the move. The active Manage Project managed worktree, live 8b15 checkout, unique 0.1.22 baseline, coordinator-plugin checkout, all locked Release Radar worktrees, tracked installers, tags, and non-integrated branches were preserved. Supported task UI readback showed 29 worker resources closed, but ambiguous repeated labels prevented safe managed retirement; no Release Radar state changed. Board remains 5 Accepted, 4 Backlog, 1 In Progress (Manage Project).
+
+
+Helper reset preparation: all three standing helpers share the canonical checkout
+on `codex/cleanup-record`; they do not own separate helper worktrees. Before the
+handoff refresh, this branch contained two unpublished commits above `origin/main`:
+`3edf9c3b` (cleanup record) and `15bf0091` (owner-requested release-tag publication
+policy). Build Agent separately published and verified existing tags v0.1.22–v0.1.30;
+that did not publish these documentation commits. The refreshed
+[helper handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md#september-20-helper-session-reset--current)
+records current checkout, merged PRs, completed restart, role-specific readiness
+and the continuing feature pause. This documentation closeout is local only.
+Managed-retirement UI ambiguity is tracked in [issue #112](https://github.com/joeroberts/release-radar/issues/112).
 
 ## Current execution recovery
 
