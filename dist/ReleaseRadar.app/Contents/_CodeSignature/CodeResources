@@ -18,7 +18,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		7jfEoD27wWrmRaZjm0MZfK+TLJw=
+		AdVoDTYmyUv2VI8w4jqci+v+Q2g=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
@@ -63,7 +63,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			q6Q/wLvmiowPSM5YXOUjhrSwz38=
+			TAAur6dWIjIECTSGiqSFGTT0Xvw=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -134,7 +134,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			eob+qUAIb3EREhjwJ9dg+kqpobAluZm8tmmyCUQir3A=
+			dFLrk2g/Xf0+VgqFCa+536M4SxOc+zpGtqgMHcuS5KE=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
