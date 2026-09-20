@@ -1,5 +1,74 @@
 # Outcome 3 — Main coordination handoff
 
+## September 20 helper session reset — current
+
+Owner requested fresh helper sessions to reduce context, with preparation only.
+**Delivery is PAUSED.** Reading this handoff or running `/new` does not resume
+implementation, builds, installation, Git publication or Release Radar mutations.
+This section overrides older role prompts and historical status below. Current
+state remains in [the ledger](../../progress.md); do not ingest old chronology.
+Main remains `01a0b54e-8f55-7c62-8bf4-4090f49b0a84`.
+
+### Fresh-session startup prompt
+
+Read AGENTS.md, docs/README.md and only the September 20 helper-reset section of
+`docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md`,
+then the current paused-state section of `docs/delivery/progress.md`. Restore only
+your named role below. Confirm canonical root, role, current task ID and exposed
+runtime settings to Main. Do not infer inherited permissions/model/effort or
+claim labels that are not exposed. If settings mismatch, report the exact task
+and intended profile; do not alter permissions. Perform readiness readback only,
+then remain idle until Main conveys explicit owner resume. No compilation,
+application mutation, installation, push, PR or cleanup during readiness.
+
+| Helper to reset | Role and intended settings | Pending assignment |
+| --- | --- | --- |
+| Release Radar — Build Agent 02 (`01a0b55a-56ad-71c1-a93c-4552cf69514a`) | Native build, trusted Git and serialized local releases. Established danger-full-access, network enabled, approval never; Terra/medium requested. Verify exposed runtime and tool availability read-only. | Paused 0.1.30 release; exact state below. |
+| Release Radar — RO Coordinator 05 (`01a0b55a-5031-7eb3-987c-773d896dfcb9`) | Read-only assigned verification through supported tools; rr-project-ro, Astra/medium requested. Never compile or write. | None; last turn completed. Historic connector findings are stale, not current assignments. |
+| Release Radar — Restricted Coordinator 03 (`01a0b55a-536f-7640-bcc4-4f66b3c14d54`) | Bounded assigned repository/connector recording; rr-project-restricted with task coordination permitted, Astra/medium requested. Native builds/trusted Git remain Build Agent's role. | None; last recording assignment completed. Do not replay historical mutations. |
+
+Canonical root is `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
+Preserve all branches, worktrees, artifacts and pre-existing untracked
+`.codex/config.toml` and `.codex/hooks.json`. Completed isolated repair and review
+tasks are archived; no reset or replacement is needed for those bounded tasks.
+The chief architect has no current assignment and needs no resurrection.
+No new task, archive, profile change or cleanup is authorized by this reset.
+
+### Paused release and continuation boundary
+
+Canonical branch `codex/p6-project-controls`: cause fix `fa84e4c4`, build source
+`c94003d9`, signed installer/staged-app commit `b2cd144cf839f026627f18a90197f2cae1b58c41`.
+Local tag `v0.1.30` exists. `dist/ReleaseRadar-0.1.30.dmg` is committed; installed
+app readback is still **0.1.29**. No remote branch exists for this branch, no push
+or PR was made. PR #100 remains open/conflicting and unchanged; resolving it is
+not part of helper readiness.
+
+Cause fix passed independent review (task `01a0bfd5-ab6b-73e2-a51a-4b88eaf189cf`,
+no findings) and two focused tests. Five version/package tests passed. These are
+direct XCTest-log results: Xcode finalization stalled and was interrupted with
+exit 130; partial XCResults are not pass evidence. Do not rerun successful checks
+without a changed candidate or concrete defect. No live recovery success yet.
+Build Agent confirms packaging complete: DMG verification, mounted payload equality,
+strict nested signatures and plugin digest checks passed. DMG SHA-256:
+`78b888fcf2e9e4e757c69921bb48587283e5e7b31bd75e906e7b3eb9624cecc0`.
+No build, packaging process or DMG mount remained at pause; installed app was
+running (PID 30023 at that observation, not a future process identity).
+Preserve `.build/dmg-source-0.1.30`, empty `.build/dmg-mount-0.1.30`, metadata
+log/partial XCResult and staging log. No temporary files were deleted.
+Use the established environment in docs/README.md and existing
+`script/build_and_run.sh` staging/install modes after explicit resume, not a new
+release script. Installers belong in repository `dist/`, not Downloads.
+
+After explicit owner resume, finish the paused local release, verify installation,
+then notify owner if Codex restart is required. Main alone replays the exact saved
+RR reviewer request `154c4774-9565-4fa9-8cff-bbccf3a908cb` from the ledger after
+availability is restored. Do not regenerate that envelope. Manage Project
+candidate `6ba3ce8e3ad6cac112f8ca3659b928be83ac361a` still awaits its managed review;
+this recovery fix is separate. Next work remains Manage Project, Navigation,
+Guided Setup in that order. Documentation reconciliation/reconstruction remain
+Backlog. Owner acceptance and push/PR/publication remain separately authorized.
+
+
 ## September 19 correction — overrides prior closeout status
 
 Outcome 3 connector upgrade recovery is **not complete**. [Issue #99](https://github.com/joeroberts/release-radar/issues/99) and the [correction brief](brief.md#september-19-connector-upgraderecovery-correction--current) record the confirmed stale AgentTools process, signing rejection, generic error and missing UI health reporting. Direct helper fallbacks were used and do not establish connector acceptance. Package delivery remains valid within its scope; the fresh release-focused test run remains incomplete. PR #98's prior closeout wording is superseded by this correction.
