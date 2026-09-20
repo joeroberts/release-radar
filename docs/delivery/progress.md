@@ -6,6 +6,18 @@ PR [#100](https://github.com/joeroberts/release-radar/pull/100) and PR [#110](ht
 
 Owner-authorized local cleanup removed 19 audited redundant worktrees (about 4.57 GiB), generated canonical build outputs (`.build`, `DerivedData`, and the obsolete C8 app; about 9.27 GiB), 23 integrated local branches, and five merged remote feature branches. Ninety-one exact synthetic `/Users/Shared` fixtures/build artifacts (about 431 MiB) were moved to Trash for recoverable removal. `/Users/Shared/out.rtf` remains because its `rekon-test` ownership denied the move. The active Manage Project managed worktree, live 8b15 checkout, unique 0.1.22 baseline, coordinator-plugin checkout, all locked Release Radar worktrees, tracked installers, tags, and non-integrated branches were preserved. Supported task UI readback showed 29 worker resources closed, but ambiguous repeated labels prevented safe managed retirement; no Release Radar state changed. Board remains 5 Accepted, 4 Backlog, 1 In Progress (Manage Project).
 
+
+Helper reset preparation: all three standing helpers share the canonical checkout
+on `codex/cleanup-record`; they do not own separate helper worktrees. Before the
+handoff refresh, this branch contained two unpublished commits above `origin/main`:
+`3edf9c3b` (cleanup record) and `15bf0091` (owner-requested release-tag publication
+policy). Build Agent separately published and verified existing tags v0.1.22–v0.1.30;
+that did not publish these documentation commits. The refreshed
+[helper handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md#september-20-helper-session-reset--current)
+records current checkout, merged PRs, completed restart, role-specific readiness
+and the continuing feature pause. This documentation closeout is local only.
+Managed-retirement UI ambiguity is tracked in [issue #112](https://github.com/joeroberts/release-radar/issues/112).
+
 ## Current execution recovery
 
 Parent-validation cause repair is committed as `0df595467dc165aa3dba3be1244fd694b19d1b11` in the isolated repair checkout and integrated as `fa84e4c4`. Ordinary libgit2 candidate/reuse status explicitly excludes ignored build artifacts while retaining tracked/untracked rejection; retirement still includes ignored content. Build Agent's real linked-worktree RED executed one failing test; focused GREEN executed two tests with zero failures, including tracked/untracked rejection and ignored-owner-content removal protection. Direct XCTest logs establish these results; Xcode stalled result finalization and was interrupted with exit 130, leaving unreadable partial XCResults. Artifacts remain preserved. Fresh independent review by task `01a0bfd5-ab6b-73e2-a51a-4b88eaf189cf` passed the exact candidate with no Required or Optional findings, covering candidate cleanliness and owner-data preservation. Requested Sol/high effective settings were not exposed. Signed release commit and local tag `v0.1.30` target `b2cd144c`; installer SHA-256 is `78b888fcf2e9e4e757c69921bb48587283e5e7b31bd75e906e7b3eb9624cecc0`. The supported no-launch workflow installed `/Applications/ReleaseRadar.app` as `com.rekonlabs.ReleaseRadar` 0.1.30 (1); strict signature/team/runtime, staged-to-installed payload equality, executable SHA-256 `a065cdaa20159e1a2ba2ee9e729201f2aa606e3dd4ee92494e8244ed272241a6`, and plugin digest `58b26787e6f108a0de692b7aafda116d7c0918ce2cdfe279d54603eeeadea182` passed. Existing Codex helper processes remain until restart. Live recovery is not yet proven; Main retains the exact replay and owner acceptance is not inferred.

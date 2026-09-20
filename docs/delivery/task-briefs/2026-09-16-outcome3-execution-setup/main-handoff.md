@@ -24,61 +24,71 @@ application mutation, installation, push, PR or cleanup during readiness.
 
 | Helper to reset | Role and intended settings | Pending assignment |
 | --- | --- | --- |
-| Release Radar — Build Agent 02 (`01a0b55a-56ad-71c1-a93c-4552cf69514a`) | Native build, trusted Git and serialized local releases. Established danger-full-access, network enabled, approval never; Terra/medium requested. Verify exposed runtime and tool availability read-only. | None; 0.1.30 publication/install endpoint is complete. Exact restart boundary is below. |
+| Release Radar — Build Agent 02 (`01a0b55a-56ad-71c1-a93c-4552cf69514a`) | Native build, trusted Git and serialized local releases. Established danger-full-access, network enabled, approval never; Terra/medium requested. Verify exposed runtime and tool availability read-only. | None after this documentation closeout; release and cleanup results are recorded below. |
 | Release Radar — RO Coordinator 05 (`01a0b55a-5031-7eb3-987c-773d896dfcb9`) | Read-only assigned verification through supported tools; rr-project-ro, Astra/medium requested. Never compile or write. | None; last turn completed. Historic connector findings are stale, not current assignments. |
 | Release Radar — Restricted Coordinator 03 (`01a0b55a-536f-7640-bcc4-4f66b3c14d54`) | Bounded assigned repository/connector recording; rr-project-restricted with task coordination permitted, Astra/medium requested. Native builds/trusted Git remain Build Agent's role. | None; last recording assignment completed. Do not replay historical mutations. |
 
-Canonical root is `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
-Preserve all branches, worktrees, artifacts and pre-existing untracked
-`.codex/config.toml` and `.codex/hooks.json`. Completed isolated repair and review
-tasks are archived; no reset or replacement is needed for those bounded tasks.
-The chief architect has no current assignment and needs no resurrection.
-No new task, archive, profile change or cleanup is authorized by this reset.
+### Shared checkout and unpublished work
 
-### Published release and restart boundary
+All three helpers were verified idle with the same canonical task directory:
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
+They do not have separate helper worktrees. Keep this shared checkout for these
+standing roles; Build Agent owns serialized Git/build operations, RO never writes,
+and Restricted writes only its assigned scope without overlapping another writer.
+No new worktree or branch switch is required for session readiness.
 
-Canonical branch `codex/p6-project-controls`: cause fix `fa84e4c4`, build source
-`c94003d9`, signed installer/staged-app commit `b2cd144cf839f026627f18a90197f2cae1b58c41`.
-Local tag `v0.1.30` exists and remains unpublished. `dist/ReleaseRadar-0.1.30.dmg`
-is committed. The branch is published in open, non-draft PR
-[#110](https://github.com/joeroberts/release-radar/pull/110); it was not merged.
-Existing PR [#100](https://github.com/joeroberts/release-radar/pull/100) was merged
-with current `main` without rewriting history and is now open, non-draft and
-mergeable. Its net diff is only the byte-preserved historical
-`dist/ReleaseRadar-0.1.21.dmg`; its staged app matches `main`. Do not merge either
-PR during helper readiness.
+The current branch is `codex/cleanup-record`, based on `origin/main` at
+`a1d2e91c`. These two commits were verified local and unpublished before this
+handoff refresh:
 
-Cause fix passed independent review (task `01a0bfd5-ab6b-73e2-a51a-4b88eaf189cf`,
-no findings) and two focused tests. Five version/package tests passed. These are
-direct XCTest-log results: Xcode finalization stalled and was interrupted with
-exit 130; partial XCResults are not pass evidence. Do not rerun successful checks
-without a changed candidate or concrete defect. No live recovery success yet.
-Build Agent confirms packaging complete: DMG verification, mounted payload equality,
-strict nested signatures and plugin digest checks passed. DMG SHA-256:
+| Commit | Content | Publication status |
+| --- | --- | --- |
+| `3edf9c3b` | Record post-merge cleanup in the delivery ledger | Local only |
+| `15bf0091` | Owner-requested standing release-tag publication rule in AGENTS.md | Local only |
+
+This handoff refresh adds documentation to the same branch; it does not publish
+that branch. Preserve its commits and the pre-existing untracked
+`.codex/config.toml` and `.codex/hooks.json`. No tracked changes were pending
+before this refresh. A fresh session must inspect current Git state rather than
+assume the recorded commit is still HEAD.
+
+Completed bounded tasks remain archived; the chief architect has no current
+assignment. Reset preparation does not authorize new tasks, cleanup, profile
+changes or app mutations. Verify each fresh session's effective settings against
+the role table above; report unavailable fields rather than assuming inheritance.
+
+### Delivered release and remaining boundaries
+
+PR [#100](https://github.com/joeroberts/release-radar/pull/100) and
+PR [#110](https://github.com/joeroberts/release-radar/pull/110) are merged.
+Release Radar **0.1.30 build 1** is installed and verified; the owner has already
+restarted Codex. No additional restart is requested by this handoff.
+`dist/ReleaseRadar-0.1.30.dmg` remains committed, with SHA-256
 `78b888fcf2e9e4e757c69921bb48587283e5e7b31bd75e906e7b3eb9624cecc0`.
-The supported no-launch workflow installed and verified
-`/Applications/ReleaseRadar.app` as `com.rekonlabs.ReleaseRadar` **0.1.30** build 1.
-Installed and staged payloads and executable SHA-256 match; strict deep signing,
-Apple Development team `2UA854NLX4`, Hardened Runtime 26.5.0 and plugin digest
-`58b26787e6f108a0de692b7aafda116d7c0918ce2cdfe279d54603eeeadea182` passed.
-The main app is stopped; existing Codex helper processes remain live until restart.
-No build, packaging process or DMG mount remains.
-Preserve `.build/dmg-source-0.1.30`, empty `.build/dmg-mount-0.1.30`, metadata
-log/partial XCResult and staging log. No temporary files were deleted.
-Use the established environment in docs/README.md and existing
-`script/build_and_run.sh` for later authorized releases, not a new release script.
-Installers belong in repository `dist/`, not Downloads.
+Build Agent reported publishing existing annotated tags `v0.1.22` through
+`v0.1.30` under separate direct owner authorization and verifying their remote
+peeled targets; `v0.1.30` targets `b2cd144c`. Tag publication does not publish the
+two documentation commits above or authorize a branch push or PR.
 
-**Owner action: restart Codex now.** Restart and session readiness do not resume
-paused feature work. After explicit owner resume and supported availability
-readback, Main alone replays the exact saved RR reviewer request
-`154c4774-9565-4fa9-8cff-bbccf3a908cb` from the ledger. Do not regenerate that
-envelope. Manage Project
-candidate `6ba3ce8e3ad6cac112f8ca3659b928be83ac361a` still awaits its managed review;
-this recovery fix is separate. Next work remains Manage Project, Navigation,
-Guided Setup in that order. Documentation reconciliation/reconstruction remain
-Backlog. Owner acceptance, PR merge, tag publication, public release and
-notarization remain separately authorized.
+The reviewed recovery fix and recorded focused checks are unchanged. Partial
+XCResults were not pass evidence; do not rerun completed checks merely for session
+readiness. Authorized cleanup removed obsolete build output and redundant ordinary
+worktrees/branches; earlier instructions to retain those removed caches and logs
+are historical. Installers belong in repository `dist/`, not Downloads.
+Outstanding managed-retirement selection ambiguity is tracked in
+[issue #112](https://github.com/joeroberts/release-radar/issues/112); it does not
+block helper session reset. Preserve the unfinished Manage Project checkout and
+its remaining review evidence, plus the owner's other cleanup exceptions.
+
+**Feature delivery remains paused.** After explicit owner resume and supported
+availability readback, Main alone replays exact reviewer request
+`154c4774-9565-4fa9-8cff-bbccf3a908cb` from the ledger. Do not regenerate it.
+Manage Project candidate `6ba3ce8e3ad6cac112f8ca3659b928be83ac361a` still awaits
+managed independent review; no live recovery success or owner acceptance is
+inferred from installation. The intended sequence remains Manage Project,
+Navigation, Guided Setup. Documentation reconciliation and plan reconstruction
+remain Backlog. Follow the current AGENTS.md release-tag rule; branch publication,
+PRs, merges, public releases and notarization retain their separate authority.
 
 
 ## September 19 correction — overrides prior closeout status
