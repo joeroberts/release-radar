@@ -83,7 +83,7 @@ Its task-local Swift module-file creation was verified here; this does not
 guarantee future toolchain compatibility or a green native build. App build
 settings alone did not redirect the manifest compiler cache, and the public
 `-packageCachePath` attempt did not relocate its `.dia` output. Recheck behavior
-after toolchain updates. Installation remains on hold in the current ledger.
+after toolchain updates. Installation timing follows the current delivery ledger.
 
 <!-- release-radar-docs:v1:start -->
 
