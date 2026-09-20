@@ -15,8 +15,14 @@ then replayed the unchanged request successfully: audit
 `76AF72BD-D976-4E4F-97BC-5794B13B00EA`, task
 `01a0c128-6ebb-7080-825b-f92b59f33131`, runs in the assigned delivery-258c312d
 checkout at baseline `7305f277`. Effective Terra/medium, exact assigned profile,
-checkout and instruction sources were verified. Its first checkpoint is the
-Task01 brief and test handoff; Build Agent owns compilation and commits.
+checkout and instruction sources were verified. Task01 brief/catalog/index are
+committed in its assigned checkout as `aab3aae5`; packaged documentation and diff
+checks passed. Build Agent ran the three new native rendering regressions against
+unchanged production source: all three compiled and failed on the intended
+missing immediate panel, local retry and registration-mismatch handling (exit 65;
+finalized readable `manage-project-task01-red-1.xcresult` in that checkout's
+`.build/native-checks/`). The same managed worker is now implementing Task01.
+Build Agent owns compilation and commits; GREEN and independent review remain.
 Manage Project remains In Progress with all three tasks pending. Before future
 preparation, selected context must be committed and stable.
 
