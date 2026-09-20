@@ -1,5 +1,32 @@
 # Outcome 3 — Main coordination handoff
 
+## Pending exact execution replay — September 20
+
+Owner restarted Codex. Supported plugin Reinstall restored Installed 0.1.31.
+Exact old reviewer replay returned `assignmentNotAuthorized` with audit
+`8D170711-C729-42C1-8ADE-BE710E2044BF`, establishing audited refusal, not worker
+launch or feature completion. Fresh complete inventory retains the exact
+registration/generation, phase lifecycle revision 1 and task-plan revision 1.
+The following fresh delivery preparation is pending; retain it unchanged across
+uncertain outcomes:
+
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","projectID":"project-fffdc0e0b15b9b86","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"258c312d-bb4f-4bb0-a077-f223cbdb63ac","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-01","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Owner resumed Manage Project. Prior reviewer request154c4774 received audited assignmentNotAuthorized after missing-context recovery. Prepare fresh task01 delivery from current committed canonical baseline; reconcile existing behavior without changing task definitions or mutating preserved older candidate."}
+```
+
+Initial fresh preparation returned `identityMismatch`. Main had added the above
+record to the selected ledger before committing it. To preserve the committed
+context and same-HEAD reuse path, this note is retained here as supporting
+recovery data and only that owned ledger addition is restored to HEAD. No
+resources or private state were edited. Exact replay succeeded: audit F1C9999E-5A79-44A1-AC85-D1CB84866DA1,
+assignment `delivery-258c312d-bb4f-4bb0-a077-f223cbdb63ac`, baseline `7305f277`.
+Worker launch succeeded: `76AF72BD-D976-4E4F-97BC-5794B13B00EA`, task
+`01a0c128-6ebb-7080-825b-f92b59f33131`. Effective Terra/medium, assigned
+rr-delivery profile, exact assigned checkout, on-request/auto_review, network
+disabled and expected instruction sources were returned. First checkpoint is
+Task01 brief and regression-test handoff; Build Agent owns native tests/Git.
+No task completion is inferred.
+
 ## September 20 helper session reset — current
 
 Owner requested fresh helper sessions to reduce context, with preparation only.

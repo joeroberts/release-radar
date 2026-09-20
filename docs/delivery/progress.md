@@ -2,12 +2,23 @@
 
 ## September 20 — Manage Project resumed
 
-**Current next action: owner restart of Codex after verified installation of
-0.1.31 (1), then Main replays the unchanged request
-`154c4774-9565-4fa9-8cff-bbccf3a908cb` through the supported connector.** Expected
-recovery is audited terminal refusal of the old missing-context request, not
-review success. Only supported disposition permits fresh current-main delivery
-and review. Manage Project remains In Progress with all three tasks pending.
+**Current work: RR-managed Manage Project Task01 delivery is running.** Owner
+restarted Codex; supported plugin Reinstall restored Installed 0.1.31. Old request
+`154c4774-9565-4fa9-8cff-bbccf3a908cb` received audited refusal
+`8D170711-C729-42C1-8ADE-BE710E2044BF`. Fresh request
+`258c312d-bb4f-4bb0-a077-f223cbdb63ac` initially failed because Main wrote selected
+ledger context before committing it. Main preserved that note in the supporting
+[handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md), restored
+only its uncommitted ledger addition without moving HEAD or altering resources,
+then replayed the unchanged request successfully: audit
+`F1C9999E-5A79-44A1-AC85-D1CB84866DA1`. Worker
+`76AF72BD-D976-4E4F-97BC-5794B13B00EA`, task
+`01a0c128-6ebb-7080-825b-f92b59f33131`, runs in the assigned delivery-258c312d
+checkout at baseline `7305f277`. Effective Terra/medium, exact assigned profile,
+checkout and instruction sources were verified. Its first checkpoint is the
+Task01 brief and test handoff; Build Agent owns compilation and commits.
+Manage Project remains In Progress with all three tasks pending. Before future
+preparation, selected context must be committed and stable.
 
 Build Agent completed the reviewed repair's local release on
 `codex/manage-project-context-recovery`: integrated source `cc352962`, build
