@@ -11,7 +11,8 @@ Main remains `01a0b54e-8f55-7c62-8bf4-4090f49b0a84`.
 
 ### Fresh-session startup prompt
 
-Read AGENTS.md, docs/README.md and only the September 20 helper-reset section of
+Read `AGENTS.md` and `docs/catalog.json`. Begin documentation discovery at
+`docs/README.md`, then read only the September 20 helper-reset section of
 `docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md`,
 then the current paused-state section of `docs/delivery/progress.md`. Restore only
 your named role below. Confirm canonical root, role, current task ID and exposed
