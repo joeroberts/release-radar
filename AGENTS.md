@@ -347,13 +347,16 @@ documentation-only work, or an intermediate task into a release. Coordinate one
 release owner after the intended batch is complete rather than packaging every
 commit or creating competing installations.
 
-Branch/tag pushes, PR creation, merges, public releases and notarization retain
-their separate authorization boundaries. Do not interpret installation approval
-as permission for unrelated project-data or configuration changes. An explicit
-STOP or a later narrower owner instruction takes precedence; legitimate runtime
-permission gates must still be respected. Report a concrete failure or missing
-permission rather than claiming completion or repeating an already granted
-approval question.
+The owner authorizes publishing the existing annotated `vX.Y.Z` tag to `origin`
+as part of each completed local Release Radar release. After the tag is created,
+push that exact tag and verify that its remote peeled commit equals the local
+tag's commit; never move or overwrite a release tag. Branch pushes, PR creation,
+merges, public releases and notarization retain their separate authorization
+boundaries. Do not interpret installation approval as permission for unrelated
+project-data or configuration changes. An explicit STOP or a later narrower
+owner instruction takes precedence; legitimate runtime permission gates must
+still be respected. Report a concrete failure or missing permission rather than
+claiming completion or repeating an already granted approval question.
 
 ## UI Completion Standard
 
