@@ -39,6 +39,7 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     if let diagnostic = prior.preparationDiagnostic {
                         prior.preparationDiagnostic = .init(
                             kind: diagnostic.kind,
+                            stage: diagnostic.stage,
                             blockingRequestID: diagnostic.blockingRequestID,
                             blockingAssignmentID: diagnostic.blockingAssignmentID,
                             evidence: .recordedFailure

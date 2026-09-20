@@ -15,6 +15,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         var definiteRefusals: Set<UUID> = []
         var partialRefusals: Set<UUID> = []
         var unattributedConflicts: Set<UUID> = []
+        var stagedConflicts: [UUID: ProjectExecutionPreparationDiagnostic.Stage] = [:]
         var acceptedReviewParents: Set<String> = []
         var activePreparation: UUID?
         var gate: DocumentationCommitGate?
@@ -28,6 +29,9 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         func refuseBeforeEffects(_ requestID: UUID) { definiteRefusals.insert(requestID) }
         func refuseAfterPreparing(_ requestID: UUID) { partialRefusals.insert(requestID) }
         func conflictWithoutKnownCause(_ requestID: UUID) { unattributedConflicts.insert(requestID) }
+        func conflict(_ requestID: UUID, at stage: ProjectExecutionPreparationDiagnostic.Stage) {
+            stagedConflicts[requestID] = stage
+        }
         func allowReview(parentID: String) { acceptedReviewParents.insert(parentID) }
         func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
             guard activePreparation == nil else { throw ProjectExecutionError.conflict }
@@ -35,6 +39,15 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
             prepares += 1
             preparesByRequestID[requestID, default: 0] += 1
             if unattributedConflicts.contains(requestID) { throw ProjectExecutionError.conflict }
+            if let stage = stagedConflicts[requestID] {
+                throw ProjectExecutionPreparationConflict(diagnostic: .init(
+                    kind: .causeUnavailable,
+                    stage: stage,
+                    blockingRequestID: nil,
+                    blockingAssignmentID: nil,
+                    evidence: .observedAtFailure
+                ))
+            }
             if definiteRefusals.contains(requestID) {
                 throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
             }
@@ -504,19 +517,76 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         XCTAssertNil(persisted.preparationDiagnostic)
     }
 
+    func testStagedPreparationConflictRemainsObservedOnlyAndDoesNotSettleReceipt() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.conflict(requestID, at: .targetProvisioning)
+        let request = AgentCommandEnvelope(
+            version: 1,
+            requestID: requestID,
+            projectRoot: root.path,
+            expectedRegistration: registration,
+            reason: "Synthetic staged preparation conflict",
+            command: .prepareExecutionAssignment(
+                projectID: "p",
+                ticketID: "ticket",
+                taskID: "task",
+                expectedTaskPlanRevision: 1,
+                expectedPhaseRevision: 2,
+                reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil
+            )
+        )
+
+        let result = await dispatcher.dispatch(request)
+
+        XCTAssertEqual(result.error, .execution(.conflict))
+        XCTAssertEqual(result.preparationDiagnostic, .init(
+            kind: .causeUnavailable,
+            stage: .targetProvisioning,
+            blockingRequestID: nil,
+            blockingAssignmentID: nil,
+            evidence: .observedAtFailure
+        ))
+        XCTAssertNil(result.auditEventID)
+        let persisted = try await store.read { connection -> AgentCommandResult in
+            guard case let .blob(data)? = try connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)]
+            )?["result_data"] else {
+                throw ProjectExecutionError.unavailable
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persisted.error, .outcomeUnknown)
+        XCTAssertNil(persisted.preparationDiagnostic)
+    }
+
     func testPreparationDiagnosticIsAdditiveForLegacyJSONAndRoundTrips() throws {
         let legacy = Data(#"{"entityIDs":[],"auditEventID":null,"error":null}"#.utf8)
         let decoded = try JSONDecoder().decode(AgentCommandResult.self, from: legacy)
         XCTAssertNil(decoded.preparationDiagnostic)
 
-        let requestID = UUID()
+        let legacyDiagnostic = Data(#"{"kind":"causeUnavailable","blockingRequestID":null,"blockingAssignmentID":null,"evidence":"observedAtFailure"}"#.utf8)
+        let decodedDiagnostic = try JSONDecoder().decode(ProjectExecutionPreparationDiagnostic.self,
+            from: legacyDiagnostic)
+        XCTAssertNil(decodedDiagnostic.stage)
+        XCTAssertNil(ProjectExecutionPreparationDiagnostic(
+            kind: .blockingAssignment,
+            stage: .targetProvisioning,
+            blockingRequestID: nil,
+            blockingAssignmentID: "review-fixture",
+            evidence: .observedAtFailure
+        ).stage)
+
         let current = AgentCommandResult(
             entityIDs: [],
             auditEventID: nil,
             error: .execution(.conflict),
             preparationDiagnostic: .init(
-                kind: .pendingPreparationRequest,
-                blockingRequestID: requestID,
+                kind: .causeUnavailable,
+                stage: .targetProvisioning,
+                blockingRequestID: nil,
                 blockingAssignmentID: nil,
                 evidence: .recordedFailure
             )
@@ -548,7 +618,8 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
             auditEventID: nil,
             error: .execution(.conflict),
             preparationDiagnostic: .init(
-                kind: .preparationInProgress,
+                kind: .causeUnavailable,
+                stage: .targetProvisioning,
                 blockingRequestID: nil,
                 blockingAssignmentID: nil,
                 evidence: .observedAtFailure
@@ -577,7 +648,8 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
 
         XCTAssertEqual(replay.error, stored.error)
         XCTAssertEqual(replay.preparationDiagnostic, .init(
-            kind: .preparationInProgress,
+            kind: .causeUnavailable,
+            stage: .targetProvisioning,
             blockingRequestID: nil,
             blockingAssignmentID: nil,
             evidence: .recordedFailure

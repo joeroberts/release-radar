@@ -57,24 +57,68 @@ public struct ProjectExecutionPreparationDiagnostic: Codable, Equatable, Sendabl
     public enum Kind: String, Codable, Sendable {
         case pendingPreparationRequest, preparationInProgress, blockingAssignment, causeUnavailable
     }
+    public enum Stage: String, Codable, Sendable {
+        case parentCandidateValidation
+        case targetProvisioning
+        case preparedAssignmentConfiguration
+        case assignmentStoreIntegrity
+        case assignmentStoreCompareAndSwap
+    }
     public enum Evidence: String, Codable, Sendable { case observedAtFailure, recordedFailure }
 
     public let kind: Kind
+    public let stage: Stage?
     public let blockingRequestID: UUID?
     public let blockingAssignmentID: String?
     public let evidence: Evidence
 
-    public init(kind: Kind, blockingRequestID: UUID?, blockingAssignmentID: String?, evidence: Evidence) {
+    public init(kind: Kind, stage: Stage? = nil, blockingRequestID: UUID?, blockingAssignmentID: String?, evidence: Evidence) {
         self.kind = kind
+        self.stage = kind == .causeUnavailable ? stage : nil
         self.blockingRequestID = blockingRequestID
         self.blockingAssignmentID = blockingAssignmentID
         self.evidence = evidence
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, stage, blockingRequestID, blockingAssignmentID, evidence
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            kind: try values.decode(Kind.self, forKey: .kind),
+            stage: try values.decodeIfPresent(Stage.self, forKey: .stage),
+            blockingRequestID: try values.decodeIfPresent(UUID.self, forKey: .blockingRequestID),
+            blockingAssignmentID: try values.decodeIfPresent(String.self, forKey: .blockingAssignmentID),
+            evidence: try values.decode(Evidence.self, forKey: .evidence)
+        )
     }
 }
 
 /// Internal conflict witness only. It never authorizes no-effects settlement.
 struct ProjectExecutionPreparationConflict: Error {
     let diagnostic: ProjectExecutionPreparationDiagnostic
+}
+
+@inline(__always)
+func withProjectExecutionPreparationStage<T>(
+    _ stage: ProjectExecutionPreparationDiagnostic.Stage,
+    _ operation: () throws -> T
+) throws -> T {
+    do {
+        return try operation()
+    } catch let conflict as ProjectExecutionPreparationConflict {
+        throw conflict
+    } catch let error as ProjectExecutionError where error == .conflict {
+        throw ProjectExecutionPreparationConflict(diagnostic: .init(
+            kind: .causeUnavailable,
+            stage: stage,
+            blockingRequestID: nil,
+            blockingAssignmentID: nil,
+            evidence: .observedAtFailure
+        ))
+    }
 }
 
 public protocol ProjectExecutionAssignmentPreparing: Sendable {

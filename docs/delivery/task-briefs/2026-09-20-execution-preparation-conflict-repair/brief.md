@@ -6,15 +6,15 @@ only the isolated source/test/documentation candidate described below.
 
 ## Shared execution context
 
-- **Standard:** `shared-execution/1`. Installed Release Radar plugin `0.1.27`
+- **Standard:** `shared-execution/1`. Installed Release Radar plugin `0.1.28`
   exposes the compatible v1 skill. Effective model/effort are not exposed to
   this task and must not be inferred. CodeGraph discovery was attempted first;
   the checkout contains only an uninitialized `.codegraph` stub, so the tool
   reported no available index and narrow local symbol reads are used instead.
-- **Root:** `/Users/jroberts/.codex/worktrees/fd61/release_radar`, branch
-  `codex/execution-preparation-conflict-repair`, baseline
-  `e9f6a36463759abcf0b4b9011096c7b632af4f46` (`exactRevision` before this
-  brief). The registered application root remains
+- **Root:** `/Users/jroberts/.codex/worktrees/reviewer-preparation-stage-repair/release_radar`,
+  branch `codex/reviewer-preparation-stage-repair`, baseline
+  `5d15676d54fb6fb03abd69b3fd1df373e643fafe` (`exactRevision` before this
+  correction). The registered application root remains
   `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`; this task
   must not mutate that application registration or owner state.
 - **Outcome:** identify the exact supported cause of the repeated review
@@ -27,7 +27,8 @@ only the isolated source/test/documentation candidate described below.
   focused repository tests; this brief and any owning mutable execution design
   update required by the final contract. Main retains the live retry and
   canonical ledger. Build Agent task `01a0b55a-56ad-71c1-a93c-4552cf69514a`
-  owns compilation, RED/GREEN runs and the scoped source commit.
+  owns compilation and RED/GREEN runs; this writer owns the scoped source,
+  tests, brief update and local commit in the isolated checkout.
 - **Authority:** owner delegation for this isolated repair; catalog artifact
   `450e84de-703b-4dcd-ad1a-f711ae82bd5a` at ledger commit `67236e19` for the
   exact blocked request; `rr-outcome3-execution-setup-brief-2026-09-16` for the
@@ -121,3 +122,16 @@ releases no other gate and performs no provisioning/configuration. Stored
 diagnostics replay as recorded evidence without rewriting history; old JSON and
 unrelated results decode with `nil`. No query, schema, UI or recovery engine is
 part of this task.
+
+After installed `0.1.28` returned an observed `causeUnavailable` for the exact
+preserved review request, chief architecture approved one further additive,
+optional `stage` only for that kind. Its closed values are
+`parentCandidateValidation`, `targetProvisioning`,
+`preparedAssignmentConfiguration`, `assignmentStoreIntegrity` and
+`assignmentStoreCompareAndSwap`. Capture the narrow failing site and preserve a
+nested store stage through broader wrappers; do not infer a last-reached stage,
+parse error text, attach a stage to known blocker kinds, or route the diagnostic
+through no-effects settlement, receipt commits or gate cleanup. Legacy payloads
+decode with `stage == nil`; recorded replay changes only evidence classification
+and never rewrites the stored receipt. The field discloses no paths, content,
+raw errors or recovery instructions.
