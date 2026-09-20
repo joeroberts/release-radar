@@ -53,8 +53,9 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     if try replay(c, envelope: envelope, body: body, registration: registration) != nil { return }
                     // A different request cannot replace an uncertain preparation of
                     // this work. Resume its exact request and read back its effects.
-                    for row in try c.rows("SELECT request_body,result_data FROM agent_command_requests WHERE registration_project_id=? AND CAST(request_body AS TEXT) LIKE ?", bindings: [.text(projectID), .text("%prepareExecutionAssignment%")], maximum: 10000) {
-                        guard case let .blob(bytes)? = row["request_body"],
+                    for row in try c.rows("SELECT request_body,result_data,registration_project_id,registration_id,request_generation FROM agent_command_requests WHERE registration_project_id=? AND CAST(request_body AS TEXT) LIKE ?", bindings: [.text(projectID), .text("%prepareExecutionAssignment%")], maximum: 10000) {
+                        guard ProjectLifecycleManager.receiptScopeMatches(row, registration: registration),
+                              case let .blob(bytes)? = row["request_body"],
                               let priorEnvelope = try? JSONDecoder().decode(AgentCommandEnvelope.self, from: bytes),
                               case let .prepareExecutionAssignment(_, priorTicket, priorTask, _, _, priorReview, _) = priorEnvelope.command,
                               priorTicket == ticketID, priorTask == taskID, (priorReview == nil) == (review == nil),

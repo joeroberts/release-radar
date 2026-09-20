@@ -267,6 +267,95 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         XCTAssertEqual(auditCount, 1)
     }
 
+    func testStaleRegistrationPendingReviewReceiptDoesNotBlockCurrentAuthorizedReview() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let staleRegistration = ProjectRegistration(
+            projectID: registration.projectID,
+            registrationID: "stale-execution-registration",
+            requestGeneration: 1
+        )
+        let staleRequestID = UUID()
+        let stale = AgentCommandEnvelope(
+            version: 1,
+            requestID: staleRequestID,
+            projectRoot: root.path,
+            expectedRegistration: staleRegistration,
+            reason: "Historical review preparation",
+            command: .prepareExecutionAssignment(
+                projectID: "p",
+                ticketID: "ticket",
+                taskID: "task",
+                expectedTaskPlanRevision: 1,
+                expectedPhaseRevision: 2,
+                reviewOfAssignmentID: "delivery-stale",
+                baselineFromAssignmentID: nil
+            )
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let pending = AgentCommandResult(
+            entityIDs: ["ticket", "task"],
+            auditEventID: nil,
+            error: .outcomeUnknown
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed stale registration review receipt") { connection in
+            try connection.execute(
+                """
+                INSERT INTO agent_command_requests
+                    (request_id,request_body,result_data,created_at,registration_project_id,registration_id,request_generation)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                bindings: [
+                    .text(staleRequestID.uuidString),
+                    .blob(try encoder.encode(stale)),
+                    .blob(try JSONEncoder().encode(pending)),
+                    .text("2026-09-19T12:00:00Z"),
+                    .text(staleRegistration.projectID.rawValue),
+                    .text(staleRegistration.registrationID),
+                    .integer(staleRegistration.requestGeneration),
+                ]
+            )
+        }
+
+        let currentParent = "delivery-current"
+        await preparer.allowReview(parentID: currentParent)
+        let currentRequestID = UUID()
+        let current = AgentCommandEnvelope(
+            version: 1,
+            requestID: currentRequestID,
+            projectRoot: root.path,
+            expectedRegistration: registration,
+            reason: "Current authorized review preparation",
+            command: .prepareExecutionAssignment(
+                projectID: "p",
+                ticketID: "ticket",
+                taskID: "task",
+                expectedTaskPlanRevision: 1,
+                expectedPhaseRevision: 2,
+                reviewOfAssignmentID: currentParent,
+                baselineFromAssignmentID: nil
+            )
+        )
+
+        let result = await dispatcher.dispatch(current)
+
+        XCTAssertNil(result.error)
+        XCTAssertEqual(result.executionAssignment?.role, .review)
+        XCTAssertEqual(result.executionAssignment?.reviewOfAssignmentID, currentParent)
+        let currentPrepares = await preparer.preparesByRequestID[currentRequestID]
+        XCTAssertEqual(currentPrepares, 1)
+        let persistedStale = try await store.read { connection -> AgentCommandResult in
+            guard case let .blob(data)? = try connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(staleRequestID.uuidString)]
+            )?["result_data"] else {
+                throw ProjectExecutionError.unavailable
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persistedStale, pending, "Stale uncertainty remains retained under its original registration")
+    }
+
     func testTerminalPreparationRefusalReplaySurvivesLaterWorkIneligibility() async throws {
         let (store, root, registration, dispatcher, preparer) = try await executionFixture()
         let requestID = UUID()
