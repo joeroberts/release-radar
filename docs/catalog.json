@@ -7464,6 +7464,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-p6-manage-project-task01-brief-2026-09-20",
+      "path": "docs/delivery/task-briefs/2026-09-20-manage-project-task01.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.rr-p6-manage-project-task-01",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
