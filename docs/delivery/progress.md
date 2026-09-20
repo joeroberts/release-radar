@@ -2,6 +2,10 @@
 
 ## Current execution recovery
 
+Replacement successfully prepared and started: assignment `delivery-7cd1c166-73e5-4c9a-b062-a6553878c55b`, worker `74048E99-1E84-4CC6-91B8-C718B07F3B0D`, task `01a0bf21-e7bc-7122-9685-f1ad8649b723`, audit `86E1F86E-FC0E-4E48-A1F9-E9422E3BCD27`. Effective Terra/medium, exact managed checkout, assigned finite profile, on-request/auto_review and network disabled verified by worker_status. Worker is at read-only readiness; Build Agent exclusively restores brief/WIP commits and pinned prerequisites before implementation resumes. Skill unavailable in worker; repository fallback applies. No passing test or completion claimed.
+
+Fresh preparation initially rejected dirty ledger context after provisioning a checkout at `dd25b811`. Ledger was committed as `f029f80a`; replay then conflicted with that retained checkout baseline. Main selected a new ordinary branch `codex/p6-manage-project-resume` at `dd25b811` and replayed the identical pending request successfully; no RR records or worktree metadata were edited. Canonical checkout returned to `codex/p6-project-controls` after worker start. Both branches remain. Future preparations must begin with committed context files.
+
 RR UI confirmed resources retired for `delivery-57482f51-b352-4602-92c1-71147c77ee60`. Exact old correction request `e9cb35b4-e026-4076-9efc-add75fe06a23` was replayed and refused with `assignmentNotAuthorized`, audit `A69658ED-86FF-409E-84A9-D95C9E2CBE94`. The coordinator explicitly terminally refuses retired parents without child effects. Fresh ordinary same-task preparation will use canonical baseline; Build Agent will restore the preserved brief/WIP into the fresh worker after launch, before product edits. This retains scope and uses normal RR admission, not receipt repair.
 Pending fresh preparation:
 ```json
