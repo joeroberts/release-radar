@@ -78,6 +78,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix](2026-09-15-plugin-verification-sandbox-fix) — leaf; Signed helper verification regression; progress controls authorization
 - [delivery.task-briefs.2026-09-15-release-0.1.17](2026-09-15-release-0.1.17) — leaf; Local 0.1.17 release; progress controls authorization
 - [delivery.task-briefs.2026-09-16-outcome3-execution-setup](2026-09-16-outcome3-execution-setup) — leaf; Outcome 3 deterministic execution setup, owned lifecycle, recovery and source package identity; progress controls authorization
+- [delivery.task-briefs.2026-09-20-execution-preparation-conflict-repair](2026-09-20-execution-preparation-conflict-repair) — leaf; Bounded execution-preparation conflict diagnosis and recovery repair; progress controls authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -981,6 +982,26 @@ Leaf: no child collections.
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-outcome3-execution-setup-brief-2026-09-16 | [docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md](2026-09-16-outcome3-execution-setup/brief.md) | document | controlling &#40;delivery.outcome3-execution-setup&#41; | active | none | none |
 | rr-outcome3-main-handoff-2026-09-18 | [docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md](2026-09-16-outcome3-execution-setup/main-handoff.md) | document | supporting | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-20-execution-preparation-conflict-repair
+
+- Path: [docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair](2026-09-20-execution-preparation-conflict-repair)
+- Purpose: Bounded execution-preparation conflict diagnosis and recovery repair; progress controls authorization
+- Allowed contents: Controlling implementation brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-execution-preparation-conflict-repair-brief-2026-09-20](2026-09-20-execution-preparation-conflict-repair/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-execution-preparation-conflict-repair-brief-2026-09-20 | [docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair/brief.md](2026-09-20-execution-preparation-conflict-repair/brief.md) | document | controlling &#40;delivery.execution-preparation-conflict-repair&#41; | active | none | none |
 
 ### Children
 
