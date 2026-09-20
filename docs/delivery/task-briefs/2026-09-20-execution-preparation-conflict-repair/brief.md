@@ -6,29 +6,30 @@ only the isolated source/test/documentation candidate described below.
 
 ## Shared execution context
 
-- **Standard:** `shared-execution/1`. Installed Release Radar plugin `0.1.28`
-  exposes the compatible v1 skill. Effective model/effort are not exposed to
-  this task and must not be inferred. CodeGraph discovery was attempted first;
-  the checkout contains only an uninitialized `.codegraph` stub, so the tool
-  reported no available index and narrow local symbol reads are used instead.
-- **Root:** `/Users/jroberts/.codex/worktrees/reviewer-preparation-stage-repair/release_radar`,
-  branch `codex/reviewer-preparation-stage-repair`, baseline
-  `5d15676d54fb6fb03abd69b3fd1df373e643fafe` (`exactRevision` before this
-  correction). The registered application root remains
+- **Standard:** `shared-execution/1`. Installed Release Radar plugin `0.1.30`
+  exposes the compatible v1 skill. Sol/high was requested for this writer, but
+  effective model/effort are not exposed and must not be inferred. CodeGraph
+  discovery was attempted first; the checkout contains only an uninitialized
+  `.codegraph` stub, so narrow local symbol reads are used instead.
+- **Root:** `/Users/jroberts/.codex/worktrees/8e4c/release_radar`, detached at
+  baseline `0ebbe7c5b5fbf44921285b491813858a43e1da6a` (`exactRevision` before
+  this correction). Build Agent owns attaching the scoped
+  `codex/execution-preparation-context-repair` branch for the local commit. The
+  registered application root remains
   `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`; this task
   must not mutate that application registration or owner state.
-- **Outcome:** identify the exact supported cause of the repeated review
-  preparation conflict, expose an actionable bounded diagnostic, and correct
-  only the demonstrated no-effects recovery defect while preserving uncertain
-  outcomes, receipts and audit history.
-- **Scope:** execution-preparation dispatcher/coordinator and the smallest
-  existing public diagnostic surface needed to distinguish a pending prior
-  receipt, protected assignment reservation, or active in-process settlement;
-  focused repository tests; this brief and any owning mutable execution design
-  update required by the final contract. Main retains the live retry and
-  canonical ledger. Build Agent task `01a0b55a-56ad-71c1-a93c-4552cf69514a`
-  owns compilation and RED/GREEN runs; this writer owns the scoped source,
-  tests, brief update and local commit in the isolated checkout.
+- **Outcome:** let the existing audited no-effects recovery path terminally
+  refuse only a closed-parent preparation whose app-selected context is missing,
+  while preserving every unreadable, partial, live or otherwise uncertain case.
+- **Scope:** `ProjectExecutionAssignmentCoordinator` only, focused producer and
+  dispatcher regressions, and this brief. The correction classifies only
+  `RepositoryDocumentError(.missingFile)` from the parent context read before
+  assignment creation; it adds no overlay, permission change, schema, public
+  contract, diagnostic kind or generalized recovery mechanism. Main retains the
+  canonical ledger, live exact replay and later product integration. Build Agent
+  task `01a0c061-578a-7e22-8ba3-77348fd6dcac` owns all compilation, RED/GREEN
+  runs and the scoped local commit; this writer owns brief/source/test edits and
+  does not compile or commit.
 - **Authority:** owner delegation for this isolated repair; catalog artifact
   `450e84de-703b-4dcd-ad1a-f711ae82bd5a` at ledger commit `67236e19` for the
   exact blocked request; `rr-outcome3-execution-setup-brief-2026-09-16` for the
@@ -40,11 +41,11 @@ only the isolated source/test/documentation candidate described below.
   focused tests and applicable documentation. No push, PR, merge, packaging,
   installation, owner acceptance, Release Radar mutation, live replay, board
   change, permission/configuration change or artifact cleanup.
-- **Direct checks:** Build Agent runs focused dispatcher/coordinator tests first
-  RED then GREEN, relevant existing replay/authority regressions, repository
-  documentation validation and `git diff --check`. Results must identify the
-  exact candidate revision, runner, scope and limitations; this writer does not
-  compile.
+- **Direct checks:** Build Agent first runs the new missing-context regression
+  RED, then after the source correction runs that selector GREEN plus only the
+  relevant existing no-effects, uncertainty, exact-replay and changed-body
+  regressions, repository documentation validation and `git diff --check`.
+  Results identify the exact candidate revision, runner, scope and limitations.
 - **Review:** one fresh independent reviewer after an immutable candidate covers
   recovery/authority, receipt and audit preservation, public diagnostic safety
   and actionable user guidance. UI QA is required only if presentation changes.
@@ -54,14 +55,19 @@ only the isolated source/test/documentation candidate described below.
 
 ## Scope, exclusions and risks
 
-The source currently maps several causes to `execution.conflict`: an earlier
-same-role/same-task `outcomeUnknown` receipt, an in-memory preparation key, and a
-protected same-role reservation. Restart excludes only a stale process-local key.
-Supported Worker resources reports no same-task review assignment, making a
-prior receipt the leading hypothesis, not a proven fact. The implementation must
-use a supported typed diagnostic or failed-command result to establish the cause;
-it must not inspect or edit private SQLite, receipts, assignment control files or
-profiles directly.
+The supported live result for the exact request is a missing app-selected context
+file in closed candidate `6ba3ce8e`. That result does not expose the durable receipt
+disposition. Current source implies an unchanged `outcomeUnknown` result because a
+generic repository-document error bypasses the existing terminal-refusal branch;
+this remains source inference until Main performs supported readback or exact replay
+after a reviewed installed repair.
+
+The missing-file read occurs after the closed parent candidate is selected but
+before request-owned assignment, worktree/branch/provisioning or profile creation.
+Code position alone is not no-effects proof. The existing verifier must additionally
+prove the deterministic assignment and all provisioning resources absent, the
+worker profile absent, the exact single-flight still owned, and the parent still the
+same-registration, same-work, closed, non-retired eligible delivery assignment.
 
 Preserve the original request ID/body and all uncertainty/audit history. Never
 delete or rewrite a receipt, synthesize success, change request identity, retire
@@ -80,23 +86,28 @@ The exact blocked request is preserved unchanged:
 
 ## Test strategy and acceptance
 
-Tests are authored before product changes and cover: diagnostic distinction for
-prior pending receipt versus durable resource reservation versus active
-single-flight settlement; exact request/body/registration/work/role scoping;
-no disclosure beyond the authorized request; no-effects historical recovery;
-resource-present, unreadable and partial-effect cases remaining pending; failed
-resolution commit preserving `outcomeUnknown`; exact terminal replay returning
-the stored audit without preparing again; changed-body reuse rejection; fresh
-replacement remaining blocked until a terminal audited result exists; and the
-existing live/unknown/revoked authority protections.
+Tests are authored before product changes. The causal regression uses a closed
+same-work delivery parent whose committed candidate lacks one app-selected context
+path. RED must show that this exact failure cannot enter the existing no-effects
+terminal path. GREEN must prove the coordinator returns the existing typed
+no-effects candidate only for `missingFile`, the verifier accepts only the exact
+eligible closed parent after proving every request-owned effect absent, and the
+dispatcher atomically stores an audited `assignmentNotAuthorized` result.
 
-Acceptance requires the supported diagnostic to identify the synthetic cause
-without private-state access and provide one actionable next step. The repair
-must settle only a proven no-effects request through an atomic audited
-transition, preserve all original identity/history, and leave every uncertain
-case blocked. The exact live Release Radar cause and recovery remain unclaimed
-until a separately authorized installed candidate returns supported typed
-readback for the preserved envelope.
+The same test boundary proves identical replay returns the stored audit without a
+second preparation, changed-body reuse rejects, and a fresh same-role/task request
+is no longer blocked only after terminal settlement. Focused existing negatives
+must keep resource-present, profile-present, mismatched parent/registration/work,
+unreadable proof, partial preparation, live/reserved and failed-CAS cases uncertain.
+Other repository-document errors are unchanged. No test or code may mutate the
+preserved parent candidate, private receipt state or live Release Radar state.
+
+Acceptance is one reviewed local source/tests/brief commit. The original request
+body and target remain unchanged; Main alone may later exact-replay it against an
+installed repair. An audited terminal refusal, if returned, permits Main to abandon
+the obsolete exact-`6ba3ce8e` review while preserving its branch and artifacts, then
+integrate the already-authorized Manage Project behavior onto current main and use a
+fresh truthful review request. No old request may be retargeted or reworded.
 
 ## Approved diagnostic contract
 

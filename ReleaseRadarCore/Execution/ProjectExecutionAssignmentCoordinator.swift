@@ -52,6 +52,24 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             && (reviewOfAssignmentID == nil || parent.role == .delivery)
     }
 
+    private nonisolated static func isEligibleClosedParent(
+        parent: ProjectExecutionAssignment,
+        requestedWork: ProjectExecutionWork,
+        registration: ProjectRegistration,
+        parentCheckoutPath: String,
+        primaryRoot: String,
+        reviewOfAssignmentID: String?
+    ) -> Bool {
+        parent.registration == registration
+            && parent.work == requestedWork
+            && parent.state == .closed
+            && parent.retirement == nil
+            && parent.sessionID != nil
+            && parent.checkoutPath == parentCheckoutPath
+            && parent.worktree?.primaryRoot == primaryRoot
+            && (reviewOfAssignmentID == nil || parent.role == .delivery)
+    }
+
     /// Called synchronously by the app while its final current-work transaction
     /// is held. Configuration preparation alone never makes an assignment usable.
     public nonisolated func admitPrepared(_ value: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
@@ -149,9 +167,14 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 && parent.retirement?.completed == true && parent.retirement?.connectionCloseUncertain != true
                 && parent.checkoutPath == parentPaths.checkout.path && parent.worktree?.primaryRoot == policy.primaryRoot
                 && (reviewOfAssignmentID == nil || parent.role == .delivery)
-            guard retiredParent || Self.isClosedTaskMismatch(parent: parent, requestedWork: work,
-                registration: registration, parentCheckoutPath: parentPaths.checkout.path,
-                primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID) else { return false }
+            guard retiredParent
+                    || Self.isEligibleClosedParent(parent: parent, requestedWork: work,
+                        registration: registration, parentCheckoutPath: parentPaths.checkout.path,
+                        primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
+                    || Self.isClosedTaskMismatch(parent: parent, requestedWork: work,
+                        registration: registration, parentCheckoutPath: parentPaths.checkout.path,
+                        primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
+            else { return false }
         }
         do {
             try await configuration.useCodexContext(policy.codexContextID)
@@ -255,19 +278,22 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         }
         let source: URL
         let baseline: String
+        let usesEligibleClosedParent: Bool
         if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
             let parent = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
                 try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
             }
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
-            guard parent.registration == registration, parent.work == work, parent.state == .closed, parent.retirement == nil, parent.sessionID != nil,
-                  parent.checkoutPath == parentPaths.checkout.path, let tree = parent.worktree,
-                  tree.primaryRoot == policy.primaryRoot, reviewOfAssignmentID == nil || parent.role == .delivery else { throw ProjectExecutionError.assignmentNotAuthorized }
+            guard Self.isEligibleClosedParent(parent: parent, requestedWork: work,
+                      registration: registration, parentCheckoutPath: parentPaths.checkout.path,
+                      primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID),
+                  let tree = parent.worktree else { throw ProjectExecutionError.assignmentNotAuthorized }
             baseline = try withProjectExecutionPreparationStage(.parentCandidateValidation) {
                 try provisioning.candidateRevision(worktree: tree)
             }
             if parent.role == .review, baseline != tree.baseline { throw ProjectExecutionError.identityMismatch }
             source = parentPaths.checkout
+            usesEligibleClosedParent = true
         } else {
             // First assignment records the verified selected repository's committed
             // baseline; unrelated dirty primary files are never copied into it.
@@ -275,11 +301,18 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 try provisioning.revision(at: project.canonicalRoot, requireClean: false)
             }
             source = project.canonicalRoot
+            usesEligibleClosedParent = false
         }
         let reader = try RepositoryDocumentReader(rootURL: source, limits: .init(maximumFileBytes: 16 * 1_048_576), afterRead: nil)
-        let contexts = try contextPaths.map { path -> ProjectExecutionAssignment.Context in
-            let bytes = try reader.read(path)
-            return .init(path: path, digest: SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined())
+        let contexts: [ProjectExecutionAssignment.Context]
+        do {
+            contexts = try contextPaths.map { path -> ProjectExecutionAssignment.Context in
+                let bytes = try reader.read(path)
+                return .init(path: path,
+                    digest: SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined())
+            }
+        } catch let error as RepositoryDocumentError where usesEligibleClosedParent && error.code == .missingFile {
+            throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
         }
         let assignment = try store.createAssignment(codexContextID: policy.codexContextID) {
             let tree = try withProjectExecutionPreparationStage(.targetProvisioning) {

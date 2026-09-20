@@ -1035,6 +1035,80 @@ final class ProjectExecutionProducerTests: XCTestCase {
         await reviewProducer.finishPreparation(work: work, requestID: reviewRequestID)
     }
 
+    func testMissingParentContextRequiresAuthoritativeAbsenceOfEveryReviewResource() async throws {
+        for residual in ["none", "assignment", "worktree", "profile"] {
+            let (root, source, project, work, store) = try fixture()
+            let configuration = Configuration()
+            let deliveryProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: configuration, handlerPath: handler,
+                provisioning: Provisioning(source: source, candidate: nil))
+            let deliveryRequestID = UUID()
+            let delivery = try await deliveryProducer.prepare(project: project, work: work,
+                requestID: deliveryRequestID, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            let admitted = try deliveryProducer.admitPrepared(delivery)
+            await deliveryProducer.finishPreparation(work: work, requestID: deliveryRequestID)
+            var closed = admitted
+            closed.state = .closed
+            closed.sessionID = "author-session"
+            try store.saveAssignment(closed, expected: admitted)
+
+            let currentBrief = source.appendingPathComponent("docs/current-brief.md")
+            try FileManager.default.createDirectory(at: currentBrief.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try Data("Current controlling brief".utf8).write(to: currentBrief)
+
+            let reviewProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: configuration, handlerPath: handler,
+                provisioning: Provisioning(source: source,
+                    candidate: URL(fileURLWithPath: closed.checkoutPath)))
+            let reviewRequestID = UUID()
+            do {
+                _ = try await reviewProducer.prepare(project: project, work: work,
+                    requestID: reviewRequestID, reviewOfAssignmentID: closed.id,
+                    baselineFromAssignmentID: nil,
+                    contextPaths: ["AGENTS.md", "docs/current-brief.md"])
+                XCTFail("A review cannot prepare when its closed candidate lacks selected context")
+            } catch let failure as ProjectExecutionPreparationFailure {
+                XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+            } catch {
+                XCTFail("Missing candidate context must use the typed no-effects path, got \(error)")
+            }
+
+            let childID = "review-" + reviewRequestID.uuidString.lowercased()
+            let childPaths = try ProjectExecutionPaths(storageRoot: root,
+                projectID: "project-one", taskID: childID)
+            if residual == "assignment" {
+                var child = ProjectExecutionAssignment(id: childID, registration: project.registration!,
+                    checkoutPath: childPaths.checkout.path, role: .review,
+                    permissionProfile: "rr-" + childID, model: "gpt-5.6-terra", effort: "high",
+                    authorization: "Unexpected partial review",
+                    context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+                    excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+                    state: .preparing, work: work, reviewOfAssignmentID: closed.id)
+                child.codexContextID = try store.policy(projectID: "project-one").codexContextID
+                try store.saveAssignment(child, expected: nil)
+            } else if residual == "worktree" {
+                try FileManager.default.createDirectory(at: childPaths.checkout,
+                    withIntermediateDirectories: true)
+            } else if residual == "profile" {
+                await configuration.seedProfile("rr-" + childID)
+            }
+
+            let verified = try await reviewProducer.verifyNoPreparationEffects(project: project,
+                work: work, requestID: reviewRequestID, reviewOfAssignmentID: closed.id,
+                baselineFromAssignmentID: nil)
+            XCTAssertEqual(verified, residual == "none")
+            let preparedProfiles = await configuration.profiles
+            XCTAssertEqual(preparedProfiles.count, 1,
+                "Recovery inspection must not prepare an additional profile")
+            let hookChecks = await configuration.hookChecks
+            XCTAssertEqual(hookChecks, 1,
+                "Recovery inspection must not configure an additional checkout")
+            await reviewProducer.finishPreparation(work: work, requestID: reviewRequestID)
+        }
+    }
+
     func testFreshRequestCannotReplaceUnknownLaunchOrReviewLiveWriter() async throws {
         let (root, source, project, work, store) = try fixture()
         let configuration = Configuration()
