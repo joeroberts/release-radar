@@ -14,6 +14,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         var preparesByRequestID: [UUID: Int] = [:]
         var definiteRefusals: Set<UUID> = []
         var partialRefusals: Set<UUID> = []
+        var unattributedConflicts: Set<UUID> = []
         var acceptedReviewParents: Set<String> = []
         var activePreparation: UUID?
         var gate: DocumentationCommitGate?
@@ -26,12 +27,14 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         func setNoEffectsGate(_ gate: DocumentationCommitGate) { noEffectsGate = gate }
         func refuseBeforeEffects(_ requestID: UUID) { definiteRefusals.insert(requestID) }
         func refuseAfterPreparing(_ requestID: UUID) { partialRefusals.insert(requestID) }
+        func conflictWithoutKnownCause(_ requestID: UUID) { unattributedConflicts.insert(requestID) }
         func allowReview(parentID: String) { acceptedReviewParents.insert(parentID) }
         func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
             guard activePreparation == nil else { throw ProjectExecutionError.conflict }
             activePreparation = requestID
             prepares += 1
             preparesByRequestID[requestID, default: 0] += 1
+            if unattributedConflicts.contains(requestID) { throw ProjectExecutionError.conflict }
             if definiteRefusals.contains(requestID) {
                 throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
             }
@@ -340,6 +343,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let result = await dispatcher.dispatch(current)
 
         XCTAssertNil(result.error)
+        XCTAssertNil(result.preparationDiagnostic)
         XCTAssertEqual(result.executionAssignment?.role, .review)
         XCTAssertEqual(result.executionAssignment?.reviewOfAssignmentID, currentParent)
         let currentPrepares = await preparer.preparesByRequestID[currentRequestID]
@@ -448,6 +452,160 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
             command: request.command)
         let blocked = await dispatcher.dispatch(replacement)
         XCTAssertEqual(blocked.error, .execution(.conflict))
+        XCTAssertEqual(blocked.preparationDiagnostic, .init(
+            kind: .pendingPreparationRequest,
+            blockingRequestID: requestID,
+            blockingAssignmentID: nil,
+            evidence: .observedAtFailure
+        ))
+    }
+
+    func testUnattributedPreparationConflictReportsUnknownCauseWithoutSettlingReceipt() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.conflictWithoutKnownCause(requestID)
+        let request = AgentCommandEnvelope(
+            version: 1,
+            requestID: requestID,
+            projectRoot: root.path,
+            expectedRegistration: registration,
+            reason: "Synthetic unattributed preparation conflict",
+            command: .prepareExecutionAssignment(
+                projectID: "p",
+                ticketID: "ticket",
+                taskID: "task",
+                expectedTaskPlanRevision: 1,
+                expectedPhaseRevision: 2,
+                reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil
+            )
+        )
+
+        let result = await dispatcher.dispatch(request)
+
+        XCTAssertEqual(result.error, .execution(.conflict))
+        XCTAssertEqual(result.preparationDiagnostic, .init(
+            kind: .causeUnavailable,
+            blockingRequestID: nil,
+            blockingAssignmentID: nil,
+            evidence: .observedAtFailure
+        ))
+        XCTAssertNil(result.auditEventID)
+        let persisted = try await store.read { connection -> AgentCommandResult in
+            guard case let .blob(data)? = try connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)]
+            )?["result_data"] else {
+                throw ProjectExecutionError.unavailable
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        }
+        XCTAssertEqual(persisted.error, .outcomeUnknown)
+        XCTAssertNil(persisted.preparationDiagnostic)
+    }
+
+    func testPreparationDiagnosticIsAdditiveForLegacyJSONAndRoundTrips() throws {
+        let legacy = Data(#"{"entityIDs":[],"auditEventID":null,"error":null}"#.utf8)
+        let decoded = try JSONDecoder().decode(AgentCommandResult.self, from: legacy)
+        XCTAssertNil(decoded.preparationDiagnostic)
+
+        let requestID = UUID()
+        let current = AgentCommandResult(
+            entityIDs: [],
+            auditEventID: nil,
+            error: .execution(.conflict),
+            preparationDiagnostic: .init(
+                kind: .pendingPreparationRequest,
+                blockingRequestID: requestID,
+                blockingAssignmentID: nil,
+                evidence: .recordedFailure
+            )
+        )
+        XCTAssertEqual(try JSONDecoder().decode(AgentCommandResult.self, from: JSONEncoder().encode(current)), current)
+    }
+
+    func testStoredPreparationDiagnosticReplaysAsRecordedWithoutRecomputingOrDisclosureOnChangedBody() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        let request = AgentCommandEnvelope(
+            version: 1,
+            requestID: requestID,
+            projectRoot: root.path,
+            expectedRegistration: registration,
+            reason: "Stored diagnostic fixture",
+            command: .prepareExecutionAssignment(
+                projectID: "p",
+                ticketID: "ticket",
+                taskID: "task",
+                expectedTaskPlanRevision: 1,
+                expectedPhaseRevision: 2,
+                reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil
+            )
+        )
+        let stored = AgentCommandResult(
+            entityIDs: [],
+            auditEventID: nil,
+            error: .execution(.conflict),
+            preparationDiagnostic: .init(
+                kind: .preparationInProgress,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            )
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let body = try encoder.encode(request)
+        let storedBytes = try JSONEncoder().encode(stored)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed stored preparation diagnostic") { connection in
+            try connection.execute(
+                """
+                INSERT INTO agent_command_requests
+                    (request_id,request_body,result_data,created_at,registration_project_id,registration_id,request_generation)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                bindings: [
+                    .text(requestID.uuidString), .blob(body), .blob(storedBytes),
+                    .text("2026-09-20T12:00:00Z"), .text(registration.projectID.rawValue),
+                    .text(registration.registrationID), .integer(registration.requestGeneration),
+                ]
+            )
+        }
+
+        let replay = await dispatcher.dispatch(request)
+
+        XCTAssertEqual(replay.error, stored.error)
+        XCTAssertEqual(replay.preparationDiagnostic, .init(
+            kind: .preparationInProgress,
+            blockingRequestID: nil,
+            blockingAssignmentID: nil,
+            evidence: .recordedFailure
+        ))
+        let prepares = await preparer.prepares
+        XCTAssertEqual(prepares, 0)
+        let persistedBytes = try await store.read { connection -> Data in
+            guard case let .blob(data)? = try connection.row(
+                "SELECT result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)]
+            )?["result_data"] else {
+                throw ProjectExecutionError.unavailable
+            }
+            return data
+        }
+        XCTAssertEqual(persistedBytes, storedBytes, "Replay must not rewrite recorded evidence")
+
+        let changed = AgentCommandEnvelope(
+            version: request.version,
+            requestID: request.requestID,
+            projectRoot: request.projectRoot,
+            expectedRegistration: request.expectedRegistration,
+            reason: "Changed body",
+            command: request.command
+        )
+        let rejected = await dispatcher.dispatch(changed)
+        XCTAssertEqual(rejected.error, .requestIDReused)
+        XCTAssertNil(rejected.preparationDiagnostic)
     }
 
     func testChangedWorkBeforeRefusalSettlementPreservesOutcomeUnknown() async throws {

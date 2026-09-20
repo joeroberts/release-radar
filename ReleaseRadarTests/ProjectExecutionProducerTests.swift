@@ -212,7 +212,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let producerConfiguration = Configuration()
         let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: producerConfiguration, handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("Replacement remains blocked") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic.kind, .blockingAssignment)
+            XCTAssertEqual(conflict.diagnostic.blockingAssignmentID, value.id)
+        }
         let producerCloses = await producerConfiguration.finishes; XCTAssertEqual(producerCloses, 1)
         let lostHandle = ProjectExecutionResourceLifecycle(root: { root }, configuration: CleanupConfiguration(), provisioning: provisioning)
         do { _ = try await lostHandle.retire(project: project, expected: pending, requestID: UUID()); XCTFail("A different request cannot recover the original connection") } catch {}
@@ -683,7 +686,14 @@ final class ProjectExecutionProducerTests: XCTestCase {
             _ = try await producer.prepare(project: project, work: work, requestID: request,
                 reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
             XCTFail("Preparation must remain single-flight until finalization")
-        } catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        } catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .preparationInProgress,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
         await producer.finishPreparation(work: work, requestID: request)
         let content = URL(fileURLWithPath: recovered.checkoutPath + "/.codex/owner.txt")
         try Data("preserve".utf8).write(to: content)
@@ -847,12 +857,23 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let deliveryRequestID = UUID()
         let delivery = try await producer.prepare(project: project, work: work, requestID: deliveryRequestID, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: delivery.id, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("Live writer must not become a review candidate") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic.kind, .preparationInProgress)
+            XCTAssertNil(conflict.diagnostic.blockingRequestID)
+            XCTAssertNil(conflict.diagnostic.blockingAssignmentID)
+        }
         await producer.finishPreparation(work: work, requestID: deliveryRequestID)
         var unknown = delivery; unknown.state = .unknown
         try store.saveAssignment(unknown, expected: delivery)
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("A new request must not replace an unknown launch") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic, .init(
+                kind: .blockingAssignment,
+                blockingRequestID: nil,
+                blockingAssignmentID: delivery.id,
+                evidence: .observedAtFailure
+            ))
+        }
         XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
     }
 
@@ -867,7 +888,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let revoked = try store.assignment(projectID: "project-one", taskID: prepared.id)
         XCTAssertEqual(revoked.state, .revoked)
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("A different request cannot replace failed finalization") }
-        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            XCTAssertEqual(conflict.diagnostic.kind, .blockingAssignment)
+            XCTAssertEqual(conflict.diagnostic.blockingAssignmentID, prepared.id)
+        }
         let resumed = try await producer.prepare(project: project, work: work, requestID: request, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
         XCTAssertEqual(resumed.id, prepared.id); XCTAssertEqual(resumed.state, .preparing)
         await producer.finishPreparation(work: work, requestID: request)

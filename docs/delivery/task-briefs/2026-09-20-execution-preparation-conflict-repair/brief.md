@@ -96,3 +96,28 @@ transition, preserve all original identity/history, and leave every uncertain
 case blocked. The exact live Release Radar cause and recovery remain unclaimed
 until a separately authorized installed candidate returns supported typed
 readback for the preserved envelope.
+
+## Approved diagnostic contract
+
+Chief architecture approved one additive optional
+`AgentCommandResult.preparationDiagnostic` with default `nil`; existing
+`execution.conflict`, entity/audit semantics, envelope version and replay
+contracts stay unchanged. Its typed kind is one of `pendingPreparationRequest`,
+`preparationInProgress`, `blockingAssignment` or `causeUnavailable`, with one
+optional directly proven request or assignment witness and evidence classified
+as `observedAtFailure` or `recordedFailure`. It contains no free text, request
+body/reason, path, prompt, content, session/account detail, raw error or recovery
+action. One observed blocker is not an exhaustive inventory and removing it does
+not imply eligibility.
+
+The receipt guard may expose an ID only after exact root, current registration
+and generation, project, ticket, task, revisions and role are validated. The
+single-flight guard exposes no request ID because its current key does not prove
+role/registration. The assignment guard exposes only its verified matching
+assignment witness. Other conflicts are `causeUnavailable`; absent legacy
+detail is never reconstructed. The internal diagnostic carrier remains distinct
+from the no-effects candidate, creates no receipt/audit, settles no uncertainty,
+releases no other gate and performs no provisioning/configuration. Stored
+diagnostics replay as recorded evidence without rewriting history; old JSON and
+unrelated results decode with `nil`. No query, schema, UI or recovery engine is
+part of this task.

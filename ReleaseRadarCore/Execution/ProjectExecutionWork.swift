@@ -53,6 +53,30 @@ enum ProjectExecutionPreparationFailure: Error {
     }
 }
 
+public struct ProjectExecutionPreparationDiagnostic: Codable, Equatable, Sendable {
+    public enum Kind: String, Codable, Sendable {
+        case pendingPreparationRequest, preparationInProgress, blockingAssignment, causeUnavailable
+    }
+    public enum Evidence: String, Codable, Sendable { case observedAtFailure, recordedFailure }
+
+    public let kind: Kind
+    public let blockingRequestID: UUID?
+    public let blockingAssignmentID: String?
+    public let evidence: Evidence
+
+    public init(kind: Kind, blockingRequestID: UUID?, blockingAssignmentID: String?, evidence: Evidence) {
+        self.kind = kind
+        self.blockingRequestID = blockingRequestID
+        self.blockingAssignmentID = blockingAssignmentID
+        self.evidence = evidence
+    }
+}
+
+/// Internal conflict witness only. It never authorizes no-effects settlement.
+struct ProjectExecutionPreparationConflict: Error {
+    let diagnostic: ProjectExecutionPreparationDiagnostic
+}
+
 public protocol ProjectExecutionAssignmentPreparing: Sendable {
     func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment
     func revokePreparation(_ assignment: ProjectExecutionAssignment) throws

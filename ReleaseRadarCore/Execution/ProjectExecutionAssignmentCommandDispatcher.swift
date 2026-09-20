@@ -36,6 +36,14 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     return (work, prior)
                 }
                 if var prior = capture.1, prior.error != .outcomeUnknown {
+                    if let diagnostic = prior.preparationDiagnostic {
+                        prior.preparationDiagnostic = .init(
+                            kind: diagnostic.kind,
+                            blockingRequestID: diagnostic.blockingRequestID,
+                            blockingAssignmentID: diagnostic.blockingAssignmentID,
+                            evidence: .recordedFailure
+                        )
+                    }
                     if prior.error == nil, let priorAssignment = prior.executionAssignment {
                         prior.executionAssignment = try await preparer.readCurrent(project: project, assignmentID: priorAssignment.id)
                     }
@@ -53,15 +61,28 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     if try replay(c, envelope: envelope, body: body, registration: registration) != nil { return }
                     // A different request cannot replace an uncertain preparation of
                     // this work. Resume its exact request and read back its effects.
-                    for row in try c.rows("SELECT request_body,result_data,registration_project_id,registration_id,request_generation FROM agent_command_requests WHERE registration_project_id=? AND CAST(request_body AS TEXT) LIKE ?", bindings: [.text(projectID), .text("%prepareExecutionAssignment%")], maximum: 10000) {
+                    for row in try c.rows("SELECT request_id,request_body,result_data,registration_project_id,registration_id,request_generation FROM agent_command_requests WHERE registration_project_id=? AND CAST(request_body AS TEXT) LIKE ?", bindings: [.text(projectID), .text("%prepareExecutionAssignment%")], maximum: 10000) {
                         guard ProjectLifecycleManager.receiptScopeMatches(row, registration: registration),
                               case let .blob(bytes)? = row["request_body"],
                               let priorEnvelope = try? JSONDecoder().decode(AgentCommandEnvelope.self, from: bytes),
-                              case let .prepareExecutionAssignment(_, priorTicket, priorTask, _, _, priorReview, _) = priorEnvelope.command,
+                              case let .prepareExecutionAssignment(priorProject, priorTicket, priorTask, priorTaskRevision, priorPhaseRevision, priorReview, _) = priorEnvelope.command,
                               priorTicket == ticketID, priorTask == taskID, (priorReview == nil) == (review == nil),
                               case let .blob(resultBytes)? = row["result_data"],
                               let result = try? JSONDecoder().decode(AgentCommandResult.self, from: resultBytes) else { continue }
-                        if result.error == .outcomeUnknown { throw ProjectExecutionError.conflict }
+                        if result.error == .outcomeUnknown {
+                            let safelyScoped = row["request_id"] == .text(priorEnvelope.requestID.uuidString)
+                                && priorEnvelope.projectRoot == envelope.projectRoot
+                                && priorEnvelope.expectedRegistration == registration
+                                && priorProject == projectID
+                                && priorTaskRevision == taskRevision
+                                && priorPhaseRevision == phaseRevision
+                            throw ProjectExecutionPreparationConflict(diagnostic: .init(
+                                kind: safelyScoped ? .pendingPreparationRequest : .causeUnavailable,
+                                blockingRequestID: safelyScoped ? priorEnvelope.requestID : nil,
+                                blockingAssignmentID: nil,
+                                evidence: .observedAtFailure
+                            ))
+                        }
                     }
                     try c.execute("INSERT INTO agent_command_requests (request_id,request_body,result_data,created_at,registration_project_id,registration_id,request_generation) VALUES (?,?,?,?,?,?,?)",
                         bindings: [.text(envelope.requestID.uuidString), .blob(body), .blob(try JSONEncoder().encode(intent)), .text(ISO8601DateFormatter().string(from: Date()))] + ProjectLifecycleManager.receiptScopeBindings(registration))
@@ -139,7 +160,16 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                 }
             }
         } catch Control.reused { return .init(entityIDs: [], auditEventID: nil, error: .requestIDReused) }
-        catch let error as ProjectExecutionError { return .init(entityIDs: [], auditEventID: nil, error: .execution(error)) }
+        catch let conflict as ProjectExecutionPreparationConflict {
+            return .init(entityIDs: [], auditEventID: nil, error: .execution(.conflict), preparationDiagnostic: conflict.diagnostic)
+        }
+        catch let error as ProjectExecutionError {
+            return .init(entityIDs: [], auditEventID: nil, error: .execution(error),
+                preparationDiagnostic: error == .conflict ? .init(
+                    kind: .causeUnavailable, blockingRequestID: nil, blockingAssignmentID: nil,
+                    evidence: .observedAtFailure
+                ) : nil)
+        }
         catch let error as DocumentationOperationError { return .init(entityIDs: [], auditEventID: nil, error: .documentation(error)) }
         catch { return .init(entityIDs: [], auditEventID: nil, error: .internalFailure(error.localizedDescription)) }
     }

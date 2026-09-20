@@ -167,6 +167,7 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
 
 public struct AgentCommandResult: Codable, Equatable, Sendable {
     public var executionAssignment: ProjectExecutionAssignment?
+    public var preparationDiagnostic: ProjectExecutionPreparationDiagnostic?
     public let entityIDs: [String]
     public let auditEventID: AuditEventID?
     public let error: AgentCommandError?
@@ -189,10 +190,11 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let phaseLifecycleEvents: [PhaseLifecycleEventRecord]?
     public let phaseCompletionAssessments: [PhaseCompletionAssessment]?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, deliveryInventory: DeliveryInventory? = nil, documentationCatalogTransition: DocumentationCatalogTransitionDiagnostic? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, preparationDiagnostic: ProjectExecutionPreparationDiagnostic? = nil, inventory: EvidenceInventory? = nil, deliveryInventory: DeliveryInventory? = nil, documentationCatalogTransition: DocumentationCatalogTransitionDiagnostic? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
+        self.preparationDiagnostic = preparationDiagnostic
         self.inventory = inventory
         self.deliveryInventory = deliveryInventory
         self.documentationCatalogTransition = documentationCatalogTransition

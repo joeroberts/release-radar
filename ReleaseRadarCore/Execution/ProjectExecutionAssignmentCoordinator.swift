@@ -92,7 +92,14 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     public func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
                         reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
         let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
-        guard preparing[key] == nil else { throw ProjectExecutionError.conflict }
+        guard preparing[key] == nil else {
+            throw ProjectExecutionPreparationConflict(diagnostic: .init(
+                kind: .preparationInProgress,
+                blockingRequestID: nil,
+                blockingAssignmentID: nil,
+                evidence: .observedAtFailure
+            ))
+        }
         preparing[key] = requestID
         do {
             let result = try await prepareOperation(project: project, work: work, requestID: requestID,
@@ -216,11 +223,19 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             return try await configure(pending, paths: paths, policy: policy, store: store)
         }
         // Another request identity cannot silently replace an uncertain/live worker.
-        guard !inventory.contains(where: {
+        if let blocking = inventory.first(where: {
             $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
                 && !($0.state == .superseded && $0.retirement?.completed == true || $0.retirement?.replacementAllowed == true)
                 && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || $0.retirement != nil || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
-        }) else { throw ProjectExecutionError.conflict }
+        }) {
+            let safelyScoped = blocking.work == work
+            throw ProjectExecutionPreparationConflict(diagnostic: .init(
+                kind: safelyScoped ? .blockingAssignment : .causeUnavailable,
+                blockingRequestID: nil,
+                blockingAssignmentID: safelyScoped ? blocking.id : nil,
+                evidence: .observedAtFailure
+            ))
+        }
         let source: URL
         let baseline: String
         if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
