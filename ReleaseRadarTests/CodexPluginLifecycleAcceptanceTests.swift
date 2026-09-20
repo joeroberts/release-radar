@@ -47,13 +47,13 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.29")
+        XCTAssertEqual(package.version, "0.1.30")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
         XCTAssertEqual(package.relativeFiles, CodexPluginPackage.relativeFiles)
-        XCTAssertEqual(package.digest, "5c6ae4bac785fab77e8c2c27f8c8aae86bf4e15fd8774e6e147351722939e10d")
+        XCTAssertEqual(package.digest, "58b26787e6f108a0de692b7aafda116d7c0918ce2cdfe279d54603eeeadea182")
         let capability = try XCTUnwrap(RecognizedPluginCapability.recognize(
             manifestVersion: package.version,
             normalizedPackageDigest: package.digest
@@ -67,9 +67,9 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         )
     }
 
-    func testPublished018RecognitionRemainsExactDuring029Update() throws {
+    func testPublished018RecognitionRemainsExactDuring030Update() throws {
         let publishedDigest = "63f1f25156ff4738894aae72957e853936292e9c6f4299388a453e76701a1168"
-        let currentDigest = "5c6ae4bac785fab77e8c2c27f8c8aae86bf4e15fd8774e6e147351722939e10d"
+        let currentDigest = "58b26787e6f108a0de692b7aafda116d7c0918ce2cdfe279d54603eeeadea182"
         let published = try XCTUnwrap(RecognizedPluginCapability.recognize(
             manifestVersion: "0.1.18",
             normalizedPackageDigest: publishedDigest
@@ -80,7 +80,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             normalizedPackageDigest: currentDigest
         ))
         XCTAssertNil(RecognizedPluginCapability.recognize(
-            manifestVersion: "0.1.29",
+            manifestVersion: "0.1.30",
             normalizedPackageDigest: publishedDigest
         ))
     }
