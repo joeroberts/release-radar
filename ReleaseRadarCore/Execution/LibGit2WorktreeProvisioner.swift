@@ -24,11 +24,12 @@ public struct LibGit2WorktreeProvisioner: ExecutionWorktreeProvisioning, Sendabl
     }
     private func clean(_ repository: OpaquePointer, includingIgnored: Bool = false) throws {
         var list: OpaquePointer?
+        var options = git_status_options(); try check(git_status_options_init(&options, 1))
+        options.flags = UInt32(GIT_STATUS_OPT_INCLUDE_UNTRACKED.rawValue | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS.rawValue)
         if includingIgnored {
-            var options = git_status_options(); try check(git_status_options_init(&options, 1))
             options.flags |= UInt32(GIT_STATUS_OPT_INCLUDE_IGNORED.rawValue | GIT_STATUS_OPT_RECURSE_IGNORED_DIRS.rawValue)
-            try check(git_status_list_new(&list, repository, &options))
-        } else { try check(git_status_list_new(&list, repository, nil)) }
+        }
+        try check(git_status_list_new(&list, repository, &options))
         defer { git_status_list_free(list) }
         guard git_status_list_entrycount(list) == 0 else { throw ProjectExecutionError.conflict }
     }
