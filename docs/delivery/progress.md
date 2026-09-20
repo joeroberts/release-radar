@@ -1,5 +1,15 @@
 # Release Radar delivery state
 
+Manage Project discovery preparation pending; existing plan1 retained unchanged. Exact envelope:
+```json
+{"version": 1, "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar", "projectID": "project-fffdc0e0b15b9b86", "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11", "registrationProjectID": "project-fffdc0e0b15b9b86", "requestGeneration": 1, "requestID": "57482f51-b352-4602-92c1-71147c77ee60", "ticketID": "rr-p6-manage-project", "taskID": "rr-p6-manage-project-task-01", "expectedPhaseRevision": 1, "expectedTaskPlanRevision": 1, "reason": "Owner authorized overnight Manage Project delivery. First bounded assignment inspects current management sections and reports exact existing implementation and relocation boundaries; no product writes until controlling brief is committed."}
+```
+
+## Overnight authorization — Manage Project, navigation and guided setup
+
+Owner authorized autonomous progress for eight hours, through 2026-09-20 11:27 UTC, in this order: `rr-p6-manage-project`, `rr-p6-navigation`, `rr-p6-guided-setup`. Existing approved task catalogs remain unchanged. Documentation reconciliation and plan reconstruction remain Backlog; the older documentation-start entry below is superseded. Use supported RR managed assignments, Build Agent compilation/integration, direct checks and appropriate independent review. Main owns coordination and this ledger. Existing local commit/release authority applies; pushes, PRs, runtime permission requests and owner acceptance retain their separate boundaries. Preserve branches, worktrees, artifacts and unrelated Codex files. Reconcile delivered Outcome 3 before remaining guided-setup implementation. Current known launch obstacle is the plugin Modified receipt; recover only through supported app controls, never direct receipt repair. Schedule final installation after managed work where possible so a Codex restart does not strand overnight coordination.
+
+
 Owner directed documentation reconciliation back to Backlog; prior start authorization is superseded. No worker launched: preparation returned execution.unavailable. Plugin reinstall confirmation cancelled without installation. Plan reconstruction remains Backlog. Return-to-backlog committed, audit `07148D8D-7F14-44C5-B71E-C7D3302B8E12`; inventory confirms both documentation reconciliation and plan reconstruction Backlog, task-plan revision1 unchanged. Exact committed envelope:
 ```json
 {"version": 1, "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar", "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11", "registrationProjectID": "project-fffdc0e0b15b9b86", "requestGeneration": 1, "ticketID": "rr-p6-doc-reconciliation", "requestID": "d827bdab-ce58-4f42-beb4-9ce28e7f760a", "lane": "backlog", "reason": "Owner directed documentation reconciliation back to Backlog. No worker launched; preserve existing task definitions and defer execution."}
