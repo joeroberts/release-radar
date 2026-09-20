@@ -1,5 +1,10 @@
 # Release Radar delivery state
 
+Owner directed documentation reconciliation back to Backlog; prior start authorization is superseded. No worker launched: preparation returned execution.unavailable. Plugin reinstall confirmation cancelled without installation. Plan reconstruction remains Backlog. Return-to-backlog committed, audit `07148D8D-7F14-44C5-B71E-C7D3302B8E12`; inventory confirms both documentation reconciliation and plan reconstruction Backlog, task-plan revision1 unchanged. Exact committed envelope:
+```json
+{"version": 1, "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar", "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11", "registrationProjectID": "project-fffdc0e0b15b9b86", "requestGeneration": 1, "ticketID": "rr-p6-doc-reconciliation", "requestID": "d827bdab-ce58-4f42-beb4-9ce28e7f760a", "lane": "backlog", "reason": "Owner directed documentation reconciliation back to Backlog. No worker launched; preserve existing task definitions and defer execution."}
+```
+
 ## Active work — P6 documentation reconciliation
 
 Owner approved repository-documentation reconciliation, followed by repository-plan reconstruction. Existing task catalog retained unchanged: task01 identifies controlling docs/conflicts/overlapping IDs; task02 reconciles active docs and references preserving stable identities, accepted ADRs and history; task03 validates and independently reviews. Main owns this ledger. First assignment is bounded read-only discovery, no source/config/app-state changes; implementation scope will follow its exact file findings. Local branch `codex/p6-documentation-reconciliation` preserves merged release ancestry and local merge record. Push/PR not yet authorized for this new outcome. Exact pending start/assignment envelopes:
