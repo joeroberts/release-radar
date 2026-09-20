@@ -14,6 +14,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         var preparesByRequestID: [UUID: Int] = [:]
         var definiteRefusals: Set<UUID> = []
         var partialRefusals: Set<UUID> = []
+        var acceptedReviewParents: Set<String> = []
         var activePreparation: UUID?
         var gate: DocumentationCommitGate?
         var noEffectsGate: DocumentationCommitGate?
@@ -25,6 +26,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         func setNoEffectsGate(_ gate: DocumentationCommitGate) { noEffectsGate = gate }
         func refuseBeforeEffects(_ requestID: UUID) { definiteRefusals.insert(requestID) }
         func refuseAfterPreparing(_ requestID: UUID) { partialRefusals.insert(requestID) }
+        func allowReview(parentID: String) { acceptedReviewParents.insert(parentID) }
         func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
             guard activePreparation == nil else { throw ProjectExecutionError.conflict }
             activePreparation = requestID
@@ -33,12 +35,17 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
             if definiteRefusals.contains(requestID) {
                 throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
             }
-            guard reviewOfAssignmentID == nil, baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
+            guard baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
+            if let reviewOfAssignmentID {
+                guard acceptedReviewParents.contains(reviewOfAssignmentID) else { throw ProjectExecutionError.assignmentNotAuthorized }
+            }
             if let gate { await gate.enterAndWait(); self.gate = nil }
-            var assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
-                checkoutPath: "/Fixture/Checkout", role: .delivery, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
+            let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review
+            var assignment = ProjectExecutionAssignment(id: role.rawValue + "-" + requestID.uuidString.lowercased(), registration: project.registration!,
+                checkoutPath: "/Fixture/Checkout", role: role, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
                 authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
-                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work)
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work,
+                reviewOfAssignmentID: reviewOfAssignmentID)
             assignment.state = .preparing; value = assignment
             if partialRefusals.contains(requestID) { throw ProjectExecutionError.assignmentNotAuthorized }
             return assignment
@@ -198,6 +205,64 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
 
         let auditCount = try await store.read {
             try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(refusalAuditID.rawValue)])
+        }
+        XCTAssertEqual(auditCount, 1)
+    }
+
+    func testHistoricalTaskMismatchReplaySettlesOnlyExactReceiptAndAllowsCorrectedReview() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let requestID = UUID()
+        await preparer.refuseBeforeEffects(requestID)
+        let mismatch = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Historical task mismatch",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2,
+                reviewOfAssignmentID: "delivery-wrong-task", baselineFromAssignmentID: nil))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let body = try encoder.encode(mismatch)
+        let pending = AgentCommandResult(entityIDs: ["ticket", "task"], auditEventID: nil, error: .outcomeUnknown)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed historical task-mismatch receipt") { connection in
+            try connection.execute("""
+                INSERT INTO agent_command_requests
+                    (request_id,request_body,result_data,created_at,registration_project_id,registration_id,request_generation)
+                VALUES (?,?,?,?,?,?,?)
+                """, bindings: [
+                    .text(requestID.uuidString), .blob(body), .blob(try JSONEncoder().encode(pending)),
+                    .text("2026-09-19T12:00:00Z"), .text(registration.projectID.rawValue),
+                    .text(registration.registrationID), .integer(registration.requestGeneration)
+                ])
+        }
+
+        let terminal = await dispatcher.dispatch(mismatch)
+        XCTAssertEqual(terminal.error, .execution(.assignmentNotAuthorized))
+        let auditID = try XCTUnwrap(terminal.auditEventID)
+        let replay = await dispatcher.dispatch(mismatch)
+        XCTAssertEqual(replay, terminal)
+        let mismatchPrepares = await preparer.preparesByRequestID[requestID]
+        XCTAssertEqual(mismatchPrepares, 1)
+
+        let changed = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Changed historical body", command: mismatch.command)
+        let changedResult = await dispatcher.dispatch(changed)
+        XCTAssertEqual(changedResult.error, .requestIDReused)
+
+        await preparer.allowReview(parentID: "delivery-correct-task")
+        let correctedRequestID = UUID()
+        let corrected = AgentCommandEnvelope(version: 1, requestID: correctedRequestID, projectRoot: root.path,
+            expectedRegistration: registration, reason: "Corrected review parent",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2,
+                reviewOfAssignmentID: "delivery-correct-task", baselineFromAssignmentID: nil))
+        let recovered = await dispatcher.dispatch(corrected)
+        XCTAssertNil(recovered.error)
+        XCTAssertEqual(recovered.executionAssignment?.role, .review)
+        XCTAssertEqual(recovered.executionAssignment?.reviewOfAssignmentID, "delivery-correct-task")
+        let correctedPrepares = await preparer.preparesByRequestID[correctedRequestID]
+        XCTAssertEqual(correctedPrepares, 1)
+
+        let auditCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(auditID.rawValue)])
         }
         XCTAssertEqual(auditCount, 1)
     }

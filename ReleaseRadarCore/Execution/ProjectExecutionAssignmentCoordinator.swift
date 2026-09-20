@@ -31,6 +31,27 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         return SHA256.hash(data: try encoder.encode(policy)).map { String(format: "%02x", $0) }.joined()
     }
 
+    private nonisolated static func isClosedTaskMismatch(
+        parent: ProjectExecutionAssignment,
+        requestedWork: ProjectExecutionWork,
+        registration: ProjectRegistration,
+        parentCheckoutPath: String,
+        primaryRoot: String,
+        reviewOfAssignmentID: String?
+    ) -> Bool {
+        guard let parentWork = parent.work else { return false }
+        return parent.registration == registration
+            && parentWork.projectID == requestedWork.projectID
+            && parentWork.ticketID == requestedWork.ticketID
+            && parentWork.taskID != requestedWork.taskID
+            && parent.state == .closed
+            && parent.retirement == nil
+            && parent.sessionID != nil
+            && parent.checkoutPath == parentCheckoutPath
+            && parent.worktree?.primaryRoot == primaryRoot
+            && (reviewOfAssignmentID == nil || parent.role == .delivery)
+    }
+
     /// Called synchronously by the app while its final current-work transaction
     /// is held. Configuration preparation alone never makes an assignment usable.
     public nonisolated func admitPrepared(_ value: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
@@ -117,10 +138,13 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
                 projectID: project.projectID.rawValue, taskID: parentID)
-            guard parent.registration == registration, parent.work == work, parent.state == .superseded,
-                  parent.retirement?.completed == true, parent.retirement?.connectionCloseUncertain != true,
-                  parent.checkoutPath == parentPaths.checkout.path, parent.worktree?.primaryRoot == policy.primaryRoot,
-                  reviewOfAssignmentID == nil || parent.role == .delivery else { return false }
+            let retiredParent = parent.registration == registration && parent.work == work && parent.state == .superseded
+                && parent.retirement?.completed == true && parent.retirement?.connectionCloseUncertain != true
+                && parent.checkoutPath == parentPaths.checkout.path && parent.worktree?.primaryRoot == policy.primaryRoot
+                && (reviewOfAssignmentID == nil || parent.role == .delivery)
+            guard retiredParent || Self.isClosedTaskMismatch(parent: parent, requestedWork: work,
+                registration: registration, parentCheckoutPath: parentPaths.checkout.path,
+                primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID) else { return false }
         }
         do {
             try await configuration.useCodexContext(policy.codexContextID)
@@ -146,6 +170,16 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
               policy.handlerPath == handlerPath, policy.appServerExecutable == CodexExecutionIdentity.executable,
               policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(), policy.hookReceipt?.installed == true,
               policy.hookReceipt?.command == "\"" + handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
+        if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
+            let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
+                projectID: project.projectID.rawValue, taskID: parentID)
+            if Self.isClosedTaskMismatch(parent: parent, requestedWork: work, registration: registration,
+                parentCheckoutPath: parentPaths.checkout.path, primaryRoot: policy.primaryRoot,
+                reviewOfAssignmentID: reviewOfAssignmentID) {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
+        }
         try await configuration.useCodexContext(policy.codexContextID)
         try await configuration.validateInstallation(handlerPath: handlerPath)
         let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review

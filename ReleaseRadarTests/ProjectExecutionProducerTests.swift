@@ -58,6 +58,17 @@ final class ProjectExecutionProducerTests: XCTestCase {
         }
         func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws { throw ProjectExecutionError.unavailable }
     }
+    struct UninspectableProvisioning: ExecutionWorktreeProvisioning {
+        let base: Provisioning
+        func revision(at root: URL, requireClean: Bool) throws -> String { try base.revision(at: root, requireClean: requireClean) }
+        func candidateRevision(worktree: ExecutionWorktree) throws -> String { try base.candidateRevision(worktree: worktree) }
+        func prepare(primaryRoot: URL, checkout: URL, projectID: String, taskID: String, baseline: String) throws -> ExecutionWorktree {
+            try base.prepare(primaryRoot: primaryRoot, checkout: checkout, projectID: projectID, taskID: taskID, baseline: baseline)
+        }
+        func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws {
+            try base.remove(primaryRoot: primaryRoot, worktree: worktree, projectID: projectID, taskID: taskID)
+        }
+    }
     private let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
     private final class CleanupProvisioning: ExecutionWorktreeProvisioning, @unchecked Sendable {
         var removals = 0
@@ -447,6 +458,129 @@ final class ProjectExecutionProducerTests: XCTestCase {
             XCTAssertEqual(hookChecks, 0, "Recovery inspection must not configure the checkout")
             await producer.finishPreparation(work: work, requestID: requestID)
         }
+    }
+
+    func testTaskMismatchRefusalRequiresClosedParentAndAuthoritativeAbsenceOfEveryChildResource() async throws {
+        for residual in ["none", "assignment", "worktree", "profile"] {
+            let (root, source, project, work, store) = try fixture()
+            let parentID = "delivery-other-task"
+            let parentPaths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: parentID)
+            let parentWork = ProjectExecutionWork(projectID: work.projectID, ticketID: work.ticketID,
+                taskID: "other-task", outcome: work.outcome, title: "Other task",
+                taskPlanRevision: work.taskPlanRevision, phaseID: work.phaseID,
+                phaseRevision: work.phaseRevision, incarnationID: work.incarnationID)
+            var parent = ProjectExecutionAssignment(id: parentID, registration: project.registration!,
+                checkoutPath: parentPaths.checkout.path, role: .delivery, permissionProfile: "rr-" + parentID,
+                model: "gpt-5.6-terra", effort: "medium", authorization: "Previously approved work",
+                context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+                state: .closed, sessionID: "closed-session",
+                worktree: .init(checkout: parentPaths.checkout.path, baseline: String(repeating: "a", count: 40),
+                    branch: "codex/rr-project-one-" + parentID, commonGitDirectory: source.path + "/.git",
+                    primaryRoot: source.path), work: parentWork)
+            parent.codexContextID = try store.policy(projectID: "project-one").codexContextID
+            parent.connectionClosed = true
+            try store.saveAssignment(parent, expected: nil)
+
+            let configuration = Configuration()
+            let provisioning = Provisioning(source: source, candidate: nil)
+            let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+                handlerPath: handler, provisioning: provisioning)
+            let requestID = UUID()
+            do {
+                _ = try await producer.prepare(project: project, work: work, requestID: requestID,
+                    reviewOfAssignmentID: parentID, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+                XCTFail("A parent from another task cannot authorize review")
+            } catch let failure as ProjectExecutionPreparationFailure {
+                XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+            } catch {
+                XCTFail("Task mismatch must use the typed pre-configuration path, got \(error)")
+            }
+
+            let childID = "review-" + requestID.uuidString.lowercased()
+            let childPaths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: childID)
+            if residual == "assignment" {
+                var child = ProjectExecutionAssignment(id: childID, registration: project.registration!,
+                    checkoutPath: childPaths.checkout.path, role: .review, permissionProfile: "rr-" + childID,
+                    model: "gpt-5.6-terra", effort: "high", authorization: "Unexpected partial child",
+                    context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+                    excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+                    state: .preparing, work: work, reviewOfAssignmentID: parentID)
+                child.codexContextID = try store.policy(projectID: "project-one").codexContextID
+                try store.saveAssignment(child, expected: nil)
+            } else if residual == "worktree" {
+                try FileManager.default.createDirectory(at: childPaths.checkout, withIntermediateDirectories: true)
+            } else if residual == "profile" {
+                await configuration.seedProfile("rr-" + childID)
+            }
+
+            let verified = try await producer.verifyNoPreparationEffects(project: project, work: work,
+                requestID: requestID, reviewOfAssignmentID: parentID, baselineFromAssignmentID: nil)
+            XCTAssertEqual(verified, residual == "none")
+            let preparedProfiles = await configuration.profiles
+            XCTAssertTrue(preparedProfiles.isEmpty,
+                "Task-mismatch recovery inspection must not prepare a profile")
+            let hookChecks = await configuration.hookChecks
+            XCTAssertEqual(hookChecks, 0,
+                "Task-mismatch recovery inspection must not configure the checkout")
+            await producer.finishPreparation(work: work, requestID: requestID)
+        }
+    }
+
+    func testTaskMismatchWithLiveParentOrUnreadableResourcesRemainsUnsettled() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let parentID = "delivery-other-task"
+        let parentPaths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: parentID)
+        let parentWork = ProjectExecutionWork(projectID: work.projectID, ticketID: work.ticketID,
+            taskID: "other-task", outcome: work.outcome, title: "Other task",
+            taskPlanRevision: work.taskPlanRevision, phaseID: work.phaseID, phaseRevision: work.phaseRevision)
+        var parent = ProjectExecutionAssignment(id: parentID, registration: project.registration!,
+            checkoutPath: parentPaths.checkout.path, role: .delivery, permissionProfile: "rr-" + parentID,
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Live work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .authorized, sessionID: "live-session",
+            worktree: .init(checkout: parentPaths.checkout.path, baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-project-one-" + parentID, commonGitDirectory: source.path + "/.git",
+                primaryRoot: source.path), work: parentWork)
+        parent.codexContextID = try store.policy(projectID: "project-one").codexContextID
+        try store.saveAssignment(parent, expected: nil)
+        let configuration = Configuration()
+        let requestID = UUID()
+        let liveProducer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+        do {
+            _ = try await liveProducer.prepare(project: project, work: work, requestID: requestID,
+                reviewOfAssignmentID: parentID, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("A live mismatched parent must remain refused")
+        } catch is ProjectExecutionPreparationFailure {
+            XCTFail("A live parent cannot be classified as a definite no-effects mismatch")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .assignmentNotAuthorized)
+        }
+
+        var closed = parent
+        closed.state = .closed
+        closed.connectionClosed = true
+        try store.saveAssignment(closed, expected: parent)
+        let unreadableProducer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: UninspectableProvisioning(base: .init(source: source, candidate: nil)))
+        let unreadableRequestID = UUID()
+        do {
+            _ = try await unreadableProducer.prepare(project: project, work: work, requestID: unreadableRequestID,
+                reviewOfAssignmentID: parentID, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("A closed mismatched parent must refuse before effects")
+        } catch let failure as ProjectExecutionPreparationFailure {
+            XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+        }
+        do {
+            _ = try await unreadableProducer.verifyNoPreparationEffects(project: project, work: work,
+                requestID: unreadableRequestID, reviewOfAssignmentID: parentID, baselineFromAssignmentID: nil)
+            XCTFail("Unreadable provisioning state cannot prove absence")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .unavailable)
+        }
+        await unreadableProducer.finishPreparation(work: work, requestID: unreadableRequestID)
     }
 
     func testRetiredParentRefusesPersistedPreparingChildBeforeConfiguration() async throws {

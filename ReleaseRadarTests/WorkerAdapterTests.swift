@@ -198,6 +198,24 @@ final class WorkerAdapterTests: XCTestCase {
         try store.saveAssignment(assignment, expected: nil)
         return (store, try WorkerPolicy(store: store, projectID: "project-one", taskID: "task-one"))
     }
+
+    func testImageViewingOverridesAreLimitedToReviewAssignments() throws {
+        let delivery = try fixture()
+        let review = try fixture(role: .review)
+
+        let deliveryOverrides = try delivery.policy.overrides(config: [:])
+        let reviewOverrides = try review.policy.overrides(config: [:])
+
+        XCTAssertEqual(deliveryOverrides["features.view_image"] as? Bool, false)
+        XCTAssertEqual(deliveryOverrides["tools.view_image"] as? Bool, false)
+        XCTAssertEqual(reviewOverrides["features.view_image"] as? Bool, true)
+        XCTAssertEqual(reviewOverrides["tools.view_image"] as? Bool, true)
+        XCTAssertEqual(reviewOverrides["features.image_generation"] as? Bool, false)
+        XCTAssertEqual(reviewOverrides["features.browser_use"] as? Bool, false)
+        XCTAssertEqual(reviewOverrides["web_search"] as? String, "disabled")
+        XCTAssertEqual(reviewOverrides["permissions.rr-worker.network.enabled"] as? Bool, false)
+    }
+
     func testSelectedHomeGlobalAndProjectGuidanceAdmitFirstTurnWithoutProgressInstructionSource() async throws {
         let valid = try fixture(includeProgress: true)
         let global = valid.store.root.appendingPathComponent("AGENTS.md")

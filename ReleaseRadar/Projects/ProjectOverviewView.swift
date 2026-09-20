@@ -105,9 +105,9 @@ struct ProjectOverviewView: View {
                 }
 
                 HStack(spacing: 14) {
-                    summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag")
-                    summaryCard("Current work", value: "\(project.currentWorkCount)", systemImage: "rectangle.stack")
-                    summaryCard("Owner attention", value: "\(project.attentionCount)", systemImage: "person.crop.circle.badge.exclamationmark")
+                    summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag", accessibilityID: "active-phase")
+                    summaryCard("Current work", value: "\(project.currentWorkCount)", systemImage: "rectangle.stack", accessibilityID: "current-work")
+                    summaryCard("Owner attention", value: "\(project.attentionCount)", systemImage: "person.crop.circle.badge.exclamationmark", accessibilityID: "owner-attention")
                 }
 
                 ProjectGoalSummaryView(context: project.goalContext)
@@ -480,21 +480,25 @@ struct ProjectOverviewView: View {
         }
     }
 
-    private func summaryCard(_ title: String, value: String, systemImage: String) -> some View {
+    private func summaryCard(_ title: String, value: String, systemImage: String, accessibilityID: String) -> some View {
         RekonCard {
             VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .light))
-                    .foregroundStyle(RekonTheme.accent)
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(RekonTheme.secondaryText)
+                HStack(spacing: 8) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 20, weight: .light))
+                        .foregroundStyle(RekonTheme.accent)
+                    Text(title)
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                }
                 Text(value)
                     .font(.headline)
-                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
         }
+        .accessibilityIdentifier("overview-metric-\(accessibilityID)")
     }
 
     private func openSettings() {
