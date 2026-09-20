@@ -18,7 +18,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		idC2JP6fiWI7vyP25MJUwfF8wWU=
+		4D2qh54tkQ44OKt3Fh0d5K0VrOo=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
@@ -34,11 +34,11 @@
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		8vYnobi2xYu2ZTiP+dFR1JiMUYo=
+		z7UrkmdqvLLBsyRwQGoTtASY8Vo=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		Q1t78fodrGQ1qti7nwuTR1OgDtE=
+		7BGeHQBgT7VK2NSZtfLZ1tmFX+s=
 		</data>
 		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
 		<data>
@@ -63,7 +63,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			4RUTQRixwnT0KQR5fzyrwgsrp5U=
+			b4KJt40uc0nPOJErQmr1+N0Bo4c=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -134,7 +134,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pan4i5P7Zp/c1hskYR3mqdv2k5KOd5FfNCgxBuwimVs=
+			LL94MFhnUW3XxK2Q6xpNv+beMwvNXQ4AiqNgcx34hhI=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
@@ -162,14 +162,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			5VXK2Mvwi2QYQfXiscJ5AuQnIcmQ7cJGiOo3EZAqcSU=
+			9KPKd0fgOkbXNVEs5/lWMfEvP/I6h2Tean+tYhPXgP8=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			vr95FlP2dJyE33VUkeN9guPfmtMlvuiiK7b/O9SdblM=
+			ICIeGk513CdM7cu+VpKVqMR+l76L/oiUuKjzuo+bjqU=
 			</data>
 		</dict>
 		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
