@@ -1,5 +1,81 @@
 # Release Radar delivery state
 
+## September 20 — Manage Project resumed
+
+Owner explicitly resumed `rr-p6-manage-project`, authorizing the saved reviewer
+request retry and remaining approved work. This supersedes the pause below for
+Manage Project only. Task definitions remain unchanged; acceptance is not inferred.
+Fresh supported inventory confirms In Progress, task-plan revision 1, three pending
+tasks and phase lifecycle revision 1. Replay of request
+`154c4774-9565-4fa9-8cff-bbccf3a908cb` initially returned execution unavailable.
+Supported Settings → Connections → Reinstall restored the installed 0.1.30
+plugin's matching-version status. Exact replay then returned documentation
+`missingFile` for
+`docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair/brief.md`,
+with no entity IDs. That file exists in the canonical checkout and its packaged
+documentation check passes. Build Agent also verified the candidate's own
+catalog check passes: the newer brief and its catalog entry are both absent
+there. Source diagnosis establishes that preparation selects paths from the
+current accepted catalog, then reads them from the older candidate checkout.
+This mixes documentation revisions. The owner-authorized isolated preparation
+repair is continuing at a read-only authority/provenance checkpoint; the original
+candidate and exact replay envelope remain unchanged. No reviewer launch or
+completion is claimed.
+
+Fresh isolated repair task creation returned pending client ID
+`client-new-thread:827e7cb4-4c13-416c-8b00-f4569c2c772b`, title
+“Release Radar — Review context revision repair”, requested Sol/high. No resolved
+task ID appeared in supported task listings yet; do not claim it started or
+create a duplicate. Its first checkpoint is read-only authority/provenance
+analysis, before any source edit. Build Agent's diagnosis is complete and idle.
+
+Repair startup subsequently resolved to task `01a0c073-c2ea-76b0-871d-3e426a305d9f`
+in `/Users/jroberts/.codex/worktrees/8e4c/release_radar`, branch
+`codex/execution-preparation-context-repair`, baseline `0ebbe7c5`. Its first
+read-only checkpoint confirmed mixed-revision context. Main withheld the proposed
+instruction overlay, permission changes and expanded persisted context contract;
+the writer is evaluating existing mechanisms and normal candidate integration
+before proposing any minimum necessary correction. No source changes or tests
+have run. Reported scratch `/tmp/candidate-catalog.json` is temporary and retained.
+
+The second checkpoint selected the existing no-effects recovery route instead
+of a dual-source overlay. Main released a bounded source/test correction: a
+closed eligible parent's context-read failure may reach the existing audited
+terminal refusal only after authoritative absence of assignment, checkout/branch,
+provisioning and profile effects; live, partial, unreadable and uncertain cases
+remain pending. Build Agent owns focused RED/GREEN and commits; independent
+recovery review precedes integration. The live request is not claimed settled.
+After supported settlement, fresh Manage Project delivery will reconcile the
+approved behavior on current main, followed by fresh review; preserved 6ba3 is
+historical work, not an immutable requirement for the final product.
+
+Repair candidate `c3b09455` is committed in the isolated branch. It restricts
+classification to the demonstrated parent-context `missingFile` and reuses the
+eligible-parent predicate for authoritative no-effects verification. Build Agent
+ran causal RED (one test, two expected assertion failures; finalization interrupted),
+causal GREEN (1/1 passed, exit 0, readable XCResult), and eight existing focused
+recovery/replay regressions (8/8 passed, exit 0, readable XCResult). Documentation
+and diff checks passed. Independent reviewer task
+`01a0c087-c35e-7e00-8177-5b94c742ad92` is reviewing this candidate. No installed or
+live recovery result is claimed; integration remains pending review.
+
+Independent reviewer `01a0c087-c35e-7e00-8177-5b94c742ad92` passed candidate
+`c3b09455` with no findings, covering source, parent eligibility, authoritative
+absence and atomic audit/replay preservation. Reviewer directly read GREEN
+1/1 and regression 8/8 bundles; RED's final bundle remains incomplete, so its
+two assertion details are attributed to Build Agent's direct XCTest output.
+Main released integration and the standing local release workflow to Build
+Agent, with installer under `dist/`. Live exact-request recovery waits for the
+new installed connector after Codex restart. No ticket completion or acceptance
+has occurred.
+
+Fresh standing helper task IDs: Build `01a0c061-578a-7e22-8ba3-77348fd6dcac`,
+RO `01a0c062-058c-7613-bef2-fa80bb897445`, Restricted
+`01a0c063-ada3-7be0-bb10-7cf98b9d8e1e`. Build retains verified build/Git
+capabilities. RO enforcement remains unverified because exposed runtime metadata
+conflicts; no RO assignment is released. PR #113 is merged; its documentation
+commits are published. Earlier unpublished-branch statements below are historical.
+
 ## Paused — post-merge cleanup
 
 PR [#100](https://github.com/joeroberts/release-radar/pull/100) and PR [#110](https://github.com/joeroberts/release-radar/pull/110) are merged; the owner has restarted Codex. Product and managed-feature delivery remain paused: this does not authorize live reviewer replay, Release Radar mutation, or new feature work. Canonical `main` is fast-forwarded to `origin/main` at `a1d2e91c`; the preserved untracked Codex configuration remains untouched.
