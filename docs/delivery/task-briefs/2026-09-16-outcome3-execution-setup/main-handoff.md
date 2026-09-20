@@ -68,7 +68,8 @@ Use the established environment in docs/README.md and existing
 `script/build_and_run.sh` for later authorized releases, not a new release script.
 Installers belong in repository `dist/`, not Downloads.
 
-**Owner action: restart Codex now.** After restart and supported availability
+**Owner action: restart Codex now.** Restart and session readiness do not resume
+paused feature work. After explicit owner resume and supported availability
 readback, Main alone replays the exact saved RR reviewer request
 `154c4774-9565-4fa9-8cff-bbccf3a908cb` from the ledger. Do not regenerate that
 envelope. Manage Project
