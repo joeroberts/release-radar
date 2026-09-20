@@ -2,6 +2,8 @@
 
 ## Current execution recovery
 
+Owner clarified accidental cancellation and authorized the same test retry. The completed retry ran all four selectors: three passed (wide/compact delayed identity, stale registration, actual Overview entry); retry test failed because it asserted pre-action error text against the successful post-action loaded state. Same worker is correcting only that assertion timing, retaining both error and recovery coverage. Finalized XCResult and five screenshots remain under the managed checkout `.build/test-output/manage-project-task01-owner-retry-20260920-1.xcresult` and `manage-project-task01-owner-retry-attachments/`. No product defect established by this failure.
+
 Build Agent compiled, linked, signed and validated the task01 working-tree candidate, but the launched XCTest host emitted no test events or connection callback for 131 seconds. The stalled attempt was canceled (exit73); runtime result is unavailable, not passed. Incomplete XCResult remains in managed checkout `.build/test-output/manage-project-task01-20260920-1.xcresult`. No screenshot or candidate commit yet. Build Agent is diagnosing runner startup; same delivery worker is checking changed test source for a concrete stall cause. No unchanged retry or permission change authorized.
 
 Task01 source correction completed in the managed checkout; Build Agent now owns focused compile/runtime verification and scoped commit. Four selectors cover wide/compact immediate identity, actual Overview entry before settings resolves, section-local retry and stale-registration rejection. No tests have passed yet; independent UX/recovery review follows the immutable candidate. Worker connection remains available for same-outcome corrections.
