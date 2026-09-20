@@ -1,5 +1,13 @@
 # Release Radar delivery state
 
+## Local release — 0.1.27 metrics
+
+Release Radar 0.1.27 is installed and verified; restart Codex to load it. Branch `codex/release-0.1.27-metrics` preserves the exact metrics net integration as `cb971d23`, the owner-accepted Outcome 3 closeout record as `643ae1fa`, release metadata as `2f30c9eb`, and the signed artifact as `ce666a69` with annotated local tag `v0.1.27`. Canonical `dist/ReleaseRadar-0.1.27.dmg` SHA-256 is `57f2f50d4f00bf8aa9e1e094f02be6f06333fa031d4fc7a89d322d68f173d785`.
+
+Installed `/Applications/ReleaseRadar.app` is `com.rekonlabs.ReleaseRadar` version `0.1.27` build `1`; strict deep signing passed with Apple Development authority, team `2UA854NLX4`, hardened runtime `26.5.0`. Installed and staged executable SHA-256 values match at `5dbdd3b1faae1d6c39b948c0c1b795d53c0d0bb13a12c3925c068782c22d9eb4`; embedded plugin version `0.1.27` has recognized normalized digest `3855b92985d62b2b87544ff0d35eeda8cb998c76b7d6e3a831b8099d20ba7107`. Signed staging, strict bundle verification, DMG verification and mounted layout checks passed.
+
+The existing 1100/620 native metrics render case passed, but overall XCTest finalization remains unclaimed because the runner stalled after the test observer completed. Independent visual QA passed with no findings: metric labels, unchanged accent glyphs, centered values and long-name wrapping match the approved design. Stable accessibility identifiers were verified in source; live VoiceOver was not exercised. No push, PR, tag push, notarization, public release, Release Radar mutation, plugin-receipt inspection or repair occurred. Temporary evidence remains preserved at `/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-review-84-preserved-l1k5t7ot`, `.build/dmg-source-0.1.27`, and `.build/dmg-mount-0.1.27`.
+
 ## Active goal — remaining blocked P6 tickets
 
 Outcome 3 closeout is owner Accepted. Supported complete inventory readback confirms all three tasks completed at plan revision4 and ticket lane accepted. NeedsReview audit `E61096E1-97A0-469F-8EE1-07961D739745`; Accepted audit `C642619D-DB7C-476E-B177-CF943E8438F7`. All exact completion envelopes committed; original invalid NeedsReview envelope rejected without effects and corrected envelope committed. Metrics remains separate work; second-Mac verification remains deferred exclusively to GH106. UI readback was interrupted by owner navigation, so only supported connector readback is claimed here.
