@@ -2,6 +2,31 @@
 
 ## September 20 — Manage Project resumed
 
+**Current next action: owner restart of Codex after verified installation of
+0.1.31 (1), then Main replays the unchanged request
+`154c4774-9565-4fa9-8cff-bbccf3a908cb` through the supported connector.** Expected
+recovery is audited terminal refusal of the old missing-context request, not
+review success. Only supported disposition permits fresh current-main delivery
+and review. Manage Project remains In Progress with all three tasks pending.
+
+Build Agent completed the reviewed repair's local release on
+`codex/manage-project-context-recovery`: integrated source `cc352962`, build
+source `039aad5a5c0006e03fe9253f052bbf4af838676f`, release/artifact commit and
+annotated tag `v0.1.31` at `457a4652cad021bf4f31541d0422497193f98a9b`. Exact tag
+publication passed with matching remote peeled commit; branch push, PR and merge
+were not performed. Five version/package tests passed with exit 0 and readable
+XCResult. Signed staging, strict nested signature/entitlements, mounted DMG layout
+and 28-entry built/staged/mounted/installed payload comparisons passed.
+Canonical tracked installer: `dist/ReleaseRadar-0.1.31.dmg`, SHA-256
+`6e7bedd9deb8ce71a6b9690076ddd529b3a6ede2b63faf2347cc9d81ff4f4c21`.
+Verified installed identity is `com.rekonlabs.ReleaseRadar` 0.1.31 (1), team
+`2UA854NLX4`, plugin digest
+`01c399bdf7e417904f055856a8fae787dadf3c8b59b44ffc8e44411cd05e6391`.
+The established no-launch installation completed; live recovery remains untested.
+Repair writer and independent reviewer are archived. Temporary canonical and
+repair-checkout `.build/` and `DerivedData/` remain retained, as does the reported
+`/tmp/candidate-catalog.json`; no cleanup is authorized by this release record.
+
 Owner explicitly resumed `rr-p6-manage-project`, authorizing the saved reviewer
 request retry and remaining approved work. This supersedes the pause below for
 Manage Project only. Task definitions remain unchanged; acceptance is not inferred.
