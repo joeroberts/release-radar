@@ -1,6 +1,16 @@
 # Release Radar delivery state
 
-## Current execution barrier
+## Current execution recovery
+
+RR UI confirmed resources retired for `delivery-57482f51-b352-4602-92c1-71147c77ee60`. Exact old correction request `e9cb35b4-e026-4076-9efc-add75fe06a23` was replayed and refused with `assignmentNotAuthorized`, audit `A69658ED-86FF-409E-84A9-D95C9E2CBE94`. The coordinator explicitly terminally refuses retired parents without child effects. Fresh ordinary same-task preparation will use canonical baseline; Build Agent will restore the preserved brief/WIP into the fresh worker after launch, before product edits. This retains scope and uses normal RR admission, not receipt repair.
+Pending fresh preparation:
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","projectID":"project-fffdc0e0b15b9b86","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"7cd1c166-73e5-4c9a-b062-a6553878c55b","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-01","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Owner approved stopped-worker retirement and resuming Manage Project. Prior correction request was refused because its parent is retired. Prepare fresh same-task delivery from canonical baseline; preserve and integrate committed WIP through Build Agent after launch."}
+```
+
+Build Agent verified preservation of `.build`, `DerivedData` and `default.profraw` (5,699 regular files, 30 symlinks), then relocated originals into the same preservation directory under `relocated-originals/` because RR retirement requires an ignored-file-clean checkout. Both copies remain recoverable; the stopped branch and WIP commit remain. Initial supported retirement attempts returned conflict while ignored originals remained; retry after relocation is pending readback.
+
+Owner explicitly approved retiring only stopped Manage Project assignment `delivery-57482f51-b352-4602-92c1-71147c77ee60` after preserving its artifacts, and resuming Manage Project. Build Agent is preserving ignored build/test artifacts in canonical `.build/preserved-workers/delivery-57482f51-b352-4602-92c1-71147c77ee60`; original checkout remains until verified preservation. Main will use supported RR retirement, then replay the retained correction request. No new publication, acceptance, task-definition or governance authority is inferred. The prior approval wait below is superseded.
 
 The same stopped-worker replacement barrier has persisted across three goal turns. Manage Project task01 WIP remains preserved at0f5d27e5; no independent verification or completion is claimed. Exact retirement exception remains unanswered. Both managed connections previously returned connectionClosed and their tasks were archived; post-close status handles now reject as session-mismatched, so no live-work claim is made. Guided-setup assessment is complete and recorded; implementation of later tickets retains the requested order. Goal is blocked pending the exact owner exception, not complete. No checkout, profile or artifact has been retired or deleted. Main caused the barrier by using interrupt rather than allowing the worker to finish before issuing the scope correction.
 
