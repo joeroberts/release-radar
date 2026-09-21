@@ -42,6 +42,227 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testManageProjectOpensImmediatelyWithSelectedRegistrationAndIndependentSections() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-immediate")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-immediate-registration",
+            requestGeneration: 7
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Immediate management",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.missing),
+                projectRoot: nil,
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    try await Task.sleep(for: .seconds(2))
+                    return .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                }
+            ),
+            name: "manage-project-immediate",
+            width: 620,
+            expected: nil,
+            presentIdentifiers: ["project-manage"],
+            postActionIdentifiers: [
+                "manage-project-panel",
+                "manage-project-identity",
+                "manage-project-section-execution",
+            ],
+            postActionText: [projectID.rawValue, registration.registrationID, "generation 7"],
+            pressIdentifiers: ["project-manage"]
+        )
+    }
+
+    func testManageProjectSheetRendersAtWideAndCompactHostWidths() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-sheet")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-sheet-registration",
+            requestGeneration: 4
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Sheet management",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ProjectOverviewView(
+                    project: project,
+                    board: nil,
+                    documentationState: .legacy(.missing),
+                    projectRoot: nil,
+                    phaseSelectionStatus: .idle,
+                    openBoard: {},
+                    selectActivePhase: { _ in },
+                    reloadActivePhase: {},
+                    reauthorizeActivePhase: { _ in },
+                    loadProjectSettings: {
+                        .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                    }
+                ),
+                name: "manage-project-sheet-host-\(Int(width))",
+                width: width,
+                expected: nil,
+                presentIdentifiers: ["project-manage"],
+                postActionIdentifiers: [
+                    "manage-project-panel",
+                    "manage-project-identity",
+                    "manage-project-section-settings",
+                    "manage-project-section-execution",
+                ],
+                postActionText: [projectID.rawValue, registration.registrationID, "generation 4"],
+                pressIdentifiers: ["project-manage"],
+                sheetAttachmentName: "manage-project-sheet-\(Int(width))"
+            )
+        }
+    }
+
+    func testManageProjectSettingsFailureIsLocalAndRetryLoadsOnlySettings() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-retry")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-retry-registration",
+            requestGeneration: 3
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Retry management",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+        var settingsLoadCount = 0
+        var executionLoadCount = 0
+
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.missing),
+                projectRoot: nil,
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    settingsLoadCount += 1
+                    if settingsLoadCount == 1 {
+                        throw NSError(domain: "ManageProjectTests", code: 1, userInfo: [
+                            NSLocalizedDescriptionKey: "Settings connection failed",
+                        ])
+                    }
+                    return .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                },
+                loadExecutionAssignments: { _ in
+                    executionLoadCount += 1
+                    return []
+                }
+            ),
+            name: "manage-project-local-retry",
+            width: 620,
+            expected: nil,
+            presentIdentifiers: ["project-manage"],
+            postActionIdentifiers: [
+                "manage-project-section-settings",
+                "manage-project-section-execution",
+                "project-settings-name",
+            ],
+            postActionText: [project.name],
+            pressIdentifiers: [
+                "project-manage",
+                "manage-project-section-settings-retry",
+            ],
+            afterPressIdentifiers: [
+                ["manage-project-section-settings-retry"],
+                ["project-settings-name"],
+            ]
+        )
+
+        XCTAssertEqual(settingsLoadCount, 2)
+        XCTAssertEqual(executionLoadCount, 1)
+    }
+
+    func testManageProjectRejectsMismatchedSettingsRegistration() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-selected")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-selected-registration",
+            requestGeneration: 2
+        )
+        let mismatchedRegistration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-replacement-registration",
+            requestGeneration: 3
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Selected management",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+        var saveCalls = 0
+
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.missing),
+                projectRoot: nil,
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    .init(registration: mismatchedRegistration, projectName: "Replacement", excludedTaskIDs: [])
+                },
+                saveProjectSettings: { _, _, _ in
+                    saveCalls += 1
+                    return .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                }
+            ),
+            name: "manage-project-stale-registration",
+            width: 620,
+            expected: nil,
+            presentIdentifiers: ["project-manage"],
+            eventuallyPostActionIdentifiers: [
+                "manage-project-section-settings-error",
+                "manage-project-section-settings-retry",
+            ],
+            pressIdentifiers: ["project-manage"]
+        )
+
+        XCTAssertEqual(saveCalls, 0)
+    }
+
     func testProjectRemovalConfirmationAndRemovedHistoryAtWideAndCompactWidths() async throws {
         let projectID = ProjectID(rawValue: "project-removal-rendering")
         let registration = ProjectRegistration(
@@ -434,6 +655,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         let project = ProjectDashboardProjection(
             id: projectID,
             name: "Usable Lifecycle",
+            registration: registration,
             activePhaseName: "No active phase",
             goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
             currentWorkCount: 0,
@@ -1216,13 +1438,17 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         absentButtonTitles: [String] = [],
         presentIdentifiers: [String] = [],
         postActionIdentifiers: [String] = [],
+        eventuallyPostActionIdentifiers: [String] = [],
         postActionVisibleIdentifiers: [String] = [],
+        postActionText: [String] = [],
         postActionFocusedIdentifier: String? = nil,
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
+        afterPressIdentifiers: [[String]] = [],
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
+        sheetAttachmentName: String? = nil,
         verifyAccessibility: @escaping (AXUIElement) throws -> Void = { _ in }
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
@@ -1317,10 +1543,28 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             )
             XCTAssertEqual(value as? Bool, false, "\(disabledIdentifier) must be disabled")
         }
-        for pressIdentifier in pressIdentifiers {
+        func waitForAccessibilityElement(identifier: String) async throws -> AXUIElement? {
+            let deadline = Date().addingTimeInterval(2)
+            repeat {
+                hosting.layoutSubtreeIfNeeded()
+                if let element = accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier) {
+                    return element
+                }
+                try? await Task.sleep(for: .milliseconds(25))
+            } while Date() < deadline
+            return nil
+        }
+        for (index, pressIdentifier) in pressIdentifiers.enumerated() {
             let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
             XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
             try await Task.sleep(for: .milliseconds(300))
+            for identifier in afterPressIdentifiers.indices.contains(index) ? afterPressIdentifiers[index] : [] {
+                let element = try await waitForAccessibilityElement(identifier: identifier)
+                XCTAssertNotNil(
+                    element,
+                    "Missing post-press accessibility element \(identifier)"
+                )
+            }
         }
         for pressTitle in pressTitles {
             let button = try XCTUnwrap(
@@ -1336,6 +1580,13 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 "Missing post-action accessibility element \(identifier)"
             )
         }
+        for identifier in eventuallyPostActionIdentifiers {
+            let element = try await waitForAccessibilityElement(identifier: identifier)
+            XCTAssertNotNil(
+                element,
+                "Missing eventual post-action accessibility element \(identifier)"
+            )
+        }
         for identifier in postActionVisibleIdentifiers {
             let element = try XCTUnwrap(
                 accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
@@ -1347,6 +1598,10 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 windowFrame.intersects(elementFrame) && !windowFrame.intersection(elementFrame).isEmpty,
                 "Post-action accessibility element \(identifier) is outside the visible window"
             )
+        }
+        let postActionActual = accessibilityText(try XCTUnwrap(ownWindow))
+        for text in postActionText {
+            XCTAssertTrue(postActionActual.contains(text), "Missing post-action text \(text)")
         }
         if let postActionFocusedIdentifier {
             let focusedElement = try XCTUnwrap(
@@ -1393,6 +1648,21 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertTrue(AXValueGetValue(axValue, .cgSize, &size))
             XCTAssertGreaterThanOrEqual(size.width, minimumSize.width, "\(identifier) is too narrow")
             XCTAssertGreaterThanOrEqual(size.height, minimumSize.height, "\(identifier) is too short")
+        }
+        if let sheetAttachmentName {
+            let sheet = try XCTUnwrap(window.sheets.first, "Manage Project sheet was not presented")
+            let sheetContent = try XCTUnwrap(sheet.contentView, "Manage Project sheet has no content view")
+            await Task.yield()
+            sheetContent.layoutSubtreeIfNeeded()
+            sheet.displayIfNeeded()
+            sheetContent.displayIfNeeded()
+            let bitmap = try XCTUnwrap(sheetContent.bitmapImageRepForCachingDisplay(in: sheetContent.bounds))
+            sheetContent.cacheDisplay(in: sheetContent.bounds, to: bitmap)
+            let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+            let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
+            attachment.name = sheetAttachmentName
+            attachment.lifetime = .keepAlways
+            add(attachment)
         }
         print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))

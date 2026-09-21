@@ -113,6 +113,308 @@ struct ProjectHealthView: View {
     }
 }
 
+struct ManageProjectView: View {
+    @Environment(\.dismiss) private var dismiss
+    let registration: ProjectRegistration
+    let projectName: String
+    let tasks: [CodexTaskDescriptor]
+    let loadSettings: () async throws -> ProjectSettingsSnapshot
+    let saveSettings: ((String, Set<String>) async throws -> ProjectSettingsSnapshot)?
+    let manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?
+    let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
+    let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
+
+    @State private var settings: ProjectSettingsSnapshot?
+    @State private var settingsError: String?
+    @State private var isLoadingSettings = true
+    @State private var name = ""
+    @State private var excluded: Set<String> = []
+    @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var executionAssignments: [ProjectExecutionAssignment] = []
+    @State private var selectedAssignmentID = ""
+    @State private var isLoadingExecution = false
+    @State private var executionMessage: String?
+    @State private var executionFailed = false
+    @State private var executionLoadFailed = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Manage Project").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(projectName).font(.headline)
+                    Text("\(registration.projectID.rawValue) · registration \(registration.registrationID) · generation \(registration.requestGeneration)")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .textSelection(.enabled)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("manage-project-identity")
+
+                settingsSection
+                executionSection
+
+                HStack {
+                    Spacer()
+                    Button("Done", action: { dismiss() })
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(28)
+        }
+        .frame(minWidth: 520, idealWidth: 620, minHeight: 460, idealHeight: 640, maxHeight: 760)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
+        .accessibilityIdentifier("manage-project-panel")
+        .task { await loadSettingsSection() }
+        .task { await loadExecutionSection() }
+    }
+
+    @ViewBuilder private var settingsSection: some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Project settings")
+                    .font(.headline)
+                    .accessibilityIdentifier("manage-project-section-settings")
+                if isLoadingSettings {
+                    ProgressView("Loading project settings…")
+                } else if let settingsError {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Project settings unavailable")
+                            .font(.headline)
+                            .accessibilityLabel("Project settings unavailable. \(settingsError)")
+                            .accessibilityIdentifier("manage-project-section-settings-error")
+                        Text(settingsError).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    Button("Retry project settings") { Task { await loadSettingsSection() } }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("manage-project-section-settings-retry")
+                        .accessibilityLabel("Retry project settings")
+                        .accessibilityHint("Loads settings again for the selected project registration.")
+                        .focusable()
+                } else if settings != nil {
+                    TextField("Project name", text: $name)
+                        .textFieldStyle(RekonQuietTextFieldStyle())
+                        .accessibilityIdentifier("project-settings-name")
+                    Text("Observed Codex tasks").font(.headline)
+                    if tasks.isEmpty && excluded.isEmpty {
+                        Text("No tasks currently match this project folder.")
+                            .foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    ForEach(taskRows, id: \.id) { task in
+                        RekonCheckbox(isOn: Binding(
+                            get: { !excluded.contains(task.id) },
+                            set: { include in
+                                if include { excluded.remove(task.id) } else { excluded.insert(task.id) }
+                            }
+                        ), title: task.title, accessibilityLabel: task.title,
+                           accessibilityIdentifier: "project-settings-task-\(task.id)")
+                            .frame(height: 32, alignment: .leading)
+                    }
+                    if let saveError {
+                        RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                            Text("Settings were not saved").font(.headline)
+                            Text(saveError).foregroundStyle(RekonTheme.secondaryText)
+                        }
+                    }
+                    Button(isSaving ? "Saving…" : "Save") { performSave() }
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .disabled(isSaving || saveSettings == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("project-settings-save")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var executionSection: some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Project execution")
+                    .font(.headline)
+                    .accessibilityIdentifier("manage-project-section-execution")
+                Text("Update the verified Release Radar hook, or pause governed work and remove it. Close workers before removal. Conflicting edits are preserved.")
+                    .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                if isLoadingExecution {
+                    ProgressView("Loading execution resources…")
+                } else if executionLoadFailed, let executionMessage {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Project execution unavailable").font(.headline)
+                        Text(executionMessage).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    Button("Retry execution resources") { Task { await loadExecutionSection() } }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("manage-project-section-execution-retry")
+                        .accessibilityLabel("Retry execution resources")
+                        .accessibilityHint("Loads execution resources again for the selected project registration.")
+                        .focusable()
+                } else {
+                    if manageExecutionHook != nil {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 10) { executionButtons }
+                            VStack(alignment: .leading, spacing: 10) { executionButtons }
+                        }
+                    }
+                    if retireExecutionAssignment != nil, !executionAssignments.isEmpty {
+                        Picker("Worker resources", selection: $selectedAssignmentID) {
+                            ForEach(executionAssignments, id: \.id) { assignment in
+                                Text("\(assignment.work?.title ?? assignment.id) — \(assignment.state.rawValue)").tag(assignment.id)
+                            }
+                        }
+                        .disabled(isSaving)
+                        .accessibilityIdentifier("project-settings-execution-assignment")
+                        Button("Retire resources and allow replacement") { performRetirement() }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .disabled(isSaving || selectedExecutionAssignment == nil)
+                            .accessibilityIdentifier("project-settings-execution-retire")
+                    }
+                    if let executionMessage {
+                        RekonCallout(tone: executionFailed ? .danger : .information, systemImage: executionFailed ? "exclamationmark.triangle" : "checkmark.circle") {
+                            Text(executionMessage)
+                        }
+                        .accessibilityIdentifier("project-settings-execution-result")
+                    }
+                }
+            }
+        }
+    }
+
+    private var taskRows: [CodexTaskDescriptor] {
+        var rows: [String: CodexTaskDescriptor] = [:]
+        for task in tasks {
+            rows[task.id] = task
+        }
+        for id in excluded where rows[id] == nil {
+            rows[id] = .init(id: id, workingDirectory: URL(fileURLWithPath: "/"), title: "Excluded task \(id)")
+        }
+        return rows.values.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    @ViewBuilder private var executionButtons: some View {
+        Button("Update execution hook") { performExecution(.update) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-update")
+        Button("Remove execution hook") { performExecution(.remove) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-remove")
+        Button("Resume project workflow") { performExecution(.resume) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-resume")
+    }
+
+    private var selectedExecutionAssignment: ProjectExecutionAssignment? {
+        executionAssignments.first { $0.id == selectedAssignmentID }
+    }
+
+    private func loadSettingsSection() async {
+        isLoadingSettings = true
+        settingsError = nil
+        defer { isLoadingSettings = false }
+        do {
+            let loaded = try await loadSettings()
+            guard loaded.registration == registration else {
+                settings = nil
+                settingsError = "The selected project registration changed while settings were loading. Retry to load the current project; no replacement settings were opened."
+                return
+            }
+            settings = loaded
+            name = loaded.projectName
+            excluded = loaded.excludedTaskIDs
+        } catch {
+            settings = nil
+            settingsError = error.localizedDescription
+        }
+    }
+
+    private func loadExecutionSection(preservingFeedback: Bool = false) async {
+        guard let loadExecutionAssignments else { return }
+        isLoadingExecution = true
+        executionLoadFailed = false
+        if !preservingFeedback {
+            executionFailed = false
+            executionMessage = nil
+        }
+        defer { isLoadingExecution = false }
+        do {
+            executionAssignments = try await loadExecutionAssignments().filter {
+                $0.registration == registration && $0.retirement?.completed != true
+            }
+            if !executionAssignments.contains(where: { $0.id == selectedAssignmentID }) {
+                selectedAssignmentID = executionAssignments.first?.id ?? ""
+            }
+        } catch {
+            executionLoadFailed = true
+            executionFailed = true
+            executionMessage = error.localizedDescription
+        }
+    }
+
+    private func performSave() {
+        guard let saveSettings, settings?.registration == registration else {
+            settingsError = "The selected project registration is no longer current. Retry settings before saving."
+            return
+        }
+        isSaving = true
+        saveError = nil
+        Task {
+            defer { isSaving = false }
+            do {
+                let updated = try await saveSettings(name, excluded)
+                guard updated.registration == registration else {
+                    saveError = "The selected project registration changed while settings were saving. No replacement settings were opened."
+                    return
+                }
+                settings = updated
+                name = updated.projectName
+                excluded = updated.excludedTaskIDs
+            } catch {
+                saveError = error.localizedDescription
+            }
+        }
+    }
+
+    private func performExecution(_ action: ProjectExecutionHookAction) {
+        guard let manageExecutionHook else { return }
+        isSaving = true
+        executionMessage = nil
+        executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await manageExecutionHook(action)
+                switch action {
+                case .remove: executionMessage = "Release Radar's hook was removed. The workflow remains disabled."
+                case .update: executionMessage = "Execution hook update verified."
+                case .resume: executionMessage = "Project workflow restored. Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment."
+                }
+            } catch {
+                executionFailed = true
+                executionMessage = error.localizedDescription
+            }
+            await loadExecutionSection(preservingFeedback: true)
+        }
+    }
+
+    private func performRetirement() {
+        guard let retireExecutionAssignment, let expected = selectedExecutionAssignment else { return }
+        isSaving = true
+        executionMessage = nil
+        executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await retireExecutionAssignment(expected)
+                executionMessage = "Resources retired. Replacement work requires a fresh current assignment; the prior outcome remains recorded."
+            } catch {
+                executionFailed = true
+                executionMessage = error.localizedDescription
+            }
+            await loadExecutionSection(preservingFeedback: true)
+        }
+    }
+}
+
 struct ProjectSettingsEditor: View {
     @Environment(\.dismiss) private var dismiss
     let initial: ProjectSettingsSnapshot

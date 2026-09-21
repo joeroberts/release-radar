@@ -65,9 +65,7 @@ struct ProjectOverviewView: View {
     var previewRemoval: (() async throws -> ProjectRemovalPreview)? = nil
     var remove: ((ProjectRemovalPreview) async throws -> Void)? = nil
     @State private var promptCopyResult: CodexPromptCopyResult?
-    @State private var settings: ProjectSettingsSnapshot?
     @State private var health: ProjectHealthSnapshot?
-    @State private var isLoadingSettings = false
     @State private var isRefreshingHealth = false
     @State private var healthRecoveryMessage: String?
     @State private var healthGeneration: UInt64 = 0
@@ -265,20 +263,29 @@ struct ProjectOverviewView: View {
             }
         }
         .sheet(isPresented: $showsSettings) {
-            if let settings, let saveProjectSettings {
-                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks,
-                                      manageExecutionHook: manageExecutionHook.map { action in
-                                          { operation in try await action(settings.registration, operation) }
-                                      }, loadExecutionAssignments: loadExecutionAssignments.map { load in
-                                          { try await load(settings.registration) }
-                                      }, retireExecutionAssignment: retireExecutionAssignment.map { retire in
-                                          { expected in try await retire(settings.registration, expected) }
-                                      }) { name, excluded in
-                    let updated = try await saveProjectSettings(settings.registration, name, excluded)
-                    self.settings = updated
-                    refreshHealth()
-                    return updated
-                }
+            if let registration = project.registration, let loadProjectSettings {
+                ManageProjectView(
+                    registration: registration,
+                    projectName: project.name,
+                    tasks: availableCodexTasks,
+                    loadSettings: { try await loadProjectSettings() },
+                    saveSettings: saveProjectSettings.map { save in
+                        { name, excluded in
+                            let updated = try await save(registration, name, excluded)
+                            refreshHealth()
+                            return updated
+                        }
+                    },
+                    manageExecutionHook: manageExecutionHook.map { action in
+                        { operation in try await action(registration, operation) }
+                    },
+                    loadExecutionAssignments: loadExecutionAssignments.map { load in
+                        { try await load(registration) }
+                    },
+                    retireExecutionAssignment: retireExecutionAssignment.map { retire in
+                        { expected in try await retire(registration, expected) }
+                    }
+                )
             }
         }
     }
@@ -292,10 +299,9 @@ struct ProjectOverviewView: View {
 
     private var projectActions: some View {
         HStack {
-            if loadProjectSettings != nil {
-                Button(isLoadingSettings ? "Loading…" : "Manage Project", action: openSettings)
+            if loadProjectSettings != nil, project.registration != nil {
+                Button("Manage Project", action: openSettings)
                     .buttonStyle(RekonSecondaryButtonStyle())
-                    .disabled(isLoadingSettings)
                     .accessibilityIdentifier("project-manage")
             }
             Button("Help") { showsHelp = true }
@@ -403,7 +409,7 @@ struct ProjectOverviewView: View {
                         prompt: CodexPromptHandoff.prompt(
                             for: documentationState,
                             projectRoot: projectRoot,
-                            registration: health?.registration ?? settings?.registration
+                            registration: health?.registration ?? project.registration
                         ),
                         using: CodexPromptHandoff.writeToGeneralPasteboard
                     )
@@ -427,7 +433,7 @@ struct ProjectOverviewView: View {
 
     @ViewBuilder
     private var documentationSetupControls: some View {
-        if let registration = health?.registration ?? settings?.registration,
+        if let registration = health?.registration ?? project.registration,
            previewDocumentationSetup != nil {
             RekonSectionPanel {
                 Text("Documentation activation").font(.title2.weight(.semibold))
@@ -502,23 +508,8 @@ struct ProjectOverviewView: View {
     }
 
     private func openSettings() {
-        guard let loadProjectSettings else { return }
-        isLoadingSettings = true
-        Task {
-            defer { isLoadingSettings = false }
-            do {
-                settings = try await loadProjectSettings()
-                showsSettings = true
-            } catch {
-                health = .init(
-                    projectID: project.id,
-                    registration: nil,
-                    rootPath: projectRoot?.path,
-                    checkedAt: Date(),
-                    checks: [.init(id: "settings", title: "Project settings unavailable", detail: error.localizedDescription, state: .unavailable)]
-                )
-            }
-        }
+        guard project.registration != nil, loadProjectSettings != nil else { return }
+        showsSettings = true
     }
 
     private func rootActionCommitted() async {
