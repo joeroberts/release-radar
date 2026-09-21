@@ -13,14 +13,19 @@ remote peeled commit matches. No branch push, PR, merge or notarization.
 DMG verification, read-only mounted layout/identity, strict nested signatures and
 mounted/staged executable equality passed. Installed `/Applications/ReleaseRadar.app`
 is `com.rekonlabs.ReleaseRadar` 0.1.34 (1), team `2UA854NLX4`; strict deep signing
-and installed/staged executable equality passed. App is stopped. Product checks
-and independent assessments below remain terminal; no tests were repeated solely
-for release. No RR connector calls were made after installation.
+and installed/staged executable equality passed. The prior coordinator launched
+installed 0.1.34 after delivery; supported connector readback succeeded after the
+owner-confirmed Codex restart. Product checks and independent assessments remain
+terminal; no tests were repeated solely for release.
 
-**Next: owner restarts Codex before any RR connector call.** After confirmation,
-create fresh Main (Astra/medium) and Build contexts before Navigation as approved.
-Replacement Main reads AGENTS, this current section, catalog/index and only the
-next controlling brief; do not ingest historical conversations or handoff sections.
+**Restart confirmed; fresh Main owns coordination and this ledger.** Main task
+`01a0c4b2-46c6-7e81-ae75-da56109621d1` (requested Astra/medium) and Build task
+`01a0c4b1-e429-78f0-8142-c85a134b4913` (requested Terra/medium) replaced the prior
+contexts. Effective model/effort is not exposed for independent confirmation.
+Build completed read-only readiness at `b6639411f064c85f36fa72bcefee7a9379cffed3`;
+the prior Build is idle and archived per the originating coordinator.
+Read AGENTS, this current section, catalog/index and only the next controlling
+brief; do not ingest historical conversations or handoff sections.
 Use canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`,
 preserve branch `codex/manage-project-context-recovery`, all worktrees and artifacts,
 and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
@@ -30,8 +35,13 @@ project/root `project-fffdc0e0b15b9b86` / `project-fffdc0e0b15b9b86-root-0`,
 registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
 Manage Project remains in_progress, task-plan revision 1 with completion recording
 pending; source/release completion does not imply RR task completion or owner
-acceptance. Obtain current supported evidence/readback and exact approval before
-any pending task-state reconciliation. Navigation is next: Archive/Remove relocation
+acceptance. Fresh supported inventory confirms this revision and all three active
+tasks remain Pending. Delivery-evidence readback is revision 0 with no targets,
+observations or expectations, and `ownerAcceptance: notAccepted`. Catalog transition
+readback is valid with matching accepted/candidate digest above. No RR state was
+mutated. Closeout remains blocked on explicitly scoped evidence recording and exact
+owner-approved task reconciliation; do not infer evidence from the installed release.
+Navigation is next: Archive/Remove relocation
 and remaining approved navigation, excluding delivered toolbar/search. Guided Setup
 follows Navigation and first reconciles its proposed remainder against accepted
 Outcome 3 (revision 4). Documentation reconciliation and plan reconstruction stay
