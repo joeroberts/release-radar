@@ -36,8 +36,20 @@ Navigation and Guided Setup in Backlog, Outcome 3 accepted at revision 4, and
 documentation reconciliation/plan reconstruction still in Backlog. No usage tracking.
 
 Task03 controlling brief: [authorization and recovery verification](task-briefs/2026-09-21-manage-project-task03.md).
-Its catalog entry is prepared; acceptance of the validated catalog transition is
-pending. Task definitions and completion states are unchanged. The completed
+Owner approved continuation and catalog acceptance. Transition
+`a76683be079a903a09b7fb218c2370be940f660340f53fb7314eee0243cbfa1e`
+to `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`
+committed via request `be84f3be-49ce-4200-a33b-910232dcb94e`, audit
+`9B636E33-A353-4BFC-8B81-72C0B00606C5`; supported readback confirms matching
+accepted/candidate digests. Task definitions and completion states are unchanged.
+Managed assignment `delivery-42c8efad-e2e8-4adc-ab2d-6270e18e2898` prepared from
+`39c7865846b5b42e34cfc3331f20c84ca2a7fc6b`, audit
+`21A16343-7B72-4974-9BCB-325C4B18658B`. Worker
+`4B8E5CBE-9636-4EE4-B60F-0B9E19586336` is running; supported status verifies
+Terra/medium and its assigned restricted checkout. Its first checkpoint is an
+evidence map and focused Build requests, with no product edits or test execution
+by the worker. Keep Main/Build through this ticket and local delivery, then replace
+their contexts before Navigation as agreed with the owner. The completed
 isolated correction task is archived after confirming its processes stopped.
 
 ## September 21 — Task02 resumed through managed execution
