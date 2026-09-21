@@ -2305,6 +2305,13 @@ final class AppModel {
         _ = await reloadProjectProjections()
     }
 
+    func recoverLostWorker(registration: ProjectRegistration,
+                           expected: ProjectExecutionAssignment) async throws {
+        try await projectOnboarding.recoverLostWorker(registration: registration,
+            expected: expected, resources: executionResourcesForOwner())
+        _ = await reloadProjectProjections()
+    }
+
     private func executionResourcesForOwner() -> ProjectExecutionResourceLifecycle {
         if let executionResourceLifecycle { return executionResourceLifecycle }
         let resources = ProjectExecutionSetupClient.resources(plugin: codexPluginCoordinator)

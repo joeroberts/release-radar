@@ -75,6 +75,31 @@ final class ProjectExecutionProducerTests: XCTestCase {
             try base.remove(primaryRoot: primaryRoot, worktree: worktree, projectID: projectID, taskID: taskID)
         }
     }
+    struct CandidateOverrideProvisioning: ExecutionWorktreeProvisioning {
+        let base: Provisioning
+        let revisions: [String: String]
+        func revision(at root: URL, requireClean: Bool) throws -> String {
+            try base.revision(at: root, requireClean: requireClean)
+        }
+        func candidateRevision(worktree: ExecutionWorktree) throws -> String {
+            revisions[worktree.checkout] ?? (try base.candidateRevision(worktree: worktree))
+        }
+        func prepare(primaryRoot: URL, checkout: URL, projectID: String, taskID: String,
+                     baseline: String) throws -> ExecutionWorktree {
+            try base.prepare(primaryRoot: primaryRoot, checkout: checkout,
+                projectID: projectID, taskID: taskID, baseline: baseline)
+        }
+        func hasPreparedResources(primaryRoot: URL, checkout: URL, projectID: String,
+                                  taskID: String) throws -> Bool {
+            try base.hasPreparedResources(primaryRoot: primaryRoot, checkout: checkout,
+                projectID: projectID, taskID: taskID)
+        }
+        func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String,
+                    taskID: String) throws {
+            try base.remove(primaryRoot: primaryRoot, worktree: worktree,
+                projectID: projectID, taskID: taskID)
+        }
+    }
     struct ConflictProvisioning: ExecutionWorktreeProvisioning {
         enum Site: Equatable { case parentCandidate, targetPreparation }
         let base: Provisioning
@@ -112,6 +137,66 @@ final class ProjectExecutionProducerTests: XCTestCase {
         func prepare(primaryRoot: URL, checkout: URL, projectID: String, taskID: String, baseline: String) throws -> ExecutionWorktree { throw ProjectExecutionError.unavailable }
         func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws {
             if dirty { throw ProjectExecutionError.conflict }; removals += 1
+        }
+    }
+    private struct RecoveryProcessObserver: ProjectExecutionWorkerProcessObserving {
+        let evidence: ProjectExecutionAssignment.LostWorkerProcessEvidence?
+        let failure: ProjectExecutionError?
+        func verifiedAbsence(for assignment: ProjectExecutionAssignment) throws
+            -> ProjectExecutionAssignment.LostWorkerProcessEvidence {
+            if let failure { throw failure }
+            return try XCTUnwrap(evidence)
+        }
+    }
+    private final class RecoveryGrantReconciler: ProjectExecutionContextGrantReconciling, @unchecked Sendable {
+        private let lock = NSLock()
+        private var outcomes: [ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition]
+        private let failure: ProjectExecutionError?
+        private(set) var calls = 0
+        init(_ outcomes: [ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition],
+             failure: ProjectExecutionError? = nil) {
+            self.outcomes = outcomes; self.failure = failure
+        }
+        func reconcileLostWorkerGrant(for assignment: ProjectExecutionAssignment) throws
+            -> ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition {
+            try lock.withLock {
+                calls += 1
+                if let failure { throw failure }
+                guard !outcomes.isEmpty else { throw ProjectExecutionError.unavailable }
+                return outcomes.removeFirst()
+            }
+        }
+    }
+    private final class RecoveryValidationGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var callCount = 0
+        private var failureCall: Int?
+        init(failureCall: Int?) { self.failureCall = failureCall }
+        func validate() throws {
+            try lock.withLock {
+                callCount += 1
+                if callCount == failureCall { throw ProjectExecutionError.conflict }
+            }
+        }
+        func allow() { lock.withLock { failureCall = nil } }
+    }
+    private final class RecoveryAuditCASInjector: @unchecked Sendable {
+        private let lock = NSLock()
+        private var callCount = 0
+        private let store: ProjectExecutionFileStore
+        private let expected: ProjectExecutionAssignment
+        private let replacement: ProjectExecutionAssignment
+
+        init(store: ProjectExecutionFileStore, expected: ProjectExecutionAssignment,
+             replacement: ProjectExecutionAssignment) {
+            self.store = store; self.expected = expected; self.replacement = replacement
+        }
+
+        func validate() throws {
+            try lock.withLock {
+                callCount += 1
+                if callCount == 2 { try store.saveAssignment(replacement, expected: expected) }
+            }
         }
     }
     private actor CleanupConfiguration: ProjectExecutionConfiguring {
@@ -156,6 +241,99 @@ final class ProjectExecutionProducerTests: XCTestCase {
         value.connectionClosed = closed; value.launchReserved = true
         if state == .unknown { value.uncertainOutcome = true }
         try store.saveAssignment(value, expected: nil); return value
+    }
+
+    private func legacyLostAssignment(root: URL, source: URL, project: AuthorizedProject,
+                                      work: ProjectExecutionWork, store: ProjectExecutionFileStore,
+                                      id: String = "delivery-legacy-lost") throws -> ProjectExecutionAssignment {
+        let paths = try ProjectExecutionPaths(storageRoot: root,
+            projectID: project.projectID.rawValue, taskID: id)
+        try FileManager.default.createDirectory(at: paths.checkout.deletingLastPathComponent(),
+            withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: source, to: paths.checkout)
+        let instructions = try Data(contentsOf: paths.checkout.appendingPathComponent("AGENTS.md"))
+        var value = ProjectExecutionAssignment(id: id, registration: project.registration!,
+            checkoutPath: paths.checkout.path, role: .delivery,
+            permissionProfile: "rr-" + id, model: "gpt-5.6-terra", effort: "medium",
+            authorization: "Approved legacy work",
+            context: [.init(path: "AGENTS.md",
+                digest: SHA256.hash(data: instructions).map { String(format: "%02x", $0) }.joined())],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .authorized, sessionID: "legacy-session",
+            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-\(project.projectID.rawValue)-\(id)",
+                commonGitDirectory: source.path + "/.git", primaryRoot: source.path), work: work)
+        value.codexContextID = try store.policy(projectID: project.projectID.rawValue).codexContextID
+        value.launchReserved = true
+        try store.saveAssignment(value, expected: nil)
+        return value
+    }
+
+    private func processObserver(for assignment: ProjectExecutionAssignment,
+                                 observedAt: Date = Date(timeIntervalSince1970: 1_789_963_200))
+        -> RecoveryProcessObserver {
+        .init(evidence: .init(
+            version: 1,
+            observedAt: observedAt,
+            executablePath: CodexExecutionIdentity.executable,
+            permissionProfile: assignment.permissionProfile,
+            argumentMarker: "permissions.\(assignment.permissionProfile).network.enabled=false"
+        ), failure: nil)
+    }
+
+    private func replacing(_ assignment: ProjectExecutionAssignment,
+                           _ change: (inout [String: Any]) throws -> Void) throws
+        -> ProjectExecutionAssignment {
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(assignment)) as? [String: Any])
+        try change(&object)
+        return try JSONDecoder().decode(ProjectExecutionAssignment.self,
+            from: JSONSerialization.data(withJSONObject: object))
+    }
+
+    private func recoveredAncestorAndClosedSuccessor(root: URL, source: URL,
+                                                      project: AuthorizedProject,
+                                                      work: ProjectExecutionWork,
+                                                      store: ProjectExecutionFileStore) async throws
+        -> (recovered: ProjectExecutionAssignment, successor: ProjectExecutionAssignment) {
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let recoveredProvisioning = Provisioning(source: source,
+            candidate: URL(fileURLWithPath: legacy.checkoutPath))
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: recoveredProvisioning,
+            processObserver: processObserver(for: legacy),
+            grantReconciler: RecoveryGrantReconciler([.noMatchingGrant]))
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: UUID())
+
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler,
+            provisioning: recoveredProvisioning)
+        let requestID = UUID()
+        let pending = try await producer.prepare(project: project, work: work,
+            requestID: requestID, reviewOfAssignmentID: nil,
+            baselineFromAssignmentID: recovered.id, contextPaths: ["AGENTS.md"])
+        let admitted = try producer.admitPrepared(pending)
+        await producer.finishPreparation(work: work, requestID: requestID)
+        var successor = admitted
+        successor.state = .closed
+        successor.sessionID = "closed-successor-session"
+        successor.connectionClosed = true
+        try store.saveAssignment(successor, expected: admitted)
+        return (recovered, successor)
+    }
+
+    private func continuationProvisioning(
+        source: URL,
+        recovered: ProjectExecutionAssignment,
+        immediateParent: ProjectExecutionAssignment
+    ) -> CandidateOverrideProvisioning {
+        CandidateOverrideProvisioning(
+            base: Provisioning(source: source,
+                candidate: URL(fileURLWithPath: immediateParent.checkoutPath)),
+            revisions: [recovered.checkoutPath: String(repeating: "b", count: 40)]
+        )
     }
 
     func testRetirementContextLossPreservesOwnedCheckoutProfileAndRequestState() async throws {
@@ -425,6 +603,466 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertEqual(recovered.retirement?.completed, false)
         let newCloses = await recoveryConfiguration.closedConnections; XCTAssertEqual(newCloses.count, 2)
         XCTAssertEqual(provisioning.removals, 1)
+    }
+
+    func testLostWorkerRecoveryPreservesCheckoutAndAdmitsOnlyExactContinuationParent() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let checkout = URL(fileURLWithPath: legacy.checkoutPath)
+        let provisioning = Provisioning(source: source, candidate: checkout)
+        let grants = RecoveryGrantReconciler([.matchingGrantReleased])
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy), grantReconciler: grants)
+        let requestID = UUID()
+
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: requestID)
+
+        XCTAssertEqual(recovered.state, .stopped)
+        XCTAssertEqual(recovered.sessionID, legacy.sessionID)
+        XCTAssertEqual(recovered.connectionClosed, true)
+        XCTAssertEqual(recovered.launchReserved, true)
+        XCTAssertEqual(recovered.uncertainOutcome, true)
+        XCTAssertEqual(recovered.checkoutPath, legacy.checkoutPath)
+        XCTAssertEqual(recovered.permissionProfile, legacy.permissionProfile)
+        XCTAssertEqual(recovered.worktree, legacy.worktree)
+        XCTAssertNil(recovered.retirement)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.requestID, requestID)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.priorState, .authorized)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.candidateRevision,
+            String(repeating: "b", count: 40))
+        XCTAssertEqual(recovered.lostWorkerRecovery?.grantDisposition, .matchingGrantReleased)
+        XCTAssertEqual(grants.calls, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.checkoutPath))
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), recovered)
+
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+        let continuationRequest = UUID()
+        let continuation = try await producer.prepare(project: project, work: work,
+            requestID: continuationRequest, reviewOfAssignmentID: nil,
+            baselineFromAssignmentID: recovered.id, contextPaths: ["AGENTS.md"])
+        XCTAssertEqual(continuation.role, .delivery)
+        XCTAssertEqual(continuation.baselineFromAssignmentID, recovered.id)
+        XCTAssertEqual(continuation.worktree?.baseline, String(repeating: "b", count: 40))
+        XCTAssertNotEqual(continuation.checkoutPath, recovered.checkoutPath)
+        await producer.finishPreparation(work: work, requestID: continuationRequest)
+    }
+
+    func testRecoveredAncestorChainUsesImmediateClosedSuccessorCandidateForCorrections() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+            project: project, work: work, store: store)
+        let provisioning = continuationProvisioning(source: source,
+            recovered: chain.recovered, immediateParent: chain.successor)
+
+        let reviewProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+        let reviewRequest = UUID()
+        let review = try await reviewProducer.prepare(project: project, work: work,
+            requestID: reviewRequest, reviewOfAssignmentID: chain.successor.id,
+            baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+        XCTAssertEqual(review.role, .review)
+        XCTAssertEqual(review.reviewOfAssignmentID, chain.successor.id,
+            "A successful successor remains the review boundary; its recovered ancestor does not")
+        await reviewProducer.finishPreparation(work: work, requestID: reviewRequest)
+
+        let correctionProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+        let correctionRequest = UUID()
+        let correction = try await correctionProducer.prepare(project: project, work: work,
+            requestID: correctionRequest, reviewOfAssignmentID: nil,
+            baselineFromAssignmentID: chain.successor.id, contextPaths: ["AGENTS.md"])
+        XCTAssertEqual(correction.baselineFromAssignmentID, chain.successor.id)
+        XCTAssertEqual(correction.worktree?.baseline, chain.successor.worktree?.baseline)
+        XCTAssertNotEqual(correction.checkoutPath, chain.successor.checkoutPath)
+        let admitted = try correctionProducer.admitPrepared(correction)
+        await correctionProducer.finishPreparation(work: work, requestID: correctionRequest)
+
+        var closedCorrection = admitted
+        closedCorrection.state = .closed
+        closedCorrection.sessionID = "closed-correction-session"
+        closedCorrection.connectionClosed = true
+        try store.saveAssignment(closedCorrection, expected: admitted)
+
+        let laterProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler,
+            provisioning: continuationProvisioning(source: source,
+                recovered: chain.recovered, immediateParent: closedCorrection))
+        let laterRequest = UUID()
+        let later = try await laterProducer.prepare(project: project, work: work,
+            requestID: laterRequest, reviewOfAssignmentID: nil,
+            baselineFromAssignmentID: closedCorrection.id, contextPaths: ["AGENTS.md"])
+        XCTAssertEqual(later.baselineFromAssignmentID, closedCorrection.id)
+        XCTAssertEqual(later.worktree?.baseline, closedCorrection.worktree?.baseline)
+        await laterProducer.finishPreparation(work: work, requestID: laterRequest)
+    }
+
+    func testRecoveredAncestorTraversalRejectsBrokenIdentityReceiptAndCandidateChains() async throws {
+        for scenario in ["missing", "cycle", "stale-work", "missing-receipt",
+                         "recovery-candidate-mismatch", "child-baseline-mismatch"] {
+            let (root, source, project, work, store) = try fixture()
+            var chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+                project: project, work: work, store: store)
+            switch scenario {
+            case "missing":
+                let changed = try replacing(chain.successor) {
+                    $0["baselineFromAssignmentID"] = "delivery-missing"
+                }
+                try store.saveAssignment(changed, expected: chain.successor)
+                chain.successor = changed
+            case "cycle":
+                let changed = try replacing(chain.successor) {
+                    $0["baselineFromAssignmentID"] = chain.successor.id
+                }
+                try store.saveAssignment(changed, expected: chain.successor)
+                chain.successor = changed
+            case "stale-work":
+                let changed = try replacing(chain.recovered) {
+                    var changedWork = try XCTUnwrap($0["work"] as? [String: Any])
+                    changedWork["outcome"] = "Different outcome"
+                    $0["work"] = changedWork
+                }
+                try store.saveAssignment(changed, expected: chain.recovered)
+                chain.recovered = changed
+            case "missing-receipt":
+                let changed = try replacing(chain.recovered) { $0["lostWorkerRecovery"] = NSNull() }
+                try store.saveAssignment(changed, expected: chain.recovered)
+                chain.recovered = changed
+            case "recovery-candidate-mismatch":
+                let changed = try replacing(chain.recovered) {
+                    var recovery = try XCTUnwrap($0["lostWorkerRecovery"] as? [String: Any])
+                    recovery["candidateRevision"] = String(repeating: "c", count: 40)
+                    $0["lostWorkerRecovery"] = recovery
+                }
+                try store.saveAssignment(changed, expected: chain.recovered)
+                chain.recovered = changed
+            case "child-baseline-mismatch":
+                let changed = try replacing(chain.successor) {
+                    var tree = try XCTUnwrap($0["worktree"] as? [String: Any])
+                    tree["baseline"] = String(repeating: "a", count: 40)
+                    $0["worktree"] = tree
+                }
+                try store.saveAssignment(changed, expected: chain.successor)
+                chain.successor = changed
+            default:
+                XCTFail("Unknown fixture scenario")
+            }
+
+            let base = Provisioning(source: source,
+                candidate: URL(fileURLWithPath: chain.successor.checkoutPath))
+            let provisioning: any ExecutionWorktreeProvisioning = CandidateOverrideProvisioning(
+                base: base, revisions: [
+                    chain.recovered.checkoutPath: String(repeating: "b", count: 40),
+                ])
+            let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+            do {
+                _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                    reviewOfAssignmentID: nil, baselineFromAssignmentID: chain.successor.id,
+                    contextPaths: ["AGENTS.md"])
+                XCTFail("Broken recovered ancestry must refuse: \(scenario)")
+            } catch {}
+            XCTAssertEqual(try store.assignments(projectID: project.projectID.rawValue).count, 2,
+                "Invalid ancestry must be rejected before a correction assignment is persisted")
+        }
+    }
+
+    func testRecoveredAncestorCandidateDriftAndUnrelatedWorkersRemainBlocking() async throws {
+        for siblingState in [ProjectExecutionAssignment.State.authorized, .unknown] {
+            let (root, source, project, work, store) = try fixture()
+            let chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+                project: project, work: work, store: store)
+            let siblingID = siblingState == .authorized ? "delivery-active-sibling" : "delivery-uncertain-sibling"
+            let siblingPaths = try ProjectExecutionPaths(storageRoot: root,
+                projectID: project.projectID.rawValue, taskID: siblingID)
+            var sibling = ProjectExecutionAssignment(id: siblingID, registration: project.registration!,
+                checkoutPath: siblingPaths.checkout.path, role: .delivery,
+                permissionProfile: "rr-" + siblingID, model: "gpt-5.6-terra", effort: "medium",
+                authorization: "Unrelated retained work",
+                context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+                state: siblingState, sessionID: "sibling-session",
+                worktree: .init(checkout: siblingPaths.checkout.path,
+                    baseline: String(repeating: "a", count: 40),
+                    branch: "codex/rr-project-one-" + siblingID,
+                    commonGitDirectory: source.path + "/.git", primaryRoot: source.path), work: work)
+            sibling.codexContextID = try store.policy(projectID: project.projectID.rawValue).codexContextID
+            sibling.launchReserved = true
+            if siblingState == .unknown { sibling.uncertainOutcome = true }
+            try store.saveAssignment(sibling, expected: nil)
+
+            let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: Configuration(), handlerPath: handler,
+                provisioning: continuationProvisioning(source: source,
+                    recovered: chain.recovered, immediateParent: chain.successor))
+            do {
+                _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                    reviewOfAssignmentID: nil, baselineFromAssignmentID: chain.successor.id,
+                    contextPaths: ["AGENTS.md"])
+                XCTFail("Recovered ancestry cannot exempt an unrelated sibling")
+            } catch let conflict as ProjectExecutionPreparationConflict {
+                XCTAssertEqual(conflict.diagnostic.kind, .blockingAssignment)
+                XCTAssertEqual(conflict.diagnostic.blockingAssignmentID, siblingID)
+            }
+        }
+
+        let (root, source, project, work, store) = try fixture()
+        let chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+            project: project, work: work, store: store)
+        let base = Provisioning(source: source,
+            candidate: URL(fileURLWithPath: chain.successor.checkoutPath))
+        let drifted = CandidateOverrideProvisioning(base: base, revisions: [
+            chain.recovered.checkoutPath: String(repeating: "c", count: 40),
+        ])
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: drifted)
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: chain.successor.id,
+                contextPaths: ["AGENTS.md"])
+            XCTFail("A dirty or replaced recovered checkout must invalidate the chain")
+        } catch {}
+        XCTAssertEqual(try store.assignments(projectID: project.projectID.rawValue).count, 2)
+    }
+
+    func testRecoveredAncestryIsRecheckedAfterConfigurationAndAtFinalAdmission() async throws {
+        do {
+            let (root, source, project, work, store) = try fixture()
+            let chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+                project: project, work: work, store: store)
+            let changedSuccessor = try replacing(chain.successor) {
+                $0["baselineFromAssignmentID"] = "delivery-missing-after-configuration"
+            }
+            let configuration = Configuration()
+            await configuration.onProfile {
+                try store.saveAssignment(changedSuccessor, expected: chain.successor)
+            }
+            let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: configuration, handlerPath: handler,
+                provisioning: continuationProvisioning(source: source,
+                    recovered: chain.recovered, immediateParent: chain.successor))
+            do {
+                _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                    reviewOfAssignmentID: nil, baselineFromAssignmentID: chain.successor.id,
+                    contextPaths: ["AGENTS.md"])
+                XCTFail("An ancestry mutation during configuration must prevent preparation")
+            } catch {}
+            let successorPath = try ProjectExecutionPaths(storageRoot: root,
+                projectID: project.projectID.rawValue, taskID: chain.successor.id).assignment
+            let persistedSuccessor = try JSONDecoder().decode(ProjectExecutionAssignment.self,
+                from: Data(contentsOf: successorPath))
+            XCTAssertEqual(persistedSuccessor, changedSuccessor,
+                "The race is preserved as evidence rather than overwritten")
+        }
+
+        do {
+            let (root, source, project, work, store) = try fixture()
+            let chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+                project: project, work: work, store: store)
+            let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: Configuration(), handlerPath: handler,
+                provisioning: continuationProvisioning(source: source,
+                    recovered: chain.recovered, immediateParent: chain.successor))
+            let requestID = UUID()
+            let pending = try await producer.prepare(project: project, work: work,
+                requestID: requestID, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: chain.successor.id, contextPaths: ["AGENTS.md"])
+            let changedRecovered = try replacing(chain.recovered) {
+                var recovery = try XCTUnwrap($0["lostWorkerRecovery"] as? [String: Any])
+                recovery["candidateRevision"] = String(repeating: "c", count: 40)
+                $0["lostWorkerRecovery"] = recovery
+            }
+            try store.saveAssignment(changedRecovered, expected: chain.recovered)
+            XCTAssertThrowsError(try producer.admitPrepared(pending),
+                "Final admission must revalidate every relied-on recovered ancestor")
+            XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+                taskID: pending.id).state, .preparing)
+            await producer.finishPreparation(work: work, requestID: requestID)
+        }
+    }
+
+    func testCompetingPreparationDuringRecoveredAncestryConfigurationStillBlocks() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let chain = try await recoveredAncestorAndClosedSuccessor(root: root, source: source,
+            project: project, work: work, store: store)
+        let siblingID = "delivery-competing-preparation"
+        let siblingPaths = try ProjectExecutionPaths(storageRoot: root,
+            projectID: project.projectID.rawValue, taskID: siblingID)
+        var sibling = ProjectExecutionAssignment(id: siblingID, registration: project.registration!,
+            checkoutPath: siblingPaths.checkout.path, role: .delivery,
+            permissionProfile: "rr-" + siblingID, model: "gpt-5.6-terra", effort: "medium",
+            authorization: "Competing preparation",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .preparing,
+            worktree: .init(checkout: siblingPaths.checkout.path,
+                baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-project-one-" + siblingID,
+                commonGitDirectory: source.path + "/.git", primaryRoot: source.path), work: work)
+        sibling.codexContextID = try store.policy(projectID: project.projectID.rawValue).codexContextID
+        let competingSibling = sibling
+        let configuration = Configuration()
+        await configuration.onHook { try store.saveAssignment(competingSibling, expected: nil) }
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: configuration, handlerPath: handler,
+            provisioning: continuationProvisioning(source: source,
+                recovered: chain.recovered, immediateParent: chain.successor))
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: chain.successor.id,
+                contextPaths: ["AGENTS.md"])
+            XCTFail("A competing preparation discovered before finalization must block")
+        } catch {}
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: siblingID), competingSibling)
+        let hookChecks = await configuration.hookChecks
+        XCTAssertEqual(hookChecks, 1, "The competing preparation fixture must occur after initial eligibility")
+    }
+
+    func testLostWorkerRecoveryRequiresProcessAndGrantEvidenceBeforeAnyStateWrite() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let provisioning = Provisioning(source: source,
+            candidate: URL(fileURLWithPath: legacy.checkoutPath))
+        let unusedGrant = RecoveryGrantReconciler([.noMatchingGrant])
+        let processUnavailable = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: RecoveryProcessObserver(evidence: nil, failure: .unavailable),
+            grantReconciler: unusedGrant)
+        do {
+            _ = try await processUnavailable.recoverLostWorker(project: project,
+                expected: legacy, requestID: UUID())
+            XCTFail("Incomplete or suspicious process identity must block recovery")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .unavailable)
+        }
+        XCTAssertEqual(unusedGrant.calls, 0)
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), legacy)
+
+        let grantUnavailable = RecoveryGrantReconciler([], failure: .unavailable)
+        let noGrantProof = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy), grantReconciler: grantUnavailable)
+        do {
+            _ = try await noGrantProof.recoverLostWorker(project: project,
+                expected: legacy, requestID: UUID())
+            XCTFail("A no-match OS observation alone cannot establish complete closure")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .unavailable)
+        }
+        XCTAssertEqual(grantUnavailable.calls, 1)
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), legacy)
+    }
+
+    func testLostWorkerGrantReleaseBeforeCASIsSafelyReplayable() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let provisioning = Provisioning(source: source,
+            candidate: URL(fileURLWithPath: legacy.checkoutPath))
+        let grants = RecoveryGrantReconciler([.matchingGrantReleased, .noMatchingGrant])
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy), grantReconciler: grants)
+        let requestID = UUID()
+        let gate = RecoveryValidationGate(failureCall: 2)
+
+        do {
+            _ = try await lifecycle.recoverLostWorker(project: project, expected: legacy,
+                requestID: requestID, beforeWrite: { try gate.validate() })
+            XCTFail("A concurrent state change after grant release must prevent the assignment CAS")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .conflict)
+        }
+        XCTAssertEqual(grants.calls, 1)
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), legacy)
+
+        gate.allow()
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: requestID, beforeWrite: { try gate.validate() })
+        XCTAssertEqual(grants.calls, 2)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.grantDisposition, .noMatchingGrant)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.requestID, requestID)
+    }
+
+    func testLostWorkerAuditCompletionReconcilesOnlyExactConcurrentReceipt() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(),
+            provisioning: Provisioning(source: source,
+                candidate: URL(fileURLWithPath: legacy.checkoutPath)),
+            processObserver: processObserver(for: legacy),
+            grantReconciler: RecoveryGrantReconciler([.matchingGrantReleased]))
+        let requestID = UUID()
+        let pending = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: requestID)
+        var completed = pending
+        completed.lostWorkerRecovery?.auditCompleted = true
+        let exact = RecoveryAuditCASInjector(store: store, expected: pending,
+            replacement: completed)
+
+        let reconciled = try await lifecycle.completeLostWorkerRecoveryAudit(
+            project: project, expected: pending, requestID: requestID,
+            beforeWrite: { try exact.validate() })
+        XCTAssertEqual(reconciled, completed,
+            "An exact competing audit completion must reconcile as success")
+
+        try store.saveAssignment(pending, expected: completed)
+        var conflicting = completed
+        conflicting.lostWorkerRecovery?.auditCompleted = true
+        let differentCandidate = String(repeating: "c", count: 40)
+        let receipt = try XCTUnwrap(conflicting.lostWorkerRecovery)
+        conflicting.lostWorkerRecovery = .init(requestID: receipt.requestID,
+            priorState: receipt.priorState, candidateRevision: differentCandidate,
+            process: receipt.process, grantDisposition: receipt.grantDisposition,
+            auditCompleted: true)
+        let conflict = RecoveryAuditCASInjector(store: store, expected: pending,
+            replacement: conflicting)
+        do {
+            _ = try await lifecycle.completeLostWorkerRecoveryAudit(
+                project: project, expected: pending, requestID: requestID,
+                beforeWrite: { try conflict.validate() })
+            XCTFail("A different receipt must remain a compare-and-swap conflict")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .conflict)
+        }
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: pending.id), conflicting)
+    }
+
+    func testRecoveredWorkerCannotBePresentedAsDeliveredReviewCandidate() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let checkout = URL(fileURLWithPath: legacy.checkoutPath)
+        let provisioning = Provisioning(source: source, candidate: checkout)
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy),
+            grantReconciler: RecoveryGrantReconciler([.noMatchingGrant]))
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: UUID())
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: recovered.id, baselineFromAssignmentID: nil,
+                contextPaths: ["AGENTS.md"])
+            XCTFail("Recovered stopped work is a continuation parent, not a delivered review candidate")
+        } catch let failure as ProjectExecutionPreparationFailure {
+            XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+        }
     }
     private func fixture(bindContext: Bool = true) throws -> (URL, URL, AuthorizedProject, ProjectExecutionWork, ProjectExecutionFileStore) {
         let base = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
@@ -1033,6 +1671,80 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertEqual(profiles.last?.workspace["."], "read")
         XCTAssertEqual(profiles.last?.workspace[".build"], "write")
         await reviewProducer.finishPreparation(work: work, requestID: reviewRequestID)
+    }
+
+    func testMissingParentContextRequiresAuthoritativeAbsenceOfEveryReviewResource() async throws {
+        for residual in ["none", "assignment", "worktree", "profile"] {
+            let (root, source, project, work, store) = try fixture()
+            let configuration = Configuration()
+            let deliveryProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: configuration, handlerPath: handler,
+                provisioning: Provisioning(source: source, candidate: nil))
+            let deliveryRequestID = UUID()
+            let delivery = try await deliveryProducer.prepare(project: project, work: work,
+                requestID: deliveryRequestID, reviewOfAssignmentID: nil,
+                baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            let admitted = try deliveryProducer.admitPrepared(delivery)
+            await deliveryProducer.finishPreparation(work: work, requestID: deliveryRequestID)
+            var closed = admitted
+            closed.state = .closed
+            closed.sessionID = "author-session"
+            try store.saveAssignment(closed, expected: admitted)
+
+            let currentBrief = source.appendingPathComponent("docs/current-brief.md")
+            try FileManager.default.createDirectory(at: currentBrief.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try Data("Current controlling brief".utf8).write(to: currentBrief)
+
+            let reviewProducer = ProjectExecutionAssignmentCoordinator(root: { root },
+                configuration: configuration, handlerPath: handler,
+                provisioning: Provisioning(source: source,
+                    candidate: URL(fileURLWithPath: closed.checkoutPath)))
+            let reviewRequestID = UUID()
+            do {
+                _ = try await reviewProducer.prepare(project: project, work: work,
+                    requestID: reviewRequestID, reviewOfAssignmentID: closed.id,
+                    baselineFromAssignmentID: nil,
+                    contextPaths: ["AGENTS.md", "docs/current-brief.md"])
+                XCTFail("A review cannot prepare when its closed candidate lacks selected context")
+            } catch let failure as ProjectExecutionPreparationFailure {
+                XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+            } catch {
+                XCTFail("Missing candidate context must use the typed no-effects path, got \(error)")
+            }
+
+            let childID = "review-" + reviewRequestID.uuidString.lowercased()
+            let childPaths = try ProjectExecutionPaths(storageRoot: root,
+                projectID: "project-one", taskID: childID)
+            if residual == "assignment" {
+                var child = ProjectExecutionAssignment(id: childID, registration: project.registration!,
+                    checkoutPath: childPaths.checkout.path, role: .review,
+                    permissionProfile: "rr-" + childID, model: "gpt-5.6-terra", effort: "high",
+                    authorization: "Unexpected partial review",
+                    context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+                    excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+                    state: .preparing, work: work, reviewOfAssignmentID: closed.id)
+                child.codexContextID = try store.policy(projectID: "project-one").codexContextID
+                try store.saveAssignment(child, expected: nil)
+            } else if residual == "worktree" {
+                try FileManager.default.createDirectory(at: childPaths.checkout,
+                    withIntermediateDirectories: true)
+            } else if residual == "profile" {
+                await configuration.seedProfile("rr-" + childID)
+            }
+
+            let verified = try await reviewProducer.verifyNoPreparationEffects(project: project,
+                work: work, requestID: reviewRequestID, reviewOfAssignmentID: closed.id,
+                baselineFromAssignmentID: nil)
+            XCTAssertEqual(verified, residual == "none")
+            let preparedProfiles = await configuration.profiles
+            XCTAssertEqual(preparedProfiles.count, 1,
+                "Recovery inspection must not prepare an additional profile")
+            let hookChecks = await configuration.hookChecks
+            XCTAssertEqual(hookChecks, 1,
+                "Recovery inspection must not configure an additional checkout")
+            await reviewProducer.finishPreparation(work: work, requestID: reviewRequestID)
+        }
     }
 
     func testFreshRequestCannotReplaceUnknownLaunchOrReviewLiveWriter() async throws {

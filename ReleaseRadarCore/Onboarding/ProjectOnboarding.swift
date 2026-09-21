@@ -925,6 +925,73 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         return expected.worktree?.primaryRoot != context.root.path
     }
 
+    public func recoverLostWorker(registration: ProjectRegistration,
+                                  expected: ProjectExecutionAssignment,
+                                  resources: ProjectExecutionResourceLifecycle) async throws {
+        let context = try await executionOwnerContext(registration: registration)
+        let validate: @Sendable () async throws -> Void = { [store] in
+            try await store.documentationRead {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID,
+                    registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+        try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { [store] resolved in
+            try context.verifyAuthorization(resolved)
+            guard expected.registration == registration,
+                  expected.worktree?.primaryRoot == resolved.url.path else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            let scope = AuditScope(projectID: registration.projectID,
+                entityType: .project, entityID: expected.id)
+            let requestID = expected.lostWorkerRecovery?.requestID ?? UUID()
+            let requestReason = "Lost worker recovery requested: \(expected.id), request \(requestID.uuidString)"
+            try await recordLostWorkerAudit(
+                id: .init(rawValue: "lost-worker-recovery-request-\(requestID.uuidString.lowercased())"),
+                reason: requestReason, scope: scope, registration: registration, context: context)
+            let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url,
+                authorizedRoots: [resolved.url])
+            let recovered = try await resources.recoverLostWorker(
+                project: project, expected: expected, requestID: requestID, beforeWrite: validate)
+            let completionReason = "Lost worker connection recovered: \(recovered.id), request \(requestID.uuidString); checkout and committed candidate preserved, task completion not claimed"
+            try await recordLostWorkerAudit(
+                id: .init(rawValue: "lost-worker-recovery-complete-\(requestID.uuidString.lowercased())"),
+                reason: completionReason, scope: scope, registration: registration, context: context)
+            _ = try await resources.completeLostWorkerRecoveryAudit(
+                project: project, expected: recovered, requestID: requestID, beforeWrite: validate)
+        }
+    }
+
+    private func recordLostWorkerAudit(id: AuditEventID, reason: String, scope: AuditScope,
+                                       registration: ProjectRegistration,
+                                       context: DocumentationRootContext) async throws {
+        let matches: @Sendable () async throws -> Bool = { [store] in
+            try await store.read { connection in
+                try connection.scalarInt(
+                    """
+                    SELECT COUNT(*) FROM audit_events
+                    WHERE id = ? AND actor_id = 'release-radar-owner'
+                      AND historical_project_id = ? AND entity_type = ? AND entity_id = ? AND reason = ?
+                    """,
+                    bindings: [.text(id.rawValue), .text(scope.projectID.rawValue),
+                        .text(scope.entityType.rawValue), .text(scope.entityID), .text(reason)]
+                ) == 1
+            }
+        }
+        if try await matches() { return }
+        do {
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: reason,
+                auditEventID: id, auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID,
+                    registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        } catch {
+            if try await matches() { return }
+            throw error
+        }
+    }
+
     public func retireExecutionAssignment(registration: ProjectRegistration, expected: ProjectExecutionAssignment, resourceFolder: URL? = nil, resources: ProjectExecutionResourceLifecycle) async throws {
         let context = try await executionOwnerContext(registration: registration)
         let resourceBookmark: Data?

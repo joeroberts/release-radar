@@ -62,4 +62,114 @@ final class ProjectExecutionAssignmentTests: XCTestCase {
         retired.retirement?.connectionCloseUncertain = true
         XCTAssertThrowsError(try retired.validated())
     }
+
+    func testLostWorkerReceiptPreservesUncertainOutcomeWithoutClaimingDeliveredWork() throws {
+        let requestID = UUID()
+        let observedAt = Date(timeIntervalSince1970: 1_789_963_200)
+        var recovered = assignment(state: .stopped)
+        recovered.sessionID = "lost-session"
+        recovered.launchReserved = true
+        recovered.connectionClosed = true
+        recovered.uncertainOutcome = true
+        recovered.lostWorkerRecovery = .init(
+            requestID: requestID,
+            priorState: .authorized,
+            candidateRevision: String(repeating: "b", count: 40),
+            process: .init(
+                version: 1,
+                observedAt: observedAt,
+                executablePath: CodexExecutionIdentity.executable,
+                permissionProfile: recovered.permissionProfile,
+                argumentMarker: "permissions.\(recovered.permissionProfile).network.enabled=false"
+            ),
+            grantDisposition: .matchingGrantReleased
+        )
+
+        try recovered.validated()
+        XCTAssertEqual(
+            try JSONDecoder().decode(ProjectExecutionAssignment.self, from: JSONEncoder().encode(recovered)),
+            recovered
+        )
+        XCTAssertNil(recovered.retirement)
+        XCTAssertThrowsError(try recovered.admit(
+            registration: registration,
+            checkoutPath: recovered.checkoutPath,
+            sessionID: "lost-session",
+            boundSessionID: "lost-session"
+        ))
+
+        var falselyClosed = recovered
+        falselyClosed.state = .closed
+        XCTAssertThrowsError(try falselyClosed.validated(),
+            "Process absence recovers the connection, not delivery completion")
+        var wrongMarker = recovered
+        wrongMarker.lostWorkerRecovery = .init(
+            requestID: requestID,
+            priorState: .authorized,
+            candidateRevision: String(repeating: "b", count: 40),
+            process: .init(
+                version: 1,
+                observedAt: observedAt,
+                executablePath: CodexExecutionIdentity.executable,
+                permissionProfile: recovered.permissionProfile,
+                argumentMarker: "permissions.rr-another-assignment.network.enabled=false"
+            ),
+            grantDisposition: .noMatchingGrant
+        )
+        XCTAssertThrowsError(try wrongMarker.validated())
+    }
+
+    func testLostWorkerProcessInventoryFailsClosedForIncompleteOrSuspiciousIdentity() throws {
+        let value = assignment()
+        let marker = "permissions.\(value.permissionProfile).network.enabled=false"
+        let observedAt = Date(timeIntervalSince1970: 1_789_963_200)
+        let unrelated = ProjectExecutionWorkerProcessInventory.Process(
+            processID: 41,
+            startTime: 100,
+            executablePath: "/usr/bin/true",
+            arguments: ["true"],
+            identity: .unrelated,
+            stable: true
+        )
+        let evidence = try ProjectExecutionWorkerProcessInventory.verifiedAbsence(
+            for: value,
+            snapshot: .init(isComplete: true, processes: [unrelated]),
+            observedAt: observedAt
+        )
+        XCTAssertEqual(evidence.argumentMarker, marker)
+        XCTAssertEqual(evidence.executablePath, CodexExecutionIdentity.executable)
+
+        let suspicious = ProjectExecutionWorkerProcessInventory.Process(
+            processID: 42,
+            startTime: 101,
+            executablePath: "/tmp/codex",
+            arguments: ["codex", "-c", marker],
+            identity: .unexpected,
+            stable: true
+        )
+        XCTAssertThrowsError(try ProjectExecutionWorkerProcessInventory.verifiedAbsence(
+            for: value,
+            snapshot: .init(isComplete: true, processes: [suspicious]),
+            observedAt: observedAt
+        ), "An exact marker on an unexpected path or signature is unavailable, never absent")
+
+        let unreadable = ProjectExecutionWorkerProcessInventory.Process(
+            processID: 43,
+            startTime: 102,
+            executablePath: CodexExecutionIdentity.executable,
+            arguments: nil,
+            identity: .unavailable,
+            stable: true
+        )
+        XCTAssertThrowsError(try ProjectExecutionWorkerProcessInventory.verifiedAbsence(
+            for: value,
+            snapshot: .init(isComplete: true, processes: [unreadable]),
+            observedAt: observedAt
+        ))
+        XCTAssertThrowsError(try ProjectExecutionWorkerProcessInventory.verifiedAbsence(
+            for: value,
+            snapshot: .init(isComplete: false, processes: []),
+            observedAt: observedAt
+        ))
+    }
 }

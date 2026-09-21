@@ -60,6 +60,7 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public var uncertainOutcome: Bool? = nil
     public var permissionProfileDefinition: Data? = nil
     public var retirement: Retirement? = nil
+    public var lostWorkerRecovery: LostWorkerRecovery? = nil
     public struct Retirement: Codable, Equatable, Sendable {
         public let requestID: UUID
         public let priorState: State
@@ -69,6 +70,41 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
         public var connectionCloseUncertain: Bool? = nil
         public var replacementAllowed: Bool? = nil
         public init(requestID: UUID, priorState: State) { self.requestID = requestID; self.priorState = priorState }
+    }
+    public struct LostWorkerProcessEvidence: Codable, Equatable, Sendable {
+        public let version: Int
+        public let observedAt: Date
+        public let executablePath: String
+        public let permissionProfile: String
+        public let argumentMarker: String
+
+        public init(version: Int, observedAt: Date, executablePath: String,
+                    permissionProfile: String, argumentMarker: String) {
+            self.version = version; self.observedAt = observedAt
+            self.executablePath = executablePath; self.permissionProfile = permissionProfile
+            self.argumentMarker = argumentMarker
+        }
+    }
+    public struct LostWorkerRecovery: Codable, Equatable, Sendable {
+        public enum GrantDisposition: String, Codable, Sendable {
+            case matchingGrantReleased
+            case noMatchingGrant
+        }
+        public let requestID: UUID
+        public let priorState: State
+        public let candidateRevision: String
+        public let process: LostWorkerProcessEvidence
+        public let grantDisposition: GrantDisposition
+        public var auditCompleted: Bool? = nil
+
+        public init(requestID: UUID, priorState: State, candidateRevision: String,
+                    process: LostWorkerProcessEvidence, grantDisposition: GrantDisposition,
+                    auditCompleted: Bool? = nil) {
+            self.requestID = requestID; self.priorState = priorState
+            self.candidateRevision = candidateRevision; self.process = process
+            self.grantDisposition = grantDisposition
+            self.auditCompleted = auditCompleted
+        }
     }
     public struct Context: Codable, Equatable, Sendable {
         public let path: String
@@ -140,6 +176,19 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
             guard state != .authorized, state != .preparing,
                   retirement.replacementAllowed != true || (retirement.worktreeRemoved && retirement.profileRemoved && (connectionClosed == true || state == .closed || sessionID == nil && launchReserved != true)),
                   !retirement.completed || (state == .superseded && retirement.worktreeRemoved && retirement.profileRemoved && retirement.connectionCloseUncertain != true) else { throw ProjectExecutionError.invalidAssignment }
+        }
+        if let recovery = lostWorkerRecovery {
+            let marker = "permissions.\(permissionProfile).network.enabled=false"
+            guard state == .stopped, connectionClosed == true, uncertainOutcome == true,
+                  role == .delivery, launchReserved == true, sessionID?.isEmpty == false, retirement == nil,
+                  [.authorized, .stopped, .unknown].contains(recovery.priorState),
+                  recovery.candidateRevision.range(of: #"^[a-f0-9]{40}$"#, options: .regularExpression) != nil,
+                  recovery.process.version == 1,
+                  recovery.process.executablePath == CodexExecutionIdentity.executable,
+                  recovery.process.permissionProfile == permissionProfile,
+                  recovery.process.argumentMarker == marker else {
+                throw ProjectExecutionError.invalidAssignment
+            }
         }
         for source in context {
             guard !source.path.hasPrefix("/"), !source.path.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }),

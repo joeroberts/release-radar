@@ -65,11 +65,6 @@ struct ProjectHealthView: View {
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("project-health-reauthorize")
                 }
-                if let manageRoots {
-                    Button("Manage Repository Roots", action: manageRoots)
-                        .buttonStyle(RekonSecondaryButtonStyle())
-                        .accessibilityIdentifier("project-health-manage-roots")
-                }
                 Text("Checked \(snapshot.checkedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -77,7 +72,13 @@ struct ProjectHealthView: View {
                 Text("Run a health check to verify local storage, folder access, documentation, Codex observation, and the installed workflow.")
                     .foregroundStyle(RekonTheme.secondaryText)
             }
+            if let manageRoots {
+                Button("Manage Repository Roots", action: manageRoots)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("project-health-manage-roots")
+            }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-health")
     }
 
@@ -110,6 +111,491 @@ struct ProjectHealthView: View {
 
     private func color(_ state: ProjectHealthSnapshot.Check.State) -> Color {
         switch state { case .ready: RekonTheme.success; case .attention: RekonTheme.warning; case .unavailable: RekonTheme.danger }
+    }
+}
+
+struct ManageProjectView: View {
+    @Environment(\.dismiss) private var dismiss
+    let registration: ProjectRegistration
+    let projectName: String
+    let tasks: [CodexTaskDescriptor]
+    let loadSettings: () async throws -> ProjectSettingsSnapshot
+    let saveSettings: ((String, Set<String>) async throws -> ProjectSettingsSnapshot)?
+    let manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?
+    let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
+    let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
+    let recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)?
+    let projectControls: ((@escaping () -> Void, FocusState<Bool>.Binding) -> AnyView)?
+    let repositoryRecovery: RepositoryRecoveryModel?
+    let onRepositoryRelocated: () async -> Void
+    let documentationActionErrorGeneration: Int
+    let revealDocumentationActionError: () -> Void
+    let reopenCurrentRegistration: (ProjectSettingsSnapshot) -> Void
+
+    @State private var settings: ProjectSettingsSnapshot?
+    @State private var staleSettings: ProjectSettingsSnapshot?
+    @State private var settingsError: String?
+    @State private var isLoadingSettings = true
+    @State private var name = ""
+    @State private var excluded: Set<String> = []
+    @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var executionAssignments: [ProjectExecutionAssignment] = []
+    @State private var selectedAssignmentID = ""
+    @State private var isLoadingExecution = false
+    @State private var executionMessage: String?
+    @State private var executionFailed = false
+    @State private var executionLoadFailed = false
+    @State private var showsRootRecovery = false
+    @FocusState private var documentationActionErrorKeyboardFocused: Bool
+
+    init(
+        registration: ProjectRegistration,
+        projectName: String,
+        tasks: [CodexTaskDescriptor],
+        initialSettings: ProjectSettingsSnapshot? = nil,
+        loadSettings: @escaping () async throws -> ProjectSettingsSnapshot,
+        saveSettings: ((String, Set<String>) async throws -> ProjectSettingsSnapshot)?,
+        manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?,
+        loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?,
+        retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?,
+        recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)? = nil,
+        projectControls: ((@escaping () -> Void, FocusState<Bool>.Binding) -> AnyView)? = nil,
+        repositoryRecovery: RepositoryRecoveryModel? = nil,
+        onRepositoryRelocated: @escaping () async -> Void = {},
+        documentationActionErrorGeneration: Int = 0,
+        revealDocumentationActionError: @escaping () -> Void = {},
+        reopenCurrentRegistration: @escaping (ProjectSettingsSnapshot) -> Void
+    ) {
+        self.registration = registration
+        self.projectName = projectName
+        self.tasks = tasks
+        self.loadSettings = loadSettings
+        self.saveSettings = saveSettings
+        self.manageExecutionHook = manageExecutionHook
+        self.loadExecutionAssignments = loadExecutionAssignments
+        self.retireExecutionAssignment = retireExecutionAssignment
+        self.recoverLostWorker = recoverLostWorker
+        self.projectControls = projectControls
+        self.repositoryRecovery = repositoryRecovery
+        self.onRepositoryRelocated = onRepositoryRelocated
+        self.documentationActionErrorGeneration = documentationActionErrorGeneration
+        self.revealDocumentationActionError = revealDocumentationActionError
+        self.reopenCurrentRegistration = reopenCurrentRegistration
+        _settings = State(initialValue: initialSettings)
+        _isLoadingSettings = State(initialValue: initialSettings == nil)
+        _name = State(initialValue: initialSettings?.projectName ?? "")
+        _excluded = State(initialValue: initialSettings?.excludedTaskIDs ?? [])
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                Text("Manage Project").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(projectName).font(.headline)
+                    Text("\(registration.projectID.rawValue) · registration \(registration.registrationID) · generation \(registration.requestGeneration)")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .textSelection(.enabled)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("manage-project-identity")
+
+                settingsSection
+                executionSection
+                projectControls?(presentRootRecovery, $documentationActionErrorKeyboardFocused)
+
+                HStack {
+                    Spacer()
+                    Button("Done", action: { dismiss() })
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+                .padding(28)
+            }
+            .onChange(of: documentationActionErrorGeneration) { _, generation in
+                guard generation > 0 else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    proxy.scrollTo("project-documentation-action-error-anchor", anchor: .center)
+                    documentationActionErrorKeyboardFocused = true
+                    revealDocumentationActionError()
+                }
+            }
+        }
+        .frame(minWidth: 520, idealWidth: 620, minHeight: 460, idealHeight: 640, maxHeight: 760)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
+        .accessibilityIdentifier("manage-project-panel")
+        .task {
+            if settings == nil { await loadSettingsSection() }
+        }
+        .task { await loadExecutionSection() }
+        .sheet(isPresented: $showsRootRecovery) {
+            if let repositoryRecovery {
+                VStack(alignment: .trailing) {
+                    ScrollView {
+                        RepositoryRecoveryView(model: repositoryRecovery, onCommitted: onRepositoryRelocated)
+                            .padding(24)
+                    }
+                    Button("Done") { showsRootRecovery = false }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .padding([.bottom, .trailing], 24)
+                }
+                .frame(minWidth: 520, idealWidth: 720, minHeight: 500, idealHeight: 750)
+                .background(RekonTheme.background)
+                .accessibilityIdentifier("manage-project-root-recovery-sheet")
+            }
+        }
+    }
+
+    private func presentRootRecovery() {
+        guard repositoryRecovery != nil else { return }
+        showsRootRecovery = true
+    }
+
+    @ViewBuilder private var settingsSection: some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Project settings")
+                    .font(.headline)
+                    .accessibilityIdentifier("manage-project-section-settings")
+                if isLoadingSettings {
+                    ProgressView("Loading project settings…")
+                } else if let settingsError {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Project settings unavailable")
+                            .font(.headline)
+                            .accessibilityLabel("Project settings unavailable. \(settingsError)")
+                            .accessibilityIdentifier("manage-project-section-settings-error")
+                        Text(settingsError).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    if let staleSettings {
+                        Button("Open current project registration") {
+                            reopenCurrentRegistration(staleSettings)
+                        }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("manage-project-section-settings-reopen")
+                        .accessibilityLabel("Open current project registration")
+                        .accessibilityHint("Closes the stale management view and opens the current project registration.")
+                        .focusable()
+                    } else {
+                        Button("Retry project settings") { Task { await loadSettingsSection() } }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .accessibilityIdentifier("manage-project-section-settings-retry")
+                            .accessibilityLabel("Retry project settings")
+                            .accessibilityHint("Loads settings again for the selected project registration.")
+                            .focusable()
+                    }
+                } else if settings != nil {
+                    TextField("Project name", text: $name)
+                        .textFieldStyle(RekonQuietTextFieldStyle())
+                        .accessibilityIdentifier("project-settings-name")
+                    Text("Observed Codex tasks").font(.headline)
+                    if tasks.isEmpty && excluded.isEmpty {
+                        Text("No tasks currently match this project folder.")
+                            .foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    ForEach(taskRows, id: \.id) { task in
+                        RekonCheckbox(isOn: Binding(
+                            get: { !excluded.contains(task.id) },
+                            set: { include in
+                                if include { excluded.remove(task.id) } else { excluded.insert(task.id) }
+                            }
+                        ), title: task.title, accessibilityLabel: task.title,
+                           accessibilityIdentifier: "project-settings-task-\(task.id)")
+                            .frame(height: 32, alignment: .leading)
+                    }
+                    if let saveError {
+                        RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                            Text("Settings were not saved").font(.headline)
+                            Text(saveError).foregroundStyle(RekonTheme.secondaryText)
+                        }
+                    }
+                    Button(isSaving ? "Saving…" : "Save") { performSave() }
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .disabled(isSaving || saveSettings == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("project-settings-save")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var executionSection: some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Project execution")
+                    .font(.headline)
+                    .accessibilityIdentifier("manage-project-section-execution")
+                Text("Update the verified Release Radar hook, or pause governed work and remove it. Close workers before removal. Conflicting edits are preserved.")
+                    .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                if isLoadingExecution {
+                    ProgressView("Loading execution resources…")
+                } else if executionLoadFailed, let executionMessage {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Project execution unavailable").font(.headline)
+                        Text(executionMessage).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    Button("Retry execution resources") { Task { await loadExecutionSection() } }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("manage-project-section-execution-retry")
+                        .accessibilityLabel("Retry execution resources")
+                        .accessibilityHint("Loads execution resources again for the selected project registration.")
+                        .focusable()
+                } else {
+                    if manageExecutionHook != nil {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 10) { executionButtons }
+                            VStack(alignment: .leading, spacing: 10) { executionButtons }
+                        }
+                    }
+                    if (retireExecutionAssignment != nil || recoverLostWorker != nil), !executionAssignments.isEmpty {
+                        Picker("Worker resources", selection: $selectedAssignmentID) {
+                            ForEach(executionAssignments, id: \.id) { assignment in
+                                Text("\(assignment.work?.title ?? assignment.id) — \(assignment.state.rawValue)").tag(assignment.id)
+                            }
+                        }
+                        .disabled(isSaving)
+                        .accessibilityIdentifier("project-settings-execution-assignment")
+                        if recoverLostWorker != nil, selectedExecutionAssignmentCanRecover {
+                            Text(selectedExecutionAssignmentNeedsRecoveryAudit
+                                ? "The worker connection was recovered and its checkout and committed work were preserved, but the audit record is still pending. Finishing the audit does not complete or review the task."
+                                : "Recovery preserves the checkout and committed work. It records the prior outcome as uncertain and enables only a fresh continuation; it does not complete or review the task.")
+                                .font(.caption)
+                                .foregroundStyle(RekonTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button(selectedExecutionAssignmentNeedsRecoveryAudit ? "Finish recovery audit" : "Recover lost worker") {
+                                performLostWorkerRecovery()
+                            }
+                                .buttonStyle(RekonSecondaryButtonStyle())
+                                .disabled(isSaving)
+                                .accessibilityIdentifier("project-settings-execution-recover")
+                                .accessibilityHint(Text(selectedExecutionAssignmentNeedsRecoveryAudit
+                                    ? "Records the pending audit for the existing recovered connection without repeating process or grant recovery."
+                                    : "Verifies that the exact worker process is absent, releases its matching retained grant, and preserves committed work for a fresh continuation."))
+                        }
+                        if retireExecutionAssignment != nil {
+                            Button("Retire resources and allow replacement") { performRetirement() }
+                                .buttonStyle(RekonSecondaryButtonStyle())
+                                .disabled(isSaving || selectedExecutionAssignment == nil)
+                                .accessibilityIdentifier("project-settings-execution-retire")
+                        }
+                    }
+                    if let executionMessage {
+                        RekonCallout(tone: executionFailed ? .danger : .information, systemImage: executionFailed ? "exclamationmark.triangle" : "checkmark.circle") {
+                            Text(executionMessage)
+                        }
+                        .accessibilityIdentifier("project-settings-execution-result")
+                    }
+                }
+            }
+        }
+    }
+
+    private var taskRows: [CodexTaskDescriptor] {
+        var rows: [String: CodexTaskDescriptor] = [:]
+        for task in tasks {
+            rows[task.id] = task
+        }
+        for id in excluded where rows[id] == nil {
+            rows[id] = .init(id: id, workingDirectory: URL(fileURLWithPath: "/"), title: "Excluded task \(id)")
+        }
+        return rows.values.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    @ViewBuilder private var executionButtons: some View {
+        Button("Update execution hook") { performExecution(.update) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-update")
+        Button("Remove execution hook") { performExecution(.remove) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-remove")
+        Button("Resume project workflow") { performExecution(.resume) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-resume")
+    }
+
+    private var selectedExecutionAssignment: ProjectExecutionAssignment? {
+        executionAssignments.first { $0.id == selectedAssignmentID }
+    }
+
+    private var selectedExecutionAssignmentCanRecover: Bool {
+        guard let assignment = selectedExecutionAssignment else { return false }
+        if assignment.lostWorkerRecovery != nil {
+            return assignment.retirement == nil && assignment.lostWorkerRecovery?.auditCompleted != true
+                && assignment.role == .delivery && assignment.work != nil
+                && assignment.launchReserved == true && assignment.connectionClosed == true
+                && assignment.sessionID?.isEmpty == false && assignment.state == .stopped
+                && assignment.uncertainOutcome == true
+        }
+        return assignment.retirement == nil
+            && assignment.role == .delivery && assignment.work != nil
+            && assignment.launchReserved == true && assignment.connectionClosed != true
+            && assignment.sessionID?.isEmpty == false
+            && [.authorized, .stopped, .unknown].contains(assignment.state)
+    }
+
+    private var selectedExecutionAssignmentNeedsRecoveryAudit: Bool {
+        selectedExecutionAssignment?.lostWorkerRecovery?.auditCompleted != true
+            && selectedExecutionAssignment?.lostWorkerRecovery != nil
+    }
+
+    private func loadSettingsSection() async {
+        isLoadingSettings = true
+        settingsError = nil
+        staleSettings = nil
+        defer { isLoadingSettings = false }
+        do {
+            let loaded = try await loadSettings()
+            guard loaded.registration == registration else {
+                settings = nil
+                staleSettings = loaded
+                settingsError = "The selected project registration changed while settings were loading. Close Manage Project and reopen it to load the current registration. No replacement settings were opened."
+                return
+            }
+            settings = loaded
+            name = loaded.projectName
+            excluded = loaded.excludedTaskIDs
+        } catch {
+            settings = nil
+            settingsError = error.localizedDescription
+        }
+    }
+
+    private func loadExecutionSection(preservingFeedback: Bool = false) async {
+        guard let loadExecutionAssignments else { return }
+        isLoadingExecution = true
+        executionLoadFailed = false
+        if !preservingFeedback {
+            executionFailed = false
+            executionMessage = nil
+        }
+        defer { isLoadingExecution = false }
+        do {
+            executionAssignments = try await loadExecutionAssignments().filter {
+                $0.registration == registration && $0.retirement?.completed != true
+            }
+            if !executionAssignments.contains(where: { $0.id == selectedAssignmentID }) {
+                selectedAssignmentID = executionAssignments.first?.id ?? ""
+            }
+        } catch {
+            executionLoadFailed = true
+            executionFailed = true
+            executionMessage = error.localizedDescription
+        }
+    }
+
+    private func performSave() {
+        guard let saveSettings, settings?.registration == registration else {
+            settingsError = "The selected project registration is no longer current. Retry settings before saving."
+            return
+        }
+        isSaving = true
+        saveError = nil
+        Task {
+            defer { isSaving = false }
+            do {
+                let updated = try await saveSettings(name, excluded)
+                guard updated.registration == registration else {
+                    saveError = "The selected project registration changed while settings were saving. No replacement settings were opened."
+                    return
+                }
+                settings = updated
+                name = updated.projectName
+                excluded = updated.excludedTaskIDs
+            } catch {
+                saveError = error.localizedDescription
+            }
+        }
+    }
+
+    private func performExecution(_ action: ProjectExecutionHookAction) {
+        guard let manageExecutionHook else { return }
+        isSaving = true
+        executionMessage = nil
+        executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await manageExecutionHook(action)
+                switch action {
+                case .remove: executionMessage = "Release Radar's hook was removed. The workflow remains disabled."
+                case .update: executionMessage = "Execution hook update verified."
+                case .resume: executionMessage = "Project workflow restored. Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment."
+                }
+            } catch {
+                executionFailed = true
+                executionMessage = error.localizedDescription
+            }
+            await loadExecutionSection(preservingFeedback: true)
+        }
+    }
+
+    private func performRetirement() {
+        guard let retireExecutionAssignment, let expected = selectedExecutionAssignment else { return }
+        isSaving = true
+        executionMessage = nil
+        executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await retireExecutionAssignment(expected)
+                executionMessage = "Resources retired. Replacement work requires a fresh current assignment; the prior outcome remains recorded."
+            } catch {
+                executionFailed = true
+                executionMessage = error.localizedDescription
+            }
+            await loadExecutionSection(preservingFeedback: true)
+        }
+    }
+
+    private func performLostWorkerRecovery() {
+        guard let recoverLostWorker, let expected = selectedExecutionAssignment,
+              selectedExecutionAssignmentCanRecover else { return }
+        isSaving = true
+        executionMessage = nil
+        executionFailed = false
+        Task {
+            defer { isSaving = false }
+            let wasFinishingAudit = expected.lostWorkerRecovery != nil
+            var failure: Error?
+            do {
+                try await recoverLostWorker(expected)
+            } catch {
+                failure = error
+            }
+            await loadExecutionSection(preservingFeedback: true)
+            if let failure {
+                if executionLoadFailed {
+                    executionFailed = true
+                    executionMessage = "The recovery outcome could not be confirmed after the operation failed. Reload execution resources before trying again. The checkout and uncertain outcome remain preserved. \(failure.localizedDescription)"
+                } else if let current = selectedExecutionAssignment,
+                   current.id == expected.id,
+                   let receipt = current.lostWorkerRecovery,
+                   (expected.lostWorkerRecovery == nil
+                        || expected.lostWorkerRecovery?.requestID == receipt.requestID) {
+                    if receipt.auditCompleted == true {
+                        executionFailed = false
+                        executionMessage = expected.lostWorkerRecovery == nil
+                            ? "Worker connection recovered and its audit finished. The checkout and committed work were preserved; task completion was not claimed."
+                            : "Recovery audit finished for the existing recovered worker connection. The checkout and committed work remain preserved; task completion was not claimed."
+                    } else {
+                        executionFailed = true
+                        executionMessage = "Worker connection recovered, but its audit record is still pending. The checkout and committed work were preserved; task completion was not claimed. Choose Finish recovery audit to reconcile the same recovery request. \(failure.localizedDescription)"
+                    }
+                } else {
+                    executionFailed = true
+                    executionMessage = "The worker connection was not recovered. \(failure.localizedDescription) The checkout, permission profile, and uncertain outcome were preserved."
+                }
+            } else if wasFinishingAudit {
+                executionMessage = "Recovery audit finished for the existing recovered worker connection. The checkout and committed work remain preserved; task completion was not claimed."
+            } else {
+                executionMessage = "Worker connection recovered. The checkout and committed work were preserved; task completion was not claimed. Start a fresh continuation from this recovered assignment."
+            }
+        }
     }
 }
 

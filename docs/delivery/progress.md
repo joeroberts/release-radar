@@ -1,5 +1,788 @@
 # Release Radar delivery state
 
+## September 21 — Manage Project delivered 0.1.34; restart handoff
+
+Manage Project Task01/02 implementation and Task03 independent verification are
+complete and locally delivered as **0.1.34 (1)**. Source/version commit
+`c9a4a16a9ad9440cefc1a609314640c4027ed588`; artifact commit and annotated
+`v0.1.34` target `0c040804228ebdf80abdcef2e3d316de55549c4b`. Exact tag pushed;
+remote peeled commit matches. No branch push, PR, merge or notarization.
+
+`dist/ReleaseRadar-0.1.34.dmg` and Downloads copy match SHA-256
+`d370d6ab03af1fefa5f84c1b955053392fbb69ce04701d83a6d8a71a8d393201`.
+DMG verification, read-only mounted layout/identity, strict nested signatures and
+mounted/staged executable equality passed. Installed `/Applications/ReleaseRadar.app`
+is `com.rekonlabs.ReleaseRadar` 0.1.34 (1), team `2UA854NLX4`; strict deep signing
+and installed/staged executable equality passed. The prior coordinator launched
+installed 0.1.34 after delivery; supported connector readback succeeded after the
+owner-confirmed Codex restart. Product checks and independent assessments remain
+terminal; no tests were repeated solely for release.
+
+**Restart confirmed; fresh Main owns coordination and this ledger.** Main task
+`01a0c4b2-46c6-7e81-ae75-da56109621d1` (requested Astra/medium) and Build task
+`01a0c4b1-e429-78f0-8142-c85a134b4913` (requested Terra/medium) replaced the prior
+contexts. Effective model/effort is not exposed for independent confirmation.
+Build completed read-only readiness at `b6639411f064c85f36fa72bcefee7a9379cffed3`;
+the prior Build is idle and archived per the originating coordinator.
+Read AGENTS, this current section, catalog/index and only the next controlling
+brief; do not ingest historical conversations or handoff sections.
+Use canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`,
+preserve branch `codex/manage-project-context-recovery`, all worktrees and artifacts,
+and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
+
+RR accepted catalog is `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`;
+project/root `project-fffdc0e0b15b9b86` / `project-fffdc0e0b15b9b86-root-0`,
+registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
+Manage Project remains in_progress with owner acceptance `notAccepted`, as the
+owner explicitly requested. The approved reconciliation completed all three tasks
+at task-plan revision 4. Evidence revision 5 contains four available, applicable,
+passed attributed handoff observations for Task01, Task02, Task03 and local release;
+all four expectations are satisfied. No task definition, order or lifecycle changed.
+The catalog transition readback is valid with matching accepted/candidate digest.
+Exact committed requests and returned audit/revision receipts are retained in the
+[Task03 reconciliation](task-briefs/2026-09-21-manage-project-task03.md#september-21-owner-approved-tracked-reconciliation).
+Supported inventory confirms all three completions; owner acceptance is separate.
+**Current priority: owner-authorized Release Radar-only Git and temporary-resource
+cleanup. Navigation remains paused; no implementation or worker was started.**
+The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
+opened against main; no merge is authorized. `codex/cleanup-record` was removed
+locally and remotely after merged-PR and ancestry verification. The clean ordinary
+`release-guidance-0.1.22-installed-baseline` worktree and branch were removed after
+confirming no branch-only patches versus main. Other ordinary branches retain
+unique patches or intentional preservation purpose; the coordinator checkout is
+dirty and retained. Main removed 15
+explicit generated build/staging/PR-body paths, approximately 5.45 GB; project
+installers and unrelated Codex configuration remain intact. RR-owned locked
+worktrees are retained for the owner to clean up later through app-managed retirement.
+
+After the owner resumes it, Navigation covers Archive/Remove relocation
+and remaining approved navigation, excluding delivered toolbar/search. Guided Setup
+follows Navigation and first reconciles its proposed remainder against accepted
+Outcome 3 (revision 4). Documentation reconciliation and plan reconstruction stay
+Backlog. No usage tracking. Managed workers use RR status, not desktop task listing.
+Main coordinates/owns ledger; Build owns compilation/Git. Preserve independent
+review and existing approval boundaries; never interrupt merely to reconcile a
+stale status display. Task03 worker connection is closed after final PASS.
+
+The owner-authorized cleanup removed the previously listed `/tmp/release-radar-0.1.34-dmg.3d5d0C`,
+`/tmp/release-radar-0.1.34-mount.9nisSq`, canonical `DerivedData/`, and `.build/task03-*`
+build outputs. It also removed canonical `.build/release-0.1.33-version-tests`,
+`.build/task02-canonical-integration`, `.build/manage-project-task01-derived-data`,
+`.build/manage-project-task02-derived-data`, `build/onboarding-recovery-tests`,
+the PR-body temporary file, and empty staging scaffolds for 0.1.10/0.1.12/0.1.13/0.1.16.
+Historical/uncertain scratch, reusable caches, dirty or unique work, and managed
+worker resources are preserved pending their specific eligibility checks. Existing
+installers remain rollback copies; no duplicate backups were created.
+
+
+## September 21 — Manage Project verified; local delivery next
+
+Task03 independent UI/recovery assessment passed with no Required defects or
+remaining in-scope gaps. RR worker `4B8E5CBE-9636-4EE4-B60F-0B9E19586336`
+completed its final turn without task-owned processes or edits. Build's focused
+checks passed 2/2 for stale-settings/local retry and 5/5 for root authorization,
+stale lifecycle previews, failure rollback and archived/removed routing on
+canonical `c8dd5cbc` (same product as assigned `39c78658`). Results:
+`.build/task03-checkpoint/Logs/Test/Test-ReleaseRadar-2026.09.21_11-43-33--0400.xcresult`
+and `.build/task03-lifecycle-authority/Logs/Test/Test-ReleaseRadar-2026.09.21_11-46-21--0400.xcresult`.
+Applicable Task01/02 checks and independent reviews remain terminal.
+
+Manage Project implementation and verification are complete; next is the standing
+authorized local release, owned by Build. No RR task completion or owner acceptance
+is inferred. Archive/Remove relocation remains Navigation work. Preserve current
+branches, worktrees and installers. After installation, wait for the owner's Codex
+restart before connector use; then refresh Main/Build contexts before Navigation
+as agreed. No usage tracking.
+
+## September 21 — Task02 integrated; Task03 next
+
+Task02 is implemented, directly verified, independently reviewed and locally
+integrated through `5ab10618` (preceding integration commits `fe4d3770`,
+`54a7f5ec`, `2275699d`). Build preserved canonical lost-worker recovery alongside
+the reviewed Manage Project relocation, root recovery and error-focus behavior.
+Independent Terra/high reviewer `01a0c468-e7fc-7a43-b8e2-14bdeffb44d6` found no
+Required source/behavior defect; compact visual and accessibility/recovery checks
+passed. Reviewer is finished, its processes stopped, and its task archived.
+
+The missing wide visual evidence was resolved by a minimal existing-test capture
+correction (`70571f71`, integrated as `5ab10618`): capture the already-resolved
+synthetic sheet instead of its covered host. Main independently inspected the
+nonblank 1100 image against the approved visual reference. Product code was
+unchanged by this test correction. The abandoned held-host route exposed live
+project rows at startup; it was terminated without interaction or observed
+owner-data mutation and is not to be repeated.
+
+Build's four affected integrated selectors passed (root recovery, catalog
+transition rejection, bind error, wide/compact sheet):
+`.build/task02-canonical-integration/Logs/Test/Test-ReleaseRadar-2026.09.21_11-08-49--0400.xcresult`.
+Diff check passed. The shell pipeline returned 1 because tee opened its log before
+the output directory existed; xcodebuild and the four test results passed.
+Previous unaffected checks remain terminal. All branches, worktrees and artifacts
+are preserved; unrelated `.codex/config.toml` and `.codex/hooks.json` remain untracked.
+
+The owner-approved isolated Task02 exception is complete; subsequent work returns
+to RR-managed execution. Next is the unchanged `rr-p6-manage-project-task-03`:
+authorization, archived/removed access, partial failures and accessible navigation
+with independent UI/recovery verification. Main owns the ledger; Build owns
+compilation/tests/Git. No release/install or RR completion/owner acceptance is
+inferred. Fresh RR inventory confirms Manage Project task-plan revision 1,
+Navigation and Guided Setup in Backlog, Outcome 3 accepted at revision 4, and
+documentation reconciliation/plan reconstruction still in Backlog. No usage tracking.
+
+Task03 controlling brief: [authorization and recovery verification](task-briefs/2026-09-21-manage-project-task03.md).
+Owner approved continuation and catalog acceptance. Transition
+`a76683be079a903a09b7fb218c2370be940f660340f53fb7314eee0243cbfa1e`
+to `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`
+committed via request `be84f3be-49ce-4200-a33b-910232dcb94e`, audit
+`9B636E33-A353-4BFC-8B81-72C0B00606C5`; supported readback confirms matching
+accepted/candidate digests. Task definitions and completion states are unchanged.
+Managed assignment `delivery-42c8efad-e2e8-4adc-ab2d-6270e18e2898` prepared from
+`39c7865846b5b42e34cfc3331f20c84ca2a7fc6b`, audit
+`21A16343-7B72-4974-9BCB-325C4B18658B`. Worker
+`4B8E5CBE-9636-4EE4-B60F-0B9E19586336` is running; supported status verifies
+Terra/medium and its assigned restricted checkout. Its first checkpoint is an
+evidence map and focused Build requests, with no product edits or test execution
+by the worker. Keep Main/Build through this ticket and local delivery, then replace
+their contexts before Navigation as agreed with the owner. The completed
+isolated correction task is archived after confirming its processes stopped.
+
+## September 21 — Task02 resumed through managed execution
+
+Owner restarted Codex after installation. Supported inventory and catalog readback
+now succeed. **After every app update, preserve handoff and require a Codex restart
+before connector use; do not diagnose the retained pre-restart client as a product
+defect.** No usage tracking.
+
+Owner approved exact catalog transition `ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9`
+→ `a76683be079a903a09b7fb218c2370be940f660340f53fb7314eee0243cbfa1e`.
+Acceptance request `317309a0-8a85-4ead-86c9-bcadf8506f31` succeeded with audit
+`AF50B1E2-9EFC-4259-9731-B57AC71A56E5`; app readback shows managed documentation
+current and shared-execution compatible. No task definitions/completions changed.
+
+Exact saved correction request `3e7e5581-a189-48a3-9b0a-2175a530df03` was replayed
+unchanged through its idempotent receipt and succeeded: audit
+`202ABB51-4A67-436F-B3CE-CB32E1BFC279`, assignment
+`delivery-3e7e5581-a189-48a3-9b0a-2175a530df03`, parent `delivery-7b5391d5-b421-465e-9c43-e9f85650117b`,
+exact baseline `3f1498c264b574b0890d45d2e8e4b9e1e77820a8`.
+Worker `C9EC2728-4A83-4E7D-A5FF-2E725FE217EA`, task
+`01a0c448-1dd1-7b20-a5f3-33dd3a54bd39` started with verified effective
+`gpt-5.6-terra` / `medium` in its app-owned checkout. This directly verifies the
+installed recovery repair admits continuation from the preserved successor.
+
+**Current blocker / preserved correction:** supported exact receipt replay confirms
+assignment `delivery-3e7e5581-a189-48a3-9b0a-2175a530df03` is `stopped`,
+`connectionClosed: true`, retaining its session/branch/checkout. Main's supported
+interrupt settled the stale running display but also made further worker turns
+ineligible. Same-handle follow-up was refused; no replacement or bypass occurred.
+Build verified saved changes: three files only (ProjectLifecycleSupport.swift,
+ProjectOverviewView.swift, ProjectDocumentationRenderingTests.swift), compilation
+succeeds, but all three focused selectors still fail (missing post-press root
+control; two false error-focus visibility assertions). Exact result in worker
+checkout `.build/task02-presentation-green/Logs/Test/Test-ReleaseRadar-2026.09.21_10-21-57--0400.xcresult`
+and `.build/task02-presentation-green.log`. A tee pipeline exit 0 is not a pass;
+xcresult records 0/3 passing. No integration/release/acceptance. Build is preserving
+the scoped failing checkpoint as a clearly incomplete local commit. Further edits
+require a supported continuation route; existing isolated exception covered only
+the already-delivered ancestry repair, not this Task02 correction.
+
+Current checkpoint: focused RED established; same managed worker released for
+bounded production corrections. Build ran three selectors after the checkout-local
+offline libgit2 prerequisite: root-recovery control lookup failed and both adapted
+documentation failure tests failed error-focus/visibility assertions. Evidence in
+worker checkout `.build/task02-presentation-red/Logs/Test/Test-ReleaseRadar-2026.09.21_10-10-44--0400.xcresult`
+and `.build/task02-presentation-red.log`. Missing control is not by itself proof of
+sheet topology; production correction must directly verify callback presentation.
+Worker is implementing recovery-sheet ownership and error scrolling/focus inside
+Manage Project; no permissions or authority fallback changes.
+
+Scope remains required Task02 corrections (root/worktree
+recovery presentation inside Manage Project; exact-registration documentation
+failure fixtures and accessible error focus/scroll). No health-derived authority
+fallback. Build owns RED/GREEN, compilation and Git; Main releases production
+after focused RED. Do not repeat terminal relocation checks without affected
+behavior. Task03 and Navigation boundaries remain intact. Controlling brief:
+[Task02](task-briefs/2026-09-20-manage-project-task02.md).
+
+## September 21 — recovery repair delivered; Task02 awaits connector refresh
+
+Reviewed recovery repair is locally delivered as **0.1.33 (1)**. Build integrated
+`e539299f` and `7c839deb`; release metadata `2af561fa`; release/tag commit
+`5c7df64262db2ab94fc168b67867562412728e6d`. Exact annotated `v0.1.33` tag pushed
+and remote peeled commit verified. No branch push, PR, merge or notarization.
+Package/lifecycle checks passed 29 tests; signed staging, DMG layout/identity,
+strict deep signing and installed `/Applications/ReleaseRadar.app` verified.
+`dist/ReleaseRadar-0.1.33.dmg` and Downloads copy are identical, SHA-256
+`002fd1753a799391aebc429d732e1b57d21ac715cfaf938079ca7c1a3b0f25ea`.
+Original focused 8/8, dispatcher 3/3 and distinct-successor 1/1 checks plus
+independent architecture/security PASS are terminal. Writer and reviewer tasks
+are complete and archived; all commits/resources remain preserved.
+
+**Current blocker:** supported delivery inventory failed before submission with
+bridge transport connection error, including after launching installed app.
+Settings → Connections confirms shipped/installed plugin 0.1.33 and explicitly
+says a new Codex task is needed to load the plugin change. App bridge check says
+Available, explicitly not certification of every Codex client. No pending Task02
+request was resubmitted, no worker launched, no receipt changed. Refresh this
+client connection through supported Codex controls before continued application
+readback. Do not treat app bridge availability as client connection success.
+
+Repair brief is closed as completed/non-authoritative following delivered repair;
+its identity/path remain preserved. Catalog transition remains **pending**, with
+last accepted digest `ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9`.
+After refreshed connection, obtain exact validated transition and explicit catalog
+acceptance before Task02 continuation. No task definitions or completion state
+changed. Then read pending-versus-terminal status for exact request `3e7e5581…`
+recorded below and continue through supported RR, preserving its exact envelope.
+Live Task02 prepare/start verification remains outstanding; local repair delivery
+does not imply live continuation or Task02 acceptance.
+
+Retained temporary build outputs (no deletion): `.build/release-0.1.33-version-tests/`,
+`.build/release-0.1.33-version-tests.log`, `.build/release-0.1.33-stage.log`,
+`.build/release-0.1.33-install.log`, and focused native-check result/log artifacts.
+
+## September 21 — Task02 recovery ancestry: reviewed repair authorized
+
+Fresh Chief Architect task `01a0c3ef-6e5f-70c1-a226-96ae893c402d` assessed
+canonical source `90ecf34d` read-only. Requested Astra/high; effective settings
+not exposed. No archived task was restored or reused. Owner directed architecture
+review before implementation; the earlier implementation approval request is
+superseded by the reviewed scope below. Owner approved implementation, the isolated
+repair-task exception, Build verification, independent architecture/security review
+and signed local delivery before Task02 resumes. Controlling brief:
+[Recovery ancestry repair](task-briefs/2026-09-21-recovery-ancestry-repair.md).
+
+**Repair execution:** isolated writer `01a0c3fc-cfd3-72f2-9ed3-afe73d867a47`
+started from committed brief baseline `2ae586d88fcefae614b0220dd7316cf4bae7e0f4`
+in `/Users/jroberts/.codex/worktrees/0419/release_radar`, requested Sol/high
+(effective settings unavailable). Tests-only checkpoint is ready in
+`ProjectExecutionProducerTests.swift`, `ExecutionWorktreeTests.swift` and
+`ManagedDocumentationOperationsTests.swift`; no production edits or tests run by
+writer. Build established behavioral RED after a test-only immutable capture fix:
+`testRecoveredAncestorChainUsesImmediateClosedSuccessorCandidateForCorrections`
+failed as intended with `blockingAssignment: delivery-legacy-lost` in 0.663s;
+normal xcodebuild `TEST FAILED`, evidence `.build/native-checks/recovery-ancestry-red-2.xcresult`
+and `.log`. Main released approved production implementation to the same writer.
+First focused GREEN run compiled and completed: 3 passed, 5 failed
+(`.build/native-checks/recovery-ancestry-green-1.xcresult`). Writer corrected
+multi-candidate test fixtures and a terminal-replay dispatcher defect; Build is
+rerunning affected checks. Final candidate `55b5709c4cf0f9160918e38c653eb8e00d9e5cd3`
+is committed in the clean isolated checkout: coordinator, dispatcher, three test
+files and mutable design (six files). Build GREEN-2 passed 8/8 recovery checks;
+dispatcher-1 passed 3/3 current-authority/terminal/changed-body replay checks.
+Complete results/logs are under canonical `.build/native-checks/`; documentation
+and diff checks passed. Fresh independent Astra/high architecture/security/recovery
+review `01a0c419-4e07-7681-be10-f6d050c58011` found no required production
+findings but placed candidate on HOLD for one required verification gap: existing
+A/B fixtures share a revision and do not prove preservation of B-only committed
+changes. Original writer is strengthening the existing real-Git fixture to prove
+C admission and later continuation preserve distinct B content and A recovery
+state. Build runs only affected checks; same reviewer assesses that correction.
+No integration or release yet.
+Documentation validation passed for the committed baseline.
+
+**Repair review complete:** final candidate `b5a01a98480bb9a52dd855159d581e59becd1c65`
+adds only the required test amendment to `55b5709c`. Distinct-successor native
+regression passed 1/1 (`.build/native-checks/recovery-ancestry-distinct-successor-2.xcresult`
+and `.log`): C and later continuation preserve B-only committed content, while
+A's recovery state and resources remain unchanged. Independent Astra/high reviewer
+`01a0c419-4e07-7681-be10-f6d050c58011` returned PASS, closed its sole required
+finding and reported no required production defects. Earlier 8/8 recovery and
+3/3 dispatcher checks remain terminal. Review is complete/idle; bounded reviewer
+and writer tasks are being retired from active coordination after preservation.
+Build Agent is authorized to integrate both scoped commits and perform the
+standing signed local patch release. No Task02 integration or acceptance implied.
+
+**Approved Chief recommendation:** extend delivery-continuation
+eligibility only for verified recovered delivery ancestors on the requested
+closed successor's own `baselineFromAssignmentID` chain. Keep retirement unchanged.
+Use successor `7b`'s clean committed candidate `3f1498c2`, not original `f913`'s
+tests-only baseline. No code-free supported route preserving that candidate was
+established; restoring a closed Codex task cannot restore managed worker authority.
+
+- Require exact current project/root/common repository, registration/generation,
+  Codex context and full work identity (task, ticket, phase/revisions, incarnation,
+  outcome/title) throughout the relied-on chain; retain normal catalog, policy,
+  hook and current-work checks.
+- Traverse only app-owned delivery baseline links. Require closed connections for
+  successful intermediate candidates and the existing valid stopped/recovered
+  receipt conditions for recovered ancestors. Match each direct recovered child's
+  recorded baseline to its parent's recovery candidate and revalidate the clean,
+  exact checkout. Reject missing/cyclic/stale links, mismatches and retired nodes.
+  Bound traversal by the finite inventory; no new general Git ancestry API.
+- Exempt only qualifying recovered ancestors; unrelated live, preparing, unknown,
+  stopped or uncertain delivery siblings and historical-registration conflicts
+  still block. Preserve delivery/review separation. Recovery does not imply
+  delivery acceptance or make the recovered node a valid direct review parent.
+- Recheck relied-on ancestry and conflict facts across configuration awaits and
+  at final admission using existing serialization/CAS. STOP, policy/context or
+  ancestry changes, retirement and competing preparation must prevent authorization.
+  A one-time eligibility helper alone is insufficient.
+- Preserve receipts, uncertainty, sessions and all resources. Audit finalization
+  remains separate; do not silently add an `auditCompleted` continuation gate.
+  No permission expansion, schema/migration/public command change, managed-record
+  edits, accepted-ADR edits or descendant retirement is proposed.
+
+**Verification / delivery proposal:** a separate bounded repair brief and owning
+mutable execution-design clarification; Sol/high writer, existing Build Agent,
+and one fresh independent architecture/security/recovery implementation reviewer
+at Astra/high. Start through supported managed admission if eligible; an isolated
+repair task exception requires explicit owner approval if admission is blocked.
+Test-first A→closed B→C and subsequent corrections using B's candidate; reject
+invalid ancestry, changed identity/baseline, dirty/replaced checkout and unrelated
+active/uncertain siblings. Exercise authority changes during suspended configuration,
+competing preparation and exact/changed-body/terminal replay at dispatcher boundary.
+Use existing native Git checks where relevant. After reviewed local integration,
+use the standing signed local release workflow and verify supported correction
+preparation/start for the preserved Task02 candidate. No branch publication, task
+acceptance/definition changes, permissions or unrelated recovery work implied.
+Owner explicitly approved this route and repair endpoint; no repeated approval is needed.
+
+**Receipt correction:** the blocking-assignment response does not establish a
+terminal preparation receipt. Dispatcher persists `outcomeUnknown` before producer
+preparation and its exception path does not settle it. Preserve the full original
+request `3e7e5581-a189-48a3-9b0a-2175a530df03` below; establish pending versus terminal
+state through supported readback before replay. Replay pending work unchanged;
+do not invent a new request or change this envelope to escape a refusal.
+Chief review was a source/contract assessment only: no runtime, compilation or tests.
+
+Canonical root: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
+Owner removed usage tracking and the weekly ceiling. Do not measure or enforce
+older budget instructions. Main profile Astra/medium; effective settings are not
+exposed. Continue Manage Project → Navigation → Guided Setup, reconciling delivered
+Outcome 3 before Guided Setup. Documentation reconciliation and plan reconstruction
+remain Backlog. Preserve approved definitions, branches, worktrees and artifacts.
+
+**Connection refreshed:** owner reported done after plugin refresh. Supported complete
+inventory now succeeds with the same exact project/root/registration/generation,
+in-delivery phase revision 1 and Manage Project plan revision 1; Task02 pending.
+A replacement Main task is unnecessary while this refreshed connection works.
+Exact Task02 continuation request (submitted; audited refusal below):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"72d8f5f5-71ed-4687-bbd5-7f80a2474ae7","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Continue owner-authorized Task02 from preserved tests-only commit0a51ee1d after verified app-owned lost-worker recovery delivered in0.1.32. Preserve task definitions, exact parent and prior RED; implement relocated controls through managed delivery."}
+```
+
+Continuation readback: the old pending request `f7fa55ae…` was replayed exactly
+only after fresh `pendingPreparationRequest` evidence; it ended with audited
+`assignmentNotAuthorized` (`4BC3FA6D-55E8-4CEC-BF31-E4C6DD2AB061`). The unchanged
+new request `72d8f5f5…` then ended with the same audited refusal
+(`D411C373-9D52-48E9-861D-D291B4AFA88F`). No worker started.
+Bounded source inspection identified a concrete context mismatch: dispatcher
+selects every active controlling document from today's accepted catalog, while
+continuation loads them from the saved parent checkout. The newly added recovery
+brief is absent there. Parent/context missing-file refusal is fail-closed.
+Close only the now-delivered recovery brief as completed/non-authoritative,
+preserving its ID/path/history; validate and obtain exact catalog acceptance
+before a fresh continuation request. No code, permissions or old checkout changes.
+
+Exact recovery-brief closeout catalog acceptance (owner approved; succeeded
+with audit `117B72A3-4211-40BB-B304-E56A21E529DC`; readback accepted=candidate
+`ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9`):
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"e49c153c-b475-41f7-8b04-a0c2af08ad77","priorCatalogVersion":1,"priorCatalogDigest":"070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f","target":{"catalogDigest":"ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"reason":"Accept validated closeout of only the delivered lost-worker recovery brief as completed/nonAuthoritative; preserve artifact identity/path/history and all task definitions."}
+```
+
+Fresh Task02 continuation request after accepted closeout (succeeded; audit
+`FE53679D-32C2-45B6-975C-7A1BF7C592BD`):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"7b5391d5-b421-465e-9c43-e9f85650117b","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Resume authorized Task02 implementation from preserved tests-only checkpoint after verified lost-worker recovery and accepted completed recovery-brief catalog closeout. Existing task scope, definitions and parent unchanged."}
+```
+
+**Task02 production resumed:** managed assignment
+`delivery-7b5391d5-b421-465e-9c43-e9f85650117b`, worker
+`B9C9E92F-477B-4287-A17A-6001F439A7AB`, task
+`01a0c2b1-10f8-7981-a3c6-a51813542357`, baseline `0a51ee1d`.
+Supported start/readback verifies Terra/medium, exact assigned checkout/profile,
+on-request approval with auto-review and network disabled. Worker owns only
+Task02 composition/tests/mutable design and stops source writes before Build
+verification. Existing RED is retained. Build Agent retains compilation/Git;
+Main retains ledger. Do not duplicate this worker or repeat completed recovery.
+
+Task02 candidate `3f1498c264b574b0890d45d2e8e4b9e1e77820a8` is committed and clean
+in the delivery checkout, not yet integrated. Exactly three files changed:
+`ProjectOverviewView.swift`, `ProjectLifecycleSupport.swift`, and
+`ManagedEvidenceRenderingTests.swift`. Existing panel order is preserved;
+explicit AX containment keeps section and child-action identifiers distinct.
+No generic scrolling test workaround remains.
+
+Direct verification: GREEN-7 relocation/callback test PASS (4.258s, wide/compact);
+GREEN-6 evidence-consumer PASS (2.653s). Canonical artifacts are under
+`.build/native-checks/manage-project-task02-green-{6,7}.xcresult/Staging/`.
+Xcode stalled after completed test execution; staged diagnostics prove the
+selector results, not the interrupted top-level bundles. Documentation/diff
+checks passed. Delivery connection closed through supported operation; completed
+delivery task archived, checkout/branch preserved.
+
+Independent review `review-e2a8457c-971d-49a4-84fe-d98908553be1` is running on this
+candidate. Worker `B9B45136-96EE-44E2-8ACC-A652C35C3F7C`, task
+`01a0c2d8-e425-7553-9216-f950e1c0d30d`; supported start confirms Terra/high, exact
+review checkout/profile, on-request auto-review and network disabled. Scope:
+UX/accessibility/recovery and preserved exact-target authorization/data boundaries.
+Review found required recovery-sheet presentation conflict: relocated root/worktree
+actions request a sibling parent sheet while Manage Project is already open.
+Reviewer clarified registration finding as required old test-fixture adaptation,
+not a demonstrated production defect: supply exact registration/settings loader
+and open Manage Project before bind/catalog failure assertions. Preserve
+Task01 selected identity; do not introduce health-derived authorization fallback.
+Bind/accept failure focus and both recovery routes need affected direct checks
+and independent wide/compact runtime review. No integration or acceptance.
+Temporary reviewer inputs `.build/task02-candidate.patch` and
+`.build/task02-direct-checks.txt` exist only in the review checkout; canonical
+candidate and direct results remain source of truth. Do not delete without approval.
+
+Exact Task02 independent-review preparation request:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"e2a8457c-971d-49a4-84fe-d98908553be1","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reviewOfAssignmentID":"delivery-7b5391d5-b421-465e-9c43-e9f85650117b","reason":"Independent Task02 review of clean committed candidate 3f1498c264b574b0890d45d2e8e4b9e1e77820a8 after direct relocation and evidence-consumer passes. Cover UX/accessibility, recovery and preserved exact-target authorization; no implementation, acceptance or scope changes."}
+```
+
+Exact Task02 correction preparation request:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"3e7e5581-a189-48a3-9b0a-2175a530df03","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-7b5391d5-b421-465e-9c43-e9f85650117b","reason":"Required corrections to Task02 candidate3f1498c2: preserve root/worktree recovery presentation inside Manage Project and update affected documentation failure fixtures/checks. Same brief/outcome and definitions; test-first checkpoint before production correction, Build owns checks/Git."}
+```
+
+Correction preparation was refused with `blockingAssignment` identifying original
+stopped `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`; no correction worker started.
+Preserve request `3e7e5581-a189-48a3-9b0a-2175a530df03` for unchanged replay after
+supported resolution. Current UI lists the original Task02 as stopped and offers
+“Retire resources and allow replacement”. This removes its clean checkout and
+matching permission profile; owner instruction preserves worktrees/permissions,
+so retirement has not been invoked. Build verified original clean at `0a51ee1d`
+on its preserved delivery-f913 branch; candidate `3f1498c2` is clean and contains
+that baseline. Owner approved retirement of only the original stopped
+checkout/profile. Main invoked the supported UI once; it refused because a
+dependent assignment still references the candidate. UI explicitly confirmed
+the checkout was preserved; no retirement occurred. Candidate/review work remains
+preserved; no bypass, governance edits or additional recovery code authorized.
+
+Bounded source readback explains the deadlock: preparation exempts only the
+immediate recovered parent (`ProjectExecutionAssignmentCoordinator.swift:296`),
+so original f913 still blocks correction from successor 7b. Retirement refuses
+any unretired dependent (`ProjectExecutionResourceLifecycle.swift:464`), while
+correction requires its parent's existing checkout. Do not delete descendants
+or change managed records to bypass this. Separate owner authorization requested
+for a minimal recovery-ancestry correction preserving existing authority and
+permissions, with focused tests and independent review; no code work started.
+
+**Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
+`/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
+`3741fdd8c71b8b68ae5a4e81eed8963673709886`; local/remote peeled tag commits match.
+Verified installer: `dist/ReleaseRadar-0.1.32.dmg`, identical copy in Downloads.
+No branch push, PR, merge or notarization. Installed/staged signing, sandbox,
+identity, version and executable equality passed. Documentation checks passed.
+
+Main invoked the new app-owned recovery once for
+`delivery-f913b890-7149-450c-bf8c-2b515cce75a0`. Supported UI showed **stopped**
+and “Worker connection recovered”, preserved checkout/committed work, and no task
+completion claimed. No retirement, permission expansion or repeated recovery.
+Build confirmed original checkout clean/locked at
+`0a51ee1d8484d960effe1d55c71e510e162cf2ab`, original branch preserved:
+`codex/rr-project-fffdc0e0b15b9b86-delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
+Checkout:
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-fffdc0e0b15b9b86/delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
+
+**Next authorized work:** verify `rr-p6-manage-project-task-02` in the existing
+managed assignment above, retaining its worker for required corrections. Task02 controlling
+brief: [Manage Project Task02](task-briefs/2026-09-20-manage-project-task02.md).
+Its tests-only causal RED is already established (`manage-project-task02-red-4`,
+missing `project-health-refresh`); do not rerun it or Task01's unchanged checks.
+Production Task02 source is frozen for Build verification. Task01 is implemented, verified,
+independently reviewed and integrated; do not repeat it. Main owns coordination
+and ledger; existing Build Agent `01a0c061-578a-7e22-8ba3-77348fd6dcac` owns
+compilation and Git (requested Terra/medium, effective settings unexposed).
+
+**Current connection:** supported worker readback succeeds, confirms the same
+completed source assignment and Terra/medium settings, with no pending requests.
+The earlier transport interruption is resolved; no fresh Main, duplicate worker,
+reinstallation or repeated lost-worker recovery is needed.
+Do not replay the earlier definite `blockingAssignment` refusal as a new request.
+
+Project `project-fffdc0e0b15b9b86`, rootID `project-fffdc0e0b15b9b86-root-0`,
+registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1; last complete
+inventory had phase `rr-p6-remediation` revision 1 and Manage Project plan revision 1.
+Catalog v1 accepted repository `e7475429-ef51-4368-ad9e-61d9073d5a4f`, digest
+`070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f`.
+Owner explicitly approved the transition adding only the recovery brief;
+acceptance succeeded, audit `EA1486BC-28E5-43F4-B517-E464B7E09DD1`, and supported
+readback confirmed accepted=candidate. Exact successful request retained:
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"da216712-1ad9-4853-9efe-19ba2f5d6a89","priorCatalogVersion":1,"priorCatalogDigest":"71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd","target":{"catalogDigest":"070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"reason":"Accept validated catalog transition adding only the owner-approved lost-worker recovery controlling brief; no task definitions or delivery state change."}
+```
+
+Recovery evidence is terminal: eight focused tests passed in
+`.build/native-checks/lost-worker-green-3.xcresult`; reviewer-required audit/replay
+corrections passed the three directly affected tests in
+`.build/native-checks/lost-worker-audit-race-green-1.xcresult`. UI and race causal
+RED were established; the first onboarding RED fixture was invalid and is not
+claimed as behavioral evidence. Independent source/correction and actual signed
+compact/short-height/wide UI review passed with no Required or Optional findings.
+Reviewer `01a0c226-4001-7152-a82e-16d184fed2ae` and writer
+`01a0c204-fd3c-7b41-b719-4d7f163ba81b` are stopped and archived. Their source
+commit `0dde2b58` integrated as `07fc0a2c`; preserve worktree
+`/Users/jroberts/.codex/worktrees/3831/release_radar`. Recovery brief:
+[exact lost-worker recovery](task-briefs/2026-09-20-lost-worker-recovery.md).
+The isolated-task exception was only for that completed repair; Task02 returns to RR.
+
+## Earlier September 20 checkpoints — superseded where updated above
+
+Owner approved a fresh RR-managed Task02 continuation preserving the prior work.
+Build Agent committed the tests-only checkpoint as `0a51ee1d8484d960effe1d55c71e510e162cf2ab`;
+the managed checkout is clean. Fresh complete delivery inventory confirms exact
+registration/generation, phase revision 1 and Manage Project task-plan revision 1.
+The original connection closure remains unverified. Continuation preparation must
+pass normal RR eligibility checks; no new worker is launched by this request.
+Preparation request `f7fa55ae-b098-4b6c-b807-7d620416abd6` returned an execution
+conflict with diagnostic `blockingAssignment`, identifying the exact prior
+`delivery-f913b890-7149-450c-bf8c-2b515cce75a0` (`observedAtFailure`), and no
+entity IDs. No continuation assignment or worker was created. The tests-only
+checkpoint is preserved; production remains unreleased. No unchanged retry,
+connector repair or bypass is authorized by this result.
+Exact refused preparation envelope (retained):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"f7fa55ae-b098-4b6c-b807-7d620416abd6","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Owner approved fresh managed Task02 continuation from preserved tests-only checkpoint 0a51ee1d8484d960effe1d55c71e510e162cf2ab after causal RED-4. Prior worker handle is unavailable; require normal RR baseline eligibility validation without assuming closure. Scope and task definitions unchanged."}
+```
+
+Task02 RED checkpoint (September 20): Build Agent verified the managed checkout
+at baseline `5d8436a8271a9b3a2c45e1822b9b0e0d28bcf1f9` contains only the new
+rendering test and owner-approved test-only corrections: missing `directResults: []`
+and diagnostic messages naming failed accessibility lookups. The focused test
+compiled and ran against unchanged production: **1 failed, 0 passed, 0 skipped**.
+RED-4 reports helper line 1694: `Missing accessibility control project-health-refresh`.
+This establishes the intended missing health control after Manage Project opens;
+it supersedes RED-3's unidentified lookup limitation. Check:
+`ProjectDocumentationRenderingTests.testManageProjectRelocatesProjectControlsAndPreservesExactCallbacks`;
+runner: offline native Xcode/macOS arm64; applicability: `workingTree`.
+Canonical temporary evidence: `.build/native-checks/manage-project-task02-red-4.xcresult`
+and matching `.log`; scoped `git diff --check` passed. Earlier setup, compile and
+generic-lookup results remain retained but are not substituted for RED-4.
+No production edit, worker replacement, connection closure, acceptance or release
+is claimed. Build Agent effective model/effort remains unexposed (requested
+Terra/medium). Observed shared weekly usage is **67%**, +1 percentage point from
+startup, below 69.4%. Next: approved Task02 implementation through a supported
+managed assignment, then direct checks and independent review. The original
+connector-local handle is absent; do not expand this into connector repair work.
+
+Main replacement startup (September 20): canonical task root verified exactly as
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`; requested
+Main profile Astra/medium (effective settings not exposed by the available task
+readback). Account weekly usage measured **66% used** (10,080-minute window).
+Approximate stopping threshold: `66 + 0.10 × (100 − 66) = 69.4% used`.
+Monitor at meaningful checkpoints and stop dispatching with a safety margin;
+checkpoint active workers, preserve this handoff and pause the goal under explicit
+owner authorization. Shared/rounded/delayed usage cannot provide exact enforcement.
+The goal retains Manage Project → Navigation → Guided Setup, with delivered
+Outcome 3 reconciliation before Guided Setup; documentation reconciliation and
+plan reconstruction remain Backlog.
+
+Original Main connection recovery attempt (September 20, owner requested): both
+supported `worker_status` and `worker_close` for
+`FC3954DD-14A3-418C-A655-63C036492ABE` now refuse with “The execution assignment
+does not match this project, checkout or session. Return to the coordinator.”
+**Closure is unverified; do not launch a replacement or infer resource cleanup.**
+The last successful original-session status, before this failure, returned
+`completed` with no pending requests. Worker reported a tests-only checkpoint:
+`ReleaseRadarTests/ProjectDocumentationRenderingTests.swift` adds
+`testManageProjectRelocatesProjectControlsAndPreservesExactCallbacks`, covering
+four relocated sections and documentation/compatibility/health/evidence callbacks
+at wide and compact widths. It reported no production edits and no compilation or
+test execution. This is reported checkpoint evidence, not a passing test or ticket
+completion. Current access failure does not revoke or verify that historical result.
+
+Assignment: `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`; baseline
+`5d8436a8271a9b3a2c45e1822b9b0e0d28bcf1f9`; checkout:
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-fffdc0e0b15b9b86/delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
+No checkpoint commit or source mutation was attempted during this connection
+failure. Preserve tests, branch, checkout and artifacts. Supported next step is
+restore coordinator access through RR's existing connection controls, then verify
+closure of this exact handle. Do not claim another session can inherit it.
+After verified closure, Build Agent can preserve the tests in a scoped checkpoint
+commit; replacement Main can request a new supported continuation assignment using
+`baselineFromAssignmentID` for this closed committed assignment, subject to RR's
+normal validation. Do not replay worker_start or bypass the failed connection.
+
+**Current work: Task01 is locally verified and integrated; Task02 tests-only
+checkpoint reported, original managed connection inaccessible and closure unverified.**
+Task02 controlling brief/catalog/index are committed at `f781701d`; documentation
+check passes. Supported preparation returned `catalogUnaccepted` without entity IDs.
+Read-only transition validation confirms `isValid: true`, repository
+`e7475429-ef51-4368-ad9e-61d9073d5a4f`, catalog v1, accepted digest
+`93a682a7548c6006414447d01d8c0b7ce6cad349487ae89927cdbb88bbc25c2f`, candidate
+`71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd`.
+Owner approved that exact catalog transition. Acceptance request
+`847def6b-7f89-44c7-b3fb-f20e49004c47` succeeded with audit
+`38BD893F-03C3-4DB4-B322-587BF5848868`. Unchanged preparation replay succeeded,
+audit `B6ED653D-107C-41FF-BBE3-25AE0A52813C`, assignment
+`delivery-f913b890-7149-450c-bf8c-2b515cce75a0`, baseline `5d8436a8`.
+Worker `FC3954DD-14A3-418C-A655-63C036492ABE`, task
+`01a0c1c3-71e6-7171-8b50-e6e00cae5f04`, is preparing focused tests before
+production edits. Start readback verified Terra/medium, exact assigned checkout
+and profile, on-request approval with auto-review, and network disabled.
+Build Agent retains compilation/Git ownership. No ticket acceptance is implied.
+Successful preparation request retained for identity/readback:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"f913b890-7149-450c-bf8c-2b515cce75a0","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Continue owner-authorized Manage Project Task02 control relocation from canonical committed f781701d containing reviewed Task01 and Task02 brief. Existing task definitions and scope unchanged."}
+```
+
+Task01 verification context: Owner
+restarted Codex; supported plugin Reinstall restored Installed 0.1.31. Old request
+`154c4774-9565-4fa9-8cff-bbccf3a908cb` received audited refusal
+`8D170711-C729-42C1-8ADE-BE710E2044BF`. Fresh request
+`258c312d-bb4f-4bb0-a077-f223cbdb63ac` initially failed because Main wrote selected
+ledger context before committing it. Main preserved that note in the supporting
+[handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md), restored
+only its uncommitted ledger addition without moving HEAD or altering resources,
+then replayed the unchanged request successfully: audit
+`F1C9999E-5A79-44A1-AC85-D1CB84866DA1`. Worker
+`76AF72BD-D976-4E4F-97BC-5794B13B00EA`, task
+`01a0c128-6ebb-7080-825b-f92b59f33131`, runs in the assigned delivery-258c312d
+checkout at baseline `7305f277`. Effective Terra/medium, exact assigned profile,
+checkout and instruction sources were verified. Task01 brief/catalog/index are
+committed in its assigned checkout as `aab3aae5`; packaged documentation and diff
+checks passed. Build Agent ran the three new native rendering regressions against
+unchanged production source: all three compiled and failed on the intended
+missing immediate panel, local retry and registration-mismatch handling (exit 65;
+finalized readable `manage-project-task01-red-1.xcresult` in that checkout's
+`.build/native-checks/`). The same managed worker is now implementing Task01.
+Build Agent owns compilation and commits. Task01 implementation now compiles.
+All three focused native rendering tests pass against the managed working tree
+(`manage-project-task01-green-6-ordinary`, exit 0: 3 passed, 0 failed, 0 skipped):
+immediate opening, registration-mismatch rejection, and local settings retry.
+The owner supplied the macOS “access data from other apps” prompt. Build Agent
+moved generated output to canonical `.build/manage-project-task01-derived-data`
+without changing permissions or the managed source checkout; test startup succeeds.
+The subsequent actual window accessibility diagnostic showed Retry inherited its
+card's section identifier. Moving section identifiers to their heading text fixed
+that failure without weakening assertions. Settings persistence/stale-generation, archive, and removal regressions passed.
+The usable Overview fixture now supplies its existing exact registration; its
+wide/compact entry assertion passes unchanged. The final affected run passed all
+three checks, including sheet widths and mismatch rejection. Compact actual-sheet
+bitmap inspection passed. The wide bitmap remained blank despite capture layout
+stabilization, so Main directly opened and observed the synthetic 1100-point test
+window's sheet through CUA: exact identity, settings, execution and Done rendered
+without clipping. This externally interacted observation is separate from the
+successful automated assertions. Candidate `cfa87c10` is committed in the managed delivery checkout. Its worker
+connection is closed. Independent UX/recovery review `review-5aec685a-e532-4e83-8ce6-8a0b87dbfafd`
+completed with one product correction: after a registration changes, settings
+Retry retains the old captured identity and cannot recover as its message claims.
+The second finding concerns an incomplete compact bitmap; a fully rendered
+same-source automated capture is available in the review scratch inputs. The
+reviewer connection is closed; no review pass or task completion is claimed.
+A supported correction assignment `delivery-8c2424da-7943-42b3-ae85-fd2b5cb11bb1`
+(preparation audit `B7BB50CE-1D5F-40F1-BFE5-7CC4D3F82575`) starts from `cfa87c10`.
+Worker `8494378B-B6D9-4FFF-B46E-836474295DB6`, task
+`01a0c1a0-d4f8-7bb2-8da9-3b3a1d6fc903`, completed correction `236f2265` after the focused regression reproduced the missing
+recovery action. Three affected tests pass: actual stale-registration recovery,
+ordinary transient retry, and immediate opening. The recovery explicitly opens a
+new same-project registration presentation without putting replacement settings
+under the stale identity. The delivery connection is closed. Independent correction
+review `review-dc39dd28-c9bf-4ca4-85e9-0f96a7f17c23` resolved the recovery finding.
+The reviewer then viewed the original-resolution compact image successfully and
+withdrew the image finding without repeating source review. No Required or Optional
+findings remain. Its connection is closed. Build Agent integrated the brief and
+two source commits conflict-free into canonical `e9ef9c55`; all six integrated
+source/test/docs files match candidate `236f2265`. Documentation and diff checks
+pass; unchanged behavioral tests were not repeated for identical integration.
+Task01 is locally verified, but RR task completion is still pending. Ticket
+evidence readback has revision 0 and no targets/observations; the supported
+repository evidence inventory returned `inventoryTooLarge`, so no catalog identity
+or evidence mutation was inferred. Task02 control-relocation preparation continues
+under existing authorization; no ticket acceptance is implied.
+No permission, installed-app or RR completion changes were made.
+Temporary logs, XCResults and diagnostic attachments remain in canonical
+`.build/native-checks`. Preserve the worker checkout and result bundles.
+Manage Project remains In Progress with all three tasks pending. Before future
+preparation, selected context must be committed and stable.
+
+Build Agent completed the reviewed repair's local release on
+`codex/manage-project-context-recovery`: integrated source `cc352962`, build
+source `039aad5a5c0006e03fe9253f052bbf4af838676f`, release/artifact commit and
+annotated tag `v0.1.31` at `457a4652cad021bf4f31541d0422497193f98a9b`. Exact tag
+publication passed with matching remote peeled commit; branch push, PR and merge
+were not performed. Five version/package tests passed with exit 0 and readable
+XCResult. Signed staging, strict nested signature/entitlements, mounted DMG layout
+and 28-entry built/staged/mounted/installed payload comparisons passed.
+Canonical tracked installer: `dist/ReleaseRadar-0.1.31.dmg`, SHA-256
+`6e7bedd9deb8ce71a6b9690076ddd529b3a6ede2b63faf2347cc9d81ff4f4c21`.
+Verified installed identity is `com.rekonlabs.ReleaseRadar` 0.1.31 (1), team
+`2UA854NLX4`, plugin digest
+`01c399bdf7e417904f055856a8fae787dadf3c8b59b44ffc8e44411cd05e6391`.
+The established no-launch installation completed; live recovery remains untested.
+Repair writer and independent reviewer are archived. Temporary canonical and
+repair-checkout `.build/` and `DerivedData/` remain retained, as does the reported
+`/tmp/candidate-catalog.json`; no cleanup is authorized by this release record.
+
+Owner explicitly resumed `rr-p6-manage-project`, authorizing the saved reviewer
+request retry and remaining approved work. This supersedes the pause below for
+Manage Project only. Task definitions remain unchanged; acceptance is not inferred.
+Fresh supported inventory confirms In Progress, task-plan revision 1, three pending
+tasks and phase lifecycle revision 1. Replay of request
+`154c4774-9565-4fa9-8cff-bbccf3a908cb` initially returned execution unavailable.
+Supported Settings → Connections → Reinstall restored the installed 0.1.30
+plugin's matching-version status. Exact replay then returned documentation
+`missingFile` for
+`docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair/brief.md`,
+with no entity IDs. That file exists in the canonical checkout and its packaged
+documentation check passes. Build Agent also verified the candidate's own
+catalog check passes: the newer brief and its catalog entry are both absent
+there. Source diagnosis establishes that preparation selects paths from the
+current accepted catalog, then reads them from the older candidate checkout.
+This mixes documentation revisions. The owner-authorized isolated preparation
+repair is continuing at a read-only authority/provenance checkpoint; the original
+candidate and exact replay envelope remain unchanged. No reviewer launch or
+completion is claimed.
+
+Fresh isolated repair task creation returned pending client ID
+`client-new-thread:827e7cb4-4c13-416c-8b00-f4569c2c772b`, title
+“Release Radar — Review context revision repair”, requested Sol/high. No resolved
+task ID appeared in supported task listings yet; do not claim it started or
+create a duplicate. Its first checkpoint is read-only authority/provenance
+analysis, before any source edit. Build Agent's diagnosis is complete and idle.
+
+Repair startup subsequently resolved to task `01a0c073-c2ea-76b0-871d-3e426a305d9f`
+in `/Users/jroberts/.codex/worktrees/8e4c/release_radar`, branch
+`codex/execution-preparation-context-repair`, baseline `0ebbe7c5`. Its first
+read-only checkpoint confirmed mixed-revision context. Main withheld the proposed
+instruction overlay, permission changes and expanded persisted context contract;
+the writer is evaluating existing mechanisms and normal candidate integration
+before proposing any minimum necessary correction. No source changes or tests
+have run. Reported scratch `/tmp/candidate-catalog.json` is temporary and retained.
+
+The second checkpoint selected the existing no-effects recovery route instead
+of a dual-source overlay. Main released a bounded source/test correction: a
+closed eligible parent's context-read failure may reach the existing audited
+terminal refusal only after authoritative absence of assignment, checkout/branch,
+provisioning and profile effects; live, partial, unreadable and uncertain cases
+remain pending. Build Agent owns focused RED/GREEN and commits; independent
+recovery review precedes integration. The live request is not claimed settled.
+After supported settlement, fresh Manage Project delivery will reconcile the
+approved behavior on current main, followed by fresh review; preserved 6ba3 is
+historical work, not an immutable requirement for the final product.
+
+Repair candidate `c3b09455` is committed in the isolated branch. It restricts
+classification to the demonstrated parent-context `missingFile` and reuses the
+eligible-parent predicate for authoritative no-effects verification. Build Agent
+ran causal RED (one test, two expected assertion failures; finalization interrupted),
+causal GREEN (1/1 passed, exit 0, readable XCResult), and eight existing focused
+recovery/replay regressions (8/8 passed, exit 0, readable XCResult). Documentation
+and diff checks passed. Independent reviewer task
+`01a0c087-c35e-7e00-8177-5b94c742ad92` is reviewing this candidate. No installed or
+live recovery result is claimed; integration remains pending review.
+
+Independent reviewer `01a0c087-c35e-7e00-8177-5b94c742ad92` passed candidate
+`c3b09455` with no findings, covering source, parent eligibility, authoritative
+absence and atomic audit/replay preservation. Reviewer directly read GREEN
+1/1 and regression 8/8 bundles; RED's final bundle remains incomplete, so its
+two assertion details are attributed to Build Agent's direct XCTest output.
+Main released integration and the standing local release workflow to Build
+Agent, with installer under `dist/`. Live exact-request recovery waits for the
+new installed connector after Codex restart. No ticket completion or acceptance
+has occurred.
+
+Fresh standing helper task IDs: Build `01a0c061-578a-7e22-8ba3-77348fd6dcac`,
+RO `01a0c062-058c-7613-bef2-fa80bb897445`, Restricted
+`01a0c063-ada3-7be0-bb10-7cf98b9d8e1e`. Build retains verified build/Git
+capabilities. RO enforcement remains unverified because exposed runtime metadata
+conflicts; no RO assignment is released. PR #113 is merged; its documentation
+commits are published. Earlier unpublished-branch statements below are historical.
+
 ## Paused — post-merge cleanup
 
 PR [#100](https://github.com/joeroberts/release-radar/pull/100) and PR [#110](https://github.com/joeroberts/release-radar/pull/110) are merged; the owner has restarted Codex. Product and managed-feature delivery remain paused: this does not authorize live reviewer replay, Release Radar mutation, or new feature work. Canonical `main` is fast-forwarded to `origin/main` at `a1d2e91c`; the preserved untracked Codex configuration remains untouched.

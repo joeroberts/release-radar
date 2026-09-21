@@ -2034,3 +2034,44 @@ or stale resolution transaction leaves the receipt uncertain. The existing prepa
 single-flight now remains held through admission, revocation or terminal settlement,
 so a concurrent replay cannot clear or duplicate live work. This adds no schema,
 public recovery tool, force-clear action or UI contract.
+
+### September 20 exact lost-worker recovery
+
+Manage Project adds an owner-invoked recovery path for a legacy assignment whose
+worker connection handle was lost. This is not retirement: it preserves the exact
+checkout, branch, permission profile, session identity and uncertain outcome. It
+does not close a task, create review evidence, remove resources, terminate a
+process, launch replacement work or claim owner acceptance.
+
+Recovery fails closed unless the current project, registration, root, stored
+assignment and clean committed candidate remain exact. The app inventories
+same-user processes through the kernel, requires stable PID/start-time identity,
+reads complete argument vectors and verifies a matching running Codex executable
+against the fixed signed identity. An incomplete inventory, unreadable candidate,
+live exact assignment marker, reused process identity or suspicious marker blocks
+the operation. Process absence alone is insufficient: the in-process context host
+must also release the one retained grant bound to the exact assignment and session,
+or establish that no matching grant remains on an exact replay. Concurrent state
+change after grant reconciliation prevents the assignment compare-and-swap; the
+same evidence can be safely re-established without inventing a prior state write.
+
+The resulting receipt records the request, prior state, observation, exact
+permission marker, retained-grant disposition and clean candidate revision. The
+assignment becomes stopped with confirmed connection cleanup and an explicitly
+uncertain delivery outcome. Only a delivery assignment naming this exact receipt as
+`baselineFromAssignmentID` may use the recorded candidate, after rechecking that
+the checkout still resolves to the same clean revision. It is never eligible as a
+review parent. Manage Project explains this distinction, keeps resource retirement
+separate and provides actionable failure feedback while preserving the prior state.
+
+The receipt also records whether the matching success audit was finalized. If that
+audit fails after the recovery compare-and-swap, Manage Project reads back and
+reports the persisted recovery, retains a **Finish recovery audit** action, and
+replays the exact stored request identity. Request and success audit identities are
+deterministic for that receipt. Reconciliation neither repeats process inspection or
+grant release nor changes the recorded candidate, and a completed audit replay is
+idempotent. An unavailable readback reports an unconfirmed outcome rather than
+claiming that recovery failed.
+
+Signed-app kernel visibility and the actual retained assignment recovery remain
+runtime acceptance checks; source and fixture coverage cannot substitute for them.

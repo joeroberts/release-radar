@@ -145,4 +145,30 @@ final class CodexContextHandoffTests: XCTestCase {
         XCTAssertEqual(otherScope.count, 0)
         XCTAssertEqual(other.activeGrantCount, 1)
     }
+
+    func testLostWorkerRecoveryReleasesOnlyExactBoundGrantAndReplaySeesNoGrant() throws {
+        let (store, context, scope, _, authority) = try fixture()
+        let connection = UUID(); let attempt = UUID()
+        let grant = try authority.acquire(connection: connection, projectID: "handoff-fixture",
+            assignmentID: "first", contextID: context.id, attemptID: attempt)
+        let policy = try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first")
+        try policy.reserve()
+        try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
+        try policy.bind(sessionID: "lost-session")
+        try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
+        authority.connectionLost(connection)
+
+        XCTAssertThrowsError(try authority.reconcileLostWorkerGrant(projectID: "handoff-fixture",
+            assignmentID: "first", sessionID: "another-session"))
+        XCTAssertEqual(scope.count, 0)
+        XCTAssertEqual(authority.activeGrantCount, 1)
+
+        XCTAssertEqual(try authority.reconcileLostWorkerGrant(projectID: "handoff-fixture",
+            assignmentID: "first", sessionID: "lost-session"), .matchingGrantReleased)
+        XCTAssertEqual(scope.count, 1)
+        XCTAssertEqual(authority.activeGrantCount, 0)
+        XCTAssertEqual(try authority.reconcileLostWorkerGrant(projectID: "handoff-fixture",
+            assignmentID: "first", sessionID: "lost-session"), .noMatchingGrant)
+        XCTAssertEqual(scope.count, 1, "Replay must not release a second scope or invent a prior write")
+    }
 }

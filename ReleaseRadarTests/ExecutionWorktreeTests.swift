@@ -32,6 +32,33 @@ final class ExecutionWorktreeTests: XCTestCase {
         try check(git_commit_create(&commitID, repository, "HEAD", signature, signature, nil, "Fixture baseline", tree, 0, nil))
         return (root, parent.appendingPathComponent("worktrees/task-one"), String(cString: git_oid_tostr_s(&commitID)))
     }
+    private func commitChange(at root: URL, path: String, contents: String,
+                              message: String) throws -> String {
+        try Data(contents.utf8).write(to: root.appendingPathComponent(path))
+        try check(git_libgit2_init()); defer { git_libgit2_shutdown() }
+        var repository: OpaquePointer?
+        try check(git_repository_open(&repository, root.path)); defer { git_repository_free(repository) }
+        var index: OpaquePointer?
+        try check(git_repository_index(&index, repository)); defer { git_index_free(index) }
+        try check(git_index_add_bypath(index, path)); try check(git_index_write(index))
+        var treeID = git_oid(); try check(git_index_write_tree(&treeID, index))
+        var tree: OpaquePointer?
+        try check(git_tree_lookup(&tree, repository, &treeID)); defer { git_tree_free(tree) }
+        var head: OpaquePointer?
+        try check(git_repository_head(&head, repository)); defer { git_reference_free(head) }
+        var parent: OpaquePointer?
+        try check(git_commit_lookup(&parent, repository, git_reference_target(head)))
+        defer { git_commit_free(parent) }
+        var signature: UnsafeMutablePointer<git_signature>?
+        try check(git_signature_new(&signature, "Fixture", "fixture@example.invalid",
+            1_700_000_001, 0)); defer { git_signature_free(signature) }
+        var commitID = git_oid()
+        try withUnsafeMutablePointer(to: &parent) { parents in
+            try check(git_commit_create(&commitID, repository, "HEAD", signature, signature,
+                nil, message, tree, 1, parents))
+        }
+        return String(cString: git_oid_tostr_s(&commitID))
+    }
     func testNativeCreationUsesExactCommittedBaselineAndRefusesDirtyReuseOrRemoval() throws {
         let fixture = try fixture(); let provisioner = LibGit2WorktreeProvisioner()
         let tree = try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline)
@@ -198,6 +225,132 @@ final class ExecutionWorktreeTests: XCTestCase {
                 XCTAssertEqual(prepared.context, pending.context); XCTAssertEqual(prepared.codexContextID, pending.codexContextID)
                 XCTAssertEqual(prepared.permissionProfileDefinition, pending.permissionProfileDefinition)
             }
+        }
+    }
+
+    func testNativeRecoveredAncestorUsesCleanClosedSuccessorCandidateAndRejectsDrift() async throws {
+        for dirtyRecoveredAncestor in [false, true] {
+            let fixture = try fixture()
+            let execution = try executionFixture(fixture)
+            let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
+            let provisioning = LibGit2WorktreeProvisioner()
+            let producer = ProjectExecutionAssignmentCoordinator(root: { execution.root },
+                configuration: ProjectExecutionProducerTests.Configuration(),
+                handlerPath: handler, provisioning: provisioning)
+
+            let originalRequest = UUID()
+            let originalPending = try await producer.prepare(project: execution.project,
+                work: execution.work, requestID: originalRequest,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil,
+                contextPaths: ["source.txt"])
+            let originalAdmitted = try producer.admitPrepared(originalPending)
+            await producer.finishPreparation(work: execution.work, requestID: originalRequest)
+            var recovered = originalAdmitted
+            recovered.state = .stopped
+            recovered.sessionID = "recovered-session"
+            recovered.connectionClosed = true
+            recovered.launchReserved = true
+            recovered.uncertainOutcome = true
+            recovered.lostWorkerRecovery = .init(requestID: UUID(), priorState: .authorized,
+                candidateRevision: fixture.baseline,
+                process: .init(version: 1, observedAt: Date(timeIntervalSince1970: 1_789_963_200),
+                    executablePath: CodexExecutionIdentity.executable,
+                    permissionProfile: recovered.permissionProfile,
+                    argumentMarker: "permissions.\(recovered.permissionProfile).network.enabled=false"),
+                grantDisposition: .noMatchingGrant)
+            try execution.store.saveAssignment(recovered, expected: originalAdmitted)
+
+            let successorRequest = UUID()
+            let successorPending = try await producer.prepare(project: execution.project,
+                work: execution.work, requestID: successorRequest,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: recovered.id,
+                contextPaths: ["source.txt"])
+            let successorAdmitted = try producer.admitPrepared(successorPending)
+            await producer.finishPreparation(work: execution.work, requestID: successorRequest)
+            var successor = successorAdmitted
+            successor.state = .closed
+            successor.sessionID = "closed-successor-session"
+            successor.connectionClosed = true
+            try execution.store.saveAssignment(successor, expected: successorAdmitted)
+            let successorRevision = try commitChange(at: URL(fileURLWithPath: successor.checkoutPath),
+                path: "source.txt", contents: "closed successor candidate",
+                message: "Fixture successor candidate")
+            XCTAssertNotEqual(successorRevision, fixture.baseline)
+            XCTAssertEqual(try provisioning.candidateRevision(
+                worktree: XCTUnwrap(successor.worktree)), successorRevision)
+            XCTAssertEqual(try execution.store.assignment(projectID: "project-one",
+                taskID: recovered.id), recovered,
+                "Preparing a newer successor candidate must not rewrite the recovered receipt")
+            XCTAssertEqual(recovered.lostWorkerRecovery?.candidateRevision, fixture.baseline)
+            XCTAssertEqual(try provisioning.candidateRevision(
+                worktree: XCTUnwrap(recovered.worktree)), fixture.baseline)
+            XCTAssertEqual(try String(contentsOf:
+                URL(fileURLWithPath: recovered.checkoutPath).appendingPathComponent("source.txt"),
+                encoding: .utf8), "baseline")
+
+            if dirtyRecoveredAncestor {
+                try Data("owner edit retained".utf8).write(to:
+                    URL(fileURLWithPath: recovered.checkoutPath).appendingPathComponent("source.txt"))
+            }
+
+            let correctionRequest = UUID()
+            do {
+                let correction = try await producer.prepare(project: execution.project,
+                    work: execution.work, requestID: correctionRequest,
+                    reviewOfAssignmentID: nil, baselineFromAssignmentID: successor.id,
+                    contextPaths: ["source.txt"])
+                if dirtyRecoveredAncestor {
+                    XCTFail("A dirty recovered ancestor must invalidate its successor chain")
+                } else {
+                    XCTAssertEqual(correction.baselineFromAssignmentID, successor.id)
+                    XCTAssertEqual(correction.worktree?.baseline, successorRevision)
+                    XCTAssertEqual(try String(contentsOf:
+                        URL(fileURLWithPath: correction.checkoutPath).appendingPathComponent("source.txt"),
+                        encoding: .utf8), "closed successor candidate")
+                    XCTAssertEqual(try provisioning.candidateRevision(
+                        worktree: XCTUnwrap(correction.worktree)), successorRevision)
+                    let admitted = try producer.admitPrepared(correction)
+                    XCTAssertEqual(admitted.state, .authorized)
+                    XCTAssertEqual(admitted.worktree?.baseline, successorRevision)
+                    await producer.finishPreparation(work: execution.work,
+                        requestID: correctionRequest)
+                    var closedCorrection = admitted
+                    closedCorrection.state = .closed
+                    closedCorrection.sessionID = "closed-correction-session"
+                    closedCorrection.connectionClosed = true
+                    try execution.store.saveAssignment(closedCorrection, expected: admitted)
+
+                    let laterRequest = UUID()
+                    let later = try await producer.prepare(project: execution.project,
+                        work: execution.work, requestID: laterRequest,
+                        reviewOfAssignmentID: nil,
+                        baselineFromAssignmentID: closedCorrection.id,
+                        contextPaths: ["source.txt"])
+                    XCTAssertEqual(later.baselineFromAssignmentID, closedCorrection.id)
+                    XCTAssertEqual(later.worktree?.baseline, successorRevision)
+                    XCTAssertEqual(try String(contentsOf:
+                        URL(fileURLWithPath: later.checkoutPath).appendingPathComponent("source.txt"),
+                        encoding: .utf8), "closed successor candidate")
+                    let laterAdmitted = try producer.admitPrepared(later)
+                    XCTAssertEqual(laterAdmitted.state, .authorized)
+                    XCTAssertEqual(laterAdmitted.worktree?.baseline, successorRevision)
+                    await producer.finishPreparation(work: execution.work, requestID: laterRequest)
+
+                    let preservedRecovered = try execution.store.assignment(
+                        projectID: "project-one", taskID: recovered.id)
+                    XCTAssertEqual(preservedRecovered, recovered)
+                    XCTAssertEqual(preservedRecovered.state, .stopped)
+                    XCTAssertEqual(preservedRecovered.uncertainOutcome, true)
+                    XCTAssertEqual(preservedRecovered.sessionID, "recovered-session")
+                    XCTAssertEqual(preservedRecovered.permissionProfile, recovered.permissionProfile)
+                    XCTAssertEqual(preservedRecovered.worktree, recovered.worktree)
+                    XCTAssertEqual(preservedRecovered.lostWorkerRecovery,
+                        recovered.lostWorkerRecovery)
+                }
+            } catch {
+                if !dirtyRecoveredAncestor { throw error }
+            }
+            await producer.finishPreparation(work: execution.work, requestID: correctionRequest)
         }
     }
 

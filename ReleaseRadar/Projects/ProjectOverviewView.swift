@@ -33,6 +33,14 @@ private enum DocumentationSetupFeedback: Equatable {
     }
 }
 
+private struct ManageProjectPresentation: Identifiable {
+    let registration: ProjectRegistration
+    let projectName: String
+    let initialSettings: ProjectSettingsSnapshot?
+
+    var id: ProjectRegistration { registration }
+}
+
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
@@ -53,6 +61,7 @@ struct ProjectOverviewView: View {
     var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
     var loadExecutionAssignments: ((ProjectRegistration) async throws -> [ProjectExecutionAssignment])? = nil
     var retireExecutionAssignment: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
+    var recoverLostWorker: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
     var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
@@ -65,20 +74,16 @@ struct ProjectOverviewView: View {
     var previewRemoval: (() async throws -> ProjectRemovalPreview)? = nil
     var remove: ((ProjectRemovalPreview) async throws -> Void)? = nil
     @State private var promptCopyResult: CodexPromptCopyResult?
-    @State private var settings: ProjectSettingsSnapshot?
     @State private var health: ProjectHealthSnapshot?
-    @State private var isLoadingSettings = false
     @State private var isRefreshingHealth = false
     @State private var healthRecoveryMessage: String?
     @State private var healthGeneration: UInt64 = 0
-    @State private var showsSettings = false
+    @State private var manageProjectPresentation: ManageProjectPresentation?
     @State private var showsHelp = false
-    @State private var showsRootManagement = false
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
     @State private var documentationSetupFeedback: DocumentationSetupFeedback?
     @State private var documentationActionErrorGeneration = 0
     @AccessibilityFocusState private var documentationActionErrorFocused: Bool
-    @FocusState private var documentationActionErrorKeyboardFocused: Bool
     @State private var isPerformingDocumentationSetup = false
     @State private var lifecyclePreview: ProjectLifecyclePreview?
     @State private var lifecyclePreviewError: String?
@@ -126,52 +131,6 @@ struct ProjectOverviewView: View {
                             .foregroundStyle(RekonTheme.secondaryText)
                     }
                 }
-                guidanceCard
-                documentationSetupControls
-                SharedExecutionCompatibilityView(
-                    documentationStatus: documentationStatus,
-                    refresh: refreshDocumentation
-                )
-                if loadProjectHealth != nil {
-                    ProjectHealthView(
-                        snapshot: health,
-                        isRefreshing: isRefreshingHealth,
-                        refresh: refreshHealth,
-                        reauthorize: healthReauthorizationAction,
-                        manageRoots: repositoryRecovery == nil ? nil : { showsRootManagement = true }
-                    )
-                    if let healthRecoveryMessage {
-                        Text(healthRecoveryMessage)
-                            .font(.caption)
-                            .foregroundStyle(RekonTheme.warning)
-                            .accessibilityIdentifier("project-health-recovery-result")
-                    }
-                }
-                if let repositoryRecovery {
-                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted)
-                }
-                if !project.evidence.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Project evidence").font(.headline)
-                        ForEach(project.evidence) { evidence in
-                            EvidenceDetailView(
-                                evidence: evidence,
-                                documentationStatus: documentationStatus,
-                                restoreFolderAccess: healthReauthorizationAction,
-                                openWorktreeRecovery: repositoryRecovery == nil ? nil : { showsRootManagement = true },
-                                loadPreview: loadEvidencePreview.map { loader in
-                                    { await loader(evidence.id) }
-                                }
-                            )
-                        }
-                    }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
-                        }
-                }
-
                 VStack(alignment: .leading, spacing: 14) {
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .center, spacing: 16) {
@@ -217,38 +176,9 @@ struct ProjectOverviewView: View {
                 .padding(28)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .onChange(of: documentationActionErrorGeneration) { _, generation in
-                guard generation > 0,
-                      let feedback = documentationSetupFeedback,
-                      let title = feedback.failureTitle else { return }
-                withAnimation {
-                    proxy.scrollTo(documentationActionErrorAnchor, anchor: .center)
-                }
-                documentationActionErrorFocused = true
-                documentationActionErrorKeyboardFocused = true
-                NSAccessibility.post(
-                    element: NSApp as Any,
-                    notification: .announcementRequested,
-                    userInfo: [
-                        .announcement: "\(title). \(feedback.message)",
-                        .priority: NSAccessibilityPriorityLevel.high.rawValue,
-                    ]
-                )
-            }
         }
         .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
-        .sheet(isPresented: $showsRootManagement) {
-            if let repositoryRecovery {
-                VStack(alignment: .trailing) {
-                    ScrollView { RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted).padding(24) }
-                    Button("Done") { showsRootManagement = false }
-                        .buttonStyle(RekonSecondaryButtonStyle()).padding([.bottom, .trailing], 24)
-                }
-                .frame(minWidth: 520, idealWidth: 720, minHeight: 500, idealHeight: 750)
-                .background(RekonTheme.background)
-            }
-        }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
         .sheet(isPresented: $showsLifecycleConfirmation) {
             if let lifecyclePreview, let archive {
@@ -264,21 +194,53 @@ struct ProjectOverviewView: View {
                 }
             }
         }
-        .sheet(isPresented: $showsSettings) {
-            if let settings, let saveProjectSettings {
-                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks,
-                                      manageExecutionHook: manageExecutionHook.map { action in
-                                          { operation in try await action(settings.registration, operation) }
-                                      }, loadExecutionAssignments: loadExecutionAssignments.map { load in
-                                          { try await load(settings.registration) }
-                                      }, retireExecutionAssignment: retireExecutionAssignment.map { retire in
-                                          { expected in try await retire(settings.registration, expected) }
-                                      }) { name, excluded in
-                    let updated = try await saveProjectSettings(settings.registration, name, excluded)
-                    self.settings = updated
-                    refreshHealth()
-                    return updated
-                }
+        .sheet(item: $manageProjectPresentation) { presentation in
+            if let loadProjectSettings {
+                ManageProjectView(
+                    registration: presentation.registration,
+                    projectName: presentation.projectName,
+                    tasks: availableCodexTasks,
+                    initialSettings: presentation.initialSettings,
+                    loadSettings: { try await loadProjectSettings() },
+                    saveSettings: saveProjectSettings.map { save in
+                        { name, excluded in
+                            let updated = try await save(presentation.registration, name, excluded)
+                            refreshHealth()
+                            return updated
+                        }
+                    },
+                    manageExecutionHook: manageExecutionHook.map { action in
+                        { operation in try await action(presentation.registration, operation) }
+                    },
+                    loadExecutionAssignments: loadExecutionAssignments.map { load in
+                        { try await load(presentation.registration) }
+                    },
+                    retireExecutionAssignment: retireExecutionAssignment.map { retire in
+                        { expected in try await retire(presentation.registration, expected) }
+                    },
+                    recoverLostWorker: recoverLostWorker.map { recover in
+                        { expected in try await recover(presentation.registration, expected) }
+                    },
+                    projectControls: { presentRootRecovery, documentationActionErrorKeyboardFocused in
+                        projectManagementControls(
+                            presentRootRecovery: presentRootRecovery,
+                            documentationActionErrorKeyboardFocused: documentationActionErrorKeyboardFocused
+                        )
+                    },
+                    repositoryRecovery: repositoryRecovery,
+                    onRepositoryRelocated: rootActionCommitted,
+                    documentationActionErrorGeneration: documentationActionErrorGeneration,
+                    revealDocumentationActionError: revealDocumentationActionError,
+                    reopenCurrentRegistration: { settings in
+                        guard settings.registration.projectID == project.id else { return }
+                        manageProjectPresentation = .init(
+                            registration: settings.registration,
+                            projectName: settings.projectName,
+                            initialSettings: settings
+                        )
+                    }
+                )
+                .id(presentation.id)
             }
         }
     }
@@ -292,10 +254,9 @@ struct ProjectOverviewView: View {
 
     private var projectActions: some View {
         HStack {
-            if loadProjectSettings != nil {
-                Button(isLoadingSettings ? "Loading…" : "Manage Project", action: openSettings)
+            if loadProjectSettings != nil, project.registration != nil {
+                Button("Manage Project", action: openSettings)
                     .buttonStyle(RekonSecondaryButtonStyle())
-                    .disabled(isLoadingSettings)
                     .accessibilityIdentifier("project-manage")
             }
             Button("Help") { showsHelp = true }
@@ -403,7 +364,7 @@ struct ProjectOverviewView: View {
                         prompt: CodexPromptHandoff.prompt(
                             for: documentationState,
                             projectRoot: projectRoot,
-                            registration: health?.registration ?? settings?.registration
+                            registration: health?.registration ?? project.registration
                         ),
                         using: CodexPromptHandoff.writeToGeneralPasteboard
                     )
@@ -425,9 +386,83 @@ struct ProjectOverviewView: View {
         .accessibilityIdentifier("project-guidance-status")
     }
 
+    private func projectManagementControls(
+        presentRootRecovery: @escaping () -> Void,
+        documentationActionErrorKeyboardFocused: FocusState<Bool>.Binding
+    ) -> AnyView {
+        AnyView(VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
+                guidanceCard
+                documentationSetupControls(
+                    documentationActionErrorKeyboardFocused: documentationActionErrorKeyboardFocused
+                )
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("manage-project-section-documentation")
+
+            SharedExecutionCompatibilityView(
+                documentationStatus: documentationStatus,
+                refresh: refreshDocumentation
+            )
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("manage-project-section-shared-execution")
+
+            VStack(alignment: .leading, spacing: 12) {
+                if loadProjectHealth != nil {
+                    ProjectHealthView(
+                        snapshot: health,
+                        isRefreshing: isRefreshingHealth,
+                        refresh: refreshHealth,
+                        reauthorize: healthReauthorizationAction,
+                        manageRoots: repositoryRecovery == nil ? nil : presentRootRecovery
+                    )
+                    if let healthRecoveryMessage {
+                        Text(healthRecoveryMessage)
+                            .font(.caption)
+                            .foregroundStyle(RekonTheme.warning)
+                            .accessibilityIdentifier("project-health-recovery-result")
+                    }
+                }
+                if let repositoryRecovery {
+                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted)
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("manage-project-section-repository-access")
+
+            if !project.evidence.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Project evidence").font(.headline)
+                    ForEach(project.evidence) { evidence in
+                        EvidenceDetailView(
+                            evidence: evidence,
+                            documentationStatus: documentationStatus,
+                            restoreFolderAccess: healthReauthorizationAction,
+                            openWorktreeRecovery: repositoryRecovery == nil ? nil : presentRootRecovery,
+                            loadPreview: loadEvidencePreview.map { loader in
+                                { await loader(evidence.id) }
+                            }
+                        )
+                    }
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("manage-project-section-evidence")
+            }
+        })
+    }
+
     @ViewBuilder
-    private var documentationSetupControls: some View {
-        if let registration = health?.registration ?? settings?.registration,
+    private func documentationSetupControls(
+        documentationActionErrorKeyboardFocused: FocusState<Bool>.Binding
+    ) -> some View {
+        if let registration = health?.registration ?? project.registration,
            previewDocumentationSetup != nil {
             RekonSectionPanel {
                 Text("Documentation activation").font(.title2.weight(.semibold))
@@ -465,7 +500,7 @@ struct ProjectOverviewView: View {
                                 .accessibilityIdentifier("project-documentation-action-error")
                                 .accessibilityFocused($documentationActionErrorFocused)
                                 .focusable()
-                                .focused($documentationActionErrorKeyboardFocused)
+                                .focused(documentationActionErrorKeyboardFocused)
                             Text(feedback.message)
                                 .foregroundStyle(RekonTheme.secondaryText)
                                 .textSelection(.enabled)
@@ -502,23 +537,12 @@ struct ProjectOverviewView: View {
     }
 
     private func openSettings() {
-        guard let loadProjectSettings else { return }
-        isLoadingSettings = true
-        Task {
-            defer { isLoadingSettings = false }
-            do {
-                settings = try await loadProjectSettings()
-                showsSettings = true
-            } catch {
-                health = .init(
-                    projectID: project.id,
-                    registration: nil,
-                    rootPath: projectRoot?.path,
-                    checkedAt: Date(),
-                    checks: [.init(id: "settings", title: "Project settings unavailable", detail: error.localizedDescription, state: .unavailable)]
-                )
-            }
-        }
+        guard let registration = project.registration, loadProjectSettings != nil else { return }
+        manageProjectPresentation = .init(
+            registration: registration,
+            projectName: project.name,
+            initialSettings: nil
+        )
     }
 
     private func rootActionCommitted() async {
@@ -577,7 +601,6 @@ struct ProjectOverviewView: View {
         isPerformingDocumentationSetup = true
         documentationSetupFeedback = nil
         documentationActionErrorFocused = false
-        documentationActionErrorKeyboardFocused = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
@@ -594,7 +617,6 @@ struct ProjectOverviewView: View {
         isPerformingDocumentationSetup = true
         documentationSetupFeedback = nil
         documentationActionErrorFocused = false
-        documentationActionErrorKeyboardFocused = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
@@ -615,6 +637,20 @@ struct ProjectOverviewView: View {
                 documentationActionErrorGeneration &+= 1
             }
         }
+    }
+
+    private func revealDocumentationActionError() {
+        guard let feedback = documentationSetupFeedback,
+              let title = feedback.failureTitle else { return }
+        documentationActionErrorFocused = true
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: "\(title). \(feedback.message)",
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ]
+        )
     }
 }
 

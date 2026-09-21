@@ -112,12 +112,45 @@ final class CodexContextHandoffAuthority: @unchecked Sendable {
             grant.lease.release(); grants.removeValue(forKey: grantID)
         }
     }
+    func reconcileLostWorkerGrant(projectID: String, assignmentID: String, sessionID: String) throws
+        -> ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition {
+        try lock.withLock {
+            let current = try store().assignment(projectID: projectID, taskID: assignmentID)
+            guard current.registration.projectID.rawValue == projectID, current.id == assignmentID,
+                  current.sessionID == sessionID, !sessionID.isEmpty,
+                  current.launchReserved == true, current.connectionClosed != true else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            let matching = grants.filter {
+                $0.value.assignment.registration.projectID.rawValue == projectID
+                    && $0.value.assignment.id == assignmentID
+            }
+            guard matching.count <= 1 else { throw ProjectExecutionError.conflict }
+            guard let (grantID, grant) = matching.first else { return .noMatchingGrant }
+            guard grant.assignment.registration == current.registration,
+                  !grant.available, grant.consumed, grant.boundSession == sessionID else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            grant.lease.release()
+            grants.removeValue(forKey: grantID)
+            return .matchingGrantReleased
+        }
+    }
     func connectionLost(_ connection: UUID) {
         lock.withLock {
             for id in grants.keys where grants[id]?.connection == connection { grants[id]?.available = false }
         }
         // Keep unresolved leases owned by this process. No timeout, replacement
         // connection or absent session establishes physical child closure.
+    }
+}
+
+extension CodexContextHandoffAuthority: ProjectExecutionContextGrantReconciling {
+    func reconcileLostWorkerGrant(for assignment: ProjectExecutionAssignment) throws
+        -> ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition {
+        guard let sessionID = assignment.sessionID else { throw ProjectExecutionError.identityMismatch }
+        return try reconcileLostWorkerGrant(projectID: assignment.registration.projectID.rawValue,
+            assignmentID: assignment.id, sessionID: sessionID)
     }
 }
 

@@ -1,5 +1,89 @@
 # Outcome 3 — Main coordination handoff
 
+## Main conversation replacement — current, September 20
+
+Owner requested replacing the long Main conversation to reduce context. Read this
+section and the current progress ledger only; older reset/pause/replay sections
+below are historical and superseded. Do not restart completed work or old requests.
+
+- Canonical root: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
+  Branch `codex/manage-project-context-recovery`; latest ledger commit `a0191dc5`.
+- Authorized sequence: Manage Project, Navigation, Guided Setup; reconcile existing
+  Outcome 3 before Guided Setup. Documentation reconciliation/reconstruction remain
+  Backlog. Retain approved task definitions. Main coordinates, not product coding.
+- Task01 is implemented, tested, independently reviewed with no remaining findings,
+  integrated at `e9ef9c55`. Do not repeat its successful checks. RR task completion
+  remains pending: evidence targets/observations absent and evidence inventory
+  returned `inventoryTooLarge`. No completion/acceptance was inferred.
+- Task02 brief: `docs/delivery/task-briefs/2026-09-20-manage-project-task02.md`,
+  committed `f781701d`. Owner explicitly accepted its validated catalog; accepted
+  digest `71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd`,
+  audit `38BD893F-03C3-4DB4-B322-587BF5848868`. No approval is pending.
+- LIVE Task02 assignment `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`,
+  worker `FC3954DD-14A3-418C-A655-63C036492ABE`, Codex task
+  `01a0c1c3-71e6-7171-8b50-e6e00cae5f04`, baseline `5d8436a8`.
+  Supported worker_status most recently reports running, no pending runtime requests.
+  Effective Terra/medium, assigned profile, on-request/auto_review, no network.
+  It is writing focused failing tests ONLY, then will finish its turn for the
+  Build Agent RED checkpoint. No production edits released yet.
+- Worker checkout:
+  `/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-fffdc0e0b15b9b86/delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
+- Next: read supported worker_status for that exact handle. Do not start a duplicate.
+  App task listing can misleadingly show interrupted/notLoaded while managed worker
+  status is running. After test-ready terminal result, dispatch Build Agent RED.
+  After intended failure, use supported worker_follow_up for production edits;
+  then Build Agent tests and one fresh RR independent reviewer. Follow-up during
+  an active turn can refuse; wait for terminal rather than bypassing the connector.
+- Established Build Agent: `01a0c061-578a-7e22-8ba3-77348fd6dcac` (Terra/medium),
+  owns native compilation and Git. Send bounded task-coordination messages there.
+  Main owns progress/brief/catalog. No subagents or direct RR helper/database access.
+- Build outputs must use ordinary canonical `.build/` (not Group Containers) to
+  avoid the demonstrated macOS AppData startup prompt. Reuse established pinned RDS
+  at canonical `DerivedData/SourcePackages/checkouts/RekonDesignSystem`, commit
+  `f986e85e786f55f1d73d6e429de11370399414f7`, offline package resolution.
+  Build Agent knows native Xcode commands, isolated test database and libgit2 setup.
+- Use installed release-radar and shared-execution skills. Worker may use repository
+  fallback if skill file inaccessible. No permission expansion. Original-resolution
+  image viewing avoids prior misleading blank resized screenshot output.
+- Project `project-fffdc0e0b15b9b86`, root ID `project-fffdc0e0b15b9b86-root-0`,
+  registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation1;
+  repository `e7475429-ef51-4368-ad9e-61d9073d5a4f`, phase revision1,
+  Manage Project task-plan revision1. Scope is unchanged; refresh exact state when
+  needed for the next mutation, not repeatedly during ordinary work.
+- Preserve branches/worktrees/artifacts and unrelated `.codex/config.toml` and
+  `.codex/hooks.json`. No push/PR/acceptance inferred. Local release only after the
+  intended verified batch, not each intermediate slice. Installed app is 0.1.31.
+- Do not import this conversation's transcript. Use the ledger as delivery truth,
+  this section as connection handoff, and the scoped Task02 brief as current work.
+
+
+## Pending exact execution replay — September 20
+
+Owner restarted Codex. Supported plugin Reinstall restored Installed 0.1.31.
+Exact old reviewer replay returned `assignmentNotAuthorized` with audit
+`8D170711-C729-42C1-8ADE-BE710E2044BF`, establishing audited refusal, not worker
+launch or feature completion. Fresh complete inventory retains the exact
+registration/generation, phase lifecycle revision 1 and task-plan revision 1.
+The following fresh delivery preparation is pending; retain it unchanged across
+uncertain outcomes:
+
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","projectID":"project-fffdc0e0b15b9b86","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"258c312d-bb4f-4bb0-a077-f223cbdb63ac","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-01","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Owner resumed Manage Project. Prior reviewer request154c4774 received audited assignmentNotAuthorized after missing-context recovery. Prepare fresh task01 delivery from current committed canonical baseline; reconcile existing behavior without changing task definitions or mutating preserved older candidate."}
+```
+
+Initial fresh preparation returned `identityMismatch`. Main had added the above
+record to the selected ledger before committing it. To preserve the committed
+context and same-HEAD reuse path, this note is retained here as supporting
+recovery data and only that owned ledger addition is restored to HEAD. No
+resources or private state were edited. Exact replay succeeded: audit F1C9999E-5A79-44A1-AC85-D1CB84866DA1,
+assignment `delivery-258c312d-bb4f-4bb0-a077-f223cbdb63ac`, baseline `7305f277`.
+Worker launch succeeded: `76AF72BD-D976-4E4F-97BC-5794B13B00EA`, task
+`01a0c128-6ebb-7080-825b-f92b59f33131`. Effective Terra/medium, assigned
+rr-delivery profile, exact assigned checkout, on-request/auto_review, network
+disabled and expected instruction sources were returned. First checkpoint is
+Task01 brief and regression-test handoff; Build Agent owns native tests/Git.
+No task completion is inferred.
+
 ## September 20 helper session reset — current
 
 Owner requested fresh helper sessions to reduce context, with preparation only.
