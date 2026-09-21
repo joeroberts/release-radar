@@ -207,7 +207,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(executionLoadCount, 1)
     }
 
-    func testManageProjectRejectsMismatchedSettingsRegistration() async throws {
+    func testManageProjectStaleSettingsRegistrationOffersCloseAndReopenRecovery() async throws {
         let projectID = ProjectID(rawValue: "manage-project-selected")
         let registration = ProjectRegistration(
             projectID: projectID,
@@ -229,6 +229,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             attentionCount: 0
         )
         var saveCalls = 0
+        var settingsLoadCount = 0
 
         try await render(
             ProjectOverviewView(
@@ -242,7 +243,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 reloadActivePhase: {},
                 reauthorizeActivePhase: { _ in },
                 loadProjectSettings: {
-                    .init(registration: mismatchedRegistration, projectName: "Replacement", excludedTaskIDs: [])
+                    settingsLoadCount += 1
+                    return .init(registration: mismatchedRegistration, projectName: "Replacement", excludedTaskIDs: [])
                 },
                 saveProjectSettings: { _, _, _ in
                     saveCalls += 1
@@ -253,14 +255,26 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             width: 620,
             expected: nil,
             presentIdentifiers: ["project-manage"],
-            eventuallyPostActionIdentifiers: [
-                "manage-project-section-settings-error",
-                "manage-project-section-settings-retry",
+            postActionIdentifiers: ["project-settings-name"],
+            postActionText: [
+                mismatchedRegistration.registrationID,
+                "Replacement",
             ],
-            pressIdentifiers: ["project-manage"]
+            pressIdentifiers: [
+                "project-manage",
+                "manage-project-section-settings-reopen",
+            ],
+            afterPressIdentifiers: [
+                [
+                    "manage-project-section-settings-error",
+                    "manage-project-section-settings-reopen",
+                ],
+                ["project-settings-name"],
+            ]
         )
 
         XCTAssertEqual(saveCalls, 0)
+        XCTAssertEqual(settingsLoadCount, 1)
     }
 
     func testProjectRemovalConfirmationAndRemovedHistoryAtWideAndCompactWidths() async throws {

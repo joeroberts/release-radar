@@ -33,6 +33,14 @@ private enum DocumentationSetupFeedback: Equatable {
     }
 }
 
+private struct ManageProjectPresentation: Identifiable {
+    let registration: ProjectRegistration
+    let projectName: String
+    let initialSettings: ProjectSettingsSnapshot?
+
+    var id: ProjectRegistration { registration }
+}
+
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
@@ -69,7 +77,7 @@ struct ProjectOverviewView: View {
     @State private var isRefreshingHealth = false
     @State private var healthRecoveryMessage: String?
     @State private var healthGeneration: UInt64 = 0
-    @State private var showsSettings = false
+    @State private var manageProjectPresentation: ManageProjectPresentation?
     @State private var showsHelp = false
     @State private var showsRootManagement = false
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
@@ -262,30 +270,40 @@ struct ProjectOverviewView: View {
                 }
             }
         }
-        .sheet(isPresented: $showsSettings) {
-            if let registration = project.registration, let loadProjectSettings {
+        .sheet(item: $manageProjectPresentation) { presentation in
+            if let loadProjectSettings {
                 ManageProjectView(
-                    registration: registration,
-                    projectName: project.name,
+                    registration: presentation.registration,
+                    projectName: presentation.projectName,
                     tasks: availableCodexTasks,
+                    initialSettings: presentation.initialSettings,
                     loadSettings: { try await loadProjectSettings() },
                     saveSettings: saveProjectSettings.map { save in
                         { name, excluded in
-                            let updated = try await save(registration, name, excluded)
+                            let updated = try await save(presentation.registration, name, excluded)
                             refreshHealth()
                             return updated
                         }
                     },
                     manageExecutionHook: manageExecutionHook.map { action in
-                        { operation in try await action(registration, operation) }
+                        { operation in try await action(presentation.registration, operation) }
                     },
                     loadExecutionAssignments: loadExecutionAssignments.map { load in
-                        { try await load(registration) }
+                        { try await load(presentation.registration) }
                     },
                     retireExecutionAssignment: retireExecutionAssignment.map { retire in
-                        { expected in try await retire(registration, expected) }
+                        { expected in try await retire(presentation.registration, expected) }
+                    },
+                    reopenCurrentRegistration: { settings in
+                        guard settings.registration.projectID == project.id else { return }
+                        manageProjectPresentation = .init(
+                            registration: settings.registration,
+                            projectName: settings.projectName,
+                            initialSettings: settings
+                        )
                     }
                 )
+                .id(presentation.id)
             }
         }
     }
@@ -508,8 +526,12 @@ struct ProjectOverviewView: View {
     }
 
     private func openSettings() {
-        guard project.registration != nil, loadProjectSettings != nil else { return }
-        showsSettings = true
+        guard let registration = project.registration, loadProjectSettings != nil else { return }
+        manageProjectPresentation = .init(
+            registration: registration,
+            projectName: project.name,
+            initialSettings: nil
+        )
     }
 
     private func rootActionCommitted() async {

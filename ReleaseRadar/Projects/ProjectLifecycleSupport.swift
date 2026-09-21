@@ -123,8 +123,10 @@ struct ManageProjectView: View {
     let manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?
     let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
     let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
+    let reopenCurrentRegistration: (ProjectSettingsSnapshot) -> Void
 
     @State private var settings: ProjectSettingsSnapshot?
+    @State private var staleSettings: ProjectSettingsSnapshot?
     @State private var settingsError: String?
     @State private var isLoadingSettings = true
     @State private var name = ""
@@ -137,6 +139,33 @@ struct ManageProjectView: View {
     @State private var executionMessage: String?
     @State private var executionFailed = false
     @State private var executionLoadFailed = false
+
+    init(
+        registration: ProjectRegistration,
+        projectName: String,
+        tasks: [CodexTaskDescriptor],
+        initialSettings: ProjectSettingsSnapshot? = nil,
+        loadSettings: @escaping () async throws -> ProjectSettingsSnapshot,
+        saveSettings: ((String, Set<String>) async throws -> ProjectSettingsSnapshot)?,
+        manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?,
+        loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?,
+        retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?,
+        reopenCurrentRegistration: @escaping (ProjectSettingsSnapshot) -> Void
+    ) {
+        self.registration = registration
+        self.projectName = projectName
+        self.tasks = tasks
+        self.loadSettings = loadSettings
+        self.saveSettings = saveSettings
+        self.manageExecutionHook = manageExecutionHook
+        self.loadExecutionAssignments = loadExecutionAssignments
+        self.retireExecutionAssignment = retireExecutionAssignment
+        self.reopenCurrentRegistration = reopenCurrentRegistration
+        _settings = State(initialValue: initialSettings)
+        _isLoadingSettings = State(initialValue: initialSettings == nil)
+        _name = State(initialValue: initialSettings?.projectName ?? "")
+        _excluded = State(initialValue: initialSettings?.excludedTaskIDs ?? [])
+    }
 
     var body: some View {
         ScrollView {
@@ -168,7 +197,9 @@ struct ManageProjectView: View {
         .foregroundStyle(RekonTheme.primaryText)
         .background(RekonTheme.background)
         .accessibilityIdentifier("manage-project-panel")
-        .task { await loadSettingsSection() }
+        .task {
+            if settings == nil { await loadSettingsSection() }
+        }
         .task { await loadExecutionSection() }
     }
 
@@ -188,12 +219,23 @@ struct ManageProjectView: View {
                             .accessibilityIdentifier("manage-project-section-settings-error")
                         Text(settingsError).foregroundStyle(RekonTheme.secondaryText)
                     }
-                    Button("Retry project settings") { Task { await loadSettingsSection() } }
+                    if let staleSettings {
+                        Button("Open current project registration") {
+                            reopenCurrentRegistration(staleSettings)
+                        }
                         .buttonStyle(RekonSecondaryButtonStyle())
-                        .accessibilityIdentifier("manage-project-section-settings-retry")
-                        .accessibilityLabel("Retry project settings")
-                        .accessibilityHint("Loads settings again for the selected project registration.")
+                        .accessibilityIdentifier("manage-project-section-settings-reopen")
+                        .accessibilityLabel("Open current project registration")
+                        .accessibilityHint("Closes the stale management view and opens the current project registration.")
                         .focusable()
+                    } else {
+                        Button("Retry project settings") { Task { await loadSettingsSection() } }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .accessibilityIdentifier("manage-project-section-settings-retry")
+                            .accessibilityLabel("Retry project settings")
+                            .accessibilityHint("Loads settings again for the selected project registration.")
+                            .focusable()
+                    }
                 } else if settings != nil {
                     TextField("Project name", text: $name)
                         .textFieldStyle(RekonQuietTextFieldStyle())
@@ -310,12 +352,14 @@ struct ManageProjectView: View {
     private func loadSettingsSection() async {
         isLoadingSettings = true
         settingsError = nil
+        staleSettings = nil
         defer { isLoadingSettings = false }
         do {
             let loaded = try await loadSettings()
             guard loaded.registration == registration else {
                 settings = nil
-                settingsError = "The selected project registration changed while settings were loading. Retry to load the current project; no replacement settings were opened."
+                staleSettings = loaded
+                settingsError = "The selected project registration changed while settings were loading. Close Manage Project and reopen it to load the current registration. No replacement settings were opened."
                 return
             }
             settings = loaded
