@@ -22,7 +22,17 @@ unchanged production source: all three compiled and failed on the intended
 missing immediate panel, local retry and registration-mismatch handling (exit 65;
 finalized readable `manage-project-task01-red-1.xcresult` in that checkout's
 `.build/native-checks/`). The same managed worker is now implementing Task01.
-Build Agent owns compilation and commits; GREEN and independent review remain.
+Build Agent owns compilation and commits. Task01 implementation now compiles.
+Latest executed focused run (`manage-project-task01-green-5`) passed immediate
+opening but failed the two error/retry tests because the Retry accessibility
+identifier remains unavailable; completion and independent review remain pending.
+A test-only failure attachment is implemented to capture the accessibility
+hierarchy, but both diagnostic launches timed out before XCTest connected,
+including one `test-without-building` attempt. Neither ran the diagnostic or
+produced behavioral evidence. Both exact runners and hosts are confirmed stopped;
+no further launch is pending. Build Agent is diagnosing the test-host startup
+failure from existing results and logs. No permissions or installed app changes
+were made for these tests. Preserve the worker checkout and result bundles.
 Manage Project remains In Progress with all three tasks pending. Before future
 preparation, selected context must be committed and stable.
 
