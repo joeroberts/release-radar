@@ -13,13 +13,22 @@ network enabled, approvals disabled; this is the explicitly approved isolated
 repair exception, not an RR-managed permission profile. The prior pending client
 ID resolved to this task; do not duplicate it.
 
-Read-only feasibility is complete. The writer identified legacy assignment-specific
-process argv plus the app's retained grant as the proposed closure witness, with
-fail-closed process identity/inventory checks and exact current-state revalidation.
-Main released focused tests first, before production edits. Build Agent retains
-compilation/Git; Main retains ledger/catalog. Actual signed/sandboxed runtime
-feasibility remains unverified and is required before claiming recovery. Preserve
-the Task02 checkpoint `0a51ee1d`; no live recovery or acceptance has occurred.
+Recovery production checkpoint is ready for direct verification (September 21).
+Build Agent established compile-stage RED on the missing recovery contracts;
+XCTest did not run, so this is not behavioral RED. Evidence:
+`.build/native-checks/lost-worker-red-1.xcresult` and matching log.
+The writer then implemented process/grant reconciliation, replay-safe recovery
+receipts, exact-parent continuation and accessible recovery UI; scoped diff check
+passed. GREEN-1 and GREEN-2 exposed bounded production/test fixture compile defects, both
+corrected by the writer. GREEN-3 passed all eight focused tests, zero failed or
+skipped (offline native Xcode, macOS arm64, `workingTree` at baseline `8a15bab`).
+Evidence: `.build/native-checks/lost-worker-green-3.xcresult` and matching log.
+Fresh independent Sol/high recovery/security/architecture/UX review is dispatched.
+Compilation/Git remain with Build Agent; Main owns this ledger.
+The owner's screenshot exposes vertically clipped Project settings; recovery
+control reachability is included in the required compact/wide UI verification.
+Actual signed/sandboxed recovery feasibility and independent review remain pending.
+Preserve Task02 checkpoint `0a51ee1d`; no live recovery or acceptance has occurred.
 
 Owner approved a narrowly scoped lost-worker recovery implementation to unblock
 Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
