@@ -2,7 +2,20 @@
 
 ## September 20 — Manage Project resumed
 
-**Current work: RR-managed Manage Project Task01 delivery is running.** Owner
+**Current work: Task01 is locally verified and integrated; Task02 awaits catalog acceptance.**
+Task02 controlling brief/catalog/index are committed at `f781701d`; documentation
+check passes. Supported preparation returned `catalogUnaccepted` without entity IDs.
+Read-only transition validation confirms `isValid: true`, repository
+`e7475429-ef51-4368-ad9e-61d9073d5a4f`, catalog v1, accepted digest
+`93a682a7548c6006414447d01d8c0b7ce6cad349487ae89927cdbb88bbc25c2f`, candidate
+`71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd`.
+Owner approval for that catalog acceptance was requested; no acceptance performed.
+Preserve this exact preparation request for replay after acceptance:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"f913b890-7149-450c-bf8c-2b515cce75a0","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Continue owner-authorized Manage Project Task02 control relocation from canonical committed f781701d containing reviewed Task01 and Task02 brief. Existing task definitions and scope unchanged."}
+```
+
+Task01 verification context: Owner
 restarted Codex; supported plugin Reinstall restored Installed 0.1.31. Old request
 `154c4774-9565-4fa9-8cff-bbccf3a908cb` received audited refusal
 `8D170711-C729-42C1-8ADE-BE710E2044BF`. Fresh request
