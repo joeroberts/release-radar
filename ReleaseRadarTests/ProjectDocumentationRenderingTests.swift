@@ -2023,6 +2023,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(size.width, minimumSize.width, "\(identifier) is too narrow")
             XCTAssertGreaterThanOrEqual(size.height, minimumSize.height, "\(identifier) is too short")
         }
+        var captureView: NSView = hosting
         if let sheetAttachmentName {
             let sheet = try XCTUnwrap(window.sheets.first, "Manage Project sheet was not presented")
             let sheetContent = try XCTUnwrap(sheet.contentView, "Manage Project sheet has no content view")
@@ -2037,10 +2038,11 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             attachment.name = sheetAttachmentName
             attachment.lifetime = .keepAlways
             add(attachment)
+            captureView = sheetContent
         }
         print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
-        let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
-        hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+        let bitmap = try XCTUnwrap(captureView.bitmapImageRepForCachingDisplay(in: captureView.bounds))
+        captureView.cacheDisplay(in: captureView.bounds, to: bitmap)
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
         attachment.name = name
