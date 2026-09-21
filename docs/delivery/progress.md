@@ -39,7 +39,15 @@ bitmap inspection passed. The wide bitmap remained blank despite capture layout
 stabilization, so Main directly opened and observed the synthetic 1100-point test
 window's sheet through CUA: exact identity, settings, execution and Done rendered
 without clipping. This externally interacted observation is separate from the
-successful automated assertions. Independent UX/recovery review remains pending.
+successful automated assertions. Candidate `cfa87c10` is committed in the managed delivery checkout. Its worker
+connection is closed. Independent UX/recovery review is running through RR
+assignment `review-5aec685a-e532-4e83-8ce6-8a0b87dbfafd` (preparation audit
+`72F7E559-7D77-465E-BDC5-F9B04CD14656`), worker
+`E04BC19B-4D51-480B-9B08-4602225DF327`, task
+`01a0c19b-7720-7841-b579-f784a2a59768`. Effective Terra/high, exact review
+checkout/profile, no network and `.build`-only scratch writes were verified.
+The reviewer has the exact diff and actual rendered sheet images within its
+permitted checkout. Task completion and owner acceptance are not inferred.
 No permission, installed-app or RR completion changes were made.
 Temporary logs, XCResults and diagnostic attachments remain in canonical
 `.build/native-checks`. Preserve the worker checkout and result bundles.
