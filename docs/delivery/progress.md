@@ -44,60 +44,48 @@ The catalog transition readback is valid with matching accepted/candidate digest
 Exact committed requests and returned audit/revision receipts are retained in the
 [Task03 reconciliation](task-briefs/2026-09-21-manage-project-task03.md#september-21-owner-approved-tracked-reconciliation).
 Supported inventory confirms all three completions and the owner-directed acceptance.
-**Current priority: Navigation resumed explicitly by the owner after PR #115 merged.**
-The [Navigation brief](task-briefs/2026-09-21-navigation.md) controls the existing two
-pending tasks at plan revision 1. Navigation is **In progress**, confirmed by supported
-inventory after the owner-directed transition (audit `8A55FF28-C04A-4668-AAB0-8DDAC0A1C42D`).
-The owner approved the catalog addition; acceptance succeeded (audit
-`91D766D9-5230-434C-BCCA-ABEB816C0A9C`). Task01 managed assignment
-`delivery-70c06d0c-d517-49db-93ce-64d4fc9bc307` starts from committed preparation
-`0b535d85c42b375abbd2723b9da63537ecdcf83e`. Worker
-`5E1F35C7-1878-488B-87E5-5C4376BDD6DF`, task `01a0c4c9-5a31-78b3-8063-1dd2d9379391`,
-completed the relocation assignment, committed as `e0d2baed` and integrated at
-`7447b588` on `codex/navigation-delivery`. The rebuilt exact-identity relocation
-test passed after correcting assertion timing; cancellation and existing
-archive/detail tests also passed. Worker-local `.build/task01-navigation-correction.xcresult`
-and `.build/task01-navigation-green-retry.xcresult` retain the direct results.
-The worker connection is closed; its checkout is retained under the owner's
-cleanup deferral. Task02 assignment `delivery-f77dbfca-29f3-46b7-9877-98a00dc14f01`
-starts at `7447b588`; worker `CA6865C9-F5EE-4532-B7F4-6959A39DE777`, task
-`01a0c4e9-06ed-7063-8cc3-3d26c6614234`, completed the narrowed Navigation
-corrections. Exact canonical candidate `8a8041ecd56b485902cb4b77a03dd9dc08699889`
-passed its two affected rebuilt native tests (2 passed, 0 failed, 0 skipped).
-Earlier route/sidebar, checking-footer, open-management and lifecycle/recovery
-checks remain applicable. The [brief's verification record](task-briefs/2026-09-21-navigation.md#september-21-narrowed-navigation-verification)
-retains the results. Independent reviewer `F573CB8B-0DDD-4C97-8C1C-98A771CEE9B8`
-(Terra/high), task `01a0c4ec-73a4-7c33-a1b7-5516da9eae58`, passed the narrowed
-candidate with no Required findings. Delivery and reviewer connections are
-closed; both bounded tasks are archived.
+**Navigation is Accepted following the owner’s explicit review and approval.**
+The [Navigation brief](task-briefs/2026-09-21-navigation.md) records the narrowed
+scope, direct verification, independent review, release and exact audited closeout
+requests. Canonical source `8a8041ecd56b485902cb4b77a03dd9dc08699889` contains only
+Navigation product/test changes; ALL Overview/metric/phase-action layout changes
+and their containment regression are excluded to
+[GitHub #116](https://github.com/joeroberts/release-radar/issues/116). That issue
+must start fresh; its experimental implementation is not to be preserved for
+reuse. Cleanup remains separate and has not occurred.
 
-The owner's revised goal excludes ALL Overview/metric/phase-action layout changes
-and compact containment regression tests. Those belong to
-[GitHub #116](https://github.com/joeroberts/release-radar/issues/116), which must
-start fresh; experimental implementation is not to be retained for future reuse.
-None is integrated into the canonical candidate. Worktree cleanup is separate
-and has not occurred. Main owns ledger; Build owns compilation/Git/release.
-Navigation **0.1.35 (1)** is locally delivered. Source preparation is
-`3fc33b07`; version metadata `64d62be9`; installer commit and annotated
-`v0.1.35` target `716376939a3d36c11d5bd7656e3893821d50ec7d`. Exact tag pushed;
-remote peeled commit matches. No branch push, PR, merge or notarization.
-`dist/ReleaseRadar-0.1.35.dmg` and Downloads copy are byte-identical, SHA-256
-`24d824bfc16ae61948ea6573705b4a803e109a2382a1db0521a925adc9a2a7dc`.
-Read-only mounted DMG and installed `/Applications/ReleaseRadar.app` verified as
-`com.rekonlabs.ReleaseRadar`, 0.1.35 (1), team `2UA854NLX4`, with strict deep
-signatures and hardened runtime. Installed/staged executable and CodeResources
-match. Local installation verification completed September 21 at 13:42:51 EDT.
+The two affected native tests passed on the exact canonical source (2 passed,
+0 failed, 0 skipped). Earlier route/sidebar, checking-footer, open-management,
+archive/removal and recovery checks remained applicable. Independent reviewer
+`F573CB8B-0DDD-4C97-8C1C-98A771CEE9B8` (Terra/high) passed the narrowed candidate
+with no Required findings. Delivery/reviewer connections are closed and bounded
+tasks archived. Build is idle; Main owns the ledger.
 
-**Waiting for owner-confirmed Codex restart; no RR connector calls until then.**
-After restart record verified evidence, complete both existing tasks and move
-Navigation to Needs review. Owner acceptance remains separate; neither task
-completion nor this transition has occurred. Preserve the explicit #116 exclusion.
-Build-generated tracked `dist/ReleaseRadar.app` changes remain uncommitted,
-consistent with prior release practice using the versioned DMG as artifact.
-Pre-existing untracked `.codex/config.toml` and `.codex/hooks.json` remain untouched.
-Temporary Navigation build/test outputs and managed checkouts await separate
-cleanup; no cleanup or reset occurred. The revised goal is not complete until
-supported post-restart readback confirms both task completions and Needs review.
+Navigation **0.1.35 (1)** is locally delivered. Source preparation `3fc33b07`,
+version metadata `64d62be9`, installer commit and annotated `v0.1.35` target
+`716376939a3d36c11d5bd7656e3893821d50ec7d`. Exact tag pushed and remote peeled
+commit matches. No branch push, PR, merge or notarization. Repository and Downloads
+DMGs match SHA-256 `24d824bfc16ae61948ea6573705b4a803e109a2382a1db0521a925adc9a2a7dc`.
+Read-only mounted and installed app verified as `com.rekonlabs.ReleaseRadar`,
+0.1.35 (1), team `2UA854NLX4`, with strict deep signatures and hardened runtime;
+installed/staged executable and CodeResources match. Installation verification
+completed September 21 at 13:42:51 EDT.
+
+Owner confirmed Codex restart, then explicitly reviewed and approved Navigation.
+Supported readback confirms both original task definitions unchanged and completed
+at task-plan revision **3**, ticket lane **accepted**, owner acceptance **accepted**.
+Evidence revision **8**, target **2**, has available/applicable/passed observations
+for Task01, Task02 and local release; all expectations are satisfied. The initial
+unknown-revision target remains stale history and was not used for completion.
+Accepted transition audit: `4F2A0F2B-23D4-443E-9BF0-D36405139616`.
+Catalog readback is valid with matching accepted/candidate digest
+`8f036fe21eed6c51a17b9b66ad73837369322cfe23d5992ad4fad08cabf2af77`.
+
+Generated tracked `dist/ReleaseRadar.app` changes remain uncommitted under the
+existing versioned-DMG release practice. Pre-existing untracked
+`.codex/config.toml` and `.codex/hooks.json` remain untouched. Temporary Navigation
+build/test outputs and managed checkouts await separate cleanup. Navigation
+closeout is complete; no new ticket implementation is authorized by this record.
 The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
 merged by the owner; canonical main was fast-forwarded and the merged branch removed. `codex/cleanup-record` was removed
 locally and remotely after merged-PR and ancestry verification. The clean ordinary
