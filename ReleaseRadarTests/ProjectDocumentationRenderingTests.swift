@@ -314,8 +314,11 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 absentButtonTitles: ["Archive…", "Remove…"],
                 postActionIdentifiers: ["manage-project-panel", "manage-project-identity", "manage-project-archive"],
                 pressIdentifiers: ["project-manage", "manage-project-archive"],
+                afterPressIdentifiers: [[], ["project-lifecycle-confirmation"]],
+                afterPressFocusIdentifiers: [["manage-project-archive"], ["project-lifecycle-cancel", "project-lifecycle-confirm"]],
                 afterPressText: [[], [registration.registrationID, "2 phases", "5 tickets", "No project data will be deleted"]],
-                pressTitles: ["Archive Project"]
+                pressTitles: ["Archive Project"],
+                sheetAttachmentName: "manage-project-archive-confirmation-\(Int(width))"
             )
             XCTAssertEqual(archivedPreviewCount, 1)
             XCTAssertEqual(archivedWith, archivePreview)
@@ -340,8 +343,11 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 absentButtonTitles: ["Archive…", "Remove…"],
                 postActionIdentifiers: ["manage-project-panel", "manage-project-identity", "manage-project-remove"],
                 pressIdentifiers: ["project-manage", "manage-project-remove"],
+                afterPressIdentifiers: [[], ["project-removal-confirmation"]],
+                afterPressFocusIdentifiers: [["manage-project-remove"], ["project-removal-cancel", "project-removal-confirm"]],
                 afterPressText: [[], [registration.registrationID, "2 phases", "5 tickets", "Read-only history will remain"]],
-                pressTitles: ["Remove from Tracking"]
+                pressTitles: ["Remove from Tracking"],
+                sheetAttachmentName: "manage-project-remove-confirmation-\(Int(width))"
             )
             XCTAssertEqual(removedPreviewCount, 1)
             XCTAssertEqual(removedWith, removalPreview)
@@ -387,8 +393,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             width: 620,
             expected: nil,
             postActionIdentifiers: ["manage-project-archive"],
-            pressIdentifiers: ["project-manage", "manage-project-archive"],
-            pressTitles: ["Cancel"]
+            pressIdentifiers: ["project-manage", "manage-project-archive", "project-lifecycle-cancel"],
+            afterPressIdentifiers: [[], ["project-lifecycle-confirmation"], ["manage-project-archive"]],
+            afterPressFocusIdentifiers: [["manage-project-archive"], ["project-lifecycle-cancel"], ["manage-project-archive"]]
         )
 
         XCTAssertEqual(archiveCallCount, 0)
@@ -1281,12 +1288,13 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             model.isSidebarCompact = width <= 620
             for (name, route, expectedTitle) in routes {
                 model.selection = route
-                let absentText = ["Persisted locally"] + (switch route {
+                var absentText = ["Persisted locally"]
+                switch route {
                 case .projects, .needsReview, .notifications, .settings:
-                    ["Delivery"]
+                    absentText.append("Delivery")
                 default:
-                    []
-                })
+                    break
+                }
                 try await render(
                     SidebarView(model: model),
                     name: "rds-\(name)-\(Int(width))",
@@ -1986,6 +1994,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
         afterPressIdentifiers: [[String]] = [],
+        afterPressFocusIdentifiers: [[String]] = [],
         afterPressText: [[String]] = [],
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
@@ -2106,11 +2115,47 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     "Missing post-press accessibility element \(identifier)"
                 )
             }
+            for identifier in afterPressFocusIdentifiers.indices.contains(index) ? afterPressFocusIdentifiers[index] : [] {
+                let candidate = try await waitForAccessibilityElement(identifier: identifier)
+                let element = try XCTUnwrap(candidate, "Missing focusable post-press accessibility element \(identifier)")
+                XCTAssertEqual(
+                    AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                    .success
+                )
+                var focusedValue: CFTypeRef?
+                XCTAssertEqual(
+                    AXUIElementCopyAttributeValue(element, kAXFocusedAttribute as CFString, &focusedValue),
+                    .success
+                )
+                XCTAssertEqual(focusedValue as? Bool, true, "\(identifier) did not retain focus")
+            }
             for text in afterPressText.indices.contains(index) ? afterPressText[index] : [] {
                 XCTAssertTrue(
                     accessibilityText(try XCTUnwrap(ownWindow)).contains(text),
                     "Missing post-press lifecycle content: \(text)"
                 )
+            }
+        }
+        var captureView: NSView = hosting
+        if let sheetAttachmentName {
+            var sheet = try XCTUnwrap(window.sheets.first, "Manage Project sheet was not presented")
+            while let nestedSheet = sheet.sheets.first {
+                sheet = nestedSheet
+            }
+            let sheetContent = try XCTUnwrap(sheet.contentView, "Presented sheet has no content view")
+            await Task.yield()
+            sheetContent.layoutSubtreeIfNeeded()
+            sheet.displayIfNeeded()
+            sheetContent.displayIfNeeded()
+            let bitmap = try XCTUnwrap(sheetContent.bitmapImageRepForCachingDisplay(in: sheetContent.bounds))
+            sheetContent.cacheDisplay(in: sheetContent.bounds, to: bitmap)
+            let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+            let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
+            attachment.name = sheetAttachmentName
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            if pressTitles.isEmpty {
+                captureView = sheetContent
             }
         }
         for pressTitle in pressTitles {
@@ -2195,23 +2240,6 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertTrue(AXValueGetValue(axValue, .cgSize, &size))
             XCTAssertGreaterThanOrEqual(size.width, minimumSize.width, "\(identifier) is too narrow")
             XCTAssertGreaterThanOrEqual(size.height, minimumSize.height, "\(identifier) is too short")
-        }
-        var captureView: NSView = hosting
-        if let sheetAttachmentName {
-            let sheet = try XCTUnwrap(window.sheets.first, "Manage Project sheet was not presented")
-            let sheetContent = try XCTUnwrap(sheet.contentView, "Manage Project sheet has no content view")
-            await Task.yield()
-            sheetContent.layoutSubtreeIfNeeded()
-            sheet.displayIfNeeded()
-            sheetContent.displayIfNeeded()
-            let bitmap = try XCTUnwrap(sheetContent.bitmapImageRepForCachingDisplay(in: sheetContent.bounds))
-            sheetContent.cacheDisplay(in: sheetContent.bounds, to: bitmap)
-            let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-            let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
-            attachment.name = sheetAttachmentName
-            attachment.lifetime = .keepAlways
-            add(attachment)
-            captureView = sheetContent
         }
         print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
         let bitmap = try XCTUnwrap(captureView.bitmapImageRepForCachingDisplay(in: captureView.bounds))
