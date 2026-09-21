@@ -315,7 +315,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 postActionIdentifiers: ["manage-project-panel", "manage-project-identity", "manage-project-archive"],
                 pressIdentifiers: ["project-manage", "manage-project-archive"],
                 afterPressIdentifiers: [[], ["project-lifecycle-confirmation"]],
-                afterPressFocusIdentifiers: [["manage-project-archive"], ["project-lifecycle-cancel", "project-lifecycle-confirm"]],
+                afterPressFocusIdentifiers: [["manage-project-archive"], []],
+                afterPressFocusTitles: [[], ["Cancel", "Archive Project"]],
                 afterPressText: [[], [registration.registrationID, "2 phases", "5 tickets", "No project data will be deleted"]],
                 pressTitles: ["Archive Project"],
                 sheetAttachmentName: "manage-project-archive-confirmation-\(Int(width))"
@@ -344,7 +345,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 postActionIdentifiers: ["manage-project-panel", "manage-project-identity", "manage-project-remove"],
                 pressIdentifiers: ["project-manage", "manage-project-remove"],
                 afterPressIdentifiers: [[], ["project-removal-confirmation"]],
-                afterPressFocusIdentifiers: [["manage-project-remove"], ["project-removal-cancel", "project-removal-confirm"]],
+                afterPressFocusIdentifiers: [["manage-project-remove"], []],
+                afterPressFocusTitles: [[], ["Cancel", "Remove from Tracking"]],
                 afterPressText: [[], [registration.registrationID, "2 phases", "5 tickets", "Read-only history will remain"]],
                 pressTitles: ["Remove from Tracking"],
                 sheetAttachmentName: "manage-project-remove-confirmation-\(Int(width))"
@@ -393,9 +395,11 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             width: 620,
             expected: nil,
             postActionIdentifiers: ["manage-project-archive"],
-            pressIdentifiers: ["project-manage", "manage-project-archive", "project-lifecycle-cancel"],
-            afterPressIdentifiers: [[], ["project-lifecycle-confirmation"], ["manage-project-archive"]],
-            afterPressFocusIdentifiers: [["manage-project-archive"], ["project-lifecycle-cancel"], ["manage-project-archive"]]
+            pressIdentifiers: ["project-manage", "manage-project-archive"],
+            afterPressIdentifiers: [[], ["project-lifecycle-confirmation"]],
+            afterPressFocusIdentifiers: [["manage-project-archive"], []],
+            afterPressFocusTitles: [[], ["Cancel"]],
+            pressTitles: ["Cancel"]
         )
 
         XCTAssertEqual(archiveCallCount, 0)
@@ -1995,6 +1999,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         pressIdentifiers: [String] = [],
         afterPressIdentifiers: [[String]] = [],
         afterPressFocusIdentifiers: [[String]] = [],
+        afterPressFocusTitles: [[String]] = [],
         afterPressText: [[String]] = [],
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
@@ -2128,6 +2133,22 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     .success
                 )
                 XCTAssertEqual(focusedValue as? Bool, true, "\(identifier) did not retain focus")
+            }
+            for title in afterPressFocusTitles.indices.contains(index) ? afterPressFocusTitles[index] : [] {
+                let element = try XCTUnwrap(
+                    accessibilityButton(try XCTUnwrap(ownWindow), title: title),
+                    "Missing focusable post-press accessibility button titled \(title)"
+                )
+                XCTAssertEqual(
+                    AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                    .success
+                )
+                var focusedValue: CFTypeRef?
+                XCTAssertEqual(
+                    AXUIElementCopyAttributeValue(element, kAXFocusedAttribute as CFString, &focusedValue),
+                    .success
+                )
+                XCTAssertEqual(focusedValue as? Bool, true, "\(title) did not retain focus")
             }
             for text in afterPressText.indices.contains(index) ? afterPressText[index] : [] {
                 XCTAssertTrue(
