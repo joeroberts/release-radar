@@ -9,8 +9,19 @@ error-focus corrections; no new recovery project, permissions or managed-state
 changes. Fresh worktree task requested Terra/medium. Main owns ledger; existing
 Build Agent owns compilation/tests/Git; independent UI/recovery review remains
 required before integration/local delivery. No archived task is restored.
-Three focused selectors remain RED as recorded below; do not repeat RED or
-unrelated successful checks. Correct actual UI behavior without weakening tests.
+Isolated task `01a0c45f-b3bc-7e31-8e29-40c35ec5bab3` is working in
+`/Users/jroberts/.codex/worktrees/3b8c/release_radar`. First correction verification
+passed root/worktree recovery presentation (1/3 total); the two documentation
+failure tests still fail their focus assertions. Evidence:
+`.build/task02-isolated-correction/Logs/Test/Test-ReleaseRadar-2026.09.21_10-34-34--0400.xcresult`
+in that checkout. Build sent a bounded error-focus/visibility correction to the
+same writer. Root recovery is terminal unless subsequent changes affect it;
+Final correction candidate `de7e472917e2dfb7962a9b7ff4a75ebd93e04fa7` is committed
+on preserved parent `3f92c35e`. Required three selectors passed 3/3 (10-37-46
+xcresult); immediate health recovery and independent section-loading boundaries
+passed 2/2 (10-38-40 xcresult), all under that checkout's same result directory.
+Build used pipefail; diff check passed. Fresh Terra/high independent UI/recovery
+review is queued against exact candidate. No integration or release yet. Correct actual UI behavior without weakening tests.
 All prior branches/checkouts/receipts/artifacts remain preserved.
 
 ## September 21 — Task02 resumed through managed execution
