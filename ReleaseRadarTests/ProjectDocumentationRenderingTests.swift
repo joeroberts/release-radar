@@ -1281,14 +1281,19 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             model.isSidebarCompact = width <= 620
             for (name, route, expectedTitle) in routes {
                 model.selection = route
+                let absentText = ["Persisted locally"] + (switch route {
+                case .projects, .needsReview, .notifications, .settings:
+                    ["Delivery"]
+                default:
+                    []
+                })
                 try await render(
                     SidebarView(model: model),
                     name: "rds-\(name)-\(Int(width))",
                     width: width,
                     expected: nil,
-                    expectedText: width <= 620
-                        ? [expectedTitle]
-                        : [expectedTitle, "Delivery", "Persisted locally"]
+                    expectedText: [expectedTitle],
+                    absentText: absentText
                 )
             }
         }
