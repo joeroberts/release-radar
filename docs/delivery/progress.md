@@ -31,11 +31,28 @@ Close only the now-delivered recovery brief as completed/non-authoritative,
 preserving its ID/path/history; validate and obtain exact catalog acceptance
 before a fresh continuation request. No code, permissions or old checkout changes.
 
-Exact recovery-brief closeout catalog acceptance (owner approval pending;
-transition validated, scoped docs committed `29fbb2d6`):
+Exact recovery-brief closeout catalog acceptance (owner approved; succeeded
+with audit `117B72A3-4211-40BB-B304-E56A21E529DC`; readback accepted=candidate
+`ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9`):
 ```json
 {"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"e49c153c-b475-41f7-8b04-a0c2af08ad77","priorCatalogVersion":1,"priorCatalogDigest":"070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f","target":{"catalogDigest":"ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"reason":"Accept validated closeout of only the delivered lost-worker recovery brief as completed/nonAuthoritative; preserve artifact identity/path/history and all task definitions."}
 ```
+
+Fresh Task02 continuation request after accepted closeout (succeeded; audit
+`FE53679D-32C2-45B6-975C-7A1BF7C592BD`):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"7b5391d5-b421-465e-9c43-e9f85650117b","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Resume authorized Task02 implementation from preserved tests-only checkpoint after verified lost-worker recovery and accepted completed recovery-brief catalog closeout. Existing task scope, definitions and parent unchanged."}
+```
+
+**Task02 production resumed:** managed assignment
+`delivery-7b5391d5-b421-465e-9c43-e9f85650117b`, worker
+`B9C9E92F-477B-4287-A17A-6001F439A7AB`, task
+`01a0c2b1-10f8-7981-a3c6-a51813542357`, baseline `0a51ee1d`.
+Supported start/readback verifies Terra/medium, exact assigned checkout/profile,
+on-request approval with auto-review and network disabled. Worker owns only
+Task02 composition/tests/mutable design and stops source writes before Build
+verification. Existing RED is retained. Build Agent retains compilation/Git;
+Main retains ledger. Do not duplicate this worker or repeat completed recovery.
 
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
