@@ -107,7 +107,8 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     }
 
     static func resources(plugin: CodexPluginLifecycleCoordinator?) -> ProjectExecutionResourceLifecycle {
-        .init(configuration: ProjectExecutionSetupClient(plugin: plugin))
+        .init(configuration: ProjectExecutionSetupClient(plugin: plugin),
+              grantReconciler: CodexContextHandoffHost.production.authority)
     }
 
     func validateInstallation(handlerPath: String) async throws {

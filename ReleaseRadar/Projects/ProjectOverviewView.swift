@@ -61,6 +61,7 @@ struct ProjectOverviewView: View {
     var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
     var loadExecutionAssignments: ((ProjectRegistration) async throws -> [ProjectExecutionAssignment])? = nil
     var retireExecutionAssignment: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
+    var recoverLostWorker: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
     var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
@@ -293,6 +294,9 @@ struct ProjectOverviewView: View {
                     },
                     retireExecutionAssignment: retireExecutionAssignment.map { retire in
                         { expected in try await retire(presentation.registration, expected) }
+                    },
+                    recoverLostWorker: recoverLostWorker.map { recover in
+                        { expected in try await recover(presentation.registration, expected) }
                     },
                     reopenCurrentRegistration: { settings in
                         guard settings.registration.projectID == project.id else { return }

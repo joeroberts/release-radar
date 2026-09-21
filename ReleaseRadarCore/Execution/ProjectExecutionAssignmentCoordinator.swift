@@ -70,6 +70,29 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             && (reviewOfAssignmentID == nil || parent.role == .delivery)
     }
 
+    private nonisolated static func isEligibleRecoveredContinuationParent(
+        parent: ProjectExecutionAssignment,
+        requestedWork: ProjectExecutionWork,
+        registration: ProjectRegistration,
+        parentCheckoutPath: String,
+        primaryRoot: String,
+        reviewOfAssignmentID: String?
+    ) -> Bool {
+        reviewOfAssignmentID == nil
+            && parent.registration == registration
+            && parent.work == requestedWork
+            && parent.role == .delivery
+            && parent.state == .stopped
+            && parent.connectionClosed == true
+            && parent.uncertainOutcome == true
+            && parent.launchReserved == true
+            && parent.sessionID != nil
+            && parent.retirement == nil
+            && parent.lostWorkerRecovery != nil
+            && parent.checkoutPath == parentCheckoutPath
+            && parent.worktree?.primaryRoot == primaryRoot
+    }
+
     /// Called synchronously by the app while its final current-work transaction
     /// is held. Configuration preparation alone never makes an assignment usable.
     public nonisolated func admitPrepared(_ value: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
@@ -171,6 +194,9 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                     || Self.isEligibleClosedParent(parent: parent, requestedWork: work,
                         registration: registration, parentCheckoutPath: parentPaths.checkout.path,
                         primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
+                    || Self.isEligibleRecoveredContinuationParent(parent: parent, requestedWork: work,
+                        registration: registration, parentCheckoutPath: parentPaths.checkout.path,
+                        primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
                     || Self.isClosedTaskMismatch(parent: parent, requestedWork: work,
                         registration: registration, parentCheckoutPath: parentPaths.checkout.path,
                         primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
@@ -213,6 +239,9 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             if Self.isClosedTaskMismatch(parent: parent, requestedWork: work, registration: registration,
                 parentCheckoutPath: parentPaths.checkout.path, primaryRoot: policy.primaryRoot,
                 reviewOfAssignmentID: reviewOfAssignmentID) {
+                throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
+            }
+            if reviewOfAssignmentID != nil, parent.lostWorkerRecovery != nil {
                 throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
             }
         }
@@ -264,7 +293,12 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         }
         // Another request identity cannot silently replace an uncertain/live worker.
         if let blocking = inventory.first(where: {
-            $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
+            let isRequestedRecoveryParent = baselineFromAssignmentID == $0.id
+                && Self.isEligibleRecoveredContinuationParent(parent: $0, requestedWork: work,
+                    registration: registration, parentCheckoutPath: $0.checkoutPath,
+                    primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
+            return $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
+                && !isRequestedRecoveryParent
                 && !($0.state == .superseded && $0.retirement?.completed == true || $0.retirement?.replacementAllowed == true)
                 && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || $0.retirement != nil || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
         }) {
@@ -284,12 +318,20 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
             }
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
+            let recoveredContinuation = Self.isEligibleRecoveredContinuationParent(parent: parent,
+                requestedWork: work, registration: registration,
+                parentCheckoutPath: parentPaths.checkout.path, primaryRoot: policy.primaryRoot,
+                reviewOfAssignmentID: reviewOfAssignmentID)
             guard Self.isEligibleClosedParent(parent: parent, requestedWork: work,
                       registration: registration, parentCheckoutPath: parentPaths.checkout.path,
-                      primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID),
+                      primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
+                    || recoveredContinuation,
                   let tree = parent.worktree else { throw ProjectExecutionError.assignmentNotAuthorized }
             baseline = try withProjectExecutionPreparationStage(.parentCandidateValidation) {
                 try provisioning.candidateRevision(worktree: tree)
+            }
+            if recoveredContinuation, baseline != parent.lostWorkerRecovery?.candidateRevision {
+                throw ProjectExecutionError.identityMismatch
             }
             if parent.role == .review, baseline != tree.baseline { throw ProjectExecutionError.identityMismatch }
             source = parentPaths.checkout
@@ -417,11 +459,23 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             let parent = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
                 try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: parentID)
             }
-            guard parent.state == .closed, parent.retirement == nil, parent.registration == assignment.registration,
+            let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
+                projectID: assignment.registration.projectID.rawValue, taskID: parentID)
+            guard let assignmentWork = assignment.work else { throw ProjectExecutionError.invalidAssignment }
+            let recoveredContinuation = assignment.baselineFromAssignmentID == parentID
+                && Self.isEligibleRecoveredContinuationParent(parent: parent,
+                    requestedWork: assignmentWork, registration: assignment.registration,
+                    parentCheckoutPath: parentPaths.checkout.path, primaryRoot: policy.primaryRoot,
+                    reviewOfAssignmentID: assignment.reviewOfAssignmentID)
+            guard (parent.state == .closed && parent.retirement == nil || recoveredContinuation),
+                  parent.registration == assignment.registration,
                   parent.work == assignment.work, let tree = parent.worktree,
                   try withProjectExecutionPreparationStage(.parentCandidateValidation, {
                       try provisioning.candidateRevision(worktree: tree)
-                  }) == assignment.worktree?.baseline else { throw ProjectExecutionError.assignmentNotAuthorized }
+                  }) == assignment.worktree?.baseline,
+                  !recoveredContinuation || parent.lostWorkerRecovery?.candidateRevision == assignment.worktree?.baseline else {
+                throw ProjectExecutionError.assignmentNotAuthorized
+            }
         }
         let finalPolicy = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
             try store.policy(projectID: assignment.registration.projectID.rawValue)

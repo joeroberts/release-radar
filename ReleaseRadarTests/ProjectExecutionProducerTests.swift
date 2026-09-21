@@ -114,6 +114,66 @@ final class ProjectExecutionProducerTests: XCTestCase {
             if dirty { throw ProjectExecutionError.conflict }; removals += 1
         }
     }
+    private struct RecoveryProcessObserver: ProjectExecutionWorkerProcessObserving {
+        let evidence: ProjectExecutionAssignment.LostWorkerProcessEvidence?
+        let failure: ProjectExecutionError?
+        func verifiedAbsence(for assignment: ProjectExecutionAssignment) throws
+            -> ProjectExecutionAssignment.LostWorkerProcessEvidence {
+            if let failure { throw failure }
+            return try XCTUnwrap(evidence)
+        }
+    }
+    private final class RecoveryGrantReconciler: ProjectExecutionContextGrantReconciling, @unchecked Sendable {
+        private let lock = NSLock()
+        private var outcomes: [ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition]
+        private let failure: ProjectExecutionError?
+        private(set) var calls = 0
+        init(_ outcomes: [ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition],
+             failure: ProjectExecutionError? = nil) {
+            self.outcomes = outcomes; self.failure = failure
+        }
+        func reconcileLostWorkerGrant(for assignment: ProjectExecutionAssignment) throws
+            -> ProjectExecutionAssignment.LostWorkerRecovery.GrantDisposition {
+            try lock.withLock {
+                calls += 1
+                if let failure { throw failure }
+                guard !outcomes.isEmpty else { throw ProjectExecutionError.unavailable }
+                return outcomes.removeFirst()
+            }
+        }
+    }
+    private final class RecoveryValidationGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var callCount = 0
+        private var failureCall: Int?
+        init(failureCall: Int?) { self.failureCall = failureCall }
+        func validate() throws {
+            try lock.withLock {
+                callCount += 1
+                if callCount == failureCall { throw ProjectExecutionError.conflict }
+            }
+        }
+        func allow() { lock.withLock { failureCall = nil } }
+    }
+    private final class RecoveryAuditCASInjector: @unchecked Sendable {
+        private let lock = NSLock()
+        private var callCount = 0
+        private let store: ProjectExecutionFileStore
+        private let expected: ProjectExecutionAssignment
+        private let replacement: ProjectExecutionAssignment
+
+        init(store: ProjectExecutionFileStore, expected: ProjectExecutionAssignment,
+             replacement: ProjectExecutionAssignment) {
+            self.store = store; self.expected = expected; self.replacement = replacement
+        }
+
+        func validate() throws {
+            try lock.withLock {
+                callCount += 1
+                if callCount == 2 { try store.saveAssignment(replacement, expected: expected) }
+            }
+        }
+    }
     private actor CleanupConfiguration: ProjectExecutionConfiguring {
         func selectedCodexContextID() async -> UUID? { nil }
         var refuseContext = false
@@ -156,6 +216,44 @@ final class ProjectExecutionProducerTests: XCTestCase {
         value.connectionClosed = closed; value.launchReserved = true
         if state == .unknown { value.uncertainOutcome = true }
         try store.saveAssignment(value, expected: nil); return value
+    }
+
+    private func legacyLostAssignment(root: URL, source: URL, project: AuthorizedProject,
+                                      work: ProjectExecutionWork, store: ProjectExecutionFileStore,
+                                      id: String = "delivery-legacy-lost") throws -> ProjectExecutionAssignment {
+        let paths = try ProjectExecutionPaths(storageRoot: root,
+            projectID: project.projectID.rawValue, taskID: id)
+        try FileManager.default.createDirectory(at: paths.checkout.deletingLastPathComponent(),
+            withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: source, to: paths.checkout)
+        let instructions = try Data(contentsOf: paths.checkout.appendingPathComponent("AGENTS.md"))
+        var value = ProjectExecutionAssignment(id: id, registration: project.registration!,
+            checkoutPath: paths.checkout.path, role: .delivery,
+            permissionProfile: "rr-" + id, model: "gpt-5.6-terra", effort: "medium",
+            authorization: "Approved legacy work",
+            context: [.init(path: "AGENTS.md",
+                digest: SHA256.hash(data: instructions).map { String(format: "%02x", $0) }.joined())],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .authorized, sessionID: "legacy-session",
+            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-\(project.projectID.rawValue)-\(id)",
+                commonGitDirectory: source.path + "/.git", primaryRoot: source.path), work: work)
+        value.codexContextID = try store.policy(projectID: project.projectID.rawValue).codexContextID
+        value.launchReserved = true
+        try store.saveAssignment(value, expected: nil)
+        return value
+    }
+
+    private func processObserver(for assignment: ProjectExecutionAssignment,
+                                 observedAt: Date = Date(timeIntervalSince1970: 1_789_963_200))
+        -> RecoveryProcessObserver {
+        .init(evidence: .init(
+            version: 1,
+            observedAt: observedAt,
+            executablePath: CodexExecutionIdentity.executable,
+            permissionProfile: assignment.permissionProfile,
+            argumentMarker: "permissions.\(assignment.permissionProfile).network.enabled=false"
+        ), failure: nil)
     }
 
     func testRetirementContextLossPreservesOwnedCheckoutProfileAndRequestState() async throws {
@@ -425,6 +523,195 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertEqual(recovered.retirement?.completed, false)
         let newCloses = await recoveryConfiguration.closedConnections; XCTAssertEqual(newCloses.count, 2)
         XCTAssertEqual(provisioning.removals, 1)
+    }
+
+    func testLostWorkerRecoveryPreservesCheckoutAndAdmitsOnlyExactContinuationParent() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let checkout = URL(fileURLWithPath: legacy.checkoutPath)
+        let provisioning = Provisioning(source: source, candidate: checkout)
+        let grants = RecoveryGrantReconciler([.matchingGrantReleased])
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy), grantReconciler: grants)
+        let requestID = UUID()
+
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: requestID)
+
+        XCTAssertEqual(recovered.state, .stopped)
+        XCTAssertEqual(recovered.sessionID, legacy.sessionID)
+        XCTAssertEqual(recovered.connectionClosed, true)
+        XCTAssertEqual(recovered.launchReserved, true)
+        XCTAssertEqual(recovered.uncertainOutcome, true)
+        XCTAssertEqual(recovered.checkoutPath, legacy.checkoutPath)
+        XCTAssertEqual(recovered.permissionProfile, legacy.permissionProfile)
+        XCTAssertEqual(recovered.worktree, legacy.worktree)
+        XCTAssertNil(recovered.retirement)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.requestID, requestID)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.priorState, .authorized)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.candidateRevision,
+            String(repeating: "b", count: 40))
+        XCTAssertEqual(recovered.lostWorkerRecovery?.grantDisposition, .matchingGrantReleased)
+        XCTAssertEqual(grants.calls, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.checkoutPath))
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), recovered)
+
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+        let continuationRequest = UUID()
+        let continuation = try await producer.prepare(project: project, work: work,
+            requestID: continuationRequest, reviewOfAssignmentID: nil,
+            baselineFromAssignmentID: recovered.id, contextPaths: ["AGENTS.md"])
+        XCTAssertEqual(continuation.role, .delivery)
+        XCTAssertEqual(continuation.baselineFromAssignmentID, recovered.id)
+        XCTAssertEqual(continuation.worktree?.baseline, String(repeating: "b", count: 40))
+        XCTAssertNotEqual(continuation.checkoutPath, recovered.checkoutPath)
+        await producer.finishPreparation(work: work, requestID: continuationRequest)
+    }
+
+    func testLostWorkerRecoveryRequiresProcessAndGrantEvidenceBeforeAnyStateWrite() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let provisioning = Provisioning(source: source,
+            candidate: URL(fileURLWithPath: legacy.checkoutPath))
+        let unusedGrant = RecoveryGrantReconciler([.noMatchingGrant])
+        let processUnavailable = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: RecoveryProcessObserver(evidence: nil, failure: .unavailable),
+            grantReconciler: unusedGrant)
+        do {
+            _ = try await processUnavailable.recoverLostWorker(project: project,
+                expected: legacy, requestID: UUID())
+            XCTFail("Incomplete or suspicious process identity must block recovery")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .unavailable)
+        }
+        XCTAssertEqual(unusedGrant.calls, 0)
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), legacy)
+
+        let grantUnavailable = RecoveryGrantReconciler([], failure: .unavailable)
+        let noGrantProof = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy), grantReconciler: grantUnavailable)
+        do {
+            _ = try await noGrantProof.recoverLostWorker(project: project,
+                expected: legacy, requestID: UUID())
+            XCTFail("A no-match OS observation alone cannot establish complete closure")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .unavailable)
+        }
+        XCTAssertEqual(grantUnavailable.calls, 1)
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), legacy)
+    }
+
+    func testLostWorkerGrantReleaseBeforeCASIsSafelyReplayable() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let provisioning = Provisioning(source: source,
+            candidate: URL(fileURLWithPath: legacy.checkoutPath))
+        let grants = RecoveryGrantReconciler([.matchingGrantReleased, .noMatchingGrant])
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy), grantReconciler: grants)
+        let requestID = UUID()
+        let gate = RecoveryValidationGate(failureCall: 2)
+
+        do {
+            _ = try await lifecycle.recoverLostWorker(project: project, expected: legacy,
+                requestID: requestID, beforeWrite: { try gate.validate() })
+            XCTFail("A concurrent state change after grant release must prevent the assignment CAS")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .conflict)
+        }
+        XCTAssertEqual(grants.calls, 1)
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: legacy.id), legacy)
+
+        gate.allow()
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: requestID, beforeWrite: { try gate.validate() })
+        XCTAssertEqual(grants.calls, 2)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.grantDisposition, .noMatchingGrant)
+        XCTAssertEqual(recovered.lostWorkerRecovery?.requestID, requestID)
+    }
+
+    func testLostWorkerAuditCompletionReconcilesOnlyExactConcurrentReceipt() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(),
+            provisioning: Provisioning(source: source,
+                candidate: URL(fileURLWithPath: legacy.checkoutPath)),
+            processObserver: processObserver(for: legacy),
+            grantReconciler: RecoveryGrantReconciler([.matchingGrantReleased]))
+        let requestID = UUID()
+        let pending = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: requestID)
+        var completed = pending
+        completed.lostWorkerRecovery?.auditCompleted = true
+        let exact = RecoveryAuditCASInjector(store: store, expected: pending,
+            replacement: completed)
+
+        let reconciled = try await lifecycle.completeLostWorkerRecoveryAudit(
+            project: project, expected: pending, requestID: requestID,
+            beforeWrite: { try exact.validate() })
+        XCTAssertEqual(reconciled, completed,
+            "An exact competing audit completion must reconcile as success")
+
+        try store.saveAssignment(pending, expected: completed)
+        var conflicting = completed
+        conflicting.lostWorkerRecovery?.auditCompleted = true
+        let differentCandidate = String(repeating: "c", count: 40)
+        let receipt = try XCTUnwrap(conflicting.lostWorkerRecovery)
+        conflicting.lostWorkerRecovery = .init(requestID: receipt.requestID,
+            priorState: receipt.priorState, candidateRevision: differentCandidate,
+            process: receipt.process, grantDisposition: receipt.grantDisposition,
+            auditCompleted: true)
+        let conflict = RecoveryAuditCASInjector(store: store, expected: pending,
+            replacement: conflicting)
+        do {
+            _ = try await lifecycle.completeLostWorkerRecoveryAudit(
+                project: project, expected: pending, requestID: requestID,
+                beforeWrite: { try conflict.validate() })
+            XCTFail("A different receipt must remain a compare-and-swap conflict")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .conflict)
+        }
+        XCTAssertEqual(try store.assignment(projectID: project.projectID.rawValue,
+            taskID: pending.id), conflicting)
+    }
+
+    func testRecoveredWorkerCannotBePresentedAsDeliveredReviewCandidate() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let legacy = try legacyLostAssignment(root: root, source: source, project: project,
+            work: work, store: store)
+        let checkout = URL(fileURLWithPath: legacy.checkoutPath)
+        let provisioning = Provisioning(source: source, candidate: checkout)
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root },
+            configuration: CleanupConfiguration(), provisioning: provisioning,
+            processObserver: processObserver(for: legacy),
+            grantReconciler: RecoveryGrantReconciler([.noMatchingGrant]))
+        let recovered = try await lifecycle.recoverLostWorker(project: project,
+            expected: legacy, requestID: UUID())
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root },
+            configuration: Configuration(), handlerPath: handler, provisioning: provisioning)
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: recovered.id, baselineFromAssignmentID: nil,
+                contextPaths: ["AGENTS.md"])
+            XCTFail("Recovered stopped work is a continuation parent, not a delivered review candidate")
+        } catch let failure as ProjectExecutionPreparationFailure {
+            XCTAssertEqual(failure.error, .assignmentNotAuthorized)
+        }
     }
     private func fixture(bindContext: Bool = true) throws -> (URL, URL, AuthorizedProject, ProjectExecutionWork, ProjectExecutionFileStore) {
         let base = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)

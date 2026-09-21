@@ -277,6 +277,154 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(settingsLoadCount, 1)
     }
 
+    func testManageProjectOffersLostWorkerRecoveryWithoutConflatingRetirementOrCompletion() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-lost-worker")
+        let registration = ProjectRegistration(projectID: projectID,
+            registrationID: "manage-project-lost-worker-registration", requestGeneration: 1)
+        var assignment = ProjectExecutionAssignment(id: "delivery-legacy-lost",
+            registration: registration,
+            checkoutPath: "/Synthetic/Execution/Worktrees/manage-project-lost-worker/delivery-legacy-lost",
+            role: .delivery, permissionProfile: "rr-delivery-legacy-lost",
+            model: "gpt-5.6-terra", effort: "medium",
+            authorization: "Approved legacy work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .authorized, sessionID: "legacy-session",
+            worktree: .init(
+                checkout: "/Synthetic/Execution/Worktrees/manage-project-lost-worker/delivery-legacy-lost",
+                baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-manage-project-lost-worker-delivery-legacy-lost",
+                commonGitDirectory: "/Synthetic/Repository/.git",
+                primaryRoot: "/Synthetic/Repository"
+            ),
+            work: .init(projectID: projectID, ticketID: "manage-project", taskID: "task-02",
+                outcome: "Relocate controls", title: "Manage Project Task02",
+                taskPlanRevision: 1, phaseID: "phase-six", phaseRevision: 1))
+        assignment.launchReserved = true
+        var recoveryCalls = 0
+        var retirementCalls = 0
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ManageProjectView(
+                    registration: registration,
+                    projectName: "Lost worker recovery",
+                    tasks: [],
+                    initialSettings: .init(registration: registration,
+                        projectName: "Lost worker recovery", excludedTaskIDs: []),
+                    loadSettings: {
+                        .init(registration: registration,
+                            projectName: "Lost worker recovery", excludedTaskIDs: [])
+                    },
+                    saveSettings: nil,
+                    manageExecutionHook: { _ in },
+                    loadExecutionAssignments: { [assignment] },
+                    retireExecutionAssignment: { _ in retirementCalls += 1 },
+                    recoverLostWorker: { expected in
+                        XCTAssertEqual(expected.id, assignment.id)
+                        recoveryCalls += 1
+                    },
+                    reopenCurrentRegistration: { _ in }
+                ),
+                name: "manage-project-lost-worker-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Recover lost worker",
+                    "Retire resources and allow replacement",
+                    "Recovery preserves the checkout and committed work",
+                ],
+                postActionIdentifiers: ["project-settings-execution-result"],
+                postActionText: [
+                    "Worker connection recovered",
+                    "task completion was not claimed",
+                    "fresh continuation",
+                ],
+                pressIdentifiers: ["project-settings-execution-recover"],
+                minimumElementSizes: [
+                    "project-settings-execution-recover": .init(width: 44, height: 32),
+                ]
+            )
+        }
+
+        XCTAssertEqual(recoveryCalls, 2)
+        XCTAssertEqual(retirementCalls, 0)
+    }
+
+    func testManageProjectReportsPersistedRecoveryWhenSuccessAuditIsPending() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-recovery-audit")
+        let registration = ProjectRegistration(projectID: projectID,
+            registrationID: "manage-project-recovery-audit-registration", requestGeneration: 1)
+        var assignment = ProjectExecutionAssignment(id: "delivery-recovery-audit",
+            registration: registration,
+            checkoutPath: "/Synthetic/Execution/Worktrees/manage-project-recovery-audit/delivery-recovery-audit",
+            role: .delivery, permissionProfile: "rr-delivery-recovery-audit",
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Approved recovery fixture",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .authorized, sessionID: "lost-session",
+            worktree: .init(
+                checkout: "/Synthetic/Execution/Worktrees/manage-project-recovery-audit/delivery-recovery-audit",
+                baseline: String(repeating: "a", count: 40),
+                branch: "codex/rr-manage-project-recovery-audit-delivery-recovery-audit",
+                commonGitDirectory: "/Synthetic/Repository/.git", primaryRoot: "/Synthetic/Repository"),
+            work: .init(projectID: projectID, ticketID: "manage-project", taskID: "task-02",
+                outcome: "Relocate controls", title: "Manage Project Task02",
+                taskPlanRevision: 1, phaseID: "phase-six", phaseRevision: 1))
+        assignment.launchReserved = true
+        var recovered = assignment
+        recovered.state = .stopped; recovered.connectionClosed = true; recovered.uncertainOutcome = true
+        recovered.lostWorkerRecovery = .init(requestID: UUID(), priorState: .authorized,
+            candidateRevision: String(repeating: "b", count: 40),
+            process: .init(version: 1, observedAt: Date(timeIntervalSince1970: 1_790_049_600),
+                executablePath: CodexExecutionIdentity.executable,
+                permissionProfile: recovered.permissionProfile,
+                argumentMarker: "permissions.\(recovered.permissionProfile).network.enabled=false"),
+            grantDisposition: .matchingGrantReleased)
+        var currentAssignment = assignment
+        var recoveryCalls = 0
+
+        try await render(
+            ManageProjectView(
+                registration: registration,
+                projectName: "Recovery audit pending",
+                tasks: [],
+                initialSettings: .init(registration: registration,
+                    projectName: "Recovery audit pending", excludedTaskIDs: []),
+                loadSettings: {
+                    .init(registration: registration,
+                        projectName: "Recovery audit pending", excludedTaskIDs: [])
+                },
+                saveSettings: nil,
+                manageExecutionHook: nil,
+                loadExecutionAssignments: { [currentAssignment] },
+                retireExecutionAssignment: nil,
+                recoverLostWorker: { _ in
+                    recoveryCalls += 1
+                    currentAssignment = recovered
+                    throw StoreError.unavailable("Synthetic success audit failure after recovery persisted.")
+                },
+                reopenCurrentRegistration: { _ in }
+            ),
+            name: "manage-project-recovery-audit-pending",
+            width: 620,
+            expected: nil,
+            absentText: ["The worker connection was not recovered."],
+            presentIdentifiers: ["project-settings-execution-recover"],
+            postActionIdentifiers: ["project-settings-execution-result"],
+            postActionText: [
+                "Worker connection recovered",
+                "audit record is still pending",
+                "task completion was not claimed",
+                "Finish recovery audit",
+            ],
+            pressIdentifiers: ["project-settings-execution-recover"],
+            afterPressIdentifiers: [["project-settings-execution-recover"]]
+        )
+
+        XCTAssertEqual(recoveryCalls, 1)
+    }
+
     func testProjectRemovalConfirmationAndRemovedHistoryAtWideAndCompactWidths() async throws {
         let projectID = ProjectID(rawValue: "project-removal-rendering")
         let registration = ProjectRegistration(

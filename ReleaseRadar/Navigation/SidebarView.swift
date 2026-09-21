@@ -363,6 +363,7 @@ struct SidebarView: View {
                         },
                         loadExecutionAssignments: { registration in try await model.executionAssignments(registration: registration) },
                         retireExecutionAssignment: { registration, expected in try await model.retireExecutionAssignment(registration: registration, expected: expected) },
+                        recoverLostWorker: { registration, expected in try await model.recoverLostWorker(registration: registration, expected: expected) },
                         availableCodexTasks: model.codexTasks(for: projectID),
                         loadProjectHealth: { await model.projectHealth(for: projectID) },
                         reauthorizeProjectHealth: { folder, identity in

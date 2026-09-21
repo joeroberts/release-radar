@@ -123,6 +123,7 @@ struct ManageProjectView: View {
     let manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?
     let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
     let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
+    let recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)?
     let reopenCurrentRegistration: (ProjectSettingsSnapshot) -> Void
 
     @State private var settings: ProjectSettingsSnapshot?
@@ -150,6 +151,7 @@ struct ManageProjectView: View {
         manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?,
         loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?,
         retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?,
+        recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)? = nil,
         reopenCurrentRegistration: @escaping (ProjectSettingsSnapshot) -> Void
     ) {
         self.registration = registration
@@ -160,6 +162,7 @@ struct ManageProjectView: View {
         self.manageExecutionHook = manageExecutionHook
         self.loadExecutionAssignments = loadExecutionAssignments
         self.retireExecutionAssignment = retireExecutionAssignment
+        self.recoverLostWorker = recoverLostWorker
         self.reopenCurrentRegistration = reopenCurrentRegistration
         _settings = State(initialValue: initialSettings)
         _isLoadingSettings = State(initialValue: initialSettings == nil)
@@ -298,7 +301,7 @@ struct ManageProjectView: View {
                             VStack(alignment: .leading, spacing: 10) { executionButtons }
                         }
                     }
-                    if retireExecutionAssignment != nil, !executionAssignments.isEmpty {
+                    if (retireExecutionAssignment != nil || recoverLostWorker != nil), !executionAssignments.isEmpty {
                         Picker("Worker resources", selection: $selectedAssignmentID) {
                             ForEach(executionAssignments, id: \.id) { assignment in
                                 Text("\(assignment.work?.title ?? assignment.id) — \(assignment.state.rawValue)").tag(assignment.id)
@@ -306,10 +309,29 @@ struct ManageProjectView: View {
                         }
                         .disabled(isSaving)
                         .accessibilityIdentifier("project-settings-execution-assignment")
-                        Button("Retire resources and allow replacement") { performRetirement() }
-                            .buttonStyle(RekonSecondaryButtonStyle())
-                            .disabled(isSaving || selectedExecutionAssignment == nil)
-                            .accessibilityIdentifier("project-settings-execution-retire")
+                        if recoverLostWorker != nil, selectedExecutionAssignmentCanRecover {
+                            Text(selectedExecutionAssignmentNeedsRecoveryAudit
+                                ? "The worker connection was recovered and its checkout and committed work were preserved, but the audit record is still pending. Finishing the audit does not complete or review the task."
+                                : "Recovery preserves the checkout and committed work. It records the prior outcome as uncertain and enables only a fresh continuation; it does not complete or review the task.")
+                                .font(.caption)
+                                .foregroundStyle(RekonTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button(selectedExecutionAssignmentNeedsRecoveryAudit ? "Finish recovery audit" : "Recover lost worker") {
+                                performLostWorkerRecovery()
+                            }
+                                .buttonStyle(RekonSecondaryButtonStyle())
+                                .disabled(isSaving)
+                                .accessibilityIdentifier("project-settings-execution-recover")
+                                .accessibilityHint(Text(selectedExecutionAssignmentNeedsRecoveryAudit
+                                    ? "Records the pending audit for the existing recovered connection without repeating process or grant recovery."
+                                    : "Verifies that the exact worker process is absent, releases its matching retained grant, and preserves committed work for a fresh continuation."))
+                        }
+                        if retireExecutionAssignment != nil {
+                            Button("Retire resources and allow replacement") { performRetirement() }
+                                .buttonStyle(RekonSecondaryButtonStyle())
+                                .disabled(isSaving || selectedExecutionAssignment == nil)
+                                .accessibilityIdentifier("project-settings-execution-retire")
+                        }
                     }
                     if let executionMessage {
                         RekonCallout(tone: executionFailed ? .danger : .information, systemImage: executionFailed ? "exclamationmark.triangle" : "checkmark.circle") {
@@ -347,6 +369,27 @@ struct ManageProjectView: View {
 
     private var selectedExecutionAssignment: ProjectExecutionAssignment? {
         executionAssignments.first { $0.id == selectedAssignmentID }
+    }
+
+    private var selectedExecutionAssignmentCanRecover: Bool {
+        guard let assignment = selectedExecutionAssignment else { return false }
+        if assignment.lostWorkerRecovery != nil {
+            return assignment.retirement == nil && assignment.lostWorkerRecovery?.auditCompleted != true
+                && assignment.role == .delivery && assignment.work != nil
+                && assignment.launchReserved == true && assignment.connectionClosed == true
+                && assignment.sessionID?.isEmpty == false && assignment.state == .stopped
+                && assignment.uncertainOutcome == true
+        }
+        return assignment.retirement == nil
+            && assignment.role == .delivery && assignment.work != nil
+            && assignment.launchReserved == true && assignment.connectionClosed != true
+            && assignment.sessionID?.isEmpty == false
+            && [.authorized, .stopped, .unknown].contains(assignment.state)
+    }
+
+    private var selectedExecutionAssignmentNeedsRecoveryAudit: Bool {
+        selectedExecutionAssignment?.lostWorkerRecovery?.auditCompleted != true
+            && selectedExecutionAssignment?.lostWorkerRecovery != nil
     }
 
     private func loadSettingsSection() async {
@@ -455,6 +498,52 @@ struct ManageProjectView: View {
                 executionMessage = error.localizedDescription
             }
             await loadExecutionSection(preservingFeedback: true)
+        }
+    }
+
+    private func performLostWorkerRecovery() {
+        guard let recoverLostWorker, let expected = selectedExecutionAssignment,
+              selectedExecutionAssignmentCanRecover else { return }
+        isSaving = true
+        executionMessage = nil
+        executionFailed = false
+        Task {
+            defer { isSaving = false }
+            let wasFinishingAudit = expected.lostWorkerRecovery != nil
+            var failure: Error?
+            do {
+                try await recoverLostWorker(expected)
+            } catch {
+                failure = error
+            }
+            await loadExecutionSection(preservingFeedback: true)
+            if let failure {
+                if executionLoadFailed {
+                    executionFailed = true
+                    executionMessage = "The recovery outcome could not be confirmed after the operation failed. Reload execution resources before trying again. The checkout and uncertain outcome remain preserved. \(failure.localizedDescription)"
+                } else if let current = selectedExecutionAssignment,
+                   current.id == expected.id,
+                   let receipt = current.lostWorkerRecovery,
+                   (expected.lostWorkerRecovery == nil
+                        || expected.lostWorkerRecovery?.requestID == receipt.requestID) {
+                    if receipt.auditCompleted == true {
+                        executionFailed = false
+                        executionMessage = expected.lostWorkerRecovery == nil
+                            ? "Worker connection recovered and its audit finished. The checkout and committed work were preserved; task completion was not claimed."
+                            : "Recovery audit finished for the existing recovered worker connection. The checkout and committed work remain preserved; task completion was not claimed."
+                    } else {
+                        executionFailed = true
+                        executionMessage = "Worker connection recovered, but its audit record is still pending. The checkout and committed work were preserved; task completion was not claimed. Choose Finish recovery audit to reconcile the same recovery request. \(failure.localizedDescription)"
+                    }
+                } else {
+                    executionFailed = true
+                    executionMessage = "The worker connection was not recovered. \(failure.localizedDescription) The checkout, permission profile, and uncertain outcome were preserved."
+                }
+            } else if wasFinishingAudit {
+                executionMessage = "Recovery audit finished for the existing recovered worker connection. The checkout and committed work remain preserved; task completion was not claimed."
+            } else {
+                executionMessage = "Worker connection recovered. The checkout and committed work were preserved; task completion was not claimed. Start a fresh continuation from this recovered assignment."
+            }
         }
     }
 }
