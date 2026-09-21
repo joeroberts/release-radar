@@ -49,10 +49,18 @@ reviewer connection is closed; no review pass or task completion is claimed.
 A supported correction assignment `delivery-8c2424da-7943-42b3-ae85-fd2b5cb11bb1`
 (preparation audit `B7BB50CE-1D5F-40F1-BFE5-7CC4D3F82575`) starts from `cfa87c10`.
 Worker `8494378B-B6D9-4FFF-B46E-836474295DB6`, task
-`01a0c1a0-d4f8-7bb2-8da9-3b3a1d6fc903`, is adding a focused recovery regression
-before the bounded correction. Effective Terra/medium, exact assigned checkout
-and profile, no network were verified. Build Agent retains compilation/Git
-ownership; only affected checks and correction review will repeat.
+`01a0c1a0-d4f8-7bb2-8da9-3b3a1d6fc903`, completed correction `236f2265` after the focused regression reproduced the missing
+recovery action. Three affected tests pass: actual stale-registration recovery,
+ordinary transient retry, and immediate opening. The recovery explicitly opens a
+new same-project registration presentation without putting replacement settings
+under the stale identity. The delivery connection is closed. Independent correction
+review is running as `review-dc39dd28-c9bf-4ca4-85e9-0f96a7f17c23`, audit
+`902C4654-5247-4378-BC33-02D90FFA924E`, worker
+`9A3D36F7-193C-45C5-B4D1-6488E819F0CC`, task
+`01a0c1ae-fb65-7c92-a71c-a4b66b23eb06`. Effective Terra/high, exact review
+profile/root and `.build` scratch-only writes were verified. Complete rendered
+wide/compact images and the exact correction diff are staged within that review
+checkout. No review pass, completion or acceptance is inferred.
 No permission, installed-app or RR completion changes were made.
 Temporary logs, XCResults and diagnostic attachments remain in canonical
 `.build/native-checks`. Preserve the worker checkout and result bundles.
