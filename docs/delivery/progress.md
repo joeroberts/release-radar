@@ -2,22 +2,20 @@
 
 ## September 20 — Manage Project resumed
 
-Budget safety checkpoint: observed weekly usage **68%**, up **2 percentage
-points** from startup 66%; approximate ceiling remains **69.4%**. Main stopped
-new dispatch before creating the approved repair task, leaving margin for delayed
-shared usage and handoff. Build Agent was idle at its last completed checkpoint.
-After this documentation checkpoint, pause the goal under the owner's explicit
-budget-pause authorization. Task02 tests/causal RED are preserved at `0a51ee1d`;
-production, independent review, integration and local delivery remain outstanding.
-Resume with the approved isolated Sol/high repair task from a committed baseline
-containing its brief and this authorization; do not ask for this exception again.
-Then return to Manage Project → Navigation → Guided Setup, reconciling Outcome 3
-before Guided Setup. Documentation reconciliation/reconstruction remain Backlog.
+Owner removed usage tracking and the weekly budget ceiling after the pause.
+Those older budget instructions are superseded; do not measure or enforce them.
+The approved isolated recovery task has been requested outside the RR launcher,
+using Sol/high and committed baseline `8a15bab9516b2a21c033538b64c51b9ee5a4e2ae`.
+Pending setup client ID: `client-new-thread:e799c0e2-617a-48e6-99a5-35fccfb305b4`.
+Do not duplicate this creation. First checkpoint is read-only: establish a safe
+recovery path for the retained legacy assignment before source edits. Build Agent
+retains compilation/Git; Main retains ledger/catalog. Task02's tests and causal
+RED remain preserved at `0a51ee1d`; remaining feature sequence and exclusions stand.
 
 Owner approved a narrowly scoped lost-worker recovery implementation to unblock
 Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
 The owner explicitly approved creating the separate isolated Codex repair task
-outside the blocked RR launcher; no repair writer has been launched. Production edits require a concrete safe recovery
+outside the blocked RR launcher; setup for that repair task is pending. Production edits require a concrete safe recovery
 path for this legacy assignment, not merely future prevention. Catalog addition is
 pending validation and separate acceptance. Main owns docs; Build Agent owns Git
 and compilation. One independent recovery/security/UX review is required.
