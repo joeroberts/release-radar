@@ -125,4 +125,11 @@ reviewed the narrowed candidate, native wide/compact lifecycle images, authority
 retention and recovery. Final verdict: pass, no Required findings. Both delivery
 and review worker connections are closed and their bounded tasks archived.
 Cleanup remains separate; #116 experimental work is not a future dependency.
-Local release and post-restart tracked closeout remain outstanding.
+Local release 0.1.35 (1) completed: installer/tag commit
+`716376939a3d36c11d5bd7656e3893821d50ec7d`, exact remote tag readback matching.
+Repository and Downloads DMGs match SHA-256
+`24d824bfc16ae61948ea6573705b4a803e109a2382a1db0521a925adc9a2a7dc`.
+Mounted and installed app identity, strict signing/hardened runtime and
+installed/staged executable equality passed. Installation verification completed
+September 21 at 13:42:51 EDT. Post-restart evidence, task completion and Needs
+review remain outstanding; owner acceptance is not inferred.

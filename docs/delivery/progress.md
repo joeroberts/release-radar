@@ -77,10 +77,27 @@ and compact containment regression tests. Those belong to
 start fresh; experimental implementation is not to be retained for future reuse.
 None is integrated into the canonical candidate. Worktree cleanup is separate
 and has not occurred. Main owns ledger; Build owns compilation/Git/release.
-Next: one authorized local patch release, then wait for owner Codex restart
-before RR connector calls. After restart record verified evidence, complete both
-existing tasks and move Navigation to Needs review. Owner acceptance remains
-separate. No release or task completion is claimed yet.
+Navigation **0.1.35 (1)** is locally delivered. Source preparation is
+`3fc33b07`; version metadata `64d62be9`; installer commit and annotated
+`v0.1.35` target `716376939a3d36c11d5bd7656e3893821d50ec7d`. Exact tag pushed;
+remote peeled commit matches. No branch push, PR, merge or notarization.
+`dist/ReleaseRadar-0.1.35.dmg` and Downloads copy are byte-identical, SHA-256
+`24d824bfc16ae61948ea6573705b4a803e109a2382a1db0521a925adc9a2a7dc`.
+Read-only mounted DMG and installed `/Applications/ReleaseRadar.app` verified as
+`com.rekonlabs.ReleaseRadar`, 0.1.35 (1), team `2UA854NLX4`, with strict deep
+signatures and hardened runtime. Installed/staged executable and CodeResources
+match. Local installation verification completed September 21 at 13:42:51 EDT.
+
+**Waiting for owner-confirmed Codex restart; no RR connector calls until then.**
+After restart record verified evidence, complete both existing tasks and move
+Navigation to Needs review. Owner acceptance remains separate; neither task
+completion nor this transition has occurred. Preserve the explicit #116 exclusion.
+Build-generated tracked `dist/ReleaseRadar.app` changes remain uncommitted,
+consistent with prior release practice using the versioned DMG as artifact.
+Pre-existing untracked `.codex/config.toml` and `.codex/hooks.json` remain untouched.
+Temporary Navigation build/test outputs and managed checkouts await separate
+cleanup; no cleanup or reset occurred. The revised goal is not complete until
+supported post-restart readback confirms both task completions and Needs review.
 The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
 merged by the owner; canonical main was fast-forwarded and the merged branch removed. `codex/cleanup-record` was removed
 locally and remotely after merged-PR and ancestry verification. The clean ordinary
