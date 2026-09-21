@@ -23,22 +23,21 @@ missing immediate panel, local retry and registration-mismatch handling (exit 65
 finalized readable `manage-project-task01-red-1.xcresult` in that checkout's
 `.build/native-checks/`). The same managed worker is now implementing Task01.
 Build Agent owns compilation and commits. Task01 implementation now compiles.
-Latest executed focused run (`manage-project-task01-green-5`) passed immediate
-opening but failed the two error/retry tests because the Retry accessibility
-identifier remains unavailable; completion and independent review remain pending.
-A test-only failure attachment is implemented to capture the accessibility
-hierarchy, but both diagnostic launches timed out before XCTest connected,
-including one `test-without-building` attempt. Neither ran the diagnostic or
-produced behavioral evidence. Both exact runners and hosts are confirmed stopped;
-no further launch is pending. Saved spindump identifies a pre-initialization
-macOS sandbox approval wait; a successful earlier host also required an AppData
-privacy decision. Full Disk Access denial appears in both successful and failed
-runs and is not established as the cause. Computer-use access to the system
-permission-dialog surface was explicitly denied. The owner has been asked for
-the exact visible privacy prompt, or confirmation that none is visible; further
-launches wait for that response. Do not bypass the protected UI, grant permissions,
-or repeat unchanged launches. No permissions or installed app changes were made
-for these tests. Preserve the worker checkout and result bundles.
+All three focused native rendering tests pass against the managed working tree
+(`manage-project-task01-green-6-ordinary`, exit 0: 3 passed, 0 failed, 0 skipped):
+immediate opening, registration-mismatch rejection, and local settings retry.
+The owner supplied the macOS “access data from other apps” prompt. Build Agent
+moved generated output to canonical `.build/manage-project-task01-derived-data`
+without changing permissions or the managed source checkout; test startup succeeds.
+The subsequent actual window accessibility diagnostic showed Retry inherited its
+card's section identifier. Moving section identifiers to their heading text fixed
+that failure without weakening assertions. Four existing regressions executed: settings persistence/stale-generation, archive,
+and removal checks passed; usable Overview failed to find “Manage Project” in
+accessibility text. The worker is classifying that failure before any affected
+rerun. New-panel wide/compact visual verification and independent review remain
+pending. No permission, installed-app or RR completion changes were made.
+Temporary logs, XCResults and diagnostic attachments remain in canonical
+`.build/native-checks`. Preserve the worker checkout and result bundles.
 Manage Project remains In Progress with all three tasks pending. Before future
 preparation, selected context must be committed and stable.
 
