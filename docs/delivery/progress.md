@@ -27,7 +27,7 @@ the prior Build is idle and archived per the originating coordinator.
 Read AGENTS, this current section, catalog/index and only the next controlling
 brief; do not ingest historical conversations or handoff sections.
 Use canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`,
-preserve branch `codex/manage-project-context-recovery`, all worktrees and artifacts,
+use merged main `f1e8d48d` as the Navigation preparation baseline,
 and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
 
 RR accepted catalog is `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`;
@@ -42,10 +42,15 @@ The catalog transition readback is valid with matching accepted/candidate digest
 Exact committed requests and returned audit/revision receipts are retained in the
 [Task03 reconciliation](task-briefs/2026-09-21-manage-project-task03.md#september-21-owner-approved-tracked-reconciliation).
 Supported inventory confirms all three completions; owner acceptance is separate.
-**Current priority: owner-authorized Release Radar-only Git and temporary-resource
-cleanup. Navigation remains paused; no implementation or worker was started.**
+**Current priority: Navigation resumed explicitly by the owner after PR #115 merged.**
+The [Navigation brief](task-briefs/2026-09-21-navigation.md) controls the existing two
+pending tasks at plan revision 1. Preparation begins from merged main `f1e8d48d`;
+no product worker has started. Main owns documentation preparation; Build commits
+it before managed dispatch. One final independent UI/authority/recovery reviewer
+covers the coherent Navigation batch. Catalog addition is pending validation and
+app acceptance; task definitions and owner acceptance remain unchanged.
 The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
-opened against main; no merge is authorized. `codex/cleanup-record` was removed
+merged by the owner; canonical main was fast-forwarded and the merged branch removed. `codex/cleanup-record` was removed
 locally and remotely after merged-PR and ancestry verification. The clean ordinary
 `release-guidance-0.1.22-installed-baseline` worktree and branch were removed after
 confirming no branch-only patches versus main. Other ordinary branches retain
@@ -55,7 +60,7 @@ explicit generated build/staging/PR-body paths, approximately 5.45 GB; project
 installers and unrelated Codex configuration remain intact. RR-owned locked
 worktrees are retained for the owner to clean up later through app-managed retirement.
 
-After the owner resumes it, Navigation covers Archive/Remove relocation
+Navigation covers Archive/Remove relocation
 and remaining approved navigation, excluding delivered toolbar/search. Guided Setup
 follows Navigation and first reconciles its proposed remainder against accepted
 Outcome 3 (revision 4). Documentation reconciliation and plan reconstruction stay

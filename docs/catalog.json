@@ -7542,6 +7542,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-p6-navigation-brief-2026-09-21",
+      "path": "docs/delivery/task-briefs/2026-09-21-navigation.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.rr-p6-navigation",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
