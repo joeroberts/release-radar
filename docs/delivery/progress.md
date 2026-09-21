@@ -1,5 +1,24 @@
 # Release Radar delivery state
 
+## September 21 — Manage Project verified; local delivery next
+
+Task03 independent UI/recovery assessment passed with no Required defects or
+remaining in-scope gaps. RR worker `4B8E5CBE-9636-4EE4-B60F-0B9E19586336`
+completed its final turn without task-owned processes or edits. Build's focused
+checks passed 2/2 for stale-settings/local retry and 5/5 for root authorization,
+stale lifecycle previews, failure rollback and archived/removed routing on
+canonical `c8dd5cbc` (same product as assigned `39c78658`). Results:
+`.build/task03-checkpoint/Logs/Test/Test-ReleaseRadar-2026.09.21_11-43-33--0400.xcresult`
+and `.build/task03-lifecycle-authority/Logs/Test/Test-ReleaseRadar-2026.09.21_11-46-21--0400.xcresult`.
+Applicable Task01/02 checks and independent reviews remain terminal.
+
+Manage Project implementation and verification are complete; next is the standing
+authorized local release, owned by Build. No RR task completion or owner acceptance
+is inferred. Archive/Remove relocation remains Navigation work. Preserve current
+branches, worktrees and installers. After installation, wait for the owner's Codex
+restart before connector use; then refresh Main/Build contexts before Navigation
+as agreed. No usage tracking.
+
 ## September 21 — Task02 integrated; Task03 next
 
 Task02 is implemented, directly verified, independently reviewed and locally
