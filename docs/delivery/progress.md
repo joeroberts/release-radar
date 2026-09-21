@@ -30,7 +30,7 @@ Use canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_r
 use merged main `f1e8d48d` as the Navigation preparation baseline,
 and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
 
-RR accepted catalog is `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`;
+RR accepted catalog is `8f036fe21eed6c51a17b9b66ad73837369322cfe23d5992ad4fad08cabf2af77`;
 project/root `project-fffdc0e0b15b9b86` / `project-fffdc0e0b15b9b86-root-0`,
 registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
 Manage Project is **Accepted** following the owner's explicit acceptance direction.
@@ -46,11 +46,18 @@ Exact committed requests and returned audit/revision receipts are retained in th
 Supported inventory confirms all three completions and the owner-directed acceptance.
 **Current priority: Navigation resumed explicitly by the owner after PR #115 merged.**
 The [Navigation brief](task-briefs/2026-09-21-navigation.md) controls the existing two
-pending tasks at plan revision 1. Preparation begins from merged main `f1e8d48d`;
-no product worker has started. Main owns documentation preparation; Build commits
-it before managed dispatch. One final independent UI/authority/recovery reviewer
-covers the coherent Navigation batch. Catalog addition is pending validation and
-app acceptance; task definitions and owner acceptance remain unchanged.
+pending tasks at plan revision 1. Navigation is **In progress**, confirmed by supported
+inventory after the owner-directed transition (audit `8A55FF28-C04A-4668-AAB0-8DDAC0A1C42D`).
+The owner approved the catalog addition; acceptance succeeded (audit
+`91D766D9-5230-434C-BCCA-ABEB816C0A9C`). Task01 managed assignment
+`delivery-70c06d0c-d517-49db-93ce-64d4fc9bc307` starts from committed preparation
+`0b535d85c42b375abbd2723b9da63537ecdcf83e`. Worker
+`5E1F35C7-1878-488B-87E5-5C4376BDD6DF`, task `01a0c4c9-5a31-78b3-8063-1dd2d9379391`,
+is running the test-first relocation assignment. Effective Terra/medium and exact
+isolated checkout/profile were verified in worker status. Main owns ledger and
+Build owns compilation/Git. One final independent UI/authority/recovery reviewer
+covers the coherent Navigation batch. No task completion or owner acceptance is
+inferred from dispatch.
 The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
 merged by the owner; canonical main was fast-forwarded and the merged branch removed. `codex/cleanup-record` was removed
 locally and remotely after merged-PR and ancestry verification. The clean ordinary
