@@ -2,15 +2,24 @@
 
 ## September 20 — Manage Project resumed
 
-**Current work: Task01 is locally verified and integrated; Task02 awaits catalog acceptance.**
+**Current work: Task01 is locally verified and integrated; Task02 managed delivery is running.**
 Task02 controlling brief/catalog/index are committed at `f781701d`; documentation
 check passes. Supported preparation returned `catalogUnaccepted` without entity IDs.
 Read-only transition validation confirms `isValid: true`, repository
 `e7475429-ef51-4368-ad9e-61d9073d5a4f`, catalog v1, accepted digest
 `93a682a7548c6006414447d01d8c0b7ce6cad349487ae89927cdbb88bbc25c2f`, candidate
 `71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd`.
-Owner approval for that catalog acceptance was requested; no acceptance performed.
-Preserve this exact preparation request for replay after acceptance:
+Owner approved that exact catalog transition. Acceptance request
+`847def6b-7f89-44c7-b3fb-f20e49004c47` succeeded with audit
+`38BD893F-03C3-4DB4-B322-587BF5848868`. Unchanged preparation replay succeeded,
+audit `B6ED653D-107C-41FF-BBE3-25AE0A52813C`, assignment
+`delivery-f913b890-7149-450c-bf8c-2b515cce75a0`, baseline `5d8436a8`.
+Worker `FC3954DD-14A3-418C-A655-63C036492ABE`, task
+`01a0c1c3-71e6-7171-8b50-e6e00cae5f04`, is preparing focused tests before
+production edits. Start readback verified Terra/medium, exact assigned checkout
+and profile, on-request approval with auto-review, and network disabled.
+Build Agent retains compilation/Git ownership. No ticket acceptance is implied.
+Successful preparation request retained for identity/readback:
 ```json
 {"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"f913b890-7149-450c-bf8c-2b515cce75a0","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reason":"Continue owner-authorized Manage Project Task02 control relocation from canonical committed f781701d containing reviewed Task01 and Task02 brief. Existing task definitions and scope unchanged."}
 ```
