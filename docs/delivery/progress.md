@@ -2,6 +2,28 @@
 
 ## September 20 — Manage Project resumed
 
+Main replacement startup (September 20): canonical task root verified exactly as
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`; requested
+Main profile Astra/medium (effective settings not exposed by the available task
+readback). Account weekly usage measured **66% used** (10,080-minute window).
+Approximate stopping threshold: `66 + 0.10 × (100 − 66) = 69.4% used`.
+Monitor at meaningful checkpoints and stop dispatching with a safety margin;
+checkpoint active workers, preserve this handoff and pause the goal under explicit
+owner authorization. Shared/rounded/delayed usage cannot provide exact enforcement.
+The goal retains Manage Project → Navigation → Guided Setup, with delivered
+Outcome 3 reconciliation before Guided Setup; documentation reconciliation and
+plan reconstruction remain Backlog.
+
+Takeover blocker: supported `worker_status` for existing worker
+`FC3954DD-14A3-418C-A655-63C036492ABE` refused: “The execution assignment does not
+match this project, checkout or session. Return to the coordinator.” This is a
+replacement-session readback failure, not evidence that the worker stopped or
+completed. Preserve assignment `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`;
+no duplicate launch, production-edit release, permission change or acceptance.
+Next action requires supported access to that same worker from its owning
+coordinator/session. Then obtain its tests-only terminal checkpoint, have Build
+Agent establish RED, and continue production through the same managed assignment.
+
 **Current work: Task01 is locally verified and integrated; Task02 managed delivery is running.**
 Task02 controlling brief/catalog/index are committed at `f781701d`; documentation
 check passes. Supported preparation returned `catalogUnaccepted` without entity IDs.
