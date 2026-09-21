@@ -1,5 +1,42 @@
 # Release Radar delivery state
 
+## September 21 — recovery repair delivered; Task02 awaits connector refresh
+
+Reviewed recovery repair is locally delivered as **0.1.33 (1)**. Build integrated
+`e539299f` and `7c839deb`; release metadata `2af561fa`; release/tag commit
+`5c7df64262db2ab94fc168b67867562412728e6d`. Exact annotated `v0.1.33` tag pushed
+and remote peeled commit verified. No branch push, PR, merge or notarization.
+Package/lifecycle checks passed 29 tests; signed staging, DMG layout/identity,
+strict deep signing and installed `/Applications/ReleaseRadar.app` verified.
+`dist/ReleaseRadar-0.1.33.dmg` and Downloads copy are identical, SHA-256
+`002fd1753a799391aebc429d732e1b57d21ac715cfaf938079ca7c1a3b0f25ea`.
+Original focused 8/8, dispatcher 3/3 and distinct-successor 1/1 checks plus
+independent architecture/security PASS are terminal. Writer and reviewer tasks
+are complete and archived; all commits/resources remain preserved.
+
+**Current blocker:** supported delivery inventory failed before submission with
+bridge transport connection error, including after launching installed app.
+Settings → Connections confirms shipped/installed plugin 0.1.33 and explicitly
+says a new Codex task is needed to load the plugin change. App bridge check says
+Available, explicitly not certification of every Codex client. No pending Task02
+request was resubmitted, no worker launched, no receipt changed. Refresh this
+client connection through supported Codex controls before continued application
+readback. Do not treat app bridge availability as client connection success.
+
+Repair brief is closed as completed/non-authoritative following delivered repair;
+its identity/path remain preserved. Catalog transition remains **pending**, with
+last accepted digest `ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9`.
+After refreshed connection, obtain exact validated transition and explicit catalog
+acceptance before Task02 continuation. No task definitions or completion state
+changed. Then read pending-versus-terminal status for exact request `3e7e5581…`
+recorded below and continue through supported RR, preserving its exact envelope.
+Live Task02 prepare/start verification remains outstanding; local repair delivery
+does not imply live continuation or Task02 acceptance.
+
+Retained temporary build outputs (no deletion): `.build/release-0.1.33-version-tests/`,
+`.build/release-0.1.33-version-tests.log`, `.build/release-0.1.33-stage.log`,
+`.build/release-0.1.33-install.log`, and focused native-check result/log artifacts.
+
 ## September 21 — Task02 recovery ancestry: reviewed repair authorized
 
 Fresh Chief Architect task `01a0c3ef-6e5f-70c1-a226-96ae893c402d` assessed

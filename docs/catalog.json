@@ -7516,9 +7516,8 @@
       "artifactID": "rr-recovery-ancestry-repair-brief-2026-09-21",
       "path": "docs/delivery/task-briefs/2026-09-21-recovery-ancestry-repair.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.recovery-ancestry-repair",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs",
       "supersedes": [],
       "applicationSensitivity": [
