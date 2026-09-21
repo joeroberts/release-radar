@@ -56,6 +56,11 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let projectID = ProjectID(rawValue: "preview-consumers")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "preview-consumers-registration",
+            requestGeneration: 1
+        )
         let evidence = EvidenceProjection(id: .init(rawValue: "consumer-evidence"), label: "Consumer evidence", path: "notes.md", isAvailable: true)
         let preview = EvidencePreview(identity: evidence.locator, path: evidence.path, status: .available,
                                       content: .text("Consumer preview", isTruncated: false))
@@ -63,6 +68,7 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let project = ProjectDashboardProjection(
             id: projectID,
             name: "Preview consumers",
+            registration: registration,
             activePhaseName: "Delivery",
             goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
             currentWorkCount: 1,
@@ -80,10 +86,13 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
                 selectActivePhase: { _ in },
                 reloadActivePhase: {},
                 reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    .init(registration: registration, projectName: "Preview consumers", excludedTaskIDs: [])
+                },
                 loadEvidencePreview: { _ in await recorder.load() }
             ),
             name: "phase3b-consumer-overview", width: 900, height: 900,
-            pressIdentifiers: ["evidence-preview-consumer-evidence"]
+            pressIdentifiers: ["project-manage", "evidence-preview-consumer-evidence"]
         )
         let detail = TicketDetailProjection(
             id: .init(rawValue: "RR-PREVIEW"),

@@ -78,6 +78,7 @@ struct ProjectHealthView: View {
                     .foregroundStyle(RekonTheme.secondaryText)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-health")
     }
 
@@ -124,6 +125,8 @@ struct ManageProjectView: View {
     let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
     let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
     let recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)?
+    let projectControls: AnyView?
+    let documentationActionErrorGeneration: Int
     let reopenCurrentRegistration: (ProjectSettingsSnapshot) -> Void
 
     @State private var settings: ProjectSettingsSnapshot?
@@ -152,6 +155,8 @@ struct ManageProjectView: View {
         loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?,
         retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?,
         recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)? = nil,
+        projectControls: AnyView? = nil,
+        documentationActionErrorGeneration: Int = 0,
         reopenCurrentRegistration: @escaping (ProjectSettingsSnapshot) -> Void
     ) {
         self.registration = registration
@@ -163,6 +168,8 @@ struct ManageProjectView: View {
         self.loadExecutionAssignments = loadExecutionAssignments
         self.retireExecutionAssignment = retireExecutionAssignment
         self.recoverLostWorker = recoverLostWorker
+        self.projectControls = projectControls
+        self.documentationActionErrorGeneration = documentationActionErrorGeneration
         self.reopenCurrentRegistration = reopenCurrentRegistration
         _settings = State(initialValue: initialSettings)
         _isLoadingSettings = State(initialValue: initialSettings == nil)
@@ -171,8 +178,9 @@ struct ManageProjectView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
                 Text("Manage Project").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(projectName).font(.headline)
@@ -186,6 +194,7 @@ struct ManageProjectView: View {
 
                 settingsSection
                 executionSection
+                projectControls
 
                 HStack {
                     Spacer()
@@ -194,7 +203,12 @@ struct ManageProjectView: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
-            .padding(28)
+                .padding(28)
+            }
+            .onChange(of: documentationActionErrorGeneration) { _, generation in
+                guard generation > 0 else { return }
+                withAnimation { proxy.scrollTo("project-documentation-action-error-anchor", anchor: .center) }
+            }
         }
         .frame(minWidth: 520, idealWidth: 620, minHeight: 460, idealHeight: 640, maxHeight: 760)
         .foregroundStyle(RekonTheme.primaryText)

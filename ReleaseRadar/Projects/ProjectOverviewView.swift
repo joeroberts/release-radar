@@ -133,52 +133,6 @@ struct ProjectOverviewView: View {
                             .foregroundStyle(RekonTheme.secondaryText)
                     }
                 }
-                guidanceCard
-                documentationSetupControls
-                SharedExecutionCompatibilityView(
-                    documentationStatus: documentationStatus,
-                    refresh: refreshDocumentation
-                )
-                if loadProjectHealth != nil {
-                    ProjectHealthView(
-                        snapshot: health,
-                        isRefreshing: isRefreshingHealth,
-                        refresh: refreshHealth,
-                        reauthorize: healthReauthorizationAction,
-                        manageRoots: repositoryRecovery == nil ? nil : { showsRootManagement = true }
-                    )
-                    if let healthRecoveryMessage {
-                        Text(healthRecoveryMessage)
-                            .font(.caption)
-                            .foregroundStyle(RekonTheme.warning)
-                            .accessibilityIdentifier("project-health-recovery-result")
-                    }
-                }
-                if let repositoryRecovery {
-                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted)
-                }
-                if !project.evidence.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Project evidence").font(.headline)
-                        ForEach(project.evidence) { evidence in
-                            EvidenceDetailView(
-                                evidence: evidence,
-                                documentationStatus: documentationStatus,
-                                restoreFolderAccess: healthReauthorizationAction,
-                                openWorktreeRecovery: repositoryRecovery == nil ? nil : { showsRootManagement = true },
-                                loadPreview: loadEvidencePreview.map { loader in
-                                    { await loader(evidence.id) }
-                                }
-                            )
-                        }
-                    }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
-                        }
-                }
-
                 VStack(alignment: .leading, spacing: 14) {
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .center, spacing: 16) {
@@ -298,6 +252,8 @@ struct ProjectOverviewView: View {
                     recoverLostWorker: recoverLostWorker.map { recover in
                         { expected in try await recover(presentation.registration, expected) }
                     },
+                    projectControls: projectManagementControls,
+                    documentationActionErrorGeneration: documentationActionErrorGeneration,
                     reopenCurrentRegistration: { settings in
                         guard settings.registration.projectID == project.id else { return }
                         manageProjectPresentation = .init(
@@ -451,6 +407,73 @@ struct ProjectOverviewView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
         .accessibilityIdentifier("project-guidance-status")
+    }
+
+    private var projectManagementControls: AnyView {
+        AnyView(VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
+                guidanceCard
+                documentationSetupControls
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("manage-project-section-documentation")
+
+            SharedExecutionCompatibilityView(
+                documentationStatus: documentationStatus,
+                refresh: refreshDocumentation
+            )
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("manage-project-section-shared-execution")
+
+            VStack(alignment: .leading, spacing: 12) {
+                if loadProjectHealth != nil {
+                    ProjectHealthView(
+                        snapshot: health,
+                        isRefreshing: isRefreshingHealth,
+                        refresh: refreshHealth,
+                        reauthorize: healthReauthorizationAction,
+                        manageRoots: repositoryRecovery == nil ? nil : { showsRootManagement = true }
+                    )
+                    if let healthRecoveryMessage {
+                        Text(healthRecoveryMessage)
+                            .font(.caption)
+                            .foregroundStyle(RekonTheme.warning)
+                            .accessibilityIdentifier("project-health-recovery-result")
+                    }
+                }
+                if let repositoryRecovery {
+                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted)
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("manage-project-section-repository-access")
+
+            if !project.evidence.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Project evidence").font(.headline)
+                    ForEach(project.evidence) { evidence in
+                        EvidenceDetailView(
+                            evidence: evidence,
+                            documentationStatus: documentationStatus,
+                            restoreFolderAccess: healthReauthorizationAction,
+                            openWorktreeRecovery: repositoryRecovery == nil ? nil : { showsRootManagement = true },
+                            loadPreview: loadEvidencePreview.map { loader in
+                                { await loader(evidence.id) }
+                            }
+                        )
+                    }
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("manage-project-section-evidence")
+            }
+        })
     }
 
     @ViewBuilder
