@@ -104,9 +104,20 @@ supported resolution. Current UI lists the original Task02 as stopped and offers
 matching permission profile; owner instruction preserves worktrees/permissions,
 so retirement has not been invoked. Build verified original clean at `0a51ee1d`
 on its preserved delivery-f913 branch; candidate `3f1498c2` is clean and contains
-that baseline. Exact owner exception requested for only the original stopped
-checkout/profile; no answer yet. Candidate/review work remains
+that baseline. Owner approved retirement of only the original stopped
+checkout/profile. Main invoked the supported UI once; it refused because a
+dependent assignment still references the candidate. UI explicitly confirmed
+the checkout was preserved; no retirement occurred. Candidate/review work remains
 preserved; no bypass, governance edits or additional recovery code authorized.
+
+Bounded source readback explains the deadlock: preparation exempts only the
+immediate recovered parent (`ProjectExecutionAssignmentCoordinator.swift:296`),
+so original f913 still blocks correction from successor 7b. Retirement refuses
+any unretired dependent (`ProjectExecutionResourceLifecycle.swift:464`), while
+correction requires its parent's existing checkout. Do not delete descendants
+or change managed records to bypass this. Separate owner authorization requested
+for a minimal recovery-ancestry correction preserving existing authority and
+permissions, with focused tests and independent review; no code work started.
 
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
