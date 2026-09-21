@@ -9,6 +9,29 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     private let provisioning: any ExecutionWorktreeProvisioning
     private let handlerPath: String
     private var preparing: [String: UUID] = [:]
+    private nonisolated let preparedAncestries = PreparedAncestryStore()
+
+    private struct ContinuationAncestry: Equatable, Sendable {
+        let assignments: [ProjectExecutionAssignment]
+        let recoveredAssignmentIDs: Set<String>
+    }
+
+    private final class PreparedAncestryStore: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [String: ContinuationAncestry] = [:]
+
+        func value(for assignmentID: String) -> ContinuationAncestry? {
+            lock.withLock { values[assignmentID] }
+        }
+
+        func set(_ value: ContinuationAncestry?, for assignmentID: String) {
+            lock.withLock { values[assignmentID] = value }
+        }
+
+        func remove(_ assignmentID: String) {
+            _ = lock.withLock { values.removeValue(forKey: assignmentID) }
+        }
+    }
 
     public init(root: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
                 configuration: any ProjectExecutionConfiguring, handlerPath: String,
@@ -93,20 +116,188 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             && parent.worktree?.primaryRoot == primaryRoot
     }
 
+    private nonisolated static func ancestryIdentity(
+        _ assignment: ProjectExecutionAssignment
+    ) -> ProjectExecutionAssignment {
+        var identity = assignment
+        if var recovery = identity.lostWorkerRecovery {
+            // Audit completion is intentionally separate from continuation
+            // authority. Every recovery fact that established the candidate is
+            // retained in the identity comparison.
+            recovery.auditCompleted = nil
+            identity.lostWorkerRecovery = recovery
+        }
+        return identity
+    }
+
+    private nonisolated func continuationAncestry(
+        parentID: String?,
+        requestedWork: ProjectExecutionWork,
+        registration: ProjectRegistration,
+        policy: ProjectExecutionPolicy,
+        storageRoot: URL,
+        inventory: [ProjectExecutionAssignment]
+    ) throws -> ContinuationAncestry? {
+        guard let parentID else { return nil }
+        let assignmentsByID = Dictionary(uniqueKeysWithValues: inventory.map { ($0.id, $0) })
+        var visited: Set<String> = []
+        var path: [ProjectExecutionAssignment] = []
+        var recoveredAssignmentIDs: Set<String> = []
+        var child: ProjectExecutionAssignment?
+        var currentID: String? = parentID
+        var commonGitDirectory: String?
+
+        while let assignmentID = currentID {
+            guard path.count < inventory.count, visited.insert(assignmentID).inserted,
+                  let current = assignmentsByID[assignmentID],
+                  current.registration == registration,
+                  current.codexContextID == policy.codexContextID,
+                  current.work == requestedWork,
+                  current.retirement == nil,
+                  let tree = current.worktree else {
+                throw ProjectExecutionError.assignmentNotAuthorized
+            }
+            let paths = try ProjectExecutionPaths(storageRoot: storageRoot,
+                projectID: requestedWork.projectID.rawValue, taskID: assignmentID)
+            guard current.checkoutPath == paths.checkout.path,
+                  tree.checkout == paths.checkout.path,
+                  tree.primaryRoot == policy.primaryRoot else {
+                throw ProjectExecutionError.assignmentNotAuthorized
+            }
+            if let commonGitDirectory {
+                guard tree.commonGitDirectory == commonGitDirectory else {
+                    throw ProjectExecutionError.identityMismatch
+                }
+            } else {
+                commonGitDirectory = tree.commonGitDirectory
+            }
+
+            let candidate = try withProjectExecutionPreparationStage(.parentCandidateValidation) {
+                try provisioning.candidateRevision(worktree: tree)
+            }
+            if let child {
+                guard child.baselineFromAssignmentID == current.id,
+                      child.worktree?.baseline == candidate else {
+                    throw ProjectExecutionError.identityMismatch
+                }
+            }
+
+            let recovered = Self.isEligibleRecoveredContinuationParent(parent: current,
+                requestedWork: requestedWork, registration: registration,
+                parentCheckoutPath: paths.checkout.path, primaryRoot: policy.primaryRoot,
+                reviewOfAssignmentID: nil)
+            if recovered {
+                guard current.lostWorkerRecovery?.candidateRevision == candidate else {
+                    throw ProjectExecutionError.identityMismatch
+                }
+                recoveredAssignmentIDs.insert(current.id)
+            } else {
+                guard Self.isEligibleClosedParent(parent: current,
+                    requestedWork: requestedWork, registration: registration,
+                    parentCheckoutPath: paths.checkout.path, primaryRoot: policy.primaryRoot,
+                    reviewOfAssignmentID: nil) else {
+                    throw ProjectExecutionError.assignmentNotAuthorized
+                }
+            }
+            path.append(Self.ancestryIdentity(current))
+            child = current
+            currentID = current.baselineFromAssignmentID
+        }
+
+        guard !recoveredAssignmentIDs.isEmpty else { return nil }
+        guard path.allSatisfy({ value in
+            value.role == .delivery && (value.lostWorkerRecovery != nil || value.connectionClosed == true)
+        }) else {
+            throw ProjectExecutionError.assignmentNotAuthorized
+        }
+        return .init(assignments: path, recoveredAssignmentIDs: recoveredAssignmentIDs)
+    }
+
+    private nonisolated static func blockingAssignment(
+        in inventory: [ProjectExecutionAssignment],
+        work: ProjectExecutionWork,
+        registration: ProjectRegistration,
+        role: ProjectExecutionAssignment.Role,
+        excluding assignmentID: String?,
+        recoveredAncestorIDs: Set<String>
+    ) -> ProjectExecutionAssignment? {
+        inventory.first(where: {
+            guard $0.id != assignmentID,
+                  $0.registration == registration,
+                  $0.work?.ticketID == work.ticketID,
+                  $0.work?.taskID == work.taskID,
+                  $0.role == role,
+                  !recoveredAncestorIDs.contains($0.id),
+                  !($0.state == .superseded && $0.retirement?.completed == true
+                    || $0.retirement?.replacementAllowed == true) else { return false }
+            return $0.state == .authorized || $0.state == .preparing || $0.state == .unknown
+                || $0.state == .stopped || $0.uncertainOutcome == true
+                || $0.finalizationFailed == true || $0.retirement != nil
+                || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed)
+        })
+    }
+
+    private nonisolated static func hasHistoricalConflict(
+        _ assignments: [ProjectExecutionAssignment]
+    ) -> Bool {
+        assignments.contains(where: {
+            $0.retirement?.completed != true && $0.retirement?.replacementAllowed != true
+                && ($0.uncertainOutcome == true || $0.state == .unknown
+                    || ($0.sessionID != nil || $0.launchReserved == true)
+                        && $0.connectionClosed != true && $0.state != .closed)
+        })
+    }
+
     /// Called synchronously by the app while its final current-work transaction
     /// is held. Configuration preparation alone never makes an assignment usable.
     public nonisolated func admitPrepared(_ value: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
         let store = try ProjectExecutionFileStore(root: root(), create: false)
         let policy = try store.policy(projectID: value.registration.projectID.rawValue)
+        let current = try store.assignment(projectID: value.registration.projectID.rawValue,
+            taskID: value.id)
         guard value.state == .preparing, value.sessionID == nil, value.launchReserved != true, value.uncertainOutcome != true,
               value.codexContextID == policy.codexContextID,
               value.preparedPolicyDigest == (try Self.policyDigest(policy)), policy.enabled, policy.bindingRecoveryPending != true,
               policy.registration == value.registration, policy.handlerPath == handlerPath,
               policy.hookReceipt?.installed == true,
-              try store.assignment(projectID: value.registration.projectID.rawValue, taskID: value.id) == value else { throw ProjectExecutionError.assignmentNotAuthorized }
+              current == value, let work = value.work else { throw ProjectExecutionError.assignmentNotAuthorized }
         guard let contextID = value.codexContextID,
               try store.codexContext()?.id == contextID else { throw CodexExecutionContextError.changed }
         try value.verifyContext()
+        let inventory = try store.assignments(projectID: value.registration.projectID.rawValue)
+        let historical = try (policy.previousProjectIDs ?? []).flatMap {
+            try store.assignments(projectID: $0)
+        } + inventory.filter { $0.registration != value.registration }
+        guard !Self.hasHistoricalConflict(historical) else {
+            throw ProjectExecutionError.assignmentNotAuthorized
+        }
+        let ancestry = try continuationAncestry(parentID: value.baselineFromAssignmentID,
+            requestedWork: work, registration: value.registration, policy: policy,
+            storageRoot: store.root, inventory: inventory)
+        guard ancestry == preparedAncestries.value(for: value.id) else {
+            throw ProjectExecutionError.assignmentNotAuthorized
+        }
+        if let ancestry {
+            guard let parentID = value.baselineFromAssignmentID,
+                  let parent = inventory.first(where: { $0.id == parentID }),
+                  let tree = parent.worktree,
+                  try withProjectExecutionPreparationStage(.parentCandidateValidation, {
+                      try provisioning.candidateRevision(worktree: tree)
+                  }) == value.worktree?.baseline else {
+                throw ProjectExecutionError.assignmentNotAuthorized
+            }
+            if let blocking = Self.blockingAssignment(in: inventory, work: work,
+                registration: value.registration, role: value.role, excluding: value.id,
+                recoveredAncestorIDs: ancestry.recoveredAssignmentIDs) {
+                let safelyScoped = blocking.work == work
+                throw ProjectExecutionPreparationConflict(diagnostic: .init(
+                    kind: safelyScoped ? .blockingAssignment : .causeUnavailable,
+                    blockingRequestID: nil,
+                    blockingAssignmentID: safelyScoped ? blocking.id : nil,
+                    evidence: .observedAtFailure
+                ))
+            }
+        }
         var admitted = value; admitted.state = .authorized; admitted.finalizationFailed = nil
         try store.saveAssignment(admitted, expected: value)
         return admitted
@@ -163,6 +354,10 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
 
     public func finishPreparation(work: ProjectExecutionWork, requestID: UUID) async {
         let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
+        preparedAncestries.remove(ProjectExecutionAssignment.Role.delivery.rawValue
+            + "-" + requestID.uuidString.lowercased())
+        preparedAncestries.remove(ProjectExecutionAssignment.Role.review.rawValue
+            + "-" + requestID.uuidString.lowercased())
         if preparing[key] == requestID { preparing.removeValue(forKey: key) }
     }
 
@@ -256,10 +451,9 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         let historical = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
             try (policy.previousProjectIDs ?? []).flatMap { try store.assignments(projectID: $0) }
         } + inventory.filter { $0.registration != registration }
-        guard !historical.contains(where: {
-            $0.retirement?.completed != true && $0.retirement?.replacementAllowed != true &&
-            ($0.uncertainOutcome == true || $0.state == .unknown || ($0.sessionID != nil || $0.launchReserved == true) && $0.connectionClosed != true && $0.state != .closed)
-        }) else { throw StoreError.unavailable("Close and explicitly retire the previous registration's worker resources in project settings before preparing replacement work. Its unresolved outcome is preserved.") }
+        guard !Self.hasHistoricalConflict(historical) else {
+            throw StoreError.unavailable("Close and explicitly retire the previous registration's worker resources in project settings before preparing replacement work. Its unresolved outcome is preserved.")
+        }
         if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
             let parent = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
                 try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
@@ -272,6 +466,10 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
             }
         }
+        let ancestry = reviewOfAssignmentID == nil ? try continuationAncestry(
+            parentID: baselineFromAssignmentID, requestedWork: work,
+            registration: registration, policy: policy, storageRoot: store.root,
+            inventory: inventory) : nil
         if let existing = inventory.first(where: { $0.id == id }) {
             guard existing.codexContextID == policy.codexContextID, existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
@@ -289,19 +487,13 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                     try store.saveAssignment(pending, expected: existing)
                 }
             }
-            return try await configure(pending, paths: paths, policy: policy, store: store)
+            return try await configure(pending, paths: paths, policy: policy, store: store,
+                ancestry: ancestry)
         }
         // Another request identity cannot silently replace an uncertain/live worker.
-        if let blocking = inventory.first(where: {
-            let isRequestedRecoveryParent = baselineFromAssignmentID == $0.id
-                && Self.isEligibleRecoveredContinuationParent(parent: $0, requestedWork: work,
-                    registration: registration, parentCheckoutPath: $0.checkoutPath,
-                    primaryRoot: policy.primaryRoot, reviewOfAssignmentID: reviewOfAssignmentID)
-            return $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
-                && !isRequestedRecoveryParent
-                && !($0.state == .superseded && $0.retirement?.completed == true || $0.retirement?.replacementAllowed == true)
-                && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || $0.retirement != nil || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
-        }) {
+        if let blocking = Self.blockingAssignment(in: inventory, work: work,
+            registration: registration, role: role, excluding: nil,
+            recoveredAncestorIDs: ancestry?.recoveredAssignmentIDs ?? []) {
             let safelyScoped = blocking.work == work
             throw ProjectExecutionPreparationConflict(diagnostic: .init(
                 kind: safelyScoped ? .blockingAssignment : .causeUnavailable,
@@ -374,11 +566,13 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             assignment.state = .preparing
             return assignment
         }
-        return try await configure(assignment, paths: paths, policy: policy, store: store)
+        return try await configure(assignment, paths: paths, policy: policy, store: store,
+            ancestry: ancestry)
     }
 
     private func configure(_ intent: ProjectExecutionAssignment, paths: ProjectExecutionPaths,
-                           policy: ProjectExecutionPolicy, store: ProjectExecutionFileStore) async throws -> ProjectExecutionAssignment {
+                           policy: ProjectExecutionPolicy, store: ProjectExecutionFileStore,
+                           ancestry: ContinuationAncestry?) async throws -> ProjectExecutionAssignment {
         var assignment = intent
         guard assignment.codexContextID == policy.codexContextID else { throw CodexExecutionContextError.changed }
         guard assignment.state == .preparing, assignment.sessionID == nil,
@@ -455,13 +649,15 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             ))
         }
         try assignment.verifyContext()
+        guard let assignmentWork = assignment.work else {
+            throw ProjectExecutionError.invalidAssignment
+        }
         if let parentID = assignment.reviewOfAssignmentID ?? assignment.baselineFromAssignmentID {
             let parent = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
                 try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: parentID)
             }
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root,
                 projectID: assignment.registration.projectID.rawValue, taskID: parentID)
-            guard let assignmentWork = assignment.work else { throw ProjectExecutionError.invalidAssignment }
             let recoveredContinuation = assignment.baselineFromAssignmentID == parentID
                 && Self.isEligibleRecoveredContinuationParent(parent: parent,
                     requestedWork: assignmentWork, registration: assignment.registration,
@@ -477,6 +673,40 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 throw ProjectExecutionError.assignmentNotAuthorized
             }
         }
+        if assignment.baselineFromAssignmentID != nil {
+            let currentInventory = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
+                try store.assignments(projectID: assignment.registration.projectID.rawValue)
+            }
+            let currentAncestry = try continuationAncestry(
+                parentID: assignment.baselineFromAssignmentID, requestedWork: assignmentWork,
+                registration: assignment.registration, policy: policy, storageRoot: store.root,
+                inventory: currentInventory)
+            guard currentAncestry == ancestry else {
+                throw ProjectExecutionError.assignmentNotAuthorized
+            }
+            if let currentAncestry {
+                let historical = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
+                    try (policy.previousProjectIDs ?? []).flatMap {
+                        try store.assignments(projectID: $0)
+                    }
+                } + currentInventory.filter { $0.registration != assignment.registration }
+                guard !Self.hasHistoricalConflict(historical) else {
+                    throw ProjectExecutionError.assignmentNotAuthorized
+                }
+                if let blocking = Self.blockingAssignment(in: currentInventory,
+                    work: assignmentWork, registration: assignment.registration,
+                    role: assignment.role, excluding: assignment.id,
+                    recoveredAncestorIDs: currentAncestry.recoveredAssignmentIDs) {
+                    let safelyScoped = blocking.work == assignmentWork
+                    throw ProjectExecutionPreparationConflict(diagnostic: .init(
+                        kind: safelyScoped ? .blockingAssignment : .causeUnavailable,
+                        blockingRequestID: nil,
+                        blockingAssignmentID: safelyScoped ? blocking.id : nil,
+                        evidence: .observedAtFailure
+                    ))
+                }
+            }
+        }
         let finalPolicy = try withProjectExecutionPreparationStage(.assignmentStoreIntegrity) {
             try store.policy(projectID: assignment.registration.projectID.rawValue)
         }
@@ -485,6 +715,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
             try store.saveAssignment(prepared, expected: assignment)
         }
+        preparedAncestries.set(ancestry, for: prepared.id)
         return prepared
     }
 }

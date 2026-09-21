@@ -201,6 +201,77 @@ final class ExecutionWorktreeTests: XCTestCase {
         }
     }
 
+    func testNativeRecoveredAncestorUsesCleanClosedSuccessorCandidateAndRejectsDrift() async throws {
+        for dirtyRecoveredAncestor in [false, true] {
+            let fixture = try fixture()
+            let execution = try executionFixture(fixture)
+            let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
+            let provisioning = LibGit2WorktreeProvisioner()
+            let producer = ProjectExecutionAssignmentCoordinator(root: { execution.root },
+                configuration: ProjectExecutionProducerTests.Configuration(),
+                handlerPath: handler, provisioning: provisioning)
+
+            let originalRequest = UUID()
+            let originalPending = try await producer.prepare(project: execution.project,
+                work: execution.work, requestID: originalRequest,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil,
+                contextPaths: ["source.txt"])
+            let originalAdmitted = try producer.admitPrepared(originalPending)
+            await producer.finishPreparation(work: execution.work, requestID: originalRequest)
+            var recovered = originalAdmitted
+            recovered.state = .stopped
+            recovered.sessionID = "recovered-session"
+            recovered.connectionClosed = true
+            recovered.launchReserved = true
+            recovered.uncertainOutcome = true
+            recovered.lostWorkerRecovery = .init(requestID: UUID(), priorState: .authorized,
+                candidateRevision: fixture.baseline,
+                process: .init(version: 1, observedAt: Date(timeIntervalSince1970: 1_789_963_200),
+                    executablePath: CodexExecutionIdentity.executable,
+                    permissionProfile: recovered.permissionProfile,
+                    argumentMarker: "permissions.\(recovered.permissionProfile).network.enabled=false"),
+                grantDisposition: .noMatchingGrant)
+            try execution.store.saveAssignment(recovered, expected: originalAdmitted)
+
+            let successorRequest = UUID()
+            let successorPending = try await producer.prepare(project: execution.project,
+                work: execution.work, requestID: successorRequest,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: recovered.id,
+                contextPaths: ["source.txt"])
+            let successorAdmitted = try producer.admitPrepared(successorPending)
+            await producer.finishPreparation(work: execution.work, requestID: successorRequest)
+            var successor = successorAdmitted
+            successor.state = .closed
+            successor.sessionID = "closed-successor-session"
+            successor.connectionClosed = true
+            try execution.store.saveAssignment(successor, expected: successorAdmitted)
+
+            if dirtyRecoveredAncestor {
+                try Data("owner edit retained".utf8).write(to:
+                    URL(fileURLWithPath: recovered.checkoutPath).appendingPathComponent("source.txt"))
+            }
+
+            let correctionRequest = UUID()
+            do {
+                let correction = try await producer.prepare(project: execution.project,
+                    work: execution.work, requestID: correctionRequest,
+                    reviewOfAssignmentID: nil, baselineFromAssignmentID: successor.id,
+                    contextPaths: ["source.txt"])
+                if dirtyRecoveredAncestor {
+                    XCTFail("A dirty recovered ancestor must invalidate its successor chain")
+                } else {
+                    XCTAssertEqual(correction.baselineFromAssignmentID, successor.id)
+                    XCTAssertEqual(correction.worktree?.baseline, successor.worktree?.baseline)
+                    XCTAssertEqual(try provisioning.candidateRevision(
+                        worktree: XCTUnwrap(correction.worktree)), fixture.baseline)
+                }
+            } catch {
+                if !dirtyRecoveredAncestor { throw error }
+            }
+            await producer.finishPreparation(work: execution.work, requestID: correctionRequest)
+        }
+    }
+
     func testNativeWrongRecoveryCheckoutIdentityRefusesProjectLayerCreation() async throws {
         let fixture = try fixture()
         let execution = try executionFixture(fixture)

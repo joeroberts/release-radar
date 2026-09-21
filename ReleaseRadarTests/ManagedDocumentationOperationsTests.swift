@@ -17,6 +17,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         var unattributedConflicts: Set<UUID> = []
         var stagedConflicts: [UUID: ProjectExecutionPreparationDiagnostic.Stage] = [:]
         var acceptedReviewParents: Set<String> = []
+        var acceptedBaselineParents: Set<String> = []
         var activePreparation: UUID?
         var gate: DocumentationCommitGate?
         var noEffectsGate: DocumentationCommitGate?
@@ -33,6 +34,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
             stagedConflicts[requestID] = stage
         }
         func allowReview(parentID: String) { acceptedReviewParents.insert(parentID) }
+        func allowBaseline(parentID: String) { acceptedBaselineParents.insert(parentID) }
         func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
             guard activePreparation == nil else { throw ProjectExecutionError.conflict }
             activePreparation = requestID
@@ -51,7 +53,11 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
             if definiteRefusals.contains(requestID) {
                 throw ProjectExecutionPreparationFailure.noEffectsCandidate(.assignmentNotAuthorized)
             }
-            guard baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
+            if let baselineFromAssignmentID {
+                guard acceptedBaselineParents.contains(baselineFromAssignmentID) else {
+                    throw ProjectExecutionError.assignmentNotAuthorized
+                }
+            }
             if let reviewOfAssignmentID {
                 guard acceptedReviewParents.contains(reviewOfAssignmentID) else { throw ProjectExecutionError.assignmentNotAuthorized }
             }
@@ -61,7 +67,8 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
                 checkoutPath: "/Fixture/Checkout", role: role, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
                 authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
                 excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work,
-                reviewOfAssignmentID: reviewOfAssignmentID)
+                reviewOfAssignmentID: reviewOfAssignmentID,
+                baselineFromAssignmentID: baselineFromAssignmentID)
             assignment.state = .preparing; value = assignment
             if partialRefusals.contains(requestID) { throw ProjectExecutionError.assignmentNotAuthorized }
             return assignment
@@ -129,6 +136,70 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         XCTAssertEqual(audits, 1)
         let changed = AgentCommandEnvelope(version: 1, requestID: request.requestID, projectRoot: root.path, expectedRegistration: registration, reason: "Changed request", command: request.command)
         let reused = await dispatcher.dispatch(changed); XCTAssertEqual(reused.error, .requestIDReused)
+    }
+
+    func testRecoveredSuccessorCorrectionPreservesPendingAndTerminalExactRequestSemantics() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let parentID = "delivery-closed-successor"
+        await preparer.allowBaseline(parentID: parentID)
+        let gate = DocumentationCommitGate()
+        await preparer.setGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(),
+            projectRoot: root.path, expectedRegistration: registration,
+            reason: "Continue from the closed successor of a recovered assignment",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 2,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: parentID))
+        let operation = Task { await dispatcher.dispatch(request) }
+        await gate.waitUntilEntered()
+
+        let pendingReplay = await dispatcher.dispatch(request)
+        XCTAssertEqual(pendingReplay.error, .execution(.conflict))
+        let pendingPrepares = await preparer.preparesByRequestID[request.requestID]
+        XCTAssertEqual(pendingPrepares, 1,
+            "An exact replay while preparation is suspended must not create a second assignment")
+
+        let competingRequest = AgentCommandEnvelope(version: 1, requestID: UUID(),
+            projectRoot: root.path, expectedRegistration: registration,
+            reason: "Competing correction while the exact request is pending", command: request.command)
+        let competing = await dispatcher.dispatch(competingRequest)
+        XCTAssertEqual(competing.error, .execution(.conflict))
+        XCTAssertEqual(competing.preparationDiagnostic?.kind, .pendingPreparationRequest)
+        XCTAssertEqual(competing.preparationDiagnostic?.blockingRequestID, request.requestID)
+
+        let changedPending = AgentCommandEnvelope(version: 1, requestID: request.requestID,
+            projectRoot: root.path, expectedRegistration: registration,
+            reason: "Changed pending correction body", command: request.command)
+        let changedPendingResult = await dispatcher.dispatch(changedPending)
+        XCTAssertEqual(changedPendingResult.error, .requestIDReused)
+
+        await gate.release()
+        let completed = await operation.value
+        XCTAssertNil(completed.error)
+        XCTAssertEqual(completed.executionAssignment?.baselineFromAssignmentID, parentID)
+        XCTAssertEqual(completed.executionAssignment?.state, .authorized)
+
+        let terminalReplay = await dispatcher.dispatch(request)
+        XCTAssertEqual(terminalReplay, completed)
+        let terminalPrepares = await preparer.preparesByRequestID[request.requestID]
+        XCTAssertEqual(terminalPrepares, 1,
+            "A terminal replay must return the recorded assignment without duplication")
+
+        try await store.transact(actor: .init(id: "fixture"), reason: "Complete work after correction receipt",
+            auditScope: .init(projectID: registration.projectID,
+                entityType: .ticketTaskPlan, entityID: "ticket")) {
+                try $0.execute("UPDATE ticket_tasks SET completion='completed',completed_at=created_at WHERE project_id='p' AND ticket_id='ticket' AND id='task'")
+                try $0.execute("UPDATE phase_lifecycles SET revision=3 WHERE project_id='p' AND phase_id='phase'")
+            }
+        let completedWorkReplay = await dispatcher.dispatch(request)
+        XCTAssertEqual(completedWorkReplay, completed,
+            "Terminal replay must not be reopened by later work lifecycle changes")
+
+        let changedTerminal = AgentCommandEnvelope(version: 1, requestID: request.requestID,
+            projectRoot: root.path, expectedRegistration: registration,
+            reason: "Changed terminal correction body", command: request.command)
+        let changedTerminalResult = await dispatcher.dispatch(changedTerminal)
+        XCTAssertEqual(changedTerminalResult.error, .requestIDReused)
     }
 
     func testExecutionCommandRejectsMissingProducerStaleWorkRootAndUnknownReviewCandidate() async throws {

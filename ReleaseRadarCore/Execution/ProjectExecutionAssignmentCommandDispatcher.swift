@@ -30,7 +30,7 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID, registration: registration, connection: c)
                     try context.verifyPersisted(c)
                     let prior = try replay(c, envelope: envelope, body: body, registration: registration)
-                    if prior?.error != nil, prior?.error != .outcomeUnknown { return (nil, prior) }
+                    if let prior, prior.error != .outcomeUnknown { return (nil, prior) }
                     let work = try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID, taskID: taskID,
                         taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c)
                     return (work, prior)

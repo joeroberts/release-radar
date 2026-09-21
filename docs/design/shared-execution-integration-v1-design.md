@@ -589,6 +589,40 @@ update a consumer and installed package as an unobservable distributed transacti
   new registration and current files; no path or name match silently transfers
   authority.
 
+### Release Radar controlled-execution continuation after worker recovery
+
+Release Radar's later, consumer-specific controlled-execution implementation uses
+SEI-9 when an app-owned delivery worker is recovered without claiming its outcome.
+This is not a shared V1 worker-lifecycle capability and grants nothing to another
+consumer. A recovered delivery assignment remains stopped and uncertain, retains
+its session, recovery receipt, checkout, permission profile and candidate, and is
+not a delivered review candidate.
+
+A delivery correction may continue from the immediate closed successful successor
+of that recovered assignment only along the requested successor's recorded
+`baselineFromAssignmentID` chain. Every relied-on node must retain the exact current
+project, root, registration/generation, selected Codex context, common repository
+and full ticket/task/phase/incarnation/outcome/title identity. Successful
+intermediate delivery assignments must have closed connections. Recovered nodes
+must retain their valid stopped recovery state and receipt, and each direct child's
+recorded baseline must equal its parent's revalidated clean candidate. Traversal is
+bounded by the finite app-owned assignment inventory with visited assignment IDs;
+missing, cyclic, retired, stale, mismatched, dirty or replaced ancestry is refused.
+The immediate closed successor, not the recovered original, supplies the new
+correction candidate.
+
+Only recovered delivery ancestors proven by that chain are exempt from the normal
+same-work conflict check. Unrelated live, preparing, stopped, unknown or uncertain
+assignments and historical-registration conflicts still block. A recovered node
+remains invalid as a direct review parent; a normal review may use its closed
+successful successor. The coordinator revalidates the relied-on ancestry,
+candidate and conflicts after asynchronous configuration and again during final
+admission. Policy/context changes, STOP, retirement, ancestry changes or a competing
+preparation deny authority. Recovery audit finalization remains separate: it is
+neither a continuation prerequisite nor omitted from preserved history. Existing
+canonical request-body replay, changed-body rejection and terminal receipt behavior
+remain unchanged.
+
 ## 11. Verification and pilot acceptance
 
 The source slice and the runtime pilot are separate. Source verification uses only
