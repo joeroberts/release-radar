@@ -4,19 +4,29 @@
 
 Owner removed usage tracking and the weekly budget ceiling after the pause.
 Those older budget instructions are superseded; do not measure or enforce them.
-The approved isolated recovery task has been requested outside the RR launcher,
-using Sol/high and committed baseline `8a15bab9516b2a21c033538b64c51b9ee5a4e2ae`.
-Pending setup client ID: `client-new-thread:e799c0e2-617a-48e6-99a5-35fccfb305b4`.
-Do not duplicate this creation. First checkpoint is read-only: establish a safe
-recovery path for the retained legacy assignment before source edits. Build Agent
-retains compilation/Git; Main retains ledger/catalog. Task02's tests and causal
-RED remain preserved at `0a51ee1d`; remaining feature sequence and exclusions stand.
+The approved isolated recovery task is active:
+`01a0c204-fd3c-7b41-b719-4d7f163ba81b`, worktree
+`/Users/jroberts/.codex/worktrees/3831/release_radar`, committed baseline
+`8a15bab9516b2a21c033538b64c51b9ee5a4e2ae`. Requested Sol/high; effective
+model/effort are not exposed. Its reported runtime is unrestricted filesystem,
+network enabled, approvals disabled; this is the explicitly approved isolated
+repair exception, not an RR-managed permission profile. The prior pending client
+ID resolved to this task; do not duplicate it.
+
+Read-only feasibility is complete. The writer identified legacy assignment-specific
+process argv plus the app's retained grant as the proposed closure witness, with
+fail-closed process identity/inventory checks and exact current-state revalidation.
+Main released focused tests first, before production edits. Build Agent retains
+compilation/Git; Main retains ledger/catalog. Actual signed/sandboxed runtime
+feasibility remains unverified and is required before claiming recovery. Preserve
+the Task02 checkpoint `0a51ee1d`; no live recovery or acceptance has occurred.
 
 Owner approved a narrowly scoped lost-worker recovery implementation to unblock
 Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
 The owner explicitly approved creating the separate isolated Codex repair task
-outside the blocked RR launcher; setup for that repair task is pending. Production edits require a concrete safe recovery
-path for this legacy assignment, not merely future prevention. Catalog addition is
+outside the blocked RR launcher. Implementation proceeds through the tests-first
+checkpoint above; the recovery must support this legacy assignment, not merely
+future workers. Catalog addition is
 pending validation and separate acceptance. Main owns docs; Build Agent owns Git
 and compilation. One independent recovery/security/UX review is required.
 
