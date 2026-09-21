@@ -105,3 +105,24 @@ this brief. The later explicit owner goal above authorizes verified evidence,
 the two existing task completions and Needs review after restart. Managed
 assignment preparation/launch remains within the
 existing onboarding authorization for this exact registered work.
+
+## September 21 narrowed Navigation verification
+
+Canonical candidate `8a8041ecd56b485902cb4b77a03dd9dc08699889` contains the
+Task01 lifecycle relocation and Navigation-only rendering-test corrections.
+No #116 Overview layout or compact containment regression changes are included.
+The exact canonical candidate passed the rebuilt native relocation/exact-identity/
+focus test (6.225 seconds) and cancellation test (1.585 seconds), 2 passed,
+0 failed, 0 skipped. Direct results are in canonical
+`.build/navigation-narrow-verification.xcresult`; this record retains the result
+independently of temporary build output.
+
+Earlier applicable direct checks passed for route labels and identity,
+wide/compact sidebar accessibility, the fixed documentation-checking footer,
+route rendering, open Manage Project, archive/detail and removal/history.
+Independent reviewer `F573CB8B-0DDD-4C97-8C1C-98A771CEE9B8` (Terra/high)
+reviewed the narrowed candidate, native wide/compact lifecycle images, authority,
+retention and recovery. Final verdict: pass, no Required findings. Both delivery
+and review worker connections are closed and their bounded tasks archived.
+Cleanup remains separate; #116 experimental work is not a future dependency.
+Local release and post-restart tracked closeout remain outstanding.

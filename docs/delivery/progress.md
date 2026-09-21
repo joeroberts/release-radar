@@ -61,26 +61,26 @@ and `.build/task01-navigation-green-retry.xcresult` retain the direct results.
 The worker connection is closed; its checkout is retained under the owner's
 cleanup deferral. Task02 assignment `delivery-f77dbfca-29f3-46b7-9877-98a00dc14f01`
 starts at `7447b588`; worker `CA6865C9-F5EE-4532-B7F4-6959A39DE777`, task
-`01a0c4e9-06ed-7063-8cc3-3d26c6614234`, is separating only the valid
-Navigation focus-test fixes for canonical integration. The owner's revised goal
-explicitly excludes ALL Overview/metric/phase-action layout changes and compact
-containment regression tests. Those belong to
-[GitHub #116](https://github.com/joeroberts/release-radar/issues/116), which will
-start fresh; experimental implementation is not to be preserved for future reuse.
-Cleanup is separate and has not occurred. Canonical `a5bdad46` contains none of
-those layout candidates. Route-render, open Manage Project, archive/detail and
-removal/history checks passed. The nested confirmation title/role focus correction
-must be verified on the exact canonical product without layout changes.
+`01a0c4e9-06ed-7063-8cc3-3d26c6614234`, completed the narrowed Navigation
+corrections. Exact canonical candidate `8a8041ecd56b485902cb4b77a03dd9dc08699889`
+passed its two affected rebuilt native tests (2 passed, 0 failed, 0 skipped).
+Earlier route/sidebar, checking-footer, open-management and lifecycle/recovery
+checks remain applicable. The [brief's verification record](task-briefs/2026-09-21-navigation.md#september-21-narrowed-navigation-verification)
+retains the results. Independent reviewer `F573CB8B-0DDD-4C97-8C1C-98A771CEE9B8`
+(Terra/high), task `01a0c4ec-73a4-7c33-a1b7-5516da9eae58`, passed the narrowed
+candidate with no Required findings. Delivery and reviewer connections are
+closed; both bounded tasks are archived.
 
-Fresh independent reviewer `F573CB8B-0DDD-4C97-8C1C-98A771CEE9B8` (Terra/high),
-task `01a0c4ec-73a4-7c33-a1b7-5516da9eae58`, passed lifecycle visual, authority,
-retention and recovery review. Final verdict will cover only the narrowed
-Navigation candidate; #116 findings do not block this ticket. Effective delivery
-Terra/medium and review Terra/high settings were verified. Main owns ledger and
-Build owns compilation/Git/release. Next: exact affected checks, final independent
-verdict, one authorized local patch release. After owner Codex restart, record
-verified evidence, complete both existing tasks and move to Needs review. Owner
-acceptance remains separate. No task completion or release is claimed yet.
+The owner's revised goal excludes ALL Overview/metric/phase-action layout changes
+and compact containment regression tests. Those belong to
+[GitHub #116](https://github.com/joeroberts/release-radar/issues/116), which must
+start fresh; experimental implementation is not to be retained for future reuse.
+None is integrated into the canonical candidate. Worktree cleanup is separate
+and has not occurred. Main owns ledger; Build owns compilation/Git/release.
+Next: one authorized local patch release, then wait for owner Codex restart
+before RR connector calls. After restart record verified evidence, complete both
+existing tasks and move Navigation to Needs review. Owner acceptance remains
+separate. No release or task completion is claimed yet.
 The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
 merged by the owner; canonical main was fast-forwarded and the merged branch removed. `codex/cleanup-record` was removed
 locally and remotely after merged-PR and ancestry verification. The clean ordinary
