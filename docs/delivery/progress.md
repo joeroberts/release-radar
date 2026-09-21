@@ -1,5 +1,36 @@
 # Release Radar delivery state
 
+## September 21 — Task02 resumed through managed execution
+
+Owner restarted Codex after installation. Supported inventory and catalog readback
+now succeed. **After every app update, preserve handoff and require a Codex restart
+before connector use; do not diagnose the retained pre-restart client as a product
+defect.** No usage tracking.
+
+Owner approved exact catalog transition `ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9`
+→ `a76683be079a903a09b7fb218c2370be940f660340f53fb7314eee0243cbfa1e`.
+Acceptance request `317309a0-8a85-4ead-86c9-bcadf8506f31` succeeded with audit
+`AF50B1E2-9EFC-4259-9731-B57AC71A56E5`; app readback shows managed documentation
+current and shared-execution compatible. No task definitions/completions changed.
+
+Exact saved correction request `3e7e5581-a189-48a3-9b0a-2175a530df03` was replayed
+unchanged through its idempotent receipt and succeeded: audit
+`202ABB51-4A67-436F-B3CE-CB32E1BFC279`, assignment
+`delivery-3e7e5581-a189-48a3-9b0a-2175a530df03`, parent `delivery-7b5391d5-b421-465e-9c43-e9f85650117b`,
+exact baseline `3f1498c264b574b0890d45d2e8e4b9e1e77820a8`.
+Worker `C9EC2728-4A83-4E7D-A5FF-2E725FE217EA`, task
+`01a0c448-1dd1-7b20-a5f3-33dd3a54bd39` started with verified effective
+`gpt-5.6-terra` / `medium` in its app-owned checkout. This directly verifies the
+installed recovery repair admits continuation from the preserved successor.
+
+Current checkpoint: tests only for required Task02 corrections (root/worktree
+recovery presentation inside Manage Project; exact-registration documentation
+failure fixtures and accessible error focus/scroll). No health-derived authority
+fallback. Build owns RED/GREEN, compilation and Git; Main releases production
+after focused RED. Do not repeat terminal relocation checks without affected
+behavior. Task03 and Navigation boundaries remain intact. Controlling brief:
+[Task02](task-briefs/2026-09-20-manage-project-task02.md).
+
 ## September 21 — recovery repair delivered; Task02 awaits connector refresh
 
 Reviewed recovery repair is locally delivered as **0.1.33 (1)**. Build integrated
