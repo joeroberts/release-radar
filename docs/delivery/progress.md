@@ -31,11 +31,16 @@ moved generated output to canonical `.build/manage-project-task01-derived-data`
 without changing permissions or the managed source checkout; test startup succeeds.
 The subsequent actual window accessibility diagnostic showed Retry inherited its
 card's section identifier. Moving section identifiers to their heading text fixed
-that failure without weakening assertions. Four existing regressions executed: settings persistence/stale-generation, archive,
-and removal checks passed; usable Overview failed to find “Manage Project” in
-accessibility text. The worker is classifying that failure before any affected
-rerun. New-panel wide/compact visual verification and independent review remain
-pending. No permission, installed-app or RR completion changes were made.
+that failure without weakening assertions. Settings persistence/stale-generation, archive, and removal regressions passed.
+The usable Overview fixture now supplies its existing exact registration; its
+wide/compact entry assertion passes unchanged. The final affected run passed all
+three checks, including sheet widths and mismatch rejection. Compact actual-sheet
+bitmap inspection passed. The wide bitmap remained blank despite capture layout
+stabilization, so Main directly opened and observed the synthetic 1100-point test
+window's sheet through CUA: exact identity, settings, execution and Done rendered
+without clipping. This externally interacted observation is separate from the
+successful automated assertions. Independent UX/recovery review remains pending.
+No permission, installed-app or RR completion changes were made.
 Temporary logs, XCResults and diagnostic attachments remain in canonical
 `.build/native-checks`. Preserve the worker checkout and result bundles.
 Manage Project remains In Progress with all three tasks pending. Before future
