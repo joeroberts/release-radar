@@ -7496,6 +7496,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-lost-worker-recovery-brief-2026-09-20",
+      "path": "docs/delivery/task-briefs/2026-09-20-lost-worker-recovery.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.lost-worker-recovery",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

@@ -2,6 +2,14 @@
 
 ## September 20 — Manage Project resumed
 
+Owner approved a narrowly scoped lost-worker recovery implementation to unblock
+Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
+The separate isolated repair-task launch exception is requested and pending; no
+repair writer has been launched. Production edits require a concrete safe recovery
+path for this legacy assignment, not merely future prevention. Catalog addition is
+pending validation and separate acceptance. Main owns docs; Build Agent owns Git
+and compilation. One independent recovery/security/UX review is required.
+
 Owner approved a fresh RR-managed Task02 continuation preserving the prior work.
 Build Agent committed the tests-only checkpoint as `0a51ee1d8484d960effe1d55c71e510e162cf2ab`;
 the managed checkout is clean. Fresh complete delivery inventory confirms exact
