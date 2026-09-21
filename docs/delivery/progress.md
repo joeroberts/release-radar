@@ -11,6 +11,47 @@ repair-task exception, Build verification, independent architecture/security rev
 and signed local delivery before Task02 resumes. Controlling brief:
 [Recovery ancestry repair](task-briefs/2026-09-21-recovery-ancestry-repair.md).
 
+**Repair execution:** isolated writer `01a0c3fc-cfd3-72f2-9ed3-afe73d867a47`
+started from committed brief baseline `2ae586d88fcefae614b0220dd7316cf4bae7e0f4`
+in `/Users/jroberts/.codex/worktrees/0419/release_radar`, requested Sol/high
+(effective settings unavailable). Tests-only checkpoint is ready in
+`ProjectExecutionProducerTests.swift`, `ExecutionWorktreeTests.swift` and
+`ManagedDocumentationOperationsTests.swift`; no production edits or tests run by
+writer. Build established behavioral RED after a test-only immutable capture fix:
+`testRecoveredAncestorChainUsesImmediateClosedSuccessorCandidateForCorrections`
+failed as intended with `blockingAssignment: delivery-legacy-lost` in 0.663s;
+normal xcodebuild `TEST FAILED`, evidence `.build/native-checks/recovery-ancestry-red-2.xcresult`
+and `.log`. Main released approved production implementation to the same writer.
+First focused GREEN run compiled and completed: 3 passed, 5 failed
+(`.build/native-checks/recovery-ancestry-green-1.xcresult`). Writer corrected
+multi-candidate test fixtures and a terminal-replay dispatcher defect; Build is
+rerunning affected checks. Final candidate `55b5709c4cf0f9160918e38c653eb8e00d9e5cd3`
+is committed in the clean isolated checkout: coordinator, dispatcher, three test
+files and mutable design (six files). Build GREEN-2 passed 8/8 recovery checks;
+dispatcher-1 passed 3/3 current-authority/terminal/changed-body replay checks.
+Complete results/logs are under canonical `.build/native-checks/`; documentation
+and diff checks passed. Fresh independent Astra/high architecture/security/recovery
+review `01a0c419-4e07-7681-be10-f6d050c58011` found no required production
+findings but placed candidate on HOLD for one required verification gap: existing
+A/B fixtures share a revision and do not prove preservation of B-only committed
+changes. Original writer is strengthening the existing real-Git fixture to prove
+C admission and later continuation preserve distinct B content and A recovery
+state. Build runs only affected checks; same reviewer assesses that correction.
+No integration or release yet.
+Documentation validation passed for the committed baseline.
+
+**Repair review complete:** final candidate `b5a01a98480bb9a52dd855159d581e59becd1c65`
+adds only the required test amendment to `55b5709c`. Distinct-successor native
+regression passed 1/1 (`.build/native-checks/recovery-ancestry-distinct-successor-2.xcresult`
+and `.log`): C and later continuation preserve B-only committed content, while
+A's recovery state and resources remain unchanged. Independent Astra/high reviewer
+`01a0c419-4e07-7681-be10-f6d050c58011` returned PASS, closed its sole required
+finding and reported no required production defects. Earlier 8/8 recovery and
+3/3 dispatcher checks remain terminal. Review is complete/idle; bounded reviewer
+and writer tasks are being retired from active coordination after preservation.
+Build Agent is authorized to integrate both scoped commits and perform the
+standing signed local patch release. No Task02 integration or acceptance implied.
+
 **Approved Chief recommendation:** extend delivery-continuation
 eligibility only for verified recovered delivery ancestors on the requested
 closed successor's own `baselineFromAssignmentID` chain. Keep retirement unchanged.
