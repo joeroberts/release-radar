@@ -53,8 +53,19 @@ The owner approved the catalog addition; acceptance succeeded (audit
 `delivery-70c06d0c-d517-49db-93ce-64d4fc9bc307` starts from committed preparation
 `0b535d85c42b375abbd2723b9da63537ecdcf83e`. Worker
 `5E1F35C7-1878-488B-87E5-5C4376BDD6DF`, task `01a0c4c9-5a31-78b3-8063-1dd2d9379391`,
-is running the test-first relocation assignment. Effective Terra/medium and exact
-isolated checkout/profile were verified in worker status. Main owns ledger and
+completed the relocation assignment, committed as `e0d2baed` and integrated at
+`7447b588` on `codex/navigation-delivery`. The rebuilt exact-identity relocation
+test passed after correcting assertion timing; cancellation and existing
+archive/detail tests also passed. Worker-local `.build/task01-navigation-correction.xcresult`
+and `.build/task01-navigation-green-retry.xcresult` retain the direct results.
+The worker connection is closed; its checkout is retained under the owner's
+cleanup deferral. Task02 assignment `delivery-f77dbfca-29f3-46b7-9877-98a00dc14f01`
+starts at `7447b588`; worker `CA6865C9-F5EE-4532-B7F4-6959A39DE777`, task
+`01a0c4e9-06ed-7063-8cc3-3d26c6614234`, is assessing remaining navigation and
+adding regression tests only for demonstrated gaps. Effective Terra/medium and
+exact isolated checkout/profile were verified. The owner requested an active
+Navigation goal through verification and authorized local delivery, preserving
+final owner acceptance. Main owns ledger and
 Build owns compilation/Git. One final independent UI/authority/recovery reviewer
 covers the coherent Navigation batch. No task completion or owner acceptance is
 inferred from dispatch.
