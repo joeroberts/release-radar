@@ -74,7 +74,14 @@ candidate. Worker `B9B45136-96EE-44E2-8ACC-A652C35C3F7C`, task
 `01a0c2d8-e425-7553-9216-f950e1c0d30d`; supported start confirms Terra/high, exact
 review checkout/profile, on-request auto-review and network disabled. Scope:
 UX/accessibility/recovery and preserved exact-target authorization/data boundaries.
-Runtime verification and review disposition pending; no integration or acceptance.
+Review found required recovery-sheet presentation conflict: relocated root/worktree
+actions request a sibling parent sheet while Manage Project is already open.
+Reviewer clarified registration finding as required old test-fixture adaptation,
+not a demonstrated production defect: supply exact registration/settings loader
+and open Manage Project before bind/catalog failure assertions. Preserve
+Task01 selected identity; do not introduce health-derived authorization fallback.
+Bind/accept failure focus and both recovery routes need affected direct checks
+and independent wide/compact runtime review. No integration or acceptance.
 Temporary reviewer inputs `.build/task02-candidate.patch` and
 `.build/task02-direct-checks.txt` exist only in the review checkout; canonical
 candidate and direct results remain source of truth. Do not delete without approval.
@@ -83,6 +90,23 @@ Exact Task02 independent-review preparation request:
 ```json
 {"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"e2a8457c-971d-49a4-84fe-d98908553be1","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reviewOfAssignmentID":"delivery-7b5391d5-b421-465e-9c43-e9f85650117b","reason":"Independent Task02 review of clean committed candidate 3f1498c264b574b0890d45d2e8e4b9e1e77820a8 after direct relocation and evidence-consumer passes. Cover UX/accessibility, recovery and preserved exact-target authorization; no implementation, acceptance or scope changes."}
 ```
+
+Exact Task02 correction preparation request:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"3e7e5581-a189-48a3-9b0a-2175a530df03","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-7b5391d5-b421-465e-9c43-e9f85650117b","reason":"Required corrections to Task02 candidate3f1498c2: preserve root/worktree recovery presentation inside Manage Project and update affected documentation failure fixtures/checks. Same brief/outcome and definitions; test-first checkpoint before production correction, Build owns checks/Git."}
+```
+
+Correction preparation was refused with `blockingAssignment` identifying original
+stopped `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`; no correction worker started.
+Preserve request `3e7e5581-a189-48a3-9b0a-2175a530df03` for unchanged replay after
+supported resolution. Current UI lists the original Task02 as stopped and offers
+“Retire resources and allow replacement”. This removes its clean checkout and
+matching permission profile; owner instruction preserves worktrees/permissions,
+so retirement has not been invoked. Build verified original clean at `0a51ee1d`
+on its preserved delivery-f913 branch; candidate `3f1498c2` is clean and contains
+that baseline. Exact owner exception requested for only the original stopped
+checkout/profile; no answer yet. Candidate/review work remains
+preserved; no bypass, governance edits or additional recovery code authorized.
 
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
