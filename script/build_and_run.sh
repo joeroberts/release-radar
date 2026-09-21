@@ -301,7 +301,7 @@ verify_bundle() {
     if ! version="$(bundle_version "$bundle")" || [[ -z "$version" ]]; then report_error "missing bundle version"; return 1; fi
     case "$role" in
         candidate)
-            if ! require_value "$version" "0.1.34" "candidate version"; then return 1; fi
+            if ! require_value "$version" "0.1.35" "candidate version"; then return 1; fi
             ;;
         prior-destination)
             case "$version" in
