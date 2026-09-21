@@ -84,7 +84,6 @@ struct ProjectOverviewView: View {
     @State private var documentationSetupFeedback: DocumentationSetupFeedback?
     @State private var documentationActionErrorGeneration = 0
     @AccessibilityFocusState private var documentationActionErrorFocused: Bool
-    @FocusState private var documentationActionErrorKeyboardFocused: Bool
     @State private var isPerformingDocumentationSetup = false
     @State private var lifecyclePreview: ProjectLifecyclePreview?
     @State private var lifecyclePreviewError: String?
@@ -177,25 +176,6 @@ struct ProjectOverviewView: View {
                 .padding(28)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .onChange(of: documentationActionErrorGeneration) { _, generation in
-                guard generation > 0,
-                      let feedback = documentationSetupFeedback,
-                      let title = feedback.failureTitle else { return }
-                proxy.scrollTo(documentationActionErrorAnchor, anchor: .center)
-                Task { @MainActor in
-                    await Task.yield()
-                    documentationActionErrorKeyboardFocused = true
-                    documentationActionErrorFocused = true
-                    NSAccessibility.post(
-                        element: NSApp as Any,
-                        notification: .announcementRequested,
-                        userInfo: [
-                            .announcement: "\(title). \(feedback.message)",
-                            .priority: NSAccessibilityPriorityLevel.high.rawValue,
-                        ]
-                    )
-                }
-            }
         }
         .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
@@ -241,15 +221,16 @@ struct ProjectOverviewView: View {
                     recoverLostWorker: recoverLostWorker.map { recover in
                         { expected in try await recover(presentation.registration, expected) }
                     },
-                    projectControls: { presentRootRecovery, documentationActionErrorFocus in
+                    projectControls: { presentRootRecovery, documentationActionErrorKeyboardFocused in
                         projectManagementControls(
                             presentRootRecovery: presentRootRecovery,
-                            documentationActionErrorFocus: documentationActionErrorFocus
+                            documentationActionErrorKeyboardFocused: documentationActionErrorKeyboardFocused
                         )
                     },
                     repositoryRecovery: repositoryRecovery,
                     onRepositoryRelocated: rootActionCommitted,
                     documentationActionErrorGeneration: documentationActionErrorGeneration,
+                    revealDocumentationActionError: revealDocumentationActionError,
                     reopenCurrentRegistration: { settings in
                         guard settings.registration.projectID == project.id else { return }
                         manageProjectPresentation = .init(
@@ -405,11 +386,16 @@ struct ProjectOverviewView: View {
         .accessibilityIdentifier("project-guidance-status")
     }
 
-    private func projectManagementControls(presentRootRecovery: @escaping () -> Void) -> AnyView {
+    private func projectManagementControls(
+        presentRootRecovery: @escaping () -> Void,
+        documentationActionErrorKeyboardFocused: FocusState<Bool>.Binding
+    ) -> AnyView {
         AnyView(VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 12) {
                 guidanceCard
-                documentationSetupControls
+                documentationSetupControls(
+                    documentationActionErrorKeyboardFocused: documentationActionErrorKeyboardFocused
+                )
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("manage-project-section-documentation")
@@ -473,7 +459,9 @@ struct ProjectOverviewView: View {
     }
 
     @ViewBuilder
-    private var documentationSetupControls: some View {
+    private func documentationSetupControls(
+        documentationActionErrorKeyboardFocused: FocusState<Bool>.Binding
+    ) -> some View {
         if let registration = health?.registration ?? project.registration,
            previewDocumentationSetup != nil {
             RekonSectionPanel {
@@ -512,7 +500,7 @@ struct ProjectOverviewView: View {
                                 .accessibilityIdentifier("project-documentation-action-error")
                                 .accessibilityFocused($documentationActionErrorFocused)
                                 .focusable()
-                                .focused($documentationActionErrorKeyboardFocused)
+                                .focused(documentationActionErrorKeyboardFocused)
                             Text(feedback.message)
                                 .foregroundStyle(RekonTheme.secondaryText)
                                 .textSelection(.enabled)
@@ -613,7 +601,6 @@ struct ProjectOverviewView: View {
         isPerformingDocumentationSetup = true
         documentationSetupFeedback = nil
         documentationActionErrorFocused = false
-        documentationActionErrorKeyboardFocused = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
@@ -630,7 +617,6 @@ struct ProjectOverviewView: View {
         isPerformingDocumentationSetup = true
         documentationSetupFeedback = nil
         documentationActionErrorFocused = false
-        documentationActionErrorKeyboardFocused = false
         Task {
             defer { isPerformingDocumentationSetup = false }
             do {
@@ -651,6 +637,20 @@ struct ProjectOverviewView: View {
                 documentationActionErrorGeneration &+= 1
             }
         }
+    }
+
+    private func revealDocumentationActionError() {
+        guard let feedback = documentationSetupFeedback,
+              let title = feedback.failureTitle else { return }
+        documentationActionErrorFocused = true
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: "\(title). \(feedback.message)",
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ]
+        )
     }
 }
 

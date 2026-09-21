@@ -65,17 +65,17 @@ struct ProjectHealthView: View {
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("project-health-reauthorize")
                 }
-                if let manageRoots {
-                    Button("Manage Repository Roots", action: manageRoots)
-                        .buttonStyle(RekonSecondaryButtonStyle())
-                        .accessibilityIdentifier("project-health-manage-roots")
-                }
                 Text("Checked \(snapshot.checkedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             } else {
                 Text("Run a health check to verify local storage, folder access, documentation, Codex observation, and the installed workflow.")
                     .foregroundStyle(RekonTheme.secondaryText)
+            }
+            if let manageRoots {
+                Button("Manage Repository Roots", action: manageRoots)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("project-health-manage-roots")
             }
         }
         .accessibilityElement(children: .contain)
@@ -129,6 +129,7 @@ struct ManageProjectView: View {
     let repositoryRecovery: RepositoryRecoveryModel?
     let onRepositoryRelocated: () async -> Void
     let documentationActionErrorGeneration: Int
+    let revealDocumentationActionError: () -> Void
     let reopenCurrentRegistration: (ProjectSettingsSnapshot) -> Void
 
     @State private var settings: ProjectSettingsSnapshot?
@@ -146,6 +147,7 @@ struct ManageProjectView: View {
     @State private var executionFailed = false
     @State private var executionLoadFailed = false
     @State private var showsRootRecovery = false
+    @FocusState private var documentationActionErrorKeyboardFocused: Bool
 
     init(
         registration: ProjectRegistration,
@@ -162,6 +164,7 @@ struct ManageProjectView: View {
         repositoryRecovery: RepositoryRecoveryModel? = nil,
         onRepositoryRelocated: @escaping () async -> Void = {},
         documentationActionErrorGeneration: Int = 0,
+        revealDocumentationActionError: @escaping () -> Void = {},
         reopenCurrentRegistration: @escaping (ProjectSettingsSnapshot) -> Void
     ) {
         self.registration = registration
@@ -177,6 +180,7 @@ struct ManageProjectView: View {
         self.repositoryRecovery = repositoryRecovery
         self.onRepositoryRelocated = onRepositoryRelocated
         self.documentationActionErrorGeneration = documentationActionErrorGeneration
+        self.revealDocumentationActionError = revealDocumentationActionError
         self.reopenCurrentRegistration = reopenCurrentRegistration
         _settings = State(initialValue: initialSettings)
         _isLoadingSettings = State(initialValue: initialSettings == nil)
@@ -201,7 +205,7 @@ struct ManageProjectView: View {
 
                 settingsSection
                 executionSection
-                projectControls?(presentRootRecovery)
+                projectControls?(presentRootRecovery, $documentationActionErrorKeyboardFocused)
 
                 HStack {
                     Spacer()
@@ -214,7 +218,12 @@ struct ManageProjectView: View {
             }
             .onChange(of: documentationActionErrorGeneration) { _, generation in
                 guard generation > 0 else { return }
-                proxy.scrollTo("project-documentation-action-error-anchor", anchor: .center)
+                Task { @MainActor in
+                    await Task.yield()
+                    proxy.scrollTo("project-documentation-action-error-anchor", anchor: .center)
+                    documentationActionErrorKeyboardFocused = true
+                    revealDocumentationActionError()
+                }
             }
         }
         .frame(minWidth: 520, idealWidth: 620, minHeight: 460, idealHeight: 640, maxHeight: 760)
