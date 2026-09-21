@@ -125,7 +125,9 @@ struct ManageProjectView: View {
     let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
     let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
     let recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)?
-    let projectControls: AnyView?
+    let projectControls: ((@escaping () -> Void, FocusState<Bool>.Binding) -> AnyView)?
+    let repositoryRecovery: RepositoryRecoveryModel?
+    let onRepositoryRelocated: () async -> Void
     let documentationActionErrorGeneration: Int
     let reopenCurrentRegistration: (ProjectSettingsSnapshot) -> Void
 
@@ -143,6 +145,7 @@ struct ManageProjectView: View {
     @State private var executionMessage: String?
     @State private var executionFailed = false
     @State private var executionLoadFailed = false
+    @State private var showsRootRecovery = false
 
     init(
         registration: ProjectRegistration,
@@ -155,7 +158,9 @@ struct ManageProjectView: View {
         loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?,
         retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?,
         recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)? = nil,
-        projectControls: AnyView? = nil,
+        projectControls: ((@escaping () -> Void, FocusState<Bool>.Binding) -> AnyView)? = nil,
+        repositoryRecovery: RepositoryRecoveryModel? = nil,
+        onRepositoryRelocated: @escaping () async -> Void = {},
         documentationActionErrorGeneration: Int = 0,
         reopenCurrentRegistration: @escaping (ProjectSettingsSnapshot) -> Void
     ) {
@@ -169,6 +174,8 @@ struct ManageProjectView: View {
         self.retireExecutionAssignment = retireExecutionAssignment
         self.recoverLostWorker = recoverLostWorker
         self.projectControls = projectControls
+        self.repositoryRecovery = repositoryRecovery
+        self.onRepositoryRelocated = onRepositoryRelocated
         self.documentationActionErrorGeneration = documentationActionErrorGeneration
         self.reopenCurrentRegistration = reopenCurrentRegistration
         _settings = State(initialValue: initialSettings)
@@ -194,7 +201,7 @@ struct ManageProjectView: View {
 
                 settingsSection
                 executionSection
-                projectControls
+                projectControls?(presentRootRecovery)
 
                 HStack {
                     Spacer()
@@ -207,7 +214,7 @@ struct ManageProjectView: View {
             }
             .onChange(of: documentationActionErrorGeneration) { _, generation in
                 guard generation > 0 else { return }
-                withAnimation { proxy.scrollTo("project-documentation-action-error-anchor", anchor: .center) }
+                proxy.scrollTo("project-documentation-action-error-anchor", anchor: .center)
             }
         }
         .frame(minWidth: 520, idealWidth: 620, minHeight: 460, idealHeight: 640, maxHeight: 760)
@@ -218,6 +225,27 @@ struct ManageProjectView: View {
             if settings == nil { await loadSettingsSection() }
         }
         .task { await loadExecutionSection() }
+        .sheet(isPresented: $showsRootRecovery) {
+            if let repositoryRecovery {
+                VStack(alignment: .trailing) {
+                    ScrollView {
+                        RepositoryRecoveryView(model: repositoryRecovery, onCommitted: onRepositoryRelocated)
+                            .padding(24)
+                    }
+                    Button("Done") { showsRootRecovery = false }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .padding([.bottom, .trailing], 24)
+                }
+                .frame(minWidth: 520, idealWidth: 720, minHeight: 500, idealHeight: 750)
+                .background(RekonTheme.background)
+                .accessibilityIdentifier("manage-project-root-recovery-sheet")
+            }
+        }
+    }
+
+    private func presentRootRecovery() {
+        guard repositoryRecovery != nil else { return }
+        showsRootRecovery = true
     }
 
     @ViewBuilder private var settingsSection: some View {

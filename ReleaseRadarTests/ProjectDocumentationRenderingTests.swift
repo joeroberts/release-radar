@@ -139,6 +139,208 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testManageProjectRelocatesProjectControlsAndPreservesExactCallbacks() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-controls")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-controls-registration",
+            requestGeneration: 9
+        )
+        let evidence = EvidenceProjection(
+            id: .init(rawValue: "manage-project-evidence"),
+            label: "Management evidence",
+            path: "docs/evidence/management.md",
+            isAvailable: true
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Managed controls",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 1,
+            evidence: [evidence]
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: "/Synthetic/ManageProject",
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: [.init(id: "folder", title: "Folder access needs attention", detail: "Restore the saved folder.", state: .attention)]
+        )
+        let preview = ProjectDocumentationSetupPreview(
+            registration: registration,
+            rootPath: health.rootPath!,
+            target: .init(
+                projectID: projectID.rawValue,
+                rootID: "manage-project-root",
+                repositoryID: "00000000-0000-4000-8000-000000000009",
+                catalogVersion: 1,
+                catalogDigest: String(repeating: "9", count: 64)
+            ),
+            action: .bind
+        )
+        let documentationStatus = DocumentationObservationStatus.observed(.init(
+            identity: .init(
+                projectID: projectID,
+                registration: registration,
+                rootID: .init(rawValue: "manage-project-root"),
+                rootPath: health.rootPath,
+                binding: nil
+            ),
+            generation: 1,
+            checkedAt: health.checkedAt,
+            documentationState: .legacy(.missing),
+            evidence: [],
+            sharedExecutionCompatibility: .init(state: .unavailable, directResults: [])
+        ))
+        var documentationPreviewRegistration: ProjectRegistration?
+        var compatibilityRefreshCount = 0
+        var evidencePreviewCount = 0
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ProjectOverviewView(
+                    project: project,
+                    board: nil,
+                    documentationState: .legacy(.missing),
+                    documentationStatus: documentationStatus,
+                    projectRoot: URL(fileURLWithPath: health.rootPath!),
+                    phaseSelectionStatus: .idle,
+                    openBoard: {},
+                    selectActivePhase: { _ in },
+                    reloadActivePhase: {},
+                    reauthorizeActivePhase: { _ in },
+                    refreshDocumentation: { compatibilityRefreshCount += 1 },
+                    loadProjectSettings: {
+                        .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                    },
+                    loadProjectHealth: { health },
+                    loadEvidencePreview: { requestedEvidenceID in
+                        XCTAssertEqual(requestedEvidenceID, evidence.id)
+                        evidencePreviewCount += 1
+                        return .init(identity: evidence.locator, path: evidence.path, status: .available,
+                                     content: .text("Exact managed evidence", isTruncated: false))
+                    },
+                    previewDocumentationSetup: { requestedRegistration in
+                        documentationPreviewRegistration = requestedRegistration
+                        return preview
+                    }
+                ),
+                name: "manage-project-controls-\(Int(width))",
+                width: width,
+                expected: nil,
+                postActionIdentifiers: [
+                    "manage-project-panel",
+                    "manage-project-identity",
+                    "manage-project-section-documentation",
+                    "manage-project-section-shared-execution",
+                    "manage-project-section-repository-access",
+                    "manage-project-section-evidence",
+                ],
+                pressIdentifiers: [
+                    "project-manage",
+                    "project-documentation-preview",
+                    "shared-execution-refresh",
+                    "project-health-refresh",
+                    "evidence-preview-manage-project-evidence",
+                ],
+                afterPressIdentifiers: [
+                    ["manage-project-panel"],
+                    [],
+                    [],
+                    [],
+                    ["evidence-preview-text-manage-project-evidence"],
+                ]
+            )
+        }
+
+        XCTAssertEqual(documentationPreviewRegistration, registration)
+        XCTAssertEqual(compatibilityRefreshCount, 2)
+        XCTAssertEqual(evidencePreviewCount, 2)
+    }
+
+    func testManageProjectRootRecoveryCallbacksPresentInsideTheManagementSheet() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-root-recovery")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-root-recovery-registration",
+            requestGeneration: 1
+        )
+        let evidence = EvidenceProjection(
+            id: .init(rawValue: "manage-project-worktree-evidence"),
+            label: "Worktree evidence",
+            path: "output/result.md",
+            isAvailable: true
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Recovery management",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 1,
+            evidence: [evidence]
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: "/Synthetic/ManageProjectRecovery",
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: [.init(id: "folder", title: "Folder access needs attention", detail: "Manage the saved roots.", state: .attention)]
+        )
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ManageProjectRecovery-\(UUID().uuidString).sqlite")
+        let recovery = RepositoryRecoveryModel(
+            store: DeliveryStore(databaseURL: databaseURL),
+            projectID: projectID,
+            allowsRelocation: true
+        )
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+
+        for (name, presses) in [
+            ("repository-roots", ["project-manage", "project-health-manage-roots"]),
+            ("saved-worktree", ["project-manage", "evidence-preview-manage-project-worktree-evidence", "evidence-preview-reconnect-worktree-manage-project-worktree-evidence"]),
+        ] {
+            try await render(
+                ProjectOverviewView(
+                    project: project,
+                    board: nil,
+                    documentationState: .legacy(.unavailable),
+                    projectRoot: nil,
+                    phaseSelectionStatus: .idle,
+                    openBoard: {},
+                    selectActivePhase: { _ in },
+                    reloadActivePhase: {},
+                    reauthorizeActivePhase: { _ in },
+                    repositoryRecovery: recovery,
+                    loadProjectSettings: {
+                        .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                    },
+                    loadProjectHealth: { health },
+                    loadEvidencePreview: { requestedEvidenceID in
+                        XCTAssertEqual(requestedEvidenceID, evidence.id)
+                        return .init(
+                            identity: evidence.locator,
+                            path: evidence.path,
+                            status: .inaccessible,
+                            content: nil,
+                            recovery: .reconnectWorktree(rootID: .init(rawValue: "saved-worktree"), path: "/Synthetic/SavedWorktree")
+                        )
+                    }
+                ),
+                name: "manage-project-recovery-\(name)",
+                width: 620,
+                expected: nil,
+                postActionIdentifiers: ["manage-project-root-recovery-sheet"],
+                pressIdentifiers: presses,
+                afterPressIdentifiers: [["manage-project-panel", "project-health-manage-roots"], [], []]
+            )
+        }
+    }
+
     func testManageProjectSettingsFailureIsLocalAndRetryLoadsOnlySettings() async throws {
         let projectID = ProjectID(rawValue: "manage-project-retry")
         let registration = ProjectRegistration(
@@ -662,6 +864,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         let project = ProjectDashboardProjection(
             id: projectID,
             name: "Catalog Transition",
+            registration: registration,
             activePhaseName: "No active phase",
             goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
             currentWorkCount: 0,
@@ -686,6 +889,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 selectActivePhase: { _ in },
                 reloadActivePhase: {},
                 reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                },
                 loadProjectHealth: { health },
                 previewDocumentationSetup: { _ in preview },
                 performDocumentationSetup: { _ in
@@ -708,6 +914,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 postActionIdentifiers: ["project-documentation-action-error"],
                 postActionVisibleIdentifiers: ["project-documentation-action-error"],
                 postActionFocusedIdentifier: "project-documentation-action-error",
+                pressIdentifiers: ["project-manage"],
                 pressTitles: ["Preview Documentation Action", "Accept This Catalog"]
             )
         }
@@ -735,6 +942,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         let project = ProjectDashboardProjection(
             id: projectID,
             name: "Repository Binding",
+            registration: registration,
             activePhaseName: "No active phase",
             goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
             currentWorkCount: 0,
@@ -759,6 +967,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 selectActivePhase: { _ in },
                 reloadActivePhase: {},
                 reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                },
                 loadProjectHealth: { health },
                 previewDocumentationSetup: { _ in preview },
                 performDocumentationSetup: { _ in
@@ -773,6 +984,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             postActionIdentifiers: ["project-documentation-action-error"],
             postActionVisibleIdentifiers: ["project-documentation-action-error"],
             postActionFocusedIdentifier: "project-documentation-action-error",
+            pressIdentifiers: ["project-manage"],
             pressTitles: ["Preview Documentation Action", "Bind This Repository"]
         )
     }

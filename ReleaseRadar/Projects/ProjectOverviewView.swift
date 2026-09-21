@@ -80,7 +80,6 @@ struct ProjectOverviewView: View {
     @State private var healthGeneration: UInt64 = 0
     @State private var manageProjectPresentation: ManageProjectPresentation?
     @State private var showsHelp = false
-    @State private var showsRootManagement = false
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
     @State private var documentationSetupFeedback: DocumentationSetupFeedback?
     @State private var documentationActionErrorGeneration = 0
@@ -182,34 +181,24 @@ struct ProjectOverviewView: View {
                 guard generation > 0,
                       let feedback = documentationSetupFeedback,
                       let title = feedback.failureTitle else { return }
-                withAnimation {
-                    proxy.scrollTo(documentationActionErrorAnchor, anchor: .center)
+                proxy.scrollTo(documentationActionErrorAnchor, anchor: .center)
+                Task { @MainActor in
+                    await Task.yield()
+                    documentationActionErrorKeyboardFocused = true
+                    documentationActionErrorFocused = true
+                    NSAccessibility.post(
+                        element: NSApp as Any,
+                        notification: .announcementRequested,
+                        userInfo: [
+                            .announcement: "\(title). \(feedback.message)",
+                            .priority: NSAccessibilityPriorityLevel.high.rawValue,
+                        ]
+                    )
                 }
-                documentationActionErrorFocused = true
-                documentationActionErrorKeyboardFocused = true
-                NSAccessibility.post(
-                    element: NSApp as Any,
-                    notification: .announcementRequested,
-                    userInfo: [
-                        .announcement: "\(title). \(feedback.message)",
-                        .priority: NSAccessibilityPriorityLevel.high.rawValue,
-                    ]
-                )
             }
         }
         .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
-        .sheet(isPresented: $showsRootManagement) {
-            if let repositoryRecovery {
-                VStack(alignment: .trailing) {
-                    ScrollView { RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted).padding(24) }
-                    Button("Done") { showsRootManagement = false }
-                        .buttonStyle(RekonSecondaryButtonStyle()).padding([.bottom, .trailing], 24)
-                }
-                .frame(minWidth: 520, idealWidth: 720, minHeight: 500, idealHeight: 750)
-                .background(RekonTheme.background)
-            }
-        }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
         .sheet(isPresented: $showsLifecycleConfirmation) {
             if let lifecyclePreview, let archive {
@@ -252,7 +241,14 @@ struct ProjectOverviewView: View {
                     recoverLostWorker: recoverLostWorker.map { recover in
                         { expected in try await recover(presentation.registration, expected) }
                     },
-                    projectControls: projectManagementControls,
+                    projectControls: { presentRootRecovery, documentationActionErrorFocus in
+                        projectManagementControls(
+                            presentRootRecovery: presentRootRecovery,
+                            documentationActionErrorFocus: documentationActionErrorFocus
+                        )
+                    },
+                    repositoryRecovery: repositoryRecovery,
+                    onRepositoryRelocated: rootActionCommitted,
                     documentationActionErrorGeneration: documentationActionErrorGeneration,
                     reopenCurrentRegistration: { settings in
                         guard settings.registration.projectID == project.id else { return }
@@ -409,7 +405,7 @@ struct ProjectOverviewView: View {
         .accessibilityIdentifier("project-guidance-status")
     }
 
-    private var projectManagementControls: AnyView {
+    private func projectManagementControls(presentRootRecovery: @escaping () -> Void) -> AnyView {
         AnyView(VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 12) {
                 guidanceCard
@@ -432,7 +428,7 @@ struct ProjectOverviewView: View {
                         isRefreshing: isRefreshingHealth,
                         refresh: refreshHealth,
                         reauthorize: healthReauthorizationAction,
-                        manageRoots: repositoryRecovery == nil ? nil : { showsRootManagement = true }
+                        manageRoots: repositoryRecovery == nil ? nil : presentRootRecovery
                     )
                     if let healthRecoveryMessage {
                         Text(healthRecoveryMessage)
@@ -456,7 +452,7 @@ struct ProjectOverviewView: View {
                             evidence: evidence,
                             documentationStatus: documentationStatus,
                             restoreFolderAccess: healthReauthorizationAction,
-                            openWorktreeRecovery: repositoryRecovery == nil ? nil : { showsRootManagement = true },
+                            openWorktreeRecovery: repositoryRecovery == nil ? nil : presentRootRecovery,
                             loadPreview: loadEvidencePreview.map { loader in
                                 { await loader(evidence.id) }
                             }
