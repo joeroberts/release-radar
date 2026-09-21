@@ -1,5 +1,50 @@
 # Release Radar delivery state
 
+## September 21 — Manage Project delivered 0.1.34; restart handoff
+
+Manage Project Task01/02 implementation and Task03 independent verification are
+complete and locally delivered as **0.1.34 (1)**. Source/version commit
+`c9a4a16a9ad9440cefc1a609314640c4027ed588`; artifact commit and annotated
+`v0.1.34` target `0c040804228ebdf80abdcef2e3d316de55549c4b`. Exact tag pushed;
+remote peeled commit matches. No branch push, PR, merge or notarization.
+
+`dist/ReleaseRadar-0.1.34.dmg` and Downloads copy match SHA-256
+`d370d6ab03af1fefa5f84c1b955053392fbb69ce04701d83a6d8a71a8d393201`.
+DMG verification, read-only mounted layout/identity, strict nested signatures and
+mounted/staged executable equality passed. Installed `/Applications/ReleaseRadar.app`
+is `com.rekonlabs.ReleaseRadar` 0.1.34 (1), team `2UA854NLX4`; strict deep signing
+and installed/staged executable equality passed. App is stopped. Product checks
+and independent assessments below remain terminal; no tests were repeated solely
+for release. No RR connector calls were made after installation.
+
+**Next: owner restarts Codex before any RR connector call.** After confirmation,
+create fresh Main (Astra/medium) and Build contexts before Navigation as approved.
+Replacement Main reads AGENTS, this current section, catalog/index and only the
+next controlling brief; do not ingest historical conversations or handoff sections.
+Use canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`,
+preserve branch `codex/manage-project-context-recovery`, all worktrees and artifacts,
+and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
+
+RR accepted catalog is `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`;
+project/root `project-fffdc0e0b15b9b86` / `project-fffdc0e0b15b9b86-root-0`,
+registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
+Manage Project remains in_progress, task-plan revision 1 with completion recording
+pending; source/release completion does not imply RR task completion or owner
+acceptance. Obtain current supported evidence/readback and exact approval before
+any pending task-state reconciliation. Navigation is next: Archive/Remove relocation
+and remaining approved navigation, excluding delivered toolbar/search. Guided Setup
+follows Navigation and first reconciles its proposed remainder against accepted
+Outcome 3 (revision 4). Documentation reconciliation and plan reconstruction stay
+Backlog. No usage tracking. Managed workers use RR status, not desktop task listing.
+Main coordinates/owns ledger; Build owns compilation/Git. Preserve independent
+review and existing approval boundaries; never interrupt merely to reconcile a
+stale status display. Task03 worker connection is closed after final PASS.
+
+Retained temporary outputs, no cleanup authorized:
+`/tmp/release-radar-0.1.34-dmg.3d5d0C`,
+`/tmp/release-radar-0.1.34-mount.9nisSq`, `DerivedData/`, and `.build/task03-*`.
+Existing installers remain rollback copies; no duplicate backups were created.
+
 ## September 21 — Manage Project verified; local delivery next
 
 Task03 independent UI/recovery assessment passed with no Required defects or
