@@ -30,9 +30,15 @@ A test-only failure attachment is implemented to capture the accessibility
 hierarchy, but both diagnostic launches timed out before XCTest connected,
 including one `test-without-building` attempt. Neither ran the diagnostic or
 produced behavioral evidence. Both exact runners and hosts are confirmed stopped;
-no further launch is pending. Build Agent is diagnosing the test-host startup
-failure from existing results and logs. No permissions or installed app changes
-were made for these tests. Preserve the worker checkout and result bundles.
+no further launch is pending. Saved spindump identifies a pre-initialization
+macOS sandbox approval wait; a successful earlier host also required an AppData
+privacy decision. Full Disk Access denial appears in both successful and failed
+runs and is not established as the cause. Computer-use access to the system
+permission-dialog surface was explicitly denied. The owner has been asked for
+the exact visible privacy prompt, or confirmation that none is visible; further
+launches wait for that response. Do not bypass the protected UI, grant permissions,
+or repeat unchanged launches. No permissions or installed app changes were made
+for these tests. Preserve the worker checkout and result bundles.
 Manage Project remains In Progress with all three tasks pending. Before future
 preparation, selected context must be committed and stable.
 
