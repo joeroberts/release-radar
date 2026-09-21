@@ -35,6 +35,11 @@ inferred. Fresh RR inventory confirms Manage Project task-plan revision 1,
 Navigation and Guided Setup in Backlog, Outcome 3 accepted at revision 4, and
 documentation reconciliation/plan reconstruction still in Backlog. No usage tracking.
 
+Task03 controlling brief: [authorization and recovery verification](task-briefs/2026-09-21-manage-project-task03.md).
+Its catalog entry is prepared; acceptance of the validated catalog transition is
+pending. Task definitions and completion states are unchanged. The completed
+isolated correction task is archived after confirming its processes stopped.
+
 ## September 21 — Task02 resumed through managed execution
 
 Owner restarted Codex after installation. Supported inventory and catalog readback
