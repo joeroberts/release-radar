@@ -23,7 +23,26 @@ passed. GREEN-1 and GREEN-2 exposed bounded production/test fixture compile defe
 corrected by the writer. GREEN-3 passed all eight focused tests, zero failed or
 skipped (offline native Xcode, macOS arm64, `workingTree` at baseline `8a15bab`).
 Evidence: `.build/native-checks/lost-worker-green-3.xcresult` and matching log.
-Fresh independent Sol/high recovery/security/architecture/UX review is dispatched.
+Independent Sol/high review task `01a0c226-4001-7152-a82e-16d184fed2ae`
+identified one Required defect: an audit failure after assignment recovery could
+show false failure and hide same-receipt retry. Two focused regressions ran in `lost-worker-review-red-2`: both failed.
+The UI test directly reproduced the missing retry control; the onboarding test
+hit injected SQLite authorization failure before its replay assertions, so replay
+RED is not established. The writer corrected truthful readback and same-receipt audit retry; Build Agent
+passed both affected tests in `lost-worker-review-green-1` (2 passed, no failures
+or skips), including actual injected post-CAS failure/replay and one grant release.
+Documentation checks passed. The same reviewer found a remaining Required race:
+concurrent identical audit-finish calls can lose the receipt CAS after the other
+succeeds and falsely report recovery failure. A focused regression reproduced the race (`lost-worker-audit-race-red-1`).
+The bounded correction passed all three directly affected tests in
+`lost-worker-audit-race-green-1` (3 passed, no failures/skips); same-reviewer
+correction review passed with no Required or Optional findings remaining.
+Build Agent is released to scoped commit/integration and signed candidate build;
+actual recovery and compact/short-height/wide UI checks remain pending. Other successful tests were not repeated. The onboarding RED fixture was invalid because its
+trigger setup used an authorizer-protected transaction; it now uses a separate
+connection to the temporary test database. Do not claim historical replay RED.
+No live recovery occurred.
+Existing successful checks remain terminal except where this correction affects them.
 Compilation/Git remain with Build Agent; Main owns this ledger.
 The owner's screenshot exposes vertically clipped Project settings; recovery
 control reachability is included in the required compact/wide UI verification.
