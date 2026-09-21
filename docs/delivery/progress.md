@@ -1,14 +1,17 @@
 # Release Radar delivery state
 
-## September 21 — Task02 recovery ancestry: chief review complete, implementation unapproved
+## September 21 — Task02 recovery ancestry: reviewed repair authorized
 
 Fresh Chief Architect task `01a0c3ef-6e5f-70c1-a226-96ae893c402d` assessed
 canonical source `90ecf34d` read-only. Requested Astra/high; effective settings
 not exposed. No archived task was restored or reused. Owner directed architecture
 review before implementation; the earlier implementation approval request is
-superseded by the reviewed proposal below. No recovery repair is authorized yet.
+superseded by the reviewed scope below. Owner approved implementation, the isolated
+repair-task exception, Build verification, independent architecture/security review
+and signed local delivery before Task02 resumes. Controlling brief:
+[Recovery ancestry repair](task-briefs/2026-09-21-recovery-ancestry-repair.md).
 
-**Chief recommendation / proposed approval scope:** extend delivery-continuation
+**Approved Chief recommendation:** extend delivery-continuation
 eligibility only for verified recovered delivery ancestors on the requested
 closed successor's own `baselineFromAssignmentID` chain. Keep retirement unchanged.
 Use successor `7b`'s clean committed candidate `3f1498c2`, not original `f913`'s
@@ -51,7 +54,7 @@ Use existing native Git checks where relevant. After reviewed local integration,
 use the standing signed local release workflow and verify supported correction
 preparation/start for the preserved Task02 candidate. No branch publication, task
 acceptance/definition changes, permissions or unrelated recovery work implied.
-Implementation route and this repair endpoint await explicit owner approval.
+Owner explicitly approved this route and repair endpoint; no repeated approval is needed.
 
 **Receipt correction:** the blocking-assignment response does not establish a
 terminal preparation receipt. Dispatcher persists `outcomeUnknown` before producer
