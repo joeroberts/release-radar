@@ -33,6 +33,16 @@ The [current ledger](../progress.md) controls authorization and delivery state.
   documentation reconciliation, plan reconstruction, RDS API changes, worker
   cleanup, permissions/configuration, new persistence or public contracts.
 
+The owner's September 21 closeout correction explicitly excludes all compact
+Overview layout changes and their containment regression test. They are tracked
+separately in [GitHub #116](https://github.com/joeroberts/release-radar/issues/116),
+which must start fresh when authorized; its experimental implementation is not
+to be retained for reuse. Integrate only the valid Navigation test corrections,
+verify that exact candidate and finish its independent review/local release.
+After the owner's Codex restart, record verified evidence, complete the two
+existing tasks and move Navigation to Needs review through supported operations.
+Final owner acceptance remains separate. Worktree cleanup is separate closeout work.
+
 The baseline is merged main `f1e8d48da1e138b75c78b9ae763130e90df5ccb9` plus the
 committed preparation containing this brief and catalog/index updates. Each
 dependent assignment starts from a committed baseline containing its prerequisite.
@@ -90,6 +100,8 @@ patch release: matching metadata/tag, versioned signed DMG in dist and Downloads
 verified installation, and exact tag push. Preserve existing release tags and
 installers. After installation, preserve the handoff and wait for the owner's
 Codex restart before connector calls. No branch push, PR, merge, public release,
-notarization, RR task completion/acceptance, or unrelated owner-state mutation is
-granted by this brief. Managed assignment preparation/launch remains within the
+notarization, owner acceptance, or unrelated owner-state mutation is granted by
+this brief. The later explicit owner goal above authorizes verified evidence,
+the two existing task completions and Needs review after restart. Managed
+assignment preparation/launch remains within the
 existing onboarding authorization for this exact registered work.
