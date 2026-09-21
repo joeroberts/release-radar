@@ -8,7 +8,13 @@ the managed checkout is clean. Fresh complete delivery inventory confirms exact
 registration/generation, phase revision 1 and Manage Project task-plan revision 1.
 The original connection closure remains unverified. Continuation preparation must
 pass normal RR eligibility checks; no new worker is launched by this request.
-Exact preparation envelope (pending):
+Preparation request `f7fa55ae-b098-4b6c-b807-7d620416abd6` returned an execution
+conflict with diagnostic `blockingAssignment`, identifying the exact prior
+`delivery-f913b890-7149-450c-bf8c-2b515cce75a0` (`observedAtFailure`), and no
+entity IDs. No continuation assignment or worker was created. The tests-only
+checkpoint is preserved; production remains unreleased. No unchanged retry,
+connector repair or bypass is authorized by this result.
+Exact refused preparation envelope (retained):
 ```json
 {"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"f7fa55ae-b098-4b6c-b807-7d620416abd6","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Owner approved fresh managed Task02 continuation from preserved tests-only checkpoint 0a51ee1d8484d960effe1d55c71e510e162cf2ab after causal RED-4. Prior worker handle is unavailable; require normal RR baseline eligibility validation without assuming closure. Scope and task definitions unchanged."}
 ```
