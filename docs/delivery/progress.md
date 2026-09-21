@@ -40,14 +40,19 @@ stabilization, so Main directly opened and observed the synthetic 1100-point tes
 window's sheet through CUA: exact identity, settings, execution and Done rendered
 without clipping. This externally interacted observation is separate from the
 successful automated assertions. Candidate `cfa87c10` is committed in the managed delivery checkout. Its worker
-connection is closed. Independent UX/recovery review is running through RR
-assignment `review-5aec685a-e532-4e83-8ce6-8a0b87dbfafd` (preparation audit
-`72F7E559-7D77-465E-BDC5-F9B04CD14656`), worker
-`E04BC19B-4D51-480B-9B08-4602225DF327`, task
-`01a0c19b-7720-7841-b579-f784a2a59768`. Effective Terra/high, exact review
-checkout/profile, no network and `.build`-only scratch writes were verified.
-The reviewer has the exact diff and actual rendered sheet images within its
-permitted checkout. Task completion and owner acceptance are not inferred.
+connection is closed. Independent UX/recovery review `review-5aec685a-e532-4e83-8ce6-8a0b87dbfafd`
+completed with one product correction: after a registration changes, settings
+Retry retains the old captured identity and cannot recover as its message claims.
+The second finding concerns an incomplete compact bitmap; a fully rendered
+same-source automated capture is available in the review scratch inputs. The
+reviewer connection is closed; no review pass or task completion is claimed.
+A supported correction assignment `delivery-8c2424da-7943-42b3-ae85-fd2b5cb11bb1`
+(preparation audit `B7BB50CE-1D5F-40F1-BFE5-7CC4D3F82575`) starts from `cfa87c10`.
+Worker `8494378B-B6D9-4FFF-B46E-836474295DB6`, task
+`01a0c1a0-d4f8-7bb2-8da9-3b3a1d6fc903`, is adding a focused recovery regression
+before the bounded correction. Effective Terra/medium, exact assigned checkout
+and profile, no network were verified. Build Agent retains compilation/Git
+ownership; only affected checks and correction review will repeat.
 No permission, installed-app or RR completion changes were made.
 Temporary logs, XCResults and diagnostic attachments remain in canonical
 `.build/native-checks`. Preserve the worker checkout and result bundles.
