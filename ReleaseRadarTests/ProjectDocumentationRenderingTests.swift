@@ -261,6 +261,167 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(evidencePreviewCount, 2)
     }
 
+    func testManageProjectRelocatesLifecycleControlsWithExactPreviewIdentity() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-lifecycle")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-lifecycle-registration",
+            requestGeneration: 11
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Lifecycle management",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+        let archivePreview = ProjectLifecyclePreview(
+            projectID: projectID,
+            projectName: project.name,
+            source: .active,
+            target: .archived,
+            registration: registration,
+            counts: .init(phases: 2, tickets: 5, evidence: 3, history: 8)
+        )
+        let removalPreview = ProjectRemovalPreview(
+            projectID: projectID,
+            projectName: project.name,
+            lifecycle: .active,
+            registration: registration,
+            counts: .init(phases: 2, tickets: 5, evidence: 3, history: 8)
+        )
+
+        for width in [1100.0, 620.0] {
+            var archivedPreviewCount = 0
+            var archivedWith: ProjectLifecyclePreview?
+            try await render(
+                lifecycleOverview(
+                    project: project,
+                    registration: registration,
+                    archivePreview: {
+                        archivedPreviewCount += 1
+                        return archivePreview
+                    },
+                    archive: { preview in archivedWith = preview },
+                    removalPreview: { removalPreview },
+                    remove: { _ in }
+                ),
+                name: "manage-project-archive-relocation-\(Int(width))",
+                width: width,
+                expected: nil,
+                absentButtonTitles: ["Archive…", "Remove…"],
+                postActionIdentifiers: ["manage-project-panel", "manage-project-identity", "manage-project-archive"],
+                pressIdentifiers: ["project-manage", "manage-project-archive"],
+                afterPressText: [[], [registration.registrationID, "2 phases", "5 tickets", "No project data will be deleted"]],
+                pressTitles: ["Archive Project"]
+            )
+            XCTAssertEqual(archivedPreviewCount, 1)
+            XCTAssertEqual(archivedWith, archivePreview)
+
+            var removedPreviewCount = 0
+            var removedWith: ProjectRemovalPreview?
+            try await render(
+                lifecycleOverview(
+                    project: project,
+                    registration: registration,
+                    archivePreview: { archivePreview },
+                    archive: { _ in },
+                    removalPreview: {
+                        removedPreviewCount += 1
+                        return removalPreview
+                    },
+                    remove: { preview in removedWith = preview }
+                ),
+                name: "manage-project-remove-relocation-\(Int(width))",
+                width: width,
+                expected: nil,
+                absentButtonTitles: ["Archive…", "Remove…"],
+                postActionIdentifiers: ["manage-project-panel", "manage-project-identity", "manage-project-remove"],
+                pressIdentifiers: ["project-manage", "manage-project-remove"],
+                afterPressText: [[], [registration.registrationID, "2 phases", "5 tickets", "Read-only history will remain"]],
+                pressTitles: ["Remove from Tracking"]
+            )
+            XCTAssertEqual(removedPreviewCount, 1)
+            XCTAssertEqual(removedWith, removalPreview)
+        }
+    }
+
+    func testManageProjectLifecycleCancellationDoesNotApplyPreview() async throws {
+        let projectID = ProjectID(rawValue: "manage-project-lifecycle-cancel")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "manage-project-lifecycle-cancel-registration",
+            requestGeneration: 12
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Lifecycle cancellation",
+            registration: registration,
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+        let preview = ProjectLifecyclePreview(
+            projectID: projectID,
+            projectName: project.name,
+            source: .active,
+            target: .archived,
+            registration: registration,
+            counts: .init(phases: 1, tickets: 2, evidence: 3, history: 4)
+        )
+        var archiveCallCount = 0
+
+        try await render(
+            lifecycleOverview(
+                project: project,
+                registration: registration,
+                archivePreview: { preview },
+                archive: { _ in archiveCallCount += 1 },
+                removalPreview: { throw ProjectRemovalError.projectNotFound },
+                remove: { _ in }
+            ),
+            name: "manage-project-archive-cancellation",
+            width: 620,
+            expected: nil,
+            postActionIdentifiers: ["manage-project-archive"],
+            pressIdentifiers: ["project-manage", "manage-project-archive"],
+            pressTitles: ["Cancel"]
+        )
+
+        XCTAssertEqual(archiveCallCount, 0)
+    }
+
+    private func lifecycleOverview(
+        project: ProjectDashboardProjection,
+        registration: ProjectRegistration,
+        archivePreview: @escaping () async throws -> ProjectLifecyclePreview,
+        archive: @escaping (ProjectLifecyclePreview) async throws -> Void,
+        removalPreview: @escaping () async throws -> ProjectRemovalPreview,
+        remove: @escaping (ProjectRemovalPreview) async throws -> Void
+    ) -> ProjectOverviewView {
+        ProjectOverviewView(
+            project: project,
+            board: nil,
+            documentationState: .legacy(.missing),
+            projectRoot: nil,
+            phaseSelectionStatus: .idle,
+            openBoard: {},
+            selectActivePhase: { _ in },
+            reloadActivePhase: {},
+            reauthorizeActivePhase: { _ in },
+            loadProjectSettings: {
+                .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+            },
+            previewArchive: archivePreview,
+            archive: archive,
+            previewRemoval: removalPreview,
+            remove: remove
+        )
+    }
+
     func testManageProjectRootRecoveryCallbacksPresentInsideTheManagementSheet() async throws {
         let projectID = ProjectID(rawValue: "manage-project-root-recovery")
         let registration = ProjectRegistration(
@@ -1820,6 +1981,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
         afterPressIdentifiers: [[String]] = [],
+        afterPressText: [[String]] = [],
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
         sheetAttachmentName: String? = nil,
@@ -1937,6 +2099,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 XCTAssertNotNil(
                     element,
                     "Missing post-press accessibility element \(identifier)"
+                )
+            }
+            for text in afterPressText.indices.contains(index) ? afterPressText[index] : [] {
+                XCTAssertTrue(
+                    accessibilityText(try XCTUnwrap(ownWindow)).contains(text),
+                    "Missing post-press lifecycle content: \(text)"
                 )
             }
         }

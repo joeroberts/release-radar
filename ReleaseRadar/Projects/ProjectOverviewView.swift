@@ -85,13 +85,6 @@ struct ProjectOverviewView: View {
     @State private var documentationActionErrorGeneration = 0
     @AccessibilityFocusState private var documentationActionErrorFocused: Bool
     @State private var isPerformingDocumentationSetup = false
-    @State private var lifecyclePreview: ProjectLifecyclePreview?
-    @State private var lifecyclePreviewError: String?
-    @State private var isLoadingLifecyclePreview = false
-    @State private var showsLifecycleConfirmation = false
-    @State private var removalPreview: ProjectRemovalPreview?
-    @State private var showsRemovalConfirmation = false
-
     private let documentationActionErrorAnchor = "project-documentation-action-error-anchor"
 
     var body: some View {
@@ -102,13 +95,6 @@ struct ProjectOverviewView: View {
                     HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
                     VStack(alignment: .leading, spacing: 12) { projectHeading; projectActions }
                 }
-                if let lifecyclePreviewError {
-                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
-                        Text("Project action unavailable").font(.headline)
-                        Text(lifecyclePreviewError).foregroundStyle(RekonTheme.secondaryText)
-                    }
-                }
-
                 HStack(spacing: 14) {
                     summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag", accessibilityID: "active-phase")
                     summaryCard("Current work", value: "\(project.currentWorkCount)", systemImage: "rectangle.stack", accessibilityID: "current-work")
@@ -180,20 +166,6 @@ struct ProjectOverviewView: View {
         .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
-        .sheet(isPresented: $showsLifecycleConfirmation) {
-            if let lifecyclePreview, let archive {
-                ProjectLifecycleConfirmationView(preview: lifecyclePreview) {
-                    try await archive(lifecyclePreview)
-                }
-            }
-        }
-        .sheet(isPresented: $showsRemovalConfirmation) {
-            if let removalPreview, let remove {
-                ProjectRemovalConfirmationView(preview: removalPreview) {
-                    try await remove(removalPreview)
-                }
-            }
-        }
         .sheet(item: $manageProjectPresentation) { presentation in
             if let loadProjectSettings {
                 ManageProjectView(
@@ -221,6 +193,10 @@ struct ProjectOverviewView: View {
                     recoverLostWorker: recoverLostWorker.map { recover in
                         { expected in try await recover(presentation.registration, expected) }
                     },
+                    previewArchive: previewArchive,
+                    archive: archive,
+                    previewRemoval: previewRemoval,
+                    remove: remove,
                     projectControls: { presentRootRecovery, documentationActionErrorKeyboardFocused in
                         projectManagementControls(
                             presentRootRecovery: presentRootRecovery,
@@ -262,48 +238,6 @@ struct ProjectOverviewView: View {
             Button("Help") { showsHelp = true }
                 .buttonStyle(RekonSecondaryButtonStyle())
                 .accessibilityIdentifier("project-help")
-            if previewArchive != nil, archive != nil {
-                Button(isLoadingLifecyclePreview ? "Preparing…" : "Archive…") { prepareArchive() }
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .disabled(isLoadingLifecyclePreview)
-                    .accessibilityIdentifier("project-archive")
-            }
-            if previewRemoval != nil, remove != nil {
-                Button(isLoadingLifecyclePreview ? "Preparing…" : "Remove…") { prepareRemoval() }
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .disabled(isLoadingLifecyclePreview)
-                    .accessibilityIdentifier("project-remove")
-            }
-        }
-    }
-
-    private func prepareArchive() {
-        guard let previewArchive else { return }
-        isLoadingLifecyclePreview = true
-        lifecyclePreviewError = nil
-        Task {
-            defer { isLoadingLifecyclePreview = false }
-            do {
-                lifecyclePreview = try await previewArchive()
-                showsLifecycleConfirmation = true
-            } catch {
-                lifecyclePreviewError = error.localizedDescription
-            }
-        }
-    }
-
-    private func prepareRemoval() {
-        guard let previewRemoval else { return }
-        isLoadingLifecyclePreview = true
-        lifecyclePreviewError = nil
-        Task {
-            defer { isLoadingLifecyclePreview = false }
-            do {
-                removalPreview = try await previewRemoval()
-                showsRemovalConfirmation = true
-            } catch {
-                lifecyclePreviewError = error.localizedDescription
-            }
         }
     }
 

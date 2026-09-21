@@ -125,6 +125,10 @@ struct ManageProjectView: View {
     let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
     let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
     let recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)?
+    let previewArchive: (() async throws -> ProjectLifecyclePreview)?
+    let archive: ((ProjectLifecyclePreview) async throws -> Void)?
+    let previewRemoval: (() async throws -> ProjectRemovalPreview)?
+    let remove: ((ProjectRemovalPreview) async throws -> Void)?
     let projectControls: ((@escaping () -> Void, FocusState<Bool>.Binding) -> AnyView)?
     let repositoryRecovery: RepositoryRecoveryModel?
     let onRepositoryRelocated: () async -> Void
@@ -147,6 +151,12 @@ struct ManageProjectView: View {
     @State private var executionFailed = false
     @State private var executionLoadFailed = false
     @State private var showsRootRecovery = false
+    @State private var lifecyclePreview: ProjectLifecyclePreview?
+    @State private var removalPreview: ProjectRemovalPreview?
+    @State private var lifecycleError: String?
+    @State private var isPreparingLifecycleAction = false
+    @State private var showsLifecycleConfirmation = false
+    @State private var showsRemovalConfirmation = false
     @FocusState private var documentationActionErrorKeyboardFocused: Bool
 
     init(
@@ -160,6 +170,10 @@ struct ManageProjectView: View {
         loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?,
         retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?,
         recoverLostWorker: ((ProjectExecutionAssignment) async throws -> Void)? = nil,
+        previewArchive: (() async throws -> ProjectLifecyclePreview)? = nil,
+        archive: ((ProjectLifecyclePreview) async throws -> Void)? = nil,
+        previewRemoval: (() async throws -> ProjectRemovalPreview)? = nil,
+        remove: ((ProjectRemovalPreview) async throws -> Void)? = nil,
         projectControls: ((@escaping () -> Void, FocusState<Bool>.Binding) -> AnyView)? = nil,
         repositoryRecovery: RepositoryRecoveryModel? = nil,
         onRepositoryRelocated: @escaping () async -> Void = {},
@@ -176,6 +190,10 @@ struct ManageProjectView: View {
         self.loadExecutionAssignments = loadExecutionAssignments
         self.retireExecutionAssignment = retireExecutionAssignment
         self.recoverLostWorker = recoverLostWorker
+        self.previewArchive = previewArchive
+        self.archive = archive
+        self.previewRemoval = previewRemoval
+        self.remove = remove
         self.projectControls = projectControls
         self.repositoryRecovery = repositoryRecovery
         self.onRepositoryRelocated = onRepositoryRelocated
@@ -205,6 +223,7 @@ struct ManageProjectView: View {
 
                 settingsSection
                 executionSection
+                lifecycleSection
                 projectControls?(presentRootRecovery, $documentationActionErrorKeyboardFocused)
 
                 HStack {
@@ -250,11 +269,98 @@ struct ManageProjectView: View {
                 .accessibilityIdentifier("manage-project-root-recovery-sheet")
             }
         }
+        .sheet(isPresented: $showsLifecycleConfirmation) {
+            if let lifecyclePreview, let archive {
+                ProjectLifecycleConfirmationView(preview: lifecyclePreview) {
+                    try await archive(lifecyclePreview)
+                }
+            }
+        }
+        .sheet(isPresented: $showsRemovalConfirmation) {
+            if let removalPreview, let remove {
+                ProjectRemovalConfirmationView(preview: removalPreview) {
+                    try await remove(removalPreview)
+                }
+            }
+        }
     }
 
     private func presentRootRecovery() {
         guard repositoryRecovery != nil else { return }
         showsRootRecovery = true
+    }
+
+    @ViewBuilder private var lifecycleSection: some View {
+        if (previewArchive != nil && archive != nil) || (previewRemoval != nil && remove != nil) {
+            RekonCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Project lifecycle")
+                        .font(.headline)
+                        .accessibilityIdentifier("manage-project-section-lifecycle")
+                    Text("Archive pauses project monitoring and preserves its registration, history, and recovery. Removing retains read-only history and creates a new registration when the project is added again.")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                    if let lifecycleError {
+                        RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                            Text("Project action unavailable").font(.headline)
+                            Text(lifecycleError).foregroundStyle(RekonTheme.secondaryText)
+                        }
+                        .accessibilityIdentifier("manage-project-lifecycle-error")
+                    }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) { lifecycleButtons }
+                        VStack(alignment: .leading, spacing: 10) { lifecycleButtons }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var lifecycleButtons: some View {
+        if previewArchive != nil, archive != nil {
+            Button(isPreparingLifecycleAction ? "Preparing…" : "Archive…") { prepareArchive() }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(isPreparingLifecycleAction)
+                .accessibilityIdentifier("manage-project-archive")
+                .accessibilityHint("Previews the exact project registration before asking for archive confirmation.")
+        }
+        if previewRemoval != nil, remove != nil {
+            Button(isPreparingLifecycleAction ? "Preparing…" : "Remove…") { prepareRemoval() }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(isPreparingLifecycleAction)
+                .accessibilityIdentifier("manage-project-remove")
+                .accessibilityHint("Previews the exact project registration before asking for removal confirmation.")
+        }
+    }
+
+    private func prepareArchive() {
+        guard let previewArchive else { return }
+        isPreparingLifecycleAction = true
+        lifecycleError = nil
+        Task {
+            defer { isPreparingLifecycleAction = false }
+            do {
+                lifecyclePreview = try await previewArchive()
+                showsLifecycleConfirmation = true
+            } catch {
+                lifecycleError = error.localizedDescription
+            }
+        }
+    }
+
+    private func prepareRemoval() {
+        guard let previewRemoval else { return }
+        isPreparingLifecycleAction = true
+        lifecycleError = nil
+        Task {
+            defer { isPreparingLifecycleAction = false }
+            do {
+                removalPreview = try await previewRemoval()
+                showsRemovalConfirmation = true
+            } catch {
+                lifecycleError = error.localizedDescription
+            }
+        }
     }
 
     @ViewBuilder private var settingsSection: some View {
