@@ -42,7 +42,20 @@ The catalog transition readback is valid with matching accepted/candidate digest
 Exact committed requests and returned audit/revision receipts are retained in the
 [Task03 reconciliation](task-briefs/2026-09-21-manage-project-task03.md#september-21-owner-approved-tracked-reconciliation).
 Supported inventory confirms all three completions; owner acceptance is separate.
-Navigation is next: Archive/Remove relocation
+**Current priority: owner-authorized Release Radar-only Git and temporary-resource
+cleanup. Navigation remains paused; no implementation or worker was started.**
+The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
+opened against main; no merge is authorized. `codex/cleanup-record` was removed
+locally and remotely after merged-PR and ancestry verification. The clean ordinary
+`release-guidance-0.1.22-installed-baseline` worktree and branch were removed after
+confirming no branch-only patches versus main. Other ordinary branches retain
+unique patches or intentional preservation purpose; the coordinator checkout is
+dirty and retained. Main removed 15
+explicit generated build/staging/PR-body paths, approximately 5.45 GB; project
+installers and unrelated Codex configuration remain intact. RR-owned locked
+worktrees are retained for the owner to clean up later through app-managed retirement.
+
+After the owner resumes it, Navigation covers Archive/Remove relocation
 and remaining approved navigation, excluding delivered toolbar/search. Guided Setup
 follows Navigation and first reconciles its proposed remainder against accepted
 Outcome 3 (revision 4). Documentation reconciliation and plan reconstruction stay
@@ -51,10 +64,16 @@ Main coordinates/owns ledger; Build owns compilation/Git. Preserve independent
 review and existing approval boundaries; never interrupt merely to reconcile a
 stale status display. Task03 worker connection is closed after final PASS.
 
-Retained temporary outputs, no cleanup authorized:
-`/tmp/release-radar-0.1.34-dmg.3d5d0C`,
-`/tmp/release-radar-0.1.34-mount.9nisSq`, `DerivedData/`, and `.build/task03-*`.
-Existing installers remain rollback copies; no duplicate backups were created.
+The owner-authorized cleanup removed the previously listed `/tmp/release-radar-0.1.34-dmg.3d5d0C`,
+`/tmp/release-radar-0.1.34-mount.9nisSq`, canonical `DerivedData/`, and `.build/task03-*`
+build outputs. It also removed canonical `.build/release-0.1.33-version-tests`,
+`.build/task02-canonical-integration`, `.build/manage-project-task01-derived-data`,
+`.build/manage-project-task02-derived-data`, `build/onboarding-recovery-tests`,
+the PR-body temporary file, and empty staging scaffolds for 0.1.10/0.1.12/0.1.13/0.1.16.
+Historical/uncertain scratch, reusable caches, dirty or unique work, and managed
+worker resources are preserved pending their specific eligibility checks. Existing
+installers remain rollback copies; no duplicate backups were created.
+
 
 ## September 21 — Manage Project verified; local delivery next
 
