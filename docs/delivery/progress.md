@@ -1,38 +1,39 @@
 # Release Radar delivery state
 
-## September 21 — isolated Task02 correction authorized
+## September 21 — Task02 integrated; Task03 next
 
-Owner explicitly approved a fresh isolated Task02 correction task from preserved
-incomplete commit `3f92c35ecc660d4bb39d9e064eb4e4e3bc597ad5`, outside the stopped
-RR assignment. This exception is confined to finishing Task02 presentation and
-error-focus corrections; no new recovery project, permissions or managed-state
-changes. Fresh worktree task requested Terra/medium. Main owns ledger; existing
-Build Agent owns compilation/tests/Git; independent UI/recovery review remains
-required before integration/local delivery. No archived task is restored.
-Isolated task `01a0c45f-b3bc-7e31-8e29-40c35ec5bab3` is working in
-`/Users/jroberts/.codex/worktrees/3b8c/release_radar`. First correction verification
-passed root/worktree recovery presentation (1/3 total); the two documentation
-failure tests still fail their focus assertions. Evidence:
-`.build/task02-isolated-correction/Logs/Test/Test-ReleaseRadar-2026.09.21_10-34-34--0400.xcresult`
-in that checkout. Build sent a bounded error-focus/visibility correction to the
-same writer. Root recovery is terminal unless subsequent changes affect it;
-Final correction candidate `de7e472917e2dfb7962a9b7ff4a75ebd93e04fa7` is committed
-on preserved parent `3f92c35e`. Required three selectors passed 3/3 (10-37-46
-xcresult); immediate health recovery and independent section-loading boundaries
-passed 2/2 (10-38-40 xcresult), all under that checkout's same result directory.
-Build used pipefail; diff check passed. Fresh Terra/high independent UI/recovery
-review task `01a0c468-e7fc-7a43-b8e2-14bdeffb44d6` returned no Required
-product/source defect on the exact candidate. Independent error rendering/focus
-checks passed 2/2; wide/compact accessibility passed and compact visual comparison
-passed. Wide visual comparison remains unavailable: the exported image captures
-the host view rather than the separate sheet. Supported xctestrun forwarding did
-hold the app, but startup exposed live owner project rows before the synthetic
-fixture. Reviewer terminated that exact host (PID 6636) without interacting with
-data; no owner-data mutation was observed. That route is ended. No new capture
-machinery or product changes. Wide visual verification remains incomplete, not a
-demonstrated product defect. No integration or release yet. The review uses the owner-approved
-desktop-task exception; RR-managed workers remain tracked through RR worker status.
-All prior branches/checkouts/receipts/artifacts remain preserved.
+Task02 is implemented, directly verified, independently reviewed and locally
+integrated through `5ab10618` (preceding integration commits `fe4d3770`,
+`54a7f5ec`, `2275699d`). Build preserved canonical lost-worker recovery alongside
+the reviewed Manage Project relocation, root recovery and error-focus behavior.
+Independent Terra/high reviewer `01a0c468-e7fc-7a43-b8e2-14bdeffb44d6` found no
+Required source/behavior defect; compact visual and accessibility/recovery checks
+passed. Reviewer is finished, its processes stopped, and its task archived.
+
+The missing wide visual evidence was resolved by a minimal existing-test capture
+correction (`70571f71`, integrated as `5ab10618`): capture the already-resolved
+synthetic sheet instead of its covered host. Main independently inspected the
+nonblank 1100 image against the approved visual reference. Product code was
+unchanged by this test correction. The abandoned held-host route exposed live
+project rows at startup; it was terminated without interaction or observed
+owner-data mutation and is not to be repeated.
+
+Build's four affected integrated selectors passed (root recovery, catalog
+transition rejection, bind error, wide/compact sheet):
+`.build/task02-canonical-integration/Logs/Test/Test-ReleaseRadar-2026.09.21_11-08-49--0400.xcresult`.
+Diff check passed. The shell pipeline returned 1 because tee opened its log before
+the output directory existed; xcodebuild and the four test results passed.
+Previous unaffected checks remain terminal. All branches, worktrees and artifacts
+are preserved; unrelated `.codex/config.toml` and `.codex/hooks.json` remain untracked.
+
+The owner-approved isolated Task02 exception is complete; subsequent work returns
+to RR-managed execution. Next is the unchanged `rr-p6-manage-project-task-03`:
+authorization, archived/removed access, partial failures and accessible navigation
+with independent UI/recovery verification. Main owns the ledger; Build owns
+compilation/tests/Git. No release/install or RR completion/owner acceptance is
+inferred. Fresh RR inventory confirms Manage Project task-plan revision 1,
+Navigation and Guided Setup in Backlog, Outcome 3 accepted at revision 4, and
+documentation reconciliation/plan reconstruction still in Backlog. No usage tracking.
 
 ## September 21 — Task02 resumed through managed execution
 
