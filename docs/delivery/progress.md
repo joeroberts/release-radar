@@ -54,13 +54,18 @@ recovery action. Three affected tests pass: actual stale-registration recovery,
 ordinary transient retry, and immediate opening. The recovery explicitly opens a
 new same-project registration presentation without putting replacement settings
 under the stale identity. The delivery connection is closed. Independent correction
-review is running as `review-dc39dd28-c9bf-4ca4-85e9-0f96a7f17c23`, audit
-`902C4654-5247-4378-BC33-02D90FFA924E`, worker
-`9A3D36F7-193C-45C5-B4D1-6488E819F0CC`, task
-`01a0c1ae-fb65-7c92-a71c-a4b66b23eb06`. Effective Terra/high, exact review
-profile/root and `.build` scratch-only writes were verified. Complete rendered
-wide/compact images and the exact correction diff are staged within that review
-checkout. No review pass, completion or acceptance is inferred.
+review `review-dc39dd28-c9bf-4ca4-85e9-0f96a7f17c23` resolved the recovery finding.
+The reviewer then viewed the original-resolution compact image successfully and
+withdrew the image finding without repeating source review. No Required or Optional
+findings remain. Its connection is closed. Build Agent integrated the brief and
+two source commits conflict-free into canonical `e9ef9c55`; all six integrated
+source/test/docs files match candidate `236f2265`. Documentation and diff checks
+pass; unchanged behavioral tests were not repeated for identical integration.
+Task01 is locally verified, but RR task completion is still pending. Ticket
+evidence readback has revision 0 and no targets/observations; the supported
+repository evidence inventory returned `inventoryTooLarge`, so no catalog identity
+or evidence mutation was inferred. Task02 control-relocation preparation continues
+under existing authorization; no ticket acceptance is implied.
 No permission, installed-app or RR completion changes were made.
 Temporary logs, XCResults and diagnostic attachments remain in canonical
 `.build/native-checks`. Preserve the worker checkout and result bundles.
