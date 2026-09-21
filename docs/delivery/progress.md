@@ -2,24 +2,24 @@
 
 ## September 20 — Manage Project resumed
 
-Task02 test checkpoint (September 20): Build Agent verified the managed checkout
+Task02 RED checkpoint (September 20): Build Agent verified the managed checkout
 at baseline `5d8436a8271a9b3a2c45e1822b9b0e0d28bcf1f9` contains only the new
-122-line rendering test. Owner approved the narrow Build Agent exception to add
-its missing `directResults: []` fixture argument. The focused test then compiled
-and ran against unchanged production: **1 failed, 0 passed, 0 skipped**. The
-recorded failure is a generic accessibility-element unwrap at test helper line
-1694; it does not identify the missing control or exclude a window lookup failure.
-Compilation is established; intended behavioral RED remains unproven. Check:
+rendering test and owner-approved test-only corrections: missing `directResults: []`
+and diagnostic messages naming failed accessibility lookups. The focused test
+compiled and ran against unchanged production: **1 failed, 0 passed, 0 skipped**.
+RED-4 reports helper line 1694: `Missing accessibility control project-health-refresh`.
+This establishes the intended missing health control after Manage Project opens;
+it supersedes RED-3's unidentified lookup limitation. Check:
 `ProjectDocumentationRenderingTests.testManageProjectRelocatesProjectControlsAndPreservesExactCallbacks`;
 runner: offline native Xcode/macOS arm64; applicability: `workingTree`.
-Canonical temporary evidence: `.build/native-checks/manage-project-task02-red-3.xcresult`
-and matching `.log`; `git diff --check` passed. Earlier missing libgit2 setup and
-fixture compilation failures are not behavioral evidence. No production edit,
-worker replacement, connection closure, acceptance or release is claimed.
-Build Agent effective model/effort remains unexposed (requested Terra/medium).
-Observed shared weekly usage is **67%**, +1 percentage point from startup, below
-69.4%. Next: establish the focused test failure cause, then continue the approved Task02
-implementation through a supported managed assignment, direct checks and review. The original
+Canonical temporary evidence: `.build/native-checks/manage-project-task02-red-4.xcresult`
+and matching `.log`; scoped `git diff --check` passed. Earlier setup, compile and
+generic-lookup results remain retained but are not substituted for RED-4.
+No production edit, worker replacement, connection closure, acceptance or release
+is claimed. Build Agent effective model/effort remains unexposed (requested
+Terra/medium). Observed shared weekly usage is **67%**, +1 percentage point from
+startup, below 69.4%. Next: approved Task02 implementation through a supported
+managed assignment, then direct checks and independent review. The original
 connector-local handle is absent; do not expand this into connector repair work.
 
 Main replacement startup (September 20): canonical task root verified exactly as
