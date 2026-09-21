@@ -1,108 +1,81 @@
 # Release Radar delivery state
 
-## September 20 — Manage Project resumed
+## September 21 — Recovery delivered; resume Task02 from a fresh Main task
 
-Owner removed usage tracking and the weekly budget ceiling after the pause.
-Those older budget instructions are superseded; do not measure or enforce them.
-The approved isolated recovery task is active:
-`01a0c204-fd3c-7b41-b719-4d7f163ba81b`, worktree
-`/Users/jroberts/.codex/worktrees/3831/release_radar`, committed baseline
-`8a15bab9516b2a21c033538b64c51b9ee5a4e2ae`. Requested Sol/high; effective
-model/effort are not exposed. Its reported runtime is unrestricted filesystem,
-network enabled, approvals disabled; this is the explicitly approved isolated
-repair exception, not an RR-managed permission profile. The prior pending client
-ID resolved to this task; do not duplicate it.
+Canonical root: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
+Owner removed usage tracking and the weekly ceiling. Do not measure or enforce
+older budget instructions. Main profile Astra/medium; effective settings are not
+exposed. Continue Manage Project → Navigation → Guided Setup, reconciling delivered
+Outcome 3 before Guided Setup. Documentation reconciliation and plan reconstruction
+remain Backlog. Preserve approved definitions, branches, worktrees and artifacts.
 
-Recovery production checkpoint is ready for direct verification (September 21).
-Build Agent established compile-stage RED on the missing recovery contracts;
-XCTest did not run, so this is not behavioral RED. Evidence:
-`.build/native-checks/lost-worker-red-1.xcresult` and matching log.
-The writer then implemented process/grant reconciliation, replay-safe recovery
-receipts, exact-parent continuation and accessible recovery UI; scoped diff check
-passed. GREEN-1 and GREEN-2 exposed bounded production/test fixture compile defects, both
-corrected by the writer. GREEN-3 passed all eight focused tests, zero failed or
-skipped (offline native Xcode, macOS arm64, `workingTree` at baseline `8a15bab`).
-Evidence: `.build/native-checks/lost-worker-green-3.xcresult` and matching log.
-Independent Sol/high review task `01a0c226-4001-7152-a82e-16d184fed2ae`
-identified one Required defect: an audit failure after assignment recovery could
-show false failure and hide same-receipt retry. Two focused regressions ran in `lost-worker-review-red-2`: both failed.
-The UI test directly reproduced the missing retry control; the onboarding test
-hit injected SQLite authorization failure before its replay assertions, so replay
-RED is not established. The writer corrected truthful readback and same-receipt audit retry; Build Agent
-passed both affected tests in `lost-worker-review-green-1` (2 passed, no failures
-or skips), including actual injected post-CAS failure/replay and one grant release.
-Documentation checks passed. The same reviewer found a remaining Required race:
-concurrent identical audit-finish calls can lose the receipt CAS after the other
-succeeds and falsely report recovery failure. A focused regression reproduced the race (`lost-worker-audit-race-red-1`).
-The bounded correction passed all three directly affected tests in
-`lost-worker-audit-race-green-1` (3 passed, no failures/skips); same-reviewer
-correction review passed with no Required or Optional findings remaining.
-Build Agent is released to scoped commit/integration and signed candidate build;
-actual recovery and compact/short-height/wide UI checks remain pending. Other successful tests were not repeated. The onboarding RED fixture was invalid because its
-trigger setup used an authorizer-protected transaction; it now uses a separate
-connection to the temporary test database. Do not claim historical replay RED.
-No live recovery occurred.
-Existing successful checks remain terminal except where this correction affects them.
-Compilation/Git remain with Build Agent; Main owns this ledger.
-The owner's screenshot exposes vertically clipped Project settings; recovery
-control reachability is included in the required compact/wide UI verification.
-Actual signed/sandboxed recovery feasibility and independent review remain pending.
-Preserve Task02 checkpoint `0a51ee1d`; no live recovery or acceptance has occurred.
+**Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
+`/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
+`3741fdd8c71b8b68ae5a4e81eed8963673709886`; local/remote peeled tag commits match.
+Verified installer: `dist/ReleaseRadar-0.1.32.dmg`, identical copy in Downloads.
+No branch push, PR, merge or notarization. Installed/staged signing, sandbox,
+identity, version and executable equality passed. Documentation checks passed.
 
-Signed runtime candidate at `dist/ReleaseRadar.app` (0.1.31 build 1, source
-`ff5df9ba`) was launched after source integration `07fc0a2c`; Build verified
-strict/deep signing and sandbox entitlements. Main invoked Recover lost worker
-once for the named Task02 assignment. Supported UI readback shows **stopped**
-and “Worker connection recovered”, with checkout/committed work preserved and
-no task completion claimed. No permission expansion, retirement or second
-recovery request occurred. Compact-sheet scrolling visibly exposes the action;
-independent short/wide runtime QA and Build's preservation readback are pending.
-Final versioned release/install/tag and Task02 continuation remain pending.
-Validated catalog transition is currently `71cf6ce5…f97bd` →
-`070f3cc1…56c5f` (v1, same repository); owner subsequently approved exact acceptance (successful request below).
+Main invoked the new app-owned recovery once for
+`delivery-f913b890-7149-450c-bf8c-2b515cce75a0`. Supported UI showed **stopped**
+and “Worker connection recovered”, preserved checkout/committed work, and no task
+completion claimed. No retirement, permission expansion or repeated recovery.
+Build confirmed original checkout clean/locked at
+`0a51ee1d8484d960effe1d55c71e510e162cf2ab`, original branch preserved:
+`codex/rr-project-fffdc0e0b15b9b86-delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
+Checkout:
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-fffdc0e0b15b9b86/delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
 
-Build verified the original Task02 checkout remains clean/locked at exact
-`0a51ee1d8484d960effe1d55c71e510e162cf2ab`, with its original branch preserved.
-The completed repair writer task is archived; source is preserved in `0dde2b58`
-and integrated as `07fc0a2c`.
-Catalog delta versus accepted baseline: one added active controlling artifact,
-`rr-lost-worker-recovery-brief-2026-09-20`, at the existing recovery brief path;
-no changed/removed entries. Raw file SHA-256 `bafa5808…43948` is recorded only
-as a file hash, not substituted for the app's transition digest.
-Owner approved the exact transition; acceptance succeeded with audit
-`EA1486BC-28E5-43F4-B517-E464B7E09DD1`. Exact successful request:
+**Next authorized work:** continue `rr-p6-manage-project-task-02` through a fresh
+RR-managed assignment using `baselineFromAssignmentID` above. Task02 controlling
+brief: [Manage Project Task02](task-briefs/2026-09-20-manage-project-task02.md).
+Its tests-only causal RED is already established (`manage-project-task02-red-4`,
+missing `project-health-refresh`); do not rerun it or Task01's unchanged checks.
+Production Task02 implementation has not begun. Task01 is implemented, verified,
+independently reviewed and integrated; do not repeat it. Main owns coordination
+and ledger; existing Build Agent `01a0c061-578a-7e22-8ba3-77348fd6dcac` owns
+compilation and Git (requested Terra/medium, effective settings unexposed).
+
+**Current connection boundary:** after the release, Main quit the old dist
+candidate and launched the installed 0.1.32 app. Settings → Connections confirms
+Installed 0.1.32 matches shipped 0.1.32 and App bridge Available, and explicitly
+says “Start a new Codex task to load the plugin change.” This Main's existing MCP
+connection refused delivery inventory with transport failure / request not
+submitted. No new continuation request or worker was created. Start fresh Main
+context to load the updated plugin; do not retry the absent original worker handle,
+reinstall, change permissions, inspect history or reopen recovery. One transient
+CUA no-window result resolved by reattaching; the app remained running, no crash
+established. Fresh Main should first read complete supported delivery inventory,
+confirm current revisions/identity, then preserve one fresh preparation envelope.
+Do not replay the earlier definite `blockingAssignment` refusal as a new request.
+
+Project `project-fffdc0e0b15b9b86`, rootID `project-fffdc0e0b15b9b86-root-0`,
+registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1; last complete
+inventory had phase `rr-p6-remediation` revision 1 and Manage Project plan revision 1.
+Catalog v1 accepted repository `e7475429-ef51-4368-ad9e-61d9073d5a4f`, digest
+`070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f`.
+Owner explicitly approved the transition adding only the recovery brief;
+acceptance succeeded, audit `EA1486BC-28E5-43F4-B517-E464B7E09DD1`, and supported
+readback confirmed accepted=candidate. Exact successful request retained:
 ```json
 {"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"da216712-1ad9-4853-9efe-19ba2f5d6a89","priorCatalogVersion":1,"priorCatalogDigest":"71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd","target":{"catalogDigest":"070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"reason":"Accept validated catalog transition adding only the owner-approved lost-worker recovery controlling brief; no task definitions or delivery state change."}
 ```
 
-Final independent runtime QA passed: compact/short-height and wide host window,
-scrolling, accessibility, stopped-state readback and action/result reachability.
-Reviewer `01a0c226-4001-7152-a82e-16d184fed2ae` reports no Required or Optional
-findings; source/correction review is also passed. The single live recovery was
-Main's authorized invocation; reviewer performed no owner-state actions.
-Build preservation readback confirms original Task02 checkout clean/locked at
-`0a51ee1d`, original branch intact. Catalog acceptance readback confirms accepted
-and candidate digest both `070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f`.
-Build Agent is released to the standing versioned local delivery endpoint, then
-Main will prepare the already-authorized Task02 continuation through RR.
+Recovery evidence is terminal: eight focused tests passed in
+`.build/native-checks/lost-worker-green-3.xcresult`; reviewer-required audit/replay
+corrections passed the three directly affected tests in
+`.build/native-checks/lost-worker-audit-race-green-1.xcresult`. UI and race causal
+RED were established; the first onboarding RED fixture was invalid and is not
+claimed as behavioral evidence. Independent source/correction and actual signed
+compact/short-height/wide UI review passed with no Required or Optional findings.
+Reviewer `01a0c226-4001-7152-a82e-16d184fed2ae` and writer
+`01a0c204-fd3c-7b41-b719-4d7f163ba81b` are stopped and archived. Their source
+commit `0dde2b58` integrated as `07fc0a2c`; preserve worktree
+`/Users/jroberts/.codex/worktrees/3831/release_radar`. Recovery brief:
+[exact lost-worker recovery](task-briefs/2026-09-20-lost-worker-recovery.md).
+The isolated-task exception was only for that completed repair; Task02 returns to RR.
 
-Release delivery completed as `0.1.32` after the accepted catalog transition and
-independent runtime QA. Build staged and strictly verified the signed sandboxed
-bundle, created and verified `dist/ReleaseRadar-0.1.32.dmg`, copied the identical
-installer to `~/Downloads/ReleaseRadar-0.1.32.dmg`, and installed the verified
-no-launch bundle at `/Applications/ReleaseRadar.app`. Writer and reviewer tasks
-are archived; their passed results remain recorded above. The versioned source,
-installer, tag and remote peeled-commit verification are recorded with this
-release; no branch push, PR, merge or notarization is implied.
-
-Owner approved a narrowly scoped lost-worker recovery implementation to unblock
-Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
-The owner explicitly approved creating the separate isolated Codex repair task
-outside the blocked RR launcher. Implementation proceeds through the tests-first
-checkpoint above; the recovery must support this legacy assignment, not merely
-future workers. Catalog addition is
-pending validation and separate acceptance. Main owns docs; Build Agent owns Git
-and compilation. One independent recovery/security/UX review is required.
+## Earlier September 20 checkpoints — superseded where updated above
 
 Owner approved a fresh RR-managed Task02 continuation preserving the prior work.
 Build Agent committed the tests-only checkpoint as `0a51ee1d8484d960effe1d55c71e510e162cf2ab`;
