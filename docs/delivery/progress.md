@@ -23,7 +23,33 @@ Worker `C9EC2728-4A83-4E7D-A5FF-2E725FE217EA`, task
 `gpt-5.6-terra` / `medium` in its app-owned checkout. This directly verifies the
 installed recovery repair admits continuation from the preserved successor.
 
-Current checkpoint: tests only for required Task02 corrections (root/worktree
+**Current blocker / preserved correction:** supported exact receipt replay confirms
+assignment `delivery-3e7e5581-a189-48a3-9b0a-2175a530df03` is `stopped`,
+`connectionClosed: true`, retaining its session/branch/checkout. Main's supported
+interrupt settled the stale running display but also made further worker turns
+ineligible. Same-handle follow-up was refused; no replacement or bypass occurred.
+Build verified saved changes: three files only (ProjectLifecycleSupport.swift,
+ProjectOverviewView.swift, ProjectDocumentationRenderingTests.swift), compilation
+succeeds, but all three focused selectors still fail (missing post-press root
+control; two false error-focus visibility assertions). Exact result in worker
+checkout `.build/task02-presentation-green/Logs/Test/Test-ReleaseRadar-2026.09.21_10-21-57--0400.xcresult`
+and `.build/task02-presentation-green.log`. A tee pipeline exit 0 is not a pass;
+xcresult records 0/3 passing. No integration/release/acceptance. Build is preserving
+the scoped failing checkpoint as a clearly incomplete local commit. Further edits
+require a supported continuation route; existing isolated exception covered only
+the already-delivered ancestry repair, not this Task02 correction.
+
+Current checkpoint: focused RED established; same managed worker released for
+bounded production corrections. Build ran three selectors after the checkout-local
+offline libgit2 prerequisite: root-recovery control lookup failed and both adapted
+documentation failure tests failed error-focus/visibility assertions. Evidence in
+worker checkout `.build/task02-presentation-red/Logs/Test/Test-ReleaseRadar-2026.09.21_10-10-44--0400.xcresult`
+and `.build/task02-presentation-red.log`. Missing control is not by itself proof of
+sheet topology; production correction must directly verify callback presentation.
+Worker is implementing recovery-sheet ownership and error scrolling/focus inside
+Manage Project; no permissions or authority fallback changes.
+
+Scope remains required Task02 corrections (root/worktree
 recovery presentation inside Manage Project; exact-registration documentation
 failure fixtures and accessible error focus/scroll). No health-derived authority
 fallback. Build owns RED/GREEN, compilation and Git; Main releases production
