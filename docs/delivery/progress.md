@@ -1,5 +1,18 @@
 # Release Radar delivery state
 
+## September 21 — isolated Task02 correction authorized
+
+Owner explicitly approved a fresh isolated Task02 correction task from preserved
+incomplete commit `3f92c35ecc660d4bb39d9e064eb4e4e3bc597ad5`, outside the stopped
+RR assignment. This exception is confined to finishing Task02 presentation and
+error-focus corrections; no new recovery project, permissions or managed-state
+changes. Fresh worktree task requested Terra/medium. Main owns ledger; existing
+Build Agent owns compilation/tests/Git; independent UI/recovery review remains
+required before integration/local delivery. No archived task is restored.
+Three focused selectors remain RED as recorded below; do not repeat RED or
+unrelated successful checks. Correct actual UI behavior without weakening tests.
+All prior branches/checkouts/receipts/artifacts remain preserved.
+
 ## September 21 — Task02 resumed through managed execution
 
 Owner restarted Codex after installation. Supported inventory and catalog readback
