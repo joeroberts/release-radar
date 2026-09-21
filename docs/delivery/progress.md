@@ -27,25 +27,67 @@ the prior Build is idle and archived per the originating coordinator.
 Read AGENTS, this current section, catalog/index and only the next controlling
 brief; do not ingest historical conversations or handoff sections.
 Use canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`,
-preserve branch `codex/manage-project-context-recovery`, all worktrees and artifacts,
+use merged main `f1e8d48d` as the Navigation preparation baseline,
 and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
 
-RR accepted catalog is `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`;
+RR accepted catalog is `8f036fe21eed6c51a17b9b66ad73837369322cfe23d5992ad4fad08cabf2af77`;
 project/root `project-fffdc0e0b15b9b86` / `project-fffdc0e0b15b9b86-root-0`,
 registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
-Manage Project remains in_progress with owner acceptance `notAccepted`, as the
-owner explicitly requested. The approved reconciliation completed all three tasks
+Manage Project is **Accepted** following the owner's explicit acceptance direction.
+Supported inventory and delivery-evidence readback confirm lane `accepted` and
+owner acceptance `accepted` (audit `09F3A201-31E7-4612-AC28-80A626DB88C6`).
+The approved reconciliation completed all three tasks
 at task-plan revision 4. Evidence revision 5 contains four available, applicable,
 passed attributed handoff observations for Task01, Task02, Task03 and local release;
 all four expectations are satisfied. No task definition, order or lifecycle changed.
 The catalog transition readback is valid with matching accepted/candidate digest.
 Exact committed requests and returned audit/revision receipts are retained in the
 [Task03 reconciliation](task-briefs/2026-09-21-manage-project-task03.md#september-21-owner-approved-tracked-reconciliation).
-Supported inventory confirms all three completions; owner acceptance is separate.
-**Current priority: owner-authorized Release Radar-only Git and temporary-resource
-cleanup. Navigation remains paused; no implementation or worker was started.**
+Supported inventory confirms all three completions and the owner-directed acceptance.
+**Navigation is Accepted following the owner’s explicit review and approval.**
+The [Navigation brief](task-briefs/2026-09-21-navigation.md) records the narrowed
+scope, direct verification, independent review, release and exact audited closeout
+requests. Canonical source `8a8041ecd56b485902cb4b77a03dd9dc08699889` contains only
+Navigation product/test changes; ALL Overview/metric/phase-action layout changes
+and their containment regression are excluded to
+[GitHub #116](https://github.com/joeroberts/release-radar/issues/116). That issue
+must start fresh; its experimental implementation is not to be preserved for
+reuse. Cleanup remains separate and has not occurred.
+
+The two affected native tests passed on the exact canonical source (2 passed,
+0 failed, 0 skipped). Earlier route/sidebar, checking-footer, open-management,
+archive/removal and recovery checks remained applicable. Independent reviewer
+`F573CB8B-0DDD-4C97-8C1C-98A771CEE9B8` (Terra/high) passed the narrowed candidate
+with no Required findings. Delivery/reviewer connections are closed and bounded
+tasks archived. Build is idle; Main owns the ledger.
+
+Navigation **0.1.35 (1)** is locally delivered. Source preparation `3fc33b07`,
+version metadata `64d62be9`, installer commit and annotated `v0.1.35` target
+`716376939a3d36c11d5bd7656e3893821d50ec7d`. Exact tag pushed and remote peeled
+commit matches. No branch push, PR, merge or notarization. Repository and Downloads
+DMGs match SHA-256 `24d824bfc16ae61948ea6573705b4a803e109a2382a1db0521a925adc9a2a7dc`.
+Read-only mounted and installed app verified as `com.rekonlabs.ReleaseRadar`,
+0.1.35 (1), team `2UA854NLX4`, with strict deep signatures and hardened runtime;
+installed/staged executable and CodeResources match. Installation verification
+completed September 21 at 13:42:51 EDT.
+
+Owner confirmed Codex restart, then explicitly reviewed and approved Navigation.
+Supported readback confirms both original task definitions unchanged and completed
+at task-plan revision **3**, ticket lane **accepted**, owner acceptance **accepted**.
+Evidence revision **8**, target **2**, has available/applicable/passed observations
+for Task01, Task02 and local release; all expectations are satisfied. The initial
+unknown-revision target remains stale history and was not used for completion.
+Accepted transition audit: `4F2A0F2B-23D4-443E-9BF0-D36405139616`.
+Catalog readback is valid with matching accepted/candidate digest
+`8f036fe21eed6c51a17b9b66ad73837369322cfe23d5992ad4fad08cabf2af77`.
+
+Generated tracked `dist/ReleaseRadar.app` changes remain uncommitted under the
+existing versioned-DMG release practice. Pre-existing untracked
+`.codex/config.toml` and `.codex/hooks.json` remain untouched. Temporary Navigation
+build/test outputs and managed checkouts await separate cleanup. Navigation
+closeout is complete; no new ticket implementation is authorized by this record.
 The completed branch was pushed and [PR #115](https://github.com/joeroberts/release-radar/pull/115)
-opened against main; no merge is authorized. `codex/cleanup-record` was removed
+merged by the owner; canonical main was fast-forwarded and the merged branch removed. `codex/cleanup-record` was removed
 locally and remotely after merged-PR and ancestry verification. The clean ordinary
 `release-guidance-0.1.22-installed-baseline` worktree and branch were removed after
 confirming no branch-only patches versus main. Other ordinary branches retain
@@ -55,7 +97,7 @@ explicit generated build/staging/PR-body paths, approximately 5.45 GB; project
 installers and unrelated Codex configuration remain intact. RR-owned locked
 worktrees are retained for the owner to clean up later through app-managed retirement.
 
-After the owner resumes it, Navigation covers Archive/Remove relocation
+Navigation covers Archive/Remove relocation
 and remaining approved navigation, excluding delivered toolbar/search. Guided Setup
 follows Navigation and first reconciles its proposed remainder against accepted
 Outcome 3 (revision 4). Documentation reconciliation and plan reconstruction stay
