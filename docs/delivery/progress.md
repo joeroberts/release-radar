@@ -31,6 +31,12 @@ Close only the now-delivered recovery brief as completed/non-authoritative,
 preserving its ID/path/history; validate and obtain exact catalog acceptance
 before a fresh continuation request. No code, permissions or old checkout changes.
 
+Exact recovery-brief closeout catalog acceptance (owner approval pending;
+transition validated, scoped docs committed `29fbb2d6`):
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"e49c153c-b475-41f7-8b04-a0c2af08ad77","priorCatalogVersion":1,"priorCatalogDigest":"070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f","target":{"catalogDigest":"ce6c173f145900fc0f11a33d0443c6063b29d4d31ea3dddf60708f8d0dfb50b9","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"reason":"Accept validated closeout of only the delivered lost-worker recovery brief as completed/nonAuthoritative; preserve artifact identity/path/history and all task definitions."}
+```
+
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
 `3741fdd8c71b8b68ae5a4e81eed8963673709886`; local/remote peeled tag commits match.
