@@ -83,8 +83,9 @@ does not satisfy this repair.
 
 Main owns this brief/catalog/progress. Delivery writer: fresh isolated task, proposed
 Sol/high for uncertain process ownership and recovery; ceiling Astra/high for a
-named unresolved issue. No Ultra. Launch outside RR is pending the explicit owner
-exception requested in this conversation. Do not use that route before approval.
+named unresolved issue. No Ultra. Owner explicitly approved a fresh isolated Codex repair task outside the blocked
+RR launcher. This exception applies only to this repair; RR remains authoritative
+for assignment recovery and the subsequent normal Task02 continuation.
 Baseline: committed canonical branch `codex/manage-project-context-recovery` with
 this brief; Build Agent supplies its exact revision before launch. Delivery owns
 only the scoped source/tests/mutable design; Build Agent serializes tests and Git.

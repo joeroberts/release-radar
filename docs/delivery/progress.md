@@ -2,10 +2,22 @@
 
 ## September 20 — Manage Project resumed
 
+Budget safety checkpoint: observed weekly usage **68%**, up **2 percentage
+points** from startup 66%; approximate ceiling remains **69.4%**. Main stopped
+new dispatch before creating the approved repair task, leaving margin for delayed
+shared usage and handoff. Build Agent was idle at its last completed checkpoint.
+After this documentation checkpoint, pause the goal under the owner's explicit
+budget-pause authorization. Task02 tests/causal RED are preserved at `0a51ee1d`;
+production, independent review, integration and local delivery remain outstanding.
+Resume with the approved isolated Sol/high repair task from a committed baseline
+containing its brief and this authorization; do not ask for this exception again.
+Then return to Manage Project → Navigation → Guided Setup, reconciling Outcome 3
+before Guided Setup. Documentation reconciliation/reconstruction remain Backlog.
+
 Owner approved a narrowly scoped lost-worker recovery implementation to unblock
 Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
-The separate isolated repair-task launch exception is requested and pending; no
-repair writer has been launched. Production edits require a concrete safe recovery
+The owner explicitly approved creating the separate isolated Codex repair task
+outside the blocked RR launcher; no repair writer has been launched. Production edits require a concrete safe recovery
 path for this legacy assignment, not merely future prevention. Catalog addition is
 pending validation and separate acceptance. Main owns docs; Build Agent owns Git
 and compilation. One independent recovery/security/UX review is required.
