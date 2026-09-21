@@ -9,6 +9,15 @@ exposed. Continue Manage Project → Navigation → Guided Setup, reconciling de
 Outcome 3 before Guided Setup. Documentation reconciliation and plan reconstruction
 remain Backlog. Preserve approved definitions, branches, worktrees and artifacts.
 
+**Connection refreshed:** owner reported done after plugin refresh. Supported complete
+inventory now succeeds with the same exact project/root/registration/generation,
+in-delivery phase revision 1 and Manage Project plan revision 1; Task02 pending.
+A replacement Main task is unnecessary while this refreshed connection works.
+Exact Task02 continuation request (prepared, not yet submitted):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"72d8f5f5-71ed-4687-bbd5-7f80a2474ae7","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Continue owner-authorized Task02 from preserved tests-only commit0a51ee1d after verified app-owned lost-worker recovery delivered in0.1.32. Preserve task definitions, exact parent and prior RED; implement relocated controls through managed delivery."}
+```
+
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
 `3741fdd8c71b8b68ae5a4e81eed8963673709886`; local/remote peeled tag commits match.
