@@ -14,17 +14,34 @@ The goal retains Manage Project → Navigation → Guided Setup, with delivered
 Outcome 3 reconciliation before Guided Setup; documentation reconciliation and
 plan reconstruction remain Backlog.
 
-Takeover blocker: supported `worker_status` for existing worker
-`FC3954DD-14A3-418C-A655-63C036492ABE` refused: “The execution assignment does not
-match this project, checkout or session. Return to the coordinator.” This is a
-replacement-session readback failure, not evidence that the worker stopped or
-completed. Preserve assignment `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`;
-no duplicate launch, production-edit release, permission change or acceptance.
-Next action requires supported access to that same worker from its owning
-coordinator/session. Then obtain its tests-only terminal checkpoint, have Build
-Agent establish RED, and continue production through the same managed assignment.
+Original Main connection recovery attempt (September 20, owner requested): both
+supported `worker_status` and `worker_close` for
+`FC3954DD-14A3-418C-A655-63C036492ABE` now refuse with “The execution assignment
+does not match this project, checkout or session. Return to the coordinator.”
+**Closure is unverified; do not launch a replacement or infer resource cleanup.**
+The last successful original-session status, before this failure, returned
+`completed` with no pending requests. Worker reported a tests-only checkpoint:
+`ReleaseRadarTests/ProjectDocumentationRenderingTests.swift` adds
+`testManageProjectRelocatesProjectControlsAndPreservesExactCallbacks`, covering
+four relocated sections and documentation/compatibility/health/evidence callbacks
+at wide and compact widths. It reported no production edits and no compilation or
+test execution. This is reported checkpoint evidence, not a passing test or ticket
+completion. Current access failure does not revoke or verify that historical result.
 
-**Current work: Task01 is locally verified and integrated; Task02 managed delivery is running.**
+Assignment: `delivery-f913b890-7149-450c-bf8c-2b515cce75a0`; baseline
+`5d8436a8271a9b3a2c45e1822b9b0e0d28bcf1f9`; checkout:
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-fffdc0e0b15b9b86/delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
+No checkpoint commit or source mutation was attempted during this connection
+failure. Preserve tests, branch, checkout and artifacts. Supported next step is
+restore coordinator access through RR's existing connection controls, then verify
+closure of this exact handle. Do not claim another session can inherit it.
+After verified closure, Build Agent can preserve the tests in a scoped checkpoint
+commit; replacement Main can request a new supported continuation assignment using
+`baselineFromAssignmentID` for this closed committed assignment, subject to RR's
+normal validation. Do not replay worker_start or bypass the failed connection.
+
+**Current work: Task01 is locally verified and integrated; Task02 tests-only
+checkpoint reported, original managed connection inaccessible and closure unverified.**
 Task02 controlling brief/catalog/index are committed at `f781701d`; documentation
 check passes. Supported preparation returned `catalogUnaccepted` without entity IDs.
 Read-only transition validation confirms `isValid: true`, repository
