@@ -31,6 +31,7 @@ briefs that were accepted or cited as controlling during delivery.
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-outcome3-simple-workspace-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome3-simple-workspace.md](2026-09-14-outcome3-simple-workspace.md) | document | controlling &#40;delivery.outcome3-simple-workspace&#41; | active | none | none |
 | rr-p6-manage-project-task01-brief-2026-09-20 | [docs/delivery/task-briefs/2026-09-20-manage-project-task01.md](2026-09-20-manage-project-task01.md) | document | controlling &#40;delivery.rr-p6-manage-project-task-01&#41; | active | none | none |
+| rr-p6-manage-project-task02-brief-2026-09-20 | [docs/delivery/task-briefs/2026-09-20-manage-project-task02.md](2026-09-20-manage-project-task02.md) | document | controlling &#40;delivery.rr-p6-manage-project-task-02&#41; | active | none | none |
 | a8065da2-31dc-45b8-a8a1-f711ae82bd5a | [docs/delivery/task-briefs/README.md](README.md) | collectionIndex | supporting | active | none | none |
 | a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4 | [docs/delivery/task-briefs/SHA256SUMS](SHA256SUMS) | checksumManifest | nonAuthoritative | completed | none | none |
 
