@@ -586,8 +586,8 @@ public struct RecognizedPluginCapability: Equatable, Sendable {
             sharedExecutionStandardVersions: [1]
         ),
         Self(
-            manifestVersion: "0.1.31",
-            normalizedPackageDigest: "01c399bdf7e417904f055856a8fae787dadf3c8b59b44ffc8e44411cd05e6391",
+            manifestVersion: "0.1.32",
+            normalizedPackageDigest: "959f091c34d08eaca22267e08ea306db1ee11d66a4fd3948abaca162f4f93a48",
             sharedExecutionStandardVersions: [1]
         ),
     ]

@@ -18,7 +18,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		4D2qh54tkQ44OKt3Fh0d5K0VrOo=
+		mpcBr+E20dT5KuwPRJEs33sme5g=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
@@ -34,11 +34,11 @@
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		z7UrkmdqvLLBsyRwQGoTtASY8Vo=
+		WvCB67LutpA4nB9jEa3qe/9TrE4=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		7BGeHQBgT7VK2NSZtfLZ1tmFX+s=
+		Vq231nKZsk6yLKzvWWJh/jAFcC4=
 		</data>
 		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>
 		<data>
@@ -63,7 +63,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			b4KJt40uc0nPOJErQmr1+N0Bo4c=
+			PlRV2+yGw6cJxrEAoQiEsZjPiUo=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -81,7 +81,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			tL7g3RKWgyrfMaLA/Bd3JtcQXDw=
+			Pz2ZhVPw7qSah9r2h7XpKgCXLGw=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCoordinator" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -134,7 +134,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			LL94MFhnUW3XxK2Q6xpNv+beMwvNXQ4AiqNgcx34hhI=
+			+gKyY0JPu/tAAD8FtnzSDihC1pMwjSzTxfTE30m1y9I=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
@@ -162,14 +162,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			9KPKd0fgOkbXNVEs5/lWMfEvP/I6h2Tean+tYhPXgP8=
+			+12P+m0rdDucIFZ3kv3zdOOGbg4XcGXIlTk1TFf2Ok8=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ICIeGk513CdM7cu+VpKVqMR+l76L/oiUuKjzuo+bjqU=
+			eZ5XoWLuX9kP3nGEyugrpJBxOQsf9i4wS1TVqs9DfPQ=
 			</data>
 		</dict>
 		<key>Resources/ThirdPartyNotices/libgit2-COPYING.txt</key>

@@ -49,6 +49,52 @@ control reachability is included in the required compact/wide UI verification.
 Actual signed/sandboxed recovery feasibility and independent review remain pending.
 Preserve Task02 checkpoint `0a51ee1d`; no live recovery or acceptance has occurred.
 
+Signed runtime candidate at `dist/ReleaseRadar.app` (0.1.31 build 1, source
+`ff5df9ba`) was launched after source integration `07fc0a2c`; Build verified
+strict/deep signing and sandbox entitlements. Main invoked Recover lost worker
+once for the named Task02 assignment. Supported UI readback shows **stopped**
+and “Worker connection recovered”, with checkout/committed work preserved and
+no task completion claimed. No permission expansion, retirement or second
+recovery request occurred. Compact-sheet scrolling visibly exposes the action;
+independent short/wide runtime QA and Build's preservation readback are pending.
+Final versioned release/install/tag and Task02 continuation remain pending.
+Validated catalog transition is currently `71cf6ce5…f97bd` →
+`070f3cc1…56c5f` (v1, same repository); owner subsequently approved exact acceptance (successful request below).
+
+Build verified the original Task02 checkout remains clean/locked at exact
+`0a51ee1d8484d960effe1d55c71e510e162cf2ab`, with its original branch preserved.
+The completed repair writer task is archived; source is preserved in `0dde2b58`
+and integrated as `07fc0a2c`.
+Catalog delta versus accepted baseline: one added active controlling artifact,
+`rr-lost-worker-recovery-brief-2026-09-20`, at the existing recovery brief path;
+no changed/removed entries. Raw file SHA-256 `bafa5808…43948` is recorded only
+as a file hash, not substituted for the app's transition digest.
+Owner approved the exact transition; acceptance succeeded with audit
+`EA1486BC-28E5-43F4-B517-E464B7E09DD1`. Exact successful request:
+```json
+{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"da216712-1ad9-4853-9efe-19ba2f5d6a89","priorCatalogVersion":1,"priorCatalogDigest":"71cf6ce5c486d39c0e6624e73e2d9f2491c72c2a7c3ca405100413d02f1e97bd","target":{"catalogDigest":"070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"reason":"Accept validated catalog transition adding only the owner-approved lost-worker recovery controlling brief; no task definitions or delivery state change."}
+```
+
+Final independent runtime QA passed: compact/short-height and wide host window,
+scrolling, accessibility, stopped-state readback and action/result reachability.
+Reviewer `01a0c226-4001-7152-a82e-16d184fed2ae` reports no Required or Optional
+findings; source/correction review is also passed. The single live recovery was
+Main's authorized invocation; reviewer performed no owner-state actions.
+Build preservation readback confirms original Task02 checkout clean/locked at
+`0a51ee1d`, original branch intact. Catalog acceptance readback confirms accepted
+and candidate digest both `070f3cc10ceda07ad35bbe1b9331d675285f48e40bb816512b6eacb51d756c5f`.
+Build Agent is released to the standing versioned local delivery endpoint, then
+Main will prepare the already-authorized Task02 continuation through RR.
+
+Release delivery completed as `0.1.32` after the accepted catalog transition and
+independent runtime QA. Build staged and strictly verified the signed sandboxed
+bundle, created and verified `dist/ReleaseRadar-0.1.32.dmg`, copied the identical
+installer to `~/Downloads/ReleaseRadar-0.1.32.dmg`, and installed the verified
+no-launch bundle at `/Applications/ReleaseRadar.app`. Writer and reviewer tasks
+are archived; their passed results remain recorded above. The versioned source,
+installer, tag and remote peeled-commit verification are recorded with this
+release; no branch push, PR, merge or notarization is implied.
+
 Owner approved a narrowly scoped lost-worker recovery implementation to unblock
 Task02; [controlling brief](task-briefs/2026-09-20-lost-worker-recovery.md).
 The owner explicitly approved creating the separate isolated Codex repair task
