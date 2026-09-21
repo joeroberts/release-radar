@@ -54,6 +54,36 @@ Task02 composition/tests/mutable design and stops source writes before Build
 verification. Existing RED is retained. Build Agent retains compilation/Git;
 Main retains ledger. Do not duplicate this worker or repeat completed recovery.
 
+Task02 candidate `3f1498c264b574b0890d45d2e8e4b9e1e77820a8` is committed and clean
+in the delivery checkout, not yet integrated. Exactly three files changed:
+`ProjectOverviewView.swift`, `ProjectLifecycleSupport.swift`, and
+`ManagedEvidenceRenderingTests.swift`. Existing panel order is preserved;
+explicit AX containment keeps section and child-action identifiers distinct.
+No generic scrolling test workaround remains.
+
+Direct verification: GREEN-7 relocation/callback test PASS (4.258s, wide/compact);
+GREEN-6 evidence-consumer PASS (2.653s). Canonical artifacts are under
+`.build/native-checks/manage-project-task02-green-{6,7}.xcresult/Staging/`.
+Xcode stalled after completed test execution; staged diagnostics prove the
+selector results, not the interrupted top-level bundles. Documentation/diff
+checks passed. Delivery connection closed through supported operation; completed
+delivery task archived, checkout/branch preserved.
+
+Independent review `review-e2a8457c-971d-49a4-84fe-d98908553be1` is running on this
+candidate. Worker `B9B45136-96EE-44E2-8ACC-A652C35C3F7C`, task
+`01a0c2d8-e425-7553-9216-f950e1c0d30d`; supported start confirms Terra/high, exact
+review checkout/profile, on-request auto-review and network disabled. Scope:
+UX/accessibility/recovery and preserved exact-target authorization/data boundaries.
+Runtime verification and review disposition pending; no integration or acceptance.
+Temporary reviewer inputs `.build/task02-candidate.patch` and
+`.build/task02-direct-checks.txt` exist only in the review checkout; canonical
+candidate and direct results remain source of truth. Do not delete without approval.
+
+Exact Task02 independent-review preparation request:
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"e2a8457c-971d-49a4-84fe-d98908553be1","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"reviewOfAssignmentID":"delivery-7b5391d5-b421-465e-9c43-e9f85650117b","reason":"Independent Task02 review of clean committed candidate 3f1498c264b574b0890d45d2e8e4b9e1e77820a8 after direct relocation and evidence-consumer passes. Cover UX/accessibility, recovery and preserved exact-target authorization; no implementation, acceptance or scope changes."}
+```
+
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:
 `3741fdd8c71b8b68ae5a4e81eed8963673709886`; local/remote peeled tag commits match.
@@ -71,27 +101,20 @@ Build confirmed original checkout clean/locked at
 Checkout:
 `/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-fffdc0e0b15b9b86/delivery-f913b890-7149-450c-bf8c-2b515cce75a0`.
 
-**Next authorized work:** continue `rr-p6-manage-project-task-02` through a fresh
-RR-managed assignment using `baselineFromAssignmentID` above. Task02 controlling
+**Next authorized work:** verify `rr-p6-manage-project-task-02` in the existing
+managed assignment above, retaining its worker for required corrections. Task02 controlling
 brief: [Manage Project Task02](task-briefs/2026-09-20-manage-project-task02.md).
 Its tests-only causal RED is already established (`manage-project-task02-red-4`,
 missing `project-health-refresh`); do not rerun it or Task01's unchanged checks.
-Production Task02 implementation has not begun. Task01 is implemented, verified,
+Production Task02 source is frozen for Build verification. Task01 is implemented, verified,
 independently reviewed and integrated; do not repeat it. Main owns coordination
 and ledger; existing Build Agent `01a0c061-578a-7e22-8ba3-77348fd6dcac` owns
 compilation and Git (requested Terra/medium, effective settings unexposed).
 
-**Current connection boundary:** after the release, Main quit the old dist
-candidate and launched the installed 0.1.32 app. Settings → Connections confirms
-Installed 0.1.32 matches shipped 0.1.32 and App bridge Available, and explicitly
-says “Start a new Codex task to load the plugin change.” This Main's existing MCP
-connection refused delivery inventory with transport failure / request not
-submitted. No new continuation request or worker was created. Start fresh Main
-context to load the updated plugin; do not retry the absent original worker handle,
-reinstall, change permissions, inspect history or reopen recovery. One transient
-CUA no-window result resolved by reattaching; the app remained running, no crash
-established. Fresh Main should first read complete supported delivery inventory,
-confirm current revisions/identity, then preserve one fresh preparation envelope.
+**Current connection:** supported worker readback succeeds, confirms the same
+completed source assignment and Terra/medium settings, with no pending requests.
+The earlier transport interruption is resolved; no fresh Main, duplicate worker,
+reinstallation or repeated lost-worker recovery is needed.
 Do not replay the earlier definite `blockingAssignment` refusal as a new request.
 
 Project `project-fffdc0e0b15b9b86`, rootID `project-fffdc0e0b15b9b86-root-0`,
