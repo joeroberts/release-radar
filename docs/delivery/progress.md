@@ -13,10 +13,23 @@ remain Backlog. Preserve approved definitions, branches, worktrees and artifacts
 inventory now succeeds with the same exact project/root/registration/generation,
 in-delivery phase revision 1 and Manage Project plan revision 1; Task02 pending.
 A replacement Main task is unnecessary while this refreshed connection works.
-Exact Task02 continuation request (prepared, not yet submitted):
+Exact Task02 continuation request (submitted; audited refusal below):
 ```json
 {"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"72d8f5f5-71ed-4687-bbd5-7f80a2474ae7","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Continue owner-authorized Task02 from preserved tests-only commit0a51ee1d after verified app-owned lost-worker recovery delivered in0.1.32. Preserve task definitions, exact parent and prior RED; implement relocated controls through managed delivery."}
 ```
+
+Continuation readback: the old pending request `f7fa55ae…` was replayed exactly
+only after fresh `pendingPreparationRequest` evidence; it ended with audited
+`assignmentNotAuthorized` (`4BC3FA6D-55E8-4CEC-BF31-E4C6DD2AB061`). The unchanged
+new request `72d8f5f5…` then ended with the same audited refusal
+(`D411C373-9D52-48E9-861D-D291B4AFA88F`). No worker started.
+Bounded source inspection identified a concrete context mismatch: dispatcher
+selects every active controlling document from today's accepted catalog, while
+continuation loads them from the saved parent checkout. The newly added recovery
+brief is absent there. Parent/context missing-file refusal is fail-closed.
+Close only the now-delivered recovery brief as completed/non-authoritative,
+preserving its ID/path/history; validate and obtain exact catalog acceptance
+before a fresh continuation request. No code, permissions or old checkout changes.
 
 **Current state:** lost-worker recovery is delivered in **0.1.32**, installed in
 `/Applications/ReleaseRadar.app`. Release commit/tag `v0.1.32`:

@@ -1,5 +1,10 @@
 # Exact lost-worker recovery for Task02
 
+Status: completed and non-authoritative. Recovery was delivered in 0.1.32,
+verified for the named assignment, independently reviewed, and locally installed.
+Current work and authorization are recorded in [progress](../progress.md).
+
+
 ## Objective and authority
 
 The owner approved an app-owned Recover lost worker action to unblock the exact
