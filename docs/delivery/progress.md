@@ -33,15 +33,17 @@ and leave unrelated `.codex/config.toml`/`.codex/hooks.json` untracked.
 RR accepted catalog is `08fdebfafb30cf7f7e5a6aada7112550d7b7b8acc85dce274d0a401bf06f6f7f`;
 project/root `project-fffdc0e0b15b9b86` / `project-fffdc0e0b15b9b86-root-0`,
 registration `8edc840e-2847-4eeb-af68-282d5ed12b11`, generation 1.
-Manage Project remains in_progress with owner acceptance `notAccepted`, as the
-owner explicitly requested. The approved reconciliation completed all three tasks
+Manage Project is **Accepted** following the owner's explicit acceptance direction.
+Supported inventory and delivery-evidence readback confirm lane `accepted` and
+owner acceptance `accepted` (audit `09F3A201-31E7-4612-AC28-80A626DB88C6`).
+The approved reconciliation completed all three tasks
 at task-plan revision 4. Evidence revision 5 contains four available, applicable,
 passed attributed handoff observations for Task01, Task02, Task03 and local release;
 all four expectations are satisfied. No task definition, order or lifecycle changed.
 The catalog transition readback is valid with matching accepted/candidate digest.
 Exact committed requests and returned audit/revision receipts are retained in the
 [Task03 reconciliation](task-briefs/2026-09-21-manage-project-task03.md#september-21-owner-approved-tracked-reconciliation).
-Supported inventory confirms all three completions; owner acceptance is separate.
+Supported inventory confirms all three completions and the owner-directed acceptance.
 **Current priority: Navigation resumed explicitly by the owner after PR #115 merged.**
 The [Navigation brief](task-briefs/2026-09-21-navigation.md) controls the existing two
 pending tasks at plan revision 1. Preparation begins from merged main `f1e8d48d`;
