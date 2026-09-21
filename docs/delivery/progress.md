@@ -2,6 +2,17 @@
 
 ## September 20 — Manage Project resumed
 
+Owner approved a fresh RR-managed Task02 continuation preserving the prior work.
+Build Agent committed the tests-only checkpoint as `0a51ee1d8484d960effe1d55c71e510e162cf2ab`;
+the managed checkout is clean. Fresh complete delivery inventory confirms exact
+registration/generation, phase revision 1 and Manage Project task-plan revision 1.
+The original connection closure remains unverified. Continuation preparation must
+pass normal RR eligibility checks; no new worker is launched by this request.
+Exact preparation envelope (pending):
+```json
+{"version":1,"projectID":"project-fffdc0e0b15b9b86","projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"requestID":"f7fa55ae-b098-4b6c-b807-7d620416abd6","ticketID":"rr-p6-manage-project","taskID":"rr-p6-manage-project-task-02","expectedPhaseRevision":1,"expectedTaskPlanRevision":1,"baselineFromAssignmentID":"delivery-f913b890-7149-450c-bf8c-2b515cce75a0","reason":"Owner approved fresh managed Task02 continuation from preserved tests-only checkpoint 0a51ee1d8484d960effe1d55c71e510e162cf2ab after causal RED-4. Prior worker handle is unavailable; require normal RR baseline eligibility validation without assuming closure. Scope and task definitions unchanged."}
+```
+
 Task02 RED checkpoint (September 20): Build Agent verified the managed checkout
 at baseline `5d8436a8271a9b3a2c45e1822b9b0e0d28bcf1f9` contains only the new
 rendering test and owner-approved test-only corrections: missing `directResults: []`
