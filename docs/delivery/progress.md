@@ -1,6 +1,65 @@
 # Release Radar delivery state
 
-## September 21 — Recovery delivered; resume Task02 from a fresh Main task
+## September 21 — Task02 recovery ancestry: chief review complete, implementation unapproved
+
+Fresh Chief Architect task `01a0c3ef-6e5f-70c1-a226-96ae893c402d` assessed
+canonical source `90ecf34d` read-only. Requested Astra/high; effective settings
+not exposed. No archived task was restored or reused. Owner directed architecture
+review before implementation; the earlier implementation approval request is
+superseded by the reviewed proposal below. No recovery repair is authorized yet.
+
+**Chief recommendation / proposed approval scope:** extend delivery-continuation
+eligibility only for verified recovered delivery ancestors on the requested
+closed successor's own `baselineFromAssignmentID` chain. Keep retirement unchanged.
+Use successor `7b`'s clean committed candidate `3f1498c2`, not original `f913`'s
+tests-only baseline. No code-free supported route preserving that candidate was
+established; restoring a closed Codex task cannot restore managed worker authority.
+
+- Require exact current project/root/common repository, registration/generation,
+  Codex context and full work identity (task, ticket, phase/revisions, incarnation,
+  outcome/title) throughout the relied-on chain; retain normal catalog, policy,
+  hook and current-work checks.
+- Traverse only app-owned delivery baseline links. Require closed connections for
+  successful intermediate candidates and the existing valid stopped/recovered
+  receipt conditions for recovered ancestors. Match each direct recovered child's
+  recorded baseline to its parent's recovery candidate and revalidate the clean,
+  exact checkout. Reject missing/cyclic/stale links, mismatches and retired nodes.
+  Bound traversal by the finite inventory; no new general Git ancestry API.
+- Exempt only qualifying recovered ancestors; unrelated live, preparing, unknown,
+  stopped or uncertain delivery siblings and historical-registration conflicts
+  still block. Preserve delivery/review separation. Recovery does not imply
+  delivery acceptance or make the recovered node a valid direct review parent.
+- Recheck relied-on ancestry and conflict facts across configuration awaits and
+  at final admission using existing serialization/CAS. STOP, policy/context or
+  ancestry changes, retirement and competing preparation must prevent authorization.
+  A one-time eligibility helper alone is insufficient.
+- Preserve receipts, uncertainty, sessions and all resources. Audit finalization
+  remains separate; do not silently add an `auditCompleted` continuation gate.
+  No permission expansion, schema/migration/public command change, managed-record
+  edits, accepted-ADR edits or descendant retirement is proposed.
+
+**Verification / delivery proposal:** a separate bounded repair brief and owning
+mutable execution-design clarification; Sol/high writer, existing Build Agent,
+and one fresh independent architecture/security/recovery implementation reviewer
+at Astra/high. Start through supported managed admission if eligible; an isolated
+repair task exception requires explicit owner approval if admission is blocked.
+Test-first A→closed B→C and subsequent corrections using B's candidate; reject
+invalid ancestry, changed identity/baseline, dirty/replaced checkout and unrelated
+active/uncertain siblings. Exercise authority changes during suspended configuration,
+competing preparation and exact/changed-body/terminal replay at dispatcher boundary.
+Use existing native Git checks where relevant. After reviewed local integration,
+use the standing signed local release workflow and verify supported correction
+preparation/start for the preserved Task02 candidate. No branch publication, task
+acceptance/definition changes, permissions or unrelated recovery work implied.
+Implementation route and this repair endpoint await explicit owner approval.
+
+**Receipt correction:** the blocking-assignment response does not establish a
+terminal preparation receipt. Dispatcher persists `outcomeUnknown` before producer
+preparation and its exception path does not settle it. Preserve the full original
+request `3e7e5581-a189-48a3-9b0a-2175a530df03` below; establish pending versus terminal
+state through supported readback before replay. Replay pending work unchanged;
+do not invent a new request or change this envelope to escape a refusal.
+Chief review was a source/contract assessment only: no runtime, compilation or tests.
 
 Canonical root: `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`.
 Owner removed usage tracking and the weekly ceiling. Do not measure or enforce
