@@ -8,9 +8,13 @@ active [brief](task-briefs/rr-p6-documentation-lifecycle/brief.md).
 Ticket is In progress; four tasks remain pending at task-plan revision 1.
 Owner-selected goal is `rr-goal-p6-documentation`; phase plan finalized at revision 14.
 Supported inventory confirms In progress. Build's native documentation check passed.
-Managed preparation returned identityMismatch; current ledger edits must be committed
-before preparation can pin identical canonical and committed worker context.
-Next: commit this scoped tracking update through Build, then recover preparation.
+Ledger committed at `959e7650`. Exact preparation replay now conflicts at
+targetProvisioning: its retained locked clean worktree is at old `07f9b615`.
+Request `c7a65068-88e1-4bde-8b39-510faeac3a05` and full recovery details are in #118.
+Owner authorized fixing the failed setup. Build may commit this tracking update
+and fast-forward only its clean, never-launched worktree to the canonical baseline;
+then Main replays the exact preparation request. No reset, deletion or new request.
+Assessment worker launch is pending successful preparation and settings verification.
 Task01 only: no cleanup, rule/hook changes, Tasks02–04, push, PR, merge or release.
 GitHub operations use `gh`. Assessment and independent review remain pending.
 
