@@ -86,6 +86,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-15-release-0.1.17](2026-09-15-release-0.1.17) — leaf; Local 0.1.17 release; progress controls authorization
 - [delivery.task-briefs.2026-09-16-outcome3-execution-setup](2026-09-16-outcome3-execution-setup) — leaf; Outcome 3 deterministic execution setup, owned lifecycle, recovery and source package identity; progress controls authorization
 - [delivery.task-briefs.2026-09-20-execution-preparation-conflict-repair](2026-09-20-execution-preparation-conflict-repair) — leaf; Bounded execution-preparation conflict diagnosis and recovery repair; progress controls authorization
+- [delivery.task-briefs.rr-p6-documentation-lifecycle](rr-p6-documentation-lifecycle) — leaf; Active execution details for rr-p6-documentation-lifecycle; full agreed plan in GitHub issue 118
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -1009,6 +1010,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-execution-preparation-conflict-repair-brief-2026-09-20 | [docs/delivery/task-briefs/2026-09-20-execution-preparation-conflict-repair/brief.md](2026-09-20-execution-preparation-conflict-repair/brief.md) | document | controlling &#40;delivery.execution-preparation-conflict-repair&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.rr-p6-documentation-lifecycle
+
+- Path: [docs/delivery/task-briefs/rr-p6-documentation-lifecycle](rr-p6-documentation-lifecycle)
+- Purpose: Active execution details for rr-p6-documentation-lifecycle; full agreed plan in GitHub issue 118
+- Allowed contents: Active ticket execution brief
+- Prohibited contents: Closed delivery history; Owner data and credentials; Temporary build output
+- First read: [rr-p6-documentation-lifecycle-brief](rr-p6-documentation-lifecycle/brief.md)
+- Archive destination: none
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-p6-documentation-lifecycle-brief | [docs/delivery/task-briefs/rr-p6-documentation-lifecycle/brief.md](rr-p6-documentation-lifecycle/brief.md) | document | controlling &#40;delivery.documentation-lifecycle&#41; | active | none | none |
 
 ### Children
 

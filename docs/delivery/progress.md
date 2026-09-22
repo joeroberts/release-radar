@@ -1,5 +1,23 @@
 # Release Radar delivery state
 
+## Current work — documentation lifecycle tracking
+
+Owner authorized plan persistence and tracking setup only; implementation is not
+released. RR `rr-p6-documentation-lifecycle` is Backlog with four pending tasks
+at revision 1. Full plan: [GitHub #118](https://github.com/joeroberts/release-radar/issues/118).
+Active execution: [ticket brief](task-briefs/rr-p6-documentation-lifecycle/brief.md).
+Scope includes RR/shared-execution/plugin compatibility and disposition of
+GH #55/#71/#74/#87 plus Guided Setup and Plan Reconstruction.
+Catalog addition is accepted and the brief is linked at requirement revision 1.
+All four tasks remain pending; no worker is running for this ticket.
+Next: wait for explicit implementation authorization of this tracked plan.
+No cleanup or hook/rule changes have begun.
+
+Committed requirement-link request; no replay pending:
+```json
+{"tool":"release_radar_upsert_ticket_reference","disposition":"committed","auditEventID":"A9263BBC-1A45-4069-8B9B-BE10209C3C1A","ticketReferenceLinkSetRevision":1,"arguments":{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"assertedThreadID":"01a0c4b2-46c6-7e81-ae75-da56109621d1","requestID":"f1b7d53a-b018-48c9-966a-2199c0696d04","ticketID":"rr-p6-documentation-lifecycle","target":{"catalogDigest":"8b299262cfcc79b35854aa4602c8ea2ba0fd88c385323fce1935cc1d505813c0","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"artifactID":"rr-p6-documentation-lifecycle-brief","expectedContentDigest":"6217b6c8f81e5c2fe64a6c8a132ae7d59ac7638c3eadc25f2645d34bcfa91525","expectedLinkSetRevision":0,"kind":"requirement","linkID":"rr-p6-documentation-lifecycle-requirement","reason":"Owner explicitly approved linking this accepted active execution brief to the new ticket. Full agreed plan is linked in GitHub issue118; retain Backlog, pending tasks and separate implementation authorization."}}
+```
+
 ## September 21 — Documentation reconciliation Accepted
 
 Owner approved the stated documentation outcome and instructed closeout.
