@@ -9,6 +9,14 @@ is unchanged. The ticket moved to In progress (audit
 The extra coordinator stopped and was archived at the owner's direction;
 remaining delivery and review use the existing RR roles.
 Controlling [brief](task-briefs/2026-09-21-documentation-reconciliation.md).
+Owner approved catalog acceptance adding only that brief: accepted/candidate v1
+digest `bca9a86264e9e97e11f78c49acc87f5fe0f0a24de3da27f10c30a8d06c4824b4`
+matches on supported readback (request `3b927db2-fd56-46e8-bbb7-f3c947020201`,
+audit `68427B92-744D-42D3-B0F0-4D997BDA1F78`). Task02 assignment
+`delivery-3b927db2-fd56-46e8-bbb7-f3c947020202` prepared at `a5e71b23`
+(audit `0FE4208C-84E3-46C6-ADC5-0FCA8985650E`); worker
+`E2B6B371-C2F4-4823-960C-06AC87520CA7` uses verified Terra/medium and its exact
+managed profile/root. Main retains ledger ownership.
 Scope: identify concrete current-document conflicts, reconcile active references
 and status while preserving IDs, accepted ADRs and historical records, then run
 the native documentation checker and one independent review. No product changes,
