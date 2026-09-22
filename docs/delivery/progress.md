@@ -1,17 +1,18 @@
 # Release Radar delivery state
 
-## Current work — documentation lifecycle tracking
+## Current work — documentation lifecycle Task01
 
-Owner authorized plan persistence and tracking setup only; implementation is not
-released. RR `rr-p6-documentation-lifecycle` is Backlog with four pending tasks
-at revision 1. Full plan: [GitHub #118](https://github.com/joeroberts/release-radar/issues/118).
-Active execution: [ticket brief](task-briefs/rr-p6-documentation-lifecycle/brief.md).
-Scope includes RR/shared-execution/plugin compatibility and disposition of
-GH #55/#71/#74/#87 plus Guided Setup and Plan Reconstruction.
-Catalog addition is accepted and the brief is linked at requirement revision 1.
-All four tasks remain pending; no worker is running for this ticket.
-Next: wait for explicit implementation authorization of this tracked plan.
-No cleanup or hook/rule changes have begun.
+Owner authorized `rr-p6-documentation-lifecycle-task-01` assessment and necessary
+tracking only. Plan: [GitHub #118](https://github.com/joeroberts/release-radar/issues/118);
+active [brief](task-briefs/rr-p6-documentation-lifecycle/brief.md).
+Ticket is In progress; four tasks remain pending at task-plan revision 1.
+Owner-selected goal is `rr-goal-p6-documentation`; phase plan finalized at revision 14.
+Supported inventory confirms In progress. Build's native documentation check passed.
+Managed preparation returned identityMismatch; current ledger edits must be committed
+before preparation can pin identical canonical and committed worker context.
+Next: commit this scoped tracking update through Build, then recover preparation.
+Task01 only: no cleanup, rule/hook changes, Tasks02–04, push, PR, merge or release.
+GitHub operations use `gh`. Assessment and independent review remain pending.
 
 Committed requirement-link request; no replay pending:
 ```json
