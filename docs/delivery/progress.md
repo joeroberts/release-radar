@@ -1,9 +1,14 @@
 # Release Radar delivery state
 
-## September 21 — Documentation reconciliation started
+## September 21 — Documentation reconciliation Accepted
 
-Owner authorized `rr-p6-doc-reconciliation`; existing three-task plan revision 1
-is unchanged. The ticket moved to In progress (audit
+Owner approved the stated documentation outcome and instructed closeout.
+Supported readback confirms `rr-p6-doc-reconciliation` is **Accepted**, owner
+acceptance `accepted`, all three original tasks completed at plan revision **4**,
+and all three scoped evidence expectations satisfied at evidence revision **4**.
+Acceptance audit: `273E4930-33D5-4DFA-9B9C-8B44E0E26982`. Exact committed
+commands and receipts are retained in the brief. No further implementation remains.
+The original three-task definitions are unchanged. Kickoff moved to In progress (audit
 `B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Main task
 `01a0c4b2-46c6-7e81-ae75-da56109621d1` solely owns coordination and this ledger.
 The extra coordinator stopped and was archived at the owner's direction;
@@ -20,13 +25,13 @@ managed profile/root. Main retains ledger ownership.
 Task02 is integrated (`77c08ac4`, clean reviewed worker candidate `c402372d`).
 Task03 independent documentation review passed with no Required findings; Build's
 native documentation and diff checks passed at candidate and canonical roots.
-Delivery/review connections are closed and bounded tasks archived. All three
-tracked tasks remain pending until owner approves the exact evidence/completion
-reconciliation retained in the brief. No further implementation is needed.
+Delivery/review connections are closed and bounded tasks archived. Owner-approved
+evidence/completion reconciliation is committed and read back in RR.
 Scope: identify concrete current-document conflicts, reconcile active references
 and status while preserving IDs, accepted ADRs and historical records, then run
 the native documentation checker and one independent review. No product changes,
-release, push, PR or owner acceptance is authorized by this kickoff.
+release, push or PR is authorized by this work; owner acceptance was explicitly
+granted at closeout.
 
 Kickoff provenance: merged main `c521851730ba9be5d51c012489ea049bdd402022`.
 Task01 executed from committed documentation branch baseline
@@ -49,7 +54,7 @@ Worker `5051AA5F-3FF9-47D3-8527-302B3868E30F` started read-only Task01 inventory
 effective Terra/medium and exact managed profile/root were verified. No code or
 database edits were needed. Task01 returned its read-only inventory; Main verified
 completion and closed the session-bound connection, and the completed task is archived.
-No tracked task completion is inferred. Main owns follow-through.
+Tracked task completion was subsequently explicitly reconciled at closeout.
 Findings: preserve kickoff/execution provenance separately and mark the RR-R10
 plan opening as a dated checkpoint. No identifier collision was found; historical
 sections and active catalog lifecycle do not establish open work.

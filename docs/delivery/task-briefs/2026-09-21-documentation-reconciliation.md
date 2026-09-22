@@ -40,7 +40,7 @@
   permission change or unrelated application mutation. Catalog additions remain
   pending until separately authorized supported catalog acceptance.
 
-## Completed delivery and proposed tracked closeout
+## Completed delivery and accepted tracked closeout
 
 Task01 inventory and Task02 correction are delivered; Task03 independent review
 passed with no Required findings. Clean reviewed candidate `c402372dbf36d8c4bc669718d7fc82c53354b784`
@@ -52,18 +52,18 @@ Build performed that check with ordinary repository access. Independent reviewer
 historical boundaries, scope/sequencing and catalog identity/index registration.
 Both delivery/review connections are closed and their tasks archived.
 
-Proposed reconciliation: existing plan revision 1, evidence revision 0; preserve
+Applied owner-approved reconciliation: existing plan revision 1, evidence revision 0; preserve
 all three task IDs/titles/order/lifecycle, add or supersede nothing. Record one
 reviewed target and three scoped attributed checks; require successful applicable
 readback, complete Task01/02/03 chaining returned plan revisions 2/3/4, then Needs
 review. Final owner acceptance is separate unless explicitly selected by owner.
-No push, PR, release or code change. These exact commands await owner approval:
+No push, PR, release or code change. Owner approved the stated outcome and closeout. All commands below committed; supported readback confirms Accepted, owner acceptance accepted, plan revision 4 and all three evidence expectations satisfied:
 
 ```json
 [
   {
     "tool": "release_radar_record_delivery_evidence_target",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -100,11 +100,18 @@ No push, PR, release or code change. These exact commands await owner approval:
         }
       ],
       "reason": "Owner-approved closeout records attributed task evidence against clean reviewed documentation candidate; no new execution or owner acceptance inferred."
+    },
+    "receipt": {
+      "deliveryEvidenceRevision": 1,
+      "auditEventID": "F82D4497-49C6-4011-8063-7CC334882FB9",
+      "entityIDs": [
+        "rr-p6-doc-reconciliation"
+      ]
     }
   },
   {
     "tool": "release_radar_append_delivery_evidence_observation",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -139,11 +146,18 @@ No push, PR, release or code change. These exact commands await owner approval:
         "observedAt": "2026-09-22T01:22:48Z",
         "recordedAt": "2026-09-22T01:22:48Z"
       }
+    },
+    "receipt": {
+      "deliveryEvidenceRevision": 2,
+      "auditEventID": "B2BECDD7-9913-4DFF-96EC-E649DAB3C71B",
+      "entityIDs": [
+        "rr-p6-doc-reconciliation"
+      ]
     }
   },
   {
     "tool": "release_radar_append_delivery_evidence_observation",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -178,11 +192,18 @@ No push, PR, release or code change. These exact commands await owner approval:
         "observedAt": "2026-09-22T01:22:48Z",
         "recordedAt": "2026-09-22T01:22:48Z"
       }
+    },
+    "receipt": {
+      "entityIDs": [
+        "rr-p6-doc-reconciliation"
+      ],
+      "auditEventID": "0F456268-A3A0-43EC-A364-B993E94A7329",
+      "deliveryEvidenceRevision": 3
     }
   },
   {
     "tool": "release_radar_append_delivery_evidence_observation",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -217,11 +238,18 @@ No push, PR, release or code change. These exact commands await owner approval:
         "observedAt": "2026-09-22T01:22:48Z",
         "recordedAt": "2026-09-22T01:22:48Z"
       }
+    },
+    "receipt": {
+      "auditEventID": "2BCE9886-FA4F-43AB-BB03-47BC878DED52",
+      "entityIDs": [
+        "rr-p6-doc-reconciliation"
+      ],
+      "deliveryEvidenceRevision": 4
     }
   },
   {
     "tool": "release_radar_complete_ticket_task",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -234,11 +262,19 @@ No push, PR, release or code change. These exact commands await owner approval:
       "expectedRevision": 1,
       "taskID": "rr-p6-doc-reconciliation-task-01",
       "reason": "Owner-approved exact reconciliation; scoped successful applicable evidence confirmed before task completion."
+    },
+    "receipt": {
+      "entityIDs": [
+        "rr-p6-doc-reconciliation",
+        "rr-p6-doc-reconciliation-task-01"
+      ],
+      "ticketTaskPlanRevision": 2,
+      "auditEventID": "28E35690-84B9-4862-B809-044E9FBB6248"
     }
   },
   {
     "tool": "release_radar_complete_ticket_task",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -251,11 +287,19 @@ No push, PR, release or code change. These exact commands await owner approval:
       "expectedRevision": 2,
       "taskID": "rr-p6-doc-reconciliation-task-02",
       "reason": "Owner-approved exact reconciliation; scoped successful applicable evidence confirmed before task completion."
+    },
+    "receipt": {
+      "entityIDs": [
+        "rr-p6-doc-reconciliation",
+        "rr-p6-doc-reconciliation-task-02"
+      ],
+      "ticketTaskPlanRevision": 3,
+      "auditEventID": "B0818ED9-654A-4891-962E-E80975E782DB"
     }
   },
   {
     "tool": "release_radar_complete_ticket_task",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -268,11 +312,19 @@ No push, PR, release or code change. These exact commands await owner approval:
       "expectedRevision": 3,
       "taskID": "rr-p6-doc-reconciliation-task-03",
       "reason": "Owner-approved exact reconciliation; scoped successful applicable evidence confirmed before task completion."
+    },
+    "receipt": {
+      "entityIDs": [
+        "rr-p6-doc-reconciliation",
+        "rr-p6-doc-reconciliation-task-03"
+      ],
+      "ticketTaskPlanRevision": 4,
+      "auditEventID": "96C81862-533C-40B8-AFDF-9A4D9DA76807"
     }
   },
   {
     "tool": "release_radar_transition_ticket",
-    "disposition": "pendingApproval",
+    "disposition": "committed",
     "arguments": {
       "version": 1,
       "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
@@ -284,6 +336,35 @@ No push, PR, release or code change. These exact commands await owner approval:
       "requestID": "3b927db2-fd56-46e8-bbb7-f3c947020601",
       "lane": "needs_review",
       "reason": "Documentation corrections, native checks and independent review complete; owner-approved task reconciliation applied. Acceptance remains separate."
+    },
+    "receipt": {
+      "entityIDs": [
+        "rr-p6-doc-reconciliation"
+      ],
+      "auditEventID": "5726182C-04B1-4CB7-B002-DDB2CA892443"
+    }
+  },
+  {
+    "tool": "release_radar_transition_ticket",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0c4b2-46c6-7e81-ae75-da56109621d1",
+      "ticketID": "rr-p6-doc-reconciliation",
+      "requestID": "3b927db2-fd56-46e8-bbb7-f3c947020602",
+      "lane": "accepted",
+      "ticketTaskPlanRevision": 4,
+      "reason": "Owner explicitly approved the explained documentation outcome and instructed closeout. All three tasks completed with applicable successful scoped evidence and independent review."
+    },
+    "receipt": {
+      "auditEventID": "273E4930-33D5-4DFA-9B9C-8B44E0E26982",
+      "entityIDs": [
+        "rr-p6-doc-reconciliation"
+      ]
     }
   }
 ]
