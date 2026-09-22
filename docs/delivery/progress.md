@@ -1,5 +1,49 @@
 # Release Radar delivery state
 
+## September 21 — Documentation reconciliation started
+
+Owner authorized `rr-p6-doc-reconciliation`; existing three-task plan revision 1
+is unchanged. The ticket moved to In progress (audit
+`B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Main owns this ledger.
+Scope: identify concrete current-document conflicts, reconcile active references
+and status while preserving IDs, accepted ADRs and historical records, then run
+the native documentation checker and one independent review. No product changes,
+release, push, PR or owner acceptance is authorized by this kickoff.
+
+Current baseline: merged main `c521851730ba9be5d51c012489ea049bdd402022`.
+Navigation is Accepted and PR #117 is merged. Its branch was removed locally and
+remotely. Project-scoped build cleanup ran; managed worker retirement remains
+partially blocked by dependency/state conflicts. Configuration, tags, installers,
+dirty work and uncertain resources were preserved. Older statements below about
+Navigation publication, cleanup and documentation reconciliation remaining Backlog
+are superseded by this current entry; preserve them as historical evidence until
+the scoped reconciliation organizes that history.
+
+Task01 preparation did not launch a worker. The supported operation returned
+`pendingPreparationRequest`, blocking request
+`ED7F673E-008D-4C59-B916-8DDD725DF118` (observed at failure).
+Do not infer success, issue replacement requests, repair SQLite or bypass managed
+execution. Supported recovery of the pending preparation is the next prerequisite.
+Exact preparation envelope retained for recovery:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "projectID": "project-fffdc0e0b15b9b86",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0c4b2-46c6-7e81-ae75-da56109621d1",
+  "requestID": "aa78c0bd-a112-4cc8-b05e-154758330802",
+  "ticketID": "rr-p6-doc-reconciliation",
+  "taskID": "rr-p6-doc-reconciliation-task-01",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "reason": "Owner authorized documentation reconciliation. Task01 is bounded read-only inventory of current controlling documents, conflicting status and overlapping delivery identifiers, starting merged main c5218517; do not implement or alter history. Main retains ledger ownership."
+}
+```
+
 ## September 21 — Manage Project delivered 0.1.34; restart handoff
 
 Manage Project Task01/02 implementation and Task03 independent verification are
