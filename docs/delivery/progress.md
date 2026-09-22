@@ -4,13 +4,17 @@
 
 Owner authorized `rr-p6-doc-reconciliation`; existing three-task plan revision 1
 is unchanged. The ticket moved to In progress (audit
-`B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Main owns this ledger.
+`B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Dedicated documentation coordinator
+`01a0c6ab-c643-73f2-9398-ee6dc3f95517` now solely owns this ledger.
+Controlling [brief](task-briefs/2026-09-21-documentation-reconciliation.md).
 Scope: identify concrete current-document conflicts, reconcile active references
 and status while preserving IDs, accepted ADRs and historical records, then run
 the native documentation checker and one independent review. No product changes,
 release, push, PR or owner acceptance is authorized by this kickoff.
 
-Current baseline: merged main `c521851730ba9be5d51c012489ea049bdd402022`.
+Kickoff provenance: merged main `c521851730ba9be5d51c012489ea049bdd402022`.
+Task01 executed from committed documentation branch baseline
+`fe204d32f68b73fb4c9617d6bcd6d5aac3f6f50f` (`codex/doc-reconciliation`).
 Navigation is Accepted and PR #117 is merged. Its branch was removed locally and
 remotely. Project-scoped build cleanup ran; managed worker retirement remains
 partially blocked by dependency/state conflicts. Configuration, tags, installers,
@@ -19,12 +23,25 @@ Navigation publication, cleanup and documentation reconciliation remaining Backl
 are superseded by this current entry; preserve them as historical evidence until
 the scoped reconciliation organizes that history.
 
-Task01 preparation did not launch a worker. The supported operation returned
+The initial Task01 preparation did not launch a worker. The supported operation returned
 `pendingPreparationRequest`, blocking request
 `ED7F673E-008D-4C59-B916-8DDD725DF118` (observed at failure).
-Do not infer success, issue replacement requests, repair SQLite or bypass managed
-execution. Supported recovery of the pending preparation is the next prerequisite.
-Exact preparation envelope retained for recovery:
+Owner subsequently approved exact replay of the original stored request. Recovery
+succeeded (audit `5B576FC9-D9F5-4C1C-8E85-AC946393C2AA`), preparing
+`delivery-ed7f673e-008d-4c59-b916-8ddd725df118` at `fe204d32`.
+Worker `5051AA5F-3FF9-47D3-8527-302B3868E30F` started read-only Task01 inventory;
+effective Terra/medium and exact managed profile/root were verified. No code or
+database edits were needed. Task01 returned its read-only inventory; Main verified
+completion and closed the session-bound connection, and the completed task is archived.
+No tracked task completion is inferred. The dedicated coordinator owns follow-through.
+Findings: preserve kickoff/execution provenance separately and mark the RR-R10
+plan opening as a dated checkpoint. No identifier collision was found; historical
+sections and active catalog lifecycle do not establish open work.
+The original stored request omitted thread attribution and used reason:
+"Identify exact current controlling documents, conflicting statuses and overlapping IDs before bounded documentation edits. Read-only discovery; preserve approved scope and history."
+All other project, registration, task and revision fields match below; its request
+ID is `ED7F673E-008D-4C59-B916-8DDD725DF118`. The following later request was refused
+and is retained only as history, not a pending replay:
 
 ```json
 {
