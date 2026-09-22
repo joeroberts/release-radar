@@ -5,7 +5,7 @@
 - Root: /Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar.
 - Outcome: correct the concrete current-document discrepancies found by Task01,
   preserving stable identities, accepted ADRs and historical records.
-- Authority: owner delegation to coordinator 01a0c6ab-c643-73f2-9398-ee6dc3f95517;
+- Authority: owner kickoff; Main coordinator 01a0c4b2-46c6-7e81-ae75-da56109621d1;
   [current ledger](../progress.md), [repository rules](../../../AGENTS.md), and
   [managed documentation contract](../../design/managed-repository-documentation-contract.md).
 - Scope: coordinator owns ledger and this brief/catalog registration. Task02 owns

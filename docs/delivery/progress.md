@@ -4,8 +4,10 @@
 
 Owner authorized `rr-p6-doc-reconciliation`; existing three-task plan revision 1
 is unchanged. The ticket moved to In progress (audit
-`B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Dedicated documentation coordinator
-`01a0c6ab-c643-73f2-9398-ee6dc3f95517` now solely owns this ledger.
+`B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Main task
+`01a0c4b2-46c6-7e81-ae75-da56109621d1` solely owns coordination and this ledger.
+The extra coordinator stopped and was archived at the owner's direction;
+remaining delivery and review use the existing RR roles.
 Controlling [brief](task-briefs/2026-09-21-documentation-reconciliation.md).
 Scope: identify concrete current-document conflicts, reconcile active references
 and status while preserving IDs, accepted ADRs and historical records, then run
@@ -33,7 +35,7 @@ Worker `5051AA5F-3FF9-47D3-8527-302B3868E30F` started read-only Task01 inventory
 effective Terra/medium and exact managed profile/root were verified. No code or
 database edits were needed. Task01 returned its read-only inventory; Main verified
 completion and closed the session-bound connection, and the completed task is archived.
-No tracked task completion is inferred. The dedicated coordinator owns follow-through.
+No tracked task completion is inferred. Main owns follow-through.
 Findings: preserve kickoff/execution provenance separately and mark the RR-R10
 plan opening as a dated checkpoint. No identifier collision was found; historical
 sections and active catalog lifecycle do not establish open work.
