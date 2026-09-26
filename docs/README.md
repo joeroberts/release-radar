@@ -1,5 +1,12 @@
 # Release Radar documentation
 
+## Design and delivery
+
+`docs/design/` owns product behavior and proposed designs. `docs/delivery/plans/`
+owns implementation sequences, dependencies and rollout gates. Completed execution plans and superseded proposals are removed after any
+continuing requirements are placed in their owning specification. Pending designs
+retain explicit approval boundaries and references to current work.
+
 ## Current reading routes
 
 Start here, then follow only the route needed for the task. Catalog lifecycle is
@@ -13,21 +20,16 @@ about document use; it does not approve product work or change delivery state.
 | Shared Execution V1 compatibility or adoption diagnosis | [Shared Execution Integration V1](design/shared-execution-integration-v1-design.md), then the consumer's own instructions and delivery state. V1 source delivery does not prove installation, runtime loading, or adoption. |
 | Proposed whole-product or companion work | [Full-product plan](delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md) and the linked proposed design. Read each section's approval qualification; proposal inclusion is not implementation authority. |
 
-Completed assignments, evidence, and archive records are not default specification
-inputs. When a named historical fact is needed, locate the exact stable artifact ID
-or path in [the catalog](catalog.json), confirm its lifecycle and authority, and
-follow the local [task-brief](delivery/task-briefs/README.md),
-[evidence](delivery/README.md), or [archive](delivery/archive/README.md) index. Use
-that record as attributed provenance only; return to the current route above for
-present requirements and authorization.
+Current specifications own continuing product requirements. Completed delivery
+paperwork is removed rather than retained in a competing archive. Git preserves
+historical versions; GitHub issues hold current work and useful results.
 
 ## Native developer setup
 
 This records the owner-confirmed host setup reported by Main on September 15,
 2026. It does not grant configuration or release authority. The catalog has no
 separate active developer/build guide; this existing entry point owns the
-reusable setup, while the [release evidence](delivery/evidence/2026-09-15-release-0.1.17-packaging.md)
-records verification and the [ledger](delivery/progress.md) records current state.
+reusable setup; the [ledger](delivery/progress.md) records current state.
 
 The confirmed `rr-project-restricted` filesystem profile keeps root denial and
 minimal read access, with read access to `/Applications/Xcode.app`,
@@ -108,7 +110,7 @@ after toolchain updates. Installation timing follows the current delivery ledger
 - [architecture](architecture) — leaf; Accepted architecture and delivery-policy decisions
 - [brand](brand/README.md) — indexed; Approved V1 brand direction and retained design references
 - [delivery](delivery/README.md) — indexed; Current delivery status and durable task/evidence history
-- [design](design/README.md) — indexed; Accepted product contracts and clearly classified proposals
+- [design](design/README.md) — indexed; Product behavior, interfaces, constraints and clearly classified design proposals
 
 ## Leaf collection: architecture
 
@@ -131,6 +133,7 @@ after toolchain updates. Installation timing follows the current delivery ledger
 | 9c1cf54c-99cf-4348-af72-1aedc07deb02 | [docs/architecture/ADR-005-ticket-task-work-plans.md](architecture/ADR-005-ticket-task-work-plans.md) | document | controlling &#40;architecture.ticket-tasks&#41; | active | none | none |
 | 874c6a9a-f7e9-444e-b38d-c32ceb18a536 | [docs/architecture/ADR-006-managed-repository-documentation-contract.md](architecture/ADR-006-managed-repository-documentation-contract.md) | document | controlling &#40;architecture.managed-documentation&#41; | active | none | none |
 | a3918ee6-cc82-40f2-ae84-2d59571b2020 | [docs/architecture/ADR-007-proportional-delivery-validation.md](architecture/ADR-007-proportional-delivery-validation.md) | document | controlling &#40;delivery.validation-policy&#41; | active | none | none |
+| rr-adr-008-opt-in-project-execution | [docs/architecture/ADR-008-opt-in-project-execution.md](architecture/ADR-008-opt-in-project-execution.md) | document | controlling &#40;architecture.project-execution&#41; | active | none | none |
 
 ### Children
 

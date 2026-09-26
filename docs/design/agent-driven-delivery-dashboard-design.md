@@ -96,6 +96,23 @@ flowchart LR
   Chat --> Tools
 ```
 
+## Store integrity and callback boundaries
+
+All delivery writes enter the app-owned store transaction and commit with their
+attributed audit. Callback handles are thread-bound leases invalidated on scope
+exit; they do not expose the actor-owned connection. Transaction callbacks cannot
+control transactions/savepoints or mutate audit rows, directly or through a foreign-
+key action. Audit reads needed for relational integrity are allowed. Denial rolls
+back sibling writes and preserves existing audit associations and cascade children.
+Store-owned audit insertion occurs outside the restricted callback before commit.
+
+Read callbacks allow only observational SELECT/READ/FUNCTION actions, rejecting
+PRAGMA and connection/schema/transaction/mutation operations. Authorizer callbacks
+must not reenter SQLite; use only the captured transaction-state value without
+retaining the connection, SQL, row data or sensitive context. Migrations are atomic
+and preserve a consistent pre-migration snapshot. Corruption or migration failure
+leaves authoritative data intact and exposes recovery rather than resetting it.
+
 ## State ownership
 
 The SQLite database has four distinct record groups:
@@ -231,6 +248,16 @@ combined store/access/documentation/plugin/observer health surface even when the
 delivery store cannot open. Every result displays its check time and exact target
 when a saved registration is available; superseded refreshes are discarded.
 
+### Authorized worktree roots
+
+Grant, reconnect and revoke are explicit per-root operations. Prove worktree
+membership using the common Git directory and linked-root backlinks under held
+folder scopes, with no-follow reads and a stable confirmation recheck. A catalog
+match alone cannot prove membership or grant access. Denied, stale or malformed
+membership exposes recovery; do not repair Git metadata or widen authorization.
+Promoting an authorized worktree to primary uses accepted-catalog relocation and
+preserves legacy first-root rules, repository content and history.
+
 ### Project archive and restore
 
 Projects opens on an explicit **Active** scope and keeps archived projects in a
@@ -256,6 +283,28 @@ or ambiguous notification work, grants no folder capability, accepts no document
 catalog and writes no repository file. Missing folder access and invalid or pending
 documentation remain visible health problems for the owner to resolve separately.
 
+### Remove tracking with retained history
+
+Removal works for active, archived and zero-phase projects without requiring folder
+access or a valid catalog. Its exact-registration preview names the operational
+records and capabilities being removed, retained history and untouched repository
+files. Cancel changes nothing; stale previews and failed writes preserve prior state.
+
+One app-owned transaction retains the removal record, historical project/registration
+identity, audit/activity, goal-assignment and supported planning/evidence history,
+then removes the live graph and capabilities. Retained history must not depend on
+live-row foreign keys. Preserve event-time facts and unknown fields; never infer an
+old phase, lane or actor from current rows. Scoped authorization for deleting live
+task history does not weaken general audit protection.
+
+Queued notifications become suppressed; in-flight attempts become unknown before
+retention. Existing terminal outcomes keep their original times and reasons.
+Registration-scoped receipts and in-transaction admission reject stale work, including
+requests resolved before removal. Old onboarding preparations cannot recreate the
+removed registration; fresh inspection creates a new identity. Removed projects have
+a separate read-only scope and detail, without Restore or operational controls.
+History never redirects to a re-added project by matching its name or path.
+
 ### Application backup, reset and recovery
 
 General Settings presents full application backup and restore separately from preference
@@ -275,6 +324,23 @@ when readable, bookmarks require reauthorization and all live registration autho
 rotated. Startup recovery remains available through Application health when the current
 store cannot open. Plugin recovery inspection is read-only and reports unknown management
 when its retained receipt is unavailable.
+
+Repeated restoration of the same backup must create fresh recovery authority, never
+reuse an earlier accepted registration tuple. Root-only legacy external mutations
+remain rejected after recovery. Preserve readable newer occurrence counters,
+terminal notification facts, removal records and audits, including displaced projects
+absent from the backup. Unknown newer history remains explicitly unavailable. A
+restore followed by another removal must preserve both historical generations.
+
+Recovery resolves interrupted replacement before ordinary services can dispatch
+notifications or update plugins. Stage and validate the exact recognized backup
+package using no-follow reads, preserve rollback state and an unreadable original,
+and replace database sidecars only after all app-owned connections are drained and
+closed. Old stores and callbacks remain invalid after the new graph is published.
+Backup creation uses one existing folder selected by the owner, an app-generated
+package name and adjacent staging; temporary security scope is balanced on success
+and failure. Recovery plugin inspection uses only an already-enabled helper and
+never registers or rebinds it as a side effect.
 
 ### Phase board
 
@@ -319,6 +385,11 @@ changes the owner-selected active working phase. Relaunch starts at Projects wit
 empty history. Missing targets explain their unavailable selection in a valid
 parent scope; archive/removal use the existing read-only identity-preserving views.
 
+Publish the selected route, focus and history entry before awaiting dashboard-open
+audit and documentation validation. While validation runs, withdraw stale evidence
+and keep dependent actions guarded. Rapid navigation preserves the latest requested
+destination; a dashboard-open failure appears inline without replacing it.
+
 Dependencies shows project-wide relationships focused on the selected ticket,
 including cross-phase prerequisites/dependents labelled with their phases.
 Opening it from a nonactive board and returning preserves that board's context.
@@ -349,6 +420,18 @@ state creates a new event and may send a new alert. Failed/misconfigured
 Pushover attempts are recorded and visible; they do not prevent dashboard use.
 
 Paused goals are shown explicitly but do not alert by default.
+
+The event, occurrence fingerprint and outbox entry commit with the meaningful
+transition. Persist attempt_started before network transport. Interrupted in-flight
+attempts become visible unknown outcomes and are never retried automatically.
+Events before first dashboard opening remain silent. Show queued, sending, unknown,
+sent and failed states without duplicate notification attempts or count surfaces.
+
+Keep both Pushover credentials as non-synchronizing WhenUnlockedThisDeviceOnly
+Keychain items. Use the fixed HTTPS api.pushover.net endpoint and reject redirects.
+Send only app-derived text, excluding raw goals, reasons, imported content and paths.
+Persist sanitized status/receipt data, never raw provider bodies or credentials.
+
 
 ## Failure behavior
 
@@ -382,12 +465,9 @@ match the accepted **Initialize Project Tracking** copied-not-sent handoff or
 the exporter/archive gate above. Preserve the image for history, but do not use
 its copy as a current product requirement.
 
-Completed Projects/Overview, selected-ticket detail, and compact-board behavior
-are covered by durable runtime evidence under `docs/delivery/evidence/`; they
-are not missing-work mockup candidates. Goals, all-phase Work Board, History,
-and their compact/state/flow images remain proposal evidence only. Their
-current classification and decision gates are recorded exclusively in
-`docs/delivery/progress.md`.
+The feature-specific contracts below describe delivered Goals, planning, History
+and search behavior. Older mockups are visual references only; their labels and
+illustrative data do not override those contracts.
 
 ## Acceptance criteria
 
@@ -482,9 +562,7 @@ revision/retirement, exact history and reverse-impact counts; changed/moved/reti
 superseded/unavailable distinctions; unsafe and stale-source failures; replay and
 rollback; lifecycle recovery; and Details → source → Recorded impacts → ticket →
 Back/Forward with empty/error/incomplete states and actual keyboard/accessibility
-focus. The completed [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
-retains delivery provenance; it is not the current UI, admission, recovery or
-acceptance authority and does not adopt later proposal or lifecycle surfaces.
+focus. These requirements do not adopt later proposal or lifecycle surfaces.
 
 ## Phase 5C proposal workflow — 2026-09-10
 
@@ -511,9 +589,7 @@ ticket with real keyboard and accessibility focus.
 Source-impact rows identify the exact recorded ticket/link/version and observed
 source facts. Opening one reuses the existing revision-specific source route. A
 missing or changed current source remains an explicit unavailable/changed state;
-the UI never substitutes current prose for the recorded version. The
-[Phase 5C brief](../delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
-contains the bounded delivery contract and verification.
+the UI never substitutes current prose for the recorded version.
 
 ## Phase 5D retained work and coverage — 2026-09-10
 
@@ -537,8 +613,9 @@ new work explains the explicit reopen/new-phase requirement. Replace count-deriv
 
 Reuse existing Plan cards, RDS controls and five-lane board design, with compact
 stacking and real keyboard/accessibility focus restoration. Do not add another
-lifecycle lane, broad History surface or phase-ordering policy. The [Phase 5E brief](../delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
-sets migration, guard and native acceptance boundaries under the approved policy.
+lifecycle lane, broad History surface or phase-ordering policy. The accepted
+[phase lifecycle decision](../architecture/ADR-001-release-radar-boundaries.md#phase-5e-explicit-lifecycle-authority--2026-09-10)
+retains the authority, migration and recovery boundaries.
 
 The implemented native controls retain the existing dark Plan card hierarchy and
 RDS picker/button vocabulary. At compact width, state and intent stack without
@@ -559,6 +636,12 @@ source and event time; selecting a row opens event detail without replacing the
 recorded facts with the ticket's current state. Where recording and observation
 times differ, detail names them separately. Legacy audit rows whose event-time
 facts were never recorded remain explicitly unknown.
+
+Observations represent the latest persisted snapshot, not an immutable timeline
+of observation changes. Actor and thread attribution retains its source provenance
+and does not establish independent review. Portable archive v1 is unchanged; any
+future complete portable format must represent supported History facts and
+provenance or explicitly reject unsupported export.
 
 At wide widths the timeline and selected-event inspector remain side by side. At
 compact widths the inspector stacks below the full-width timeline and remains
@@ -728,3 +811,60 @@ without importing their aspirational data-source states. The inspected native
 captures record the delivered [wide Search](../delivery/evidence/2026-09-10-phase6e-search-wide.png),
 [compact Search](../delivery/evidence/2026-09-10-phase6e-search-compact.png) and
 [shared Help](../delivery/evidence/2026-09-10-phase6e-help.png) treatments.
+
+## Persistent toolbar and project management
+
+The owner-selected toolbar requirements replace the September 12 proposal. The
+toolbar and search were delivered; remaining management, metrics and guided-setup
+work keeps the scope and authorization recorded in the full-product plan. This
+specification does not claim those remaining features are complete.
+
+- Place a smaller borderless Release Radar logo above the sidebar menu. Preserve
+  the approved orbit identity; this does not change the production AppIcon.
+- Keep a persistent toolbar above page titles with an inset divider. Left: sidebar
+  toggle, Back, Forward. Center: search and an adjacent borderless bookmark for
+  Save query. Right: Help, Settings, Notifications, visible at compact widths.
+- Keep the near-black surfaces, restrained blue borders and existing navigation
+  semantics. Global sidebar destinations are Projects, Goals and Needs Review.
+  Search, Help, Settings and Notifications belong in the toolbar.
+- Search uses an app-owned draft. Typing does not navigate; Enter and the magnifier
+  submit identically. Back restores source context. Results own scope, filters,
+  record types, sort and saved-query management. Search configuration remains
+  reachable before submission; an unresolved entry-point design must not be
+  treated as approved. Save opens a name field with Save/Cancel and stores the
+  complete definition without executing it.
+- Preserve accessible names, keyboard order, existing shortcuts, restored focus,
+  notification indicators and loading/error/partial/unsupported-scope recovery.
+- The compact sidebar uses icons; wide mode retains labels. Keep a fixed sidebar
+  footer for Checking project documentation so menu items do not shift. Remove
+  the redundant Persisted locally label without changing validation behavior.
+- Overview metrics retain their icons, colors and meaning; labels sit beside icons
+  and values are centered beneath, including long phase names.
+- Manage Project opens immediately for the exact selected project, loads sections
+  independently and presents retry/recovery in place. Documentation activation,
+  shared execution, folder access, evidence, Archive and Remove belong there.
+  Preserve authorization, confirmations, retained history and removed/archive access.
+  Capture project ID, registration ID and request generation when opening. Every
+  asynchronous section result, preview and action must still match that capture;
+  a replacement registration cannot inherit displayed data or authority. Retry only
+  the failed section. Activation keeps separate preview/confirm steps and accessible
+  error focus; compatibility refresh is read-only. Health, root recovery and folder
+  access share coherent refresh state. Evidence retains exact selection, authorization
+  and cancellation/freshness checks. Overview retains informational attention, while
+  management actions and their local errors stay in Manage Project.
+- Guided setup prepares an exact repository change in a user-initiated Codex task
+  for owner approval, applies only that approved change and reports verified success
+  or actionable recovery. Dispatch is not completion; binding and catalog acceptance
+  remain separate product operations. Residual scope must account for delivered
+  Outcome 3 rather than recreating it.
+- RDS owns reusable toolbar composition, appearance, input and accessibility. Apps
+  own callbacks, routing, query state, persistence, notifications and project data.
+  Do not couple shared components to Release Radar entities.
+
+The [wide reference](mockups/phase6-persistent-workspace-toolbar-proposal.png) and
+[compact reference](mockups/phase6-compact-workspace-toolbar-proposal.png) are static
+visual references, not runtime or accessibility verification. Exact compact fit
+requires implementation verification; proposed raster dimensions are not requirements.
+
+Current Project Plan redesign is tracked in [#121](https://github.com/joeroberts/release-radar/issues/121).
+The obsolete August proposals are not its acceptance criteria.

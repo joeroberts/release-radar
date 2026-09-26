@@ -9,10 +9,9 @@
 | Delivery effect | V1 source delivered; no installation, app-state, runtime-loading, or consumer-adoption effect |
 
 The owner authorized and completed the source implementation under this reviewed
-design. The [source evidence](../delivery/evidence/2026-09-09-shared-execution-integration-v1.md)
-records the delivered plugin skill, diagnostic, compatibility reducer and read-only
-presentation. Those source results create no installed behavior, application-state
-mutation, runtime-loading proof, or consumer adoption. This design is the current
+design: the plugin skill, diagnostic, compatibility reducer and read-only
+presentation were delivered in source. Those source results create no installed
+behavior, application-state mutation, runtime-loading proof, or consumer adoption. This design is the current
 V1 specification for a small shared execution contract for repeatable Codex
 delivery without turning Release Radar into an execution engine or copying another
 large instruction manual into every repository. It remains non-gating to ordinary
@@ -84,9 +83,9 @@ why V1 took this shape; they do not describe the delivered source candidate.
   missing-registration premise; it does not create check or run attestation.
 - `assertedThreadID` remains asserted attribution in that dispatcher. Current source
   therefore does not verify independent reviewer identity.
-- The [rules/hooks discovery](../delivery/task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md)
+- The [rules/hooks assessment](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md#separate-rules-and-hooks-implementation)
   found no safe I9 pilot, and the
-  [run-ownership discovery](../delivery/task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md)
+  [conditional execution-owner assessment](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md#conditional-i7i8-execution-owner-constraints)
   made Run Guard only a conditional future feasibility path.
 
 ## 2. Choice and tradeoffs
@@ -703,34 +702,12 @@ authorized fresh-task/runtime pilot; source fixtures cannot prove them.
     receipts are not exposed or interpreted as check, run, review, or completion
     attestations.
 
-### Separately authorized fresh-task/runtime pilot
+### Runtime proof boundary
 
-After source delivery, plugin installation/update and runtime inspection receive
-their own explicit authorization. Use the supported Codex task interface and normal
-Release Radar diagnostic surfaces, not a custom agent harness or transcript parser.
-The pilot starts a fresh task after installation, targets only a synthetic repository,
-and directly observes whether the task loads the selected V1 skill, names the exact
-root/source basis, limits its context to the eight fields and named controllers, and
-reports actual check results without claiming acceptance. A separate fresh reviewer
-task receives the same synthetic outcome and an identified candidate; the observation
-can show that this tested workflow preserved review separation, but it is not verified
-reviewer identity or a general enforcement claim.
-
-Run one missing/incompatible-skill case under an isolated supported setup and confirm
-that affected material work stops while unrelated read-only work follows local
-fallbacks. Run one owner-denied adoption case and confirm no repository, plugin,
-catalog, or app state changes. Read back repository and app diagnostic state after
-the tested prompt/adoption flow; absence of mutation in that run is evidence only for
-that run, not proof that prompts can never cause actions. Archive/restore and
-removal/re-add runtime coverage remains synthetic app-state acceptance unless a later
-owner authorization explicitly permits installed-app lifecycle inspection.
-
-One later independent reviewer should cover the shared clause boundary, checker
-compatibility/security, consumer supersession preservation, and recovery matrix. A
-separate reviewer is needed only if an implementation introduces a distinct named
-risk. Runtime installation, signed bundle behavior, actual task context selection,
-and real consumer adoption need their own separately authorized acceptance; static
-or synthetic source proof cannot establish them.
+Source delivery and synthetic tests do not prove installed skill loading, consumer
+adoption or enforcement across every task route. Any new runtime pilot requires
+its own scoped authorization; residual execution work belongs to
+[#96](https://github.com/joeroberts/release-radar/issues/96).
 
 ## 12. Delivered source and remaining boundaries
 

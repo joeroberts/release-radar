@@ -9,10 +9,9 @@
 
 This mutable design is the current product specification for managed repository
 documentation. The accepted ADR records the architecture decision and remains
-unchanged; this file owns current implementation detail. Milestone narratives and
-review text below are retained provenance from their named checkpoints, not current
-authorization or an instruction to rerun completed work. Current authorization and
-application synchronization state live in `docs/delivery/progress.md`.
+unchanged; this file owns current implementation detail. Completed MDCP
+milestones are not instructions to repeat delivery work. Current work is
+recorded in GitHub and the short `docs/delivery/progress.md` snapshot.
 
 ## Decision summary
 
@@ -86,64 +85,6 @@ Out of scope:
   inference, or unaudited owner-state mutation;
 - product work unrelated to repository-document compatibility; and
 - M2 or later work during this M0-M1 planning session.
-
-## M0: isolated and attributable baseline
-
-M0 established the following facts before any repository write:
-
-- Worktree root and Git top level both resolved to
-  `/Users/jroberts/.codex/worktrees/b0f1/release_radar`.
-- The active branch was
-  `codex/managed-documentation-contract-planning`.
-- `HEAD` was exactly
-  `653cdfd647590bfefbb23b556d48bd5970846a97` and the worktree was clean.
-- That commit is the accepted post-Task-4A documentation closeout based on
-  completed implementation checkpoint
-  `910b9653b661c6088d025bc6f6aea71271cff3b0`.
-- No original-checkout content or uncommitted state was imported.
-- No application, test, owner data, storage, guidance, document, evidence, or
-  external issue mutation occurred.
-
-### Issue #2 owner disposition
-
-The owner accepted the exact current versions of these three files at
-checkpoint `653cdfd` as operative RR-R10 output:
-
-- `docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json` —
-  SHA-256
-  `95bfa880903408d20ef7fbaaa8051ef6a2908a45d2ada9f6d01e8ba9d89cdea5`;
-- `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md`
-  — SHA-256
-  `711abe4edee9ac86951e9e41c40170f9fbb67123e2f44216e0203cec85595292`;
-  and
-- `docs/delivery/task-briefs/SHA256SUMS` — checkpoint SHA-256
-  `7205890306b278548d09a67320e2ff6d9b04a0104980a4ca4410a3410229da6d`.
-
-Their session-level authorship remains **unknown**. Acceptance neither infers
-authorship nor retroactively approves changes made after the preservation hold
-opened. The attribution incident remains historical evidence. The owner
-directed that the accepted artifacts not be investigated, replaced,
-regenerated, or rewritten merely to resolve Issue #2. The preservation hold is
-resolved. The external GitHub issue remains open and unmodified.
-
-The checkpoint hash above remains the attribution incident's immutable
-baseline.
-
-### Issue #1, Task 4B, and program priority
-
-These are separate work items:
-
-- **Task 4B** is the bounded RR-R10 task that exposes the already designed,
-  audited Ticket Task plan commands.
-- **GitHub Issue #1** is a later generic Ticket Tasks onboarding/adoption
-  workflow and owns guidance v3.
-- **MDCP** owns the managed repository-document contract, guidance v2, and
-  evidence compatibility described here.
-
-MDCP has priority after M1. Task 4B remains eligible but unopened until the
-`MDCP-COMPAT-1` checkpoint below is accepted. Issue #1 remains open externally
-but unopened for implementation until MDCP terminal acceptance and separate
-owner authorization. None is merged into another feature.
 
 ## Catalog v1 contract
 
@@ -551,154 +492,6 @@ other legacy evidence row remain unchanged. The old bound bookmark is revoked
 and the old root can no longer satisfy managed operations; unrelated unbound
 root rows remain ineligible. No partial rebind or prefix rewrite is allowed.
 
-## Milestones and release gates
-
-### M1 — durable planning package
-
-This document, ADR-006, the M2-M8 briefs, and the delivery ledger are the
-complete M1 inventory. M1 approval authorizes neither M2 nor Task 4B.
-
-### M1A — proportional delivery validation
-
-Accepted ADR-007 governs validation for M2-M8 and supersedes the original
-mandatory full-role review clauses, mutable-brief checksums, exact-brief hashes,
-and validation-of-validation ceremony for unopened work. The substantive
-product, architecture, security, dependency, test, and acceptance requirements
-remain controlling. The M1 review record below remains unchanged because it
-truthfully records the reviews that occurred.
-
-### M2 — repository contract foundation
-
-- M2A: catalog contract, snapshot, parser, and validator.
-- M2B: deterministic repository documentation tool and check mode.
-- M2C: centralized application path contract and read-only v1 catalog preview.
-
-### M3 — application compatibility foundation
-
-- M3A0: immutable checksummed schema-v12 migration fixture.
-- M3A: additive evidence locator and accepted-snapshot/root-bound project
-  repository-binding schema/models/resolver.
-- M3B: typed repository activation/catalog acceptance, read-only inventory,
-  audited exact reconciliation, and importer compatibility.
-- M3C: projection/UI readback and explicit root relocation.
-
-### M4 — stage this repository in place
-
-Catalog and index the current tree without moving documents, activating v2, or
-adopting evidence. M4 uses one tested transitional exception: `docs/README.md`
-directly enumerates the existing `docs/superpowers/` subtree, its `plans/` and
-`specs/` leaf collections, and every contained artifact without adding a file
-there. The exception permits no new content and expires in M7.
-
-### M5 — freeze the v2 compatibility candidate
-
-Make guidance v2 current in the exact application/bundled candidate while all
-repository document paths remain unchanged. Complete exact contract and
-failure tests, including real-tree catalog/index conformance in the normal
-repository test/check workflow. Do not install the candidate, mutate owner
-state, adopt evidence, or move documents.
-
-### `MDCP-COMPAT-1`
-
-Task 4B becomes eligible for a separate planning refresh and owner
-authorization only after every M2-M5 brief is implemented, independently
-accepted with zero required findings, and recorded at one exact attributable
-clean checkpoint. That checkpoint freezes:
-
-- command/query envelopes and result JSON;
-- evidence and root-bound accepted-catalog schema, activation/transition,
-  resolver, inventory, reconciliation, and root-rebind contracts;
-- importer behavior;
-- guidance v1/v2 semantics and bundled-skill content;
-- exact tool names and schemas; and
-- overlapping fixtures and acceptance tests.
-
-Task 4B does not open automatically. Its existing 13-tool and shared-file
-baselines must be refreshed against `MDCP-COMPAT-1` without absorbing MDCP
-behavior.
-
-M6-M8 consume the frozen candidate and may not reopen a frozen source or test
-contract. If they expose such a need, both programs stop; MDCP reopens only the
-affected M2/M3/M5 slice, receives affected-role review, replaces
-`MDCP-COMPAT-1`, and Task 4B refreshes again before resuming. Ledger writes are
-serialized even when implementation files do not overlap.
-
-### M6 — owner-authorized activation and adoption
-
-- M6A: exact candidate install, storage migration, v2 repository handoff,
-  typed root-row repository binding, relaunch readback, and read-only inventory
-  under a separately approved backup/recovery runbook.
-- M6B: one catalog-digest-bound atomic reconciliation of the complete approved
-  managed-adoption set.
-
-Uncertain and arbitrary evidence remains legacy. M6 requires separate owner
-authorization for every application and repository mutation.
-
-### M7 — catalog-driven repository cutover
-
-Before the repository-only M7 slice opens, prepare the exact move map, then use
-a separately authorized live preflight outside that slice. First quiesce the
-app and every mutation-capable client/helper, leaving only the authenticated
-read-only M3B query path for one authoritative inventory against the frozen
-map. Close that query path after it returns and keep all writers quiesced
-through M7. The map/inventory digests and quiescence proof form the release
-token. Every evidence row targeting a moved file must already be managed;
-otherwise that file is removed from the move set pending a separately
-authorized exact legacy relocation and a new token. The preflight mutates no
-owner data, and M7 itself does not launch or access the app.
-
-Before the first move, record an exact clean pre-M7 Git checkpoint and validate
-both the complete old and proposed new catalog/tree candidates. Any changed
-move map, failed/uncertain preflight, or paused or aborted cutover invalidates
-the M7 continuation token. Preserve the partial state and keep writers
-quiesced. Recovery is phase-specific:
-
-- Restoring the exact old accepted candidate requires validator-clean proof,
-  then a separately authorized fresh inventory/token before retrying M7 or
-  resuming live use on the old state.
-- Forward-completing the exact new pending candidate is permitted only if
-  writer quiescence was never lost. After validator-clean proof it remains
-  quiesced and proceeds directly to separately authorized M8 catalog acceptance;
-  managed inventory cannot run while the old digest remains accepted.
-- If any writer resumes or evidence-state quiescence is uncertain, forward
-  completion is prohibited. Restore the exact old candidate, validate it, and
-  obtain a fresh inventory/token.
-
-Never inventory a partial, invalid, or unaccepted candidate as if it were
-authoritative.
-
-After the release gate is satisfied, move documents, update catalog paths,
-generate indexes, repair active links and checksums, compact `progress.md`,
-establish archive boundaries and lifecycle rules, and remove active
-`docs/superpowers/` dependencies. Managed evidence rows are not path-rewritten.
-Successful M7 does not release live use: mutation-capable clients remain
-quiesced until M8 performs the controlled post-cutover catalog-transition
-mutation, then read-only application readback, and records an explicit owner
-release decision. The app binding remains on the old accepted digest throughout
-M7; the exact validator-clean new catalog is only a pending candidate.
-
-### M8 — runtime acceptance and closeout
-
-While mutation-capable clients remain quiesced, validate the exact new catalog
-against the stored prior accepted snapshot and execute the separately
-authorized typed catalog-acceptance command. Then prove controlled application
-resolution/readback, relaunch, root relocation,
-import/onboarding/guidance compatibility, UI truthfulness, and unrelated-state
-preservation. Before catalog acceptance commits, recovery follows the M7
-phase-specific old-restore or continuously-quiesced new-forward branch. If
-the acceptance outcome is unknown, keep repository state and writers quiesced,
-replay the exact original request/receipt, and use supported binding readback to
-establish which digest committed before selecting any recovery branch. If
-acceptance commits but a later check fails, keep the new repository candidate
-and writers quiesced; do not invoke the old-restore branch or silently roll the
-accepted snapshot backward. A repository-only defect then uses a separately
-authorized forward M7/M8 correction: derive and validate a corrected candidate
-from the new accepted snapshot, apply it under quiescence, and accept that next
-transition. Only an actual frozen-contract defect reopens M2/M3/M5 and replaces
-`MDCP-COMPAT-1`. Release live use
-only through an explicit owner decision after post-cutover readback succeeds.
-Record the terminal current state and next eligible work.
-
 ## Phase 3A runtime observation contract
 
 The Phase 3A source candidate adds one shared, in-memory documentation observation
@@ -723,56 +516,47 @@ Catalog validation follows renewal, so invalid or pending catalogs remain visibl
 invalid or pending. Repository relocation retains its separate accepted-catalog
 workflow.
 
-The source verification record is
-[Phase 3A documentation freshness evidence](../delivery/evidence/2026-09-07-phase3a-documentation-freshness.md).
-It includes signed native proof that the accessibility action opens the shared
-picker and that cancellation is non-mutating. Successful signed selection through
+Phase 3A signed native verification established that the accessibility action
+opens the shared picker and that cancellation is non-mutating. Successful signed selection through
 real sandbox authorization to bookmark renewal remains an outstanding Phase 3
 verification gap; synthetic integration tests cover the renewal contract itself.
 
-## Program-wide execution rules
+## Evidence preview limits and access
 
-- One brief is opened at a time after dependency-safe release and explicit
-  owner authorization.
-- Every behavior change starts with the brief's attributable RED and uses the
-  repository's existing XCTest and fixture patterns.
-- Application source and live repository/state changes never share a slice.
-- Catalog staging precedes v2 activation; v2 activation precedes evidence
-  adoption; evidence adoption precedes document movement.
-- No direct SQLite access, filename-only inference, silent prefix rewrite, or
-  delivery-state mutation is permitted.
-- Every mutating request is typed, project-scoped, audited, idempotent, and
-  bound to the exact inspected catalog snapshot.
-- Replay receipts prefer stable IDs, digests, and request hashes; bookmark
-  bytes, content, and unnecessary absolute paths/free-form reasons are omitted
-  from durable audit, receipt, log, and UI surfaces.
-- Missing or malformed managed documentation produces truthful, recoverable,
-  read-only failure and no unrelated mutation.
-- Human historical narratives remain intact; current indexes and archive maps
-  explain moved paths.
-- The Release Radar-managed `AGENTS.md` block changes only through its exact
-  versioned guidance workflow. M7 operating rules are placed outside that block
-  unless guidance v2 explicitly owns them.
-- Completion requires repository validation, focused application evidence,
-  supported readback, and the progress ledger to agree.
+Evidence previews are transient, read-only views of authorized content. Previewing
+never updates evidence, catalog acceptance, audit records or delivery state.
 
-## Review and approval state
+- The preview payload is limited to **1 MiB (1,048,576 bytes)**. Larger payloads
+  report `oversized` and expose no preview content.
+- Text must be valid UTF-8. Display at most **131,072 characters**, with truncation
+  explicitly labelled. HTML and SVG are displayed as inert source text; previews
+  execute no scripts and load no remote resources.
+- Supported raster formats are PNG, JPEG, GIF, WebP and TIFF. An image must contain
+  exactly one image/frame, have positive dimensions no greater than **4,096 pixels
+  per dimension**, and contain no more than **16,000,000 decoded pixels**.
+  Malformed or out-of-bounds images are rejected; unsupported formats are explicit.
+- Managed previews revalidate the exact accepted binding and current catalog before
+  descriptor-relative, no-follow reads. Legacy paths must resolve within an
+  existing authorized primary or worktree root for the same project.
+- Missing, oversized, inaccessible and rejected sources remain distinct. Recovery
+  preserves the authorizing root: restore primary-folder access, reconnect the
+  exact saved worktree, or explicitly relocate legacy evidence outside saved grants.
+- Selection, observation, root, registration or service invalidation withdraws
+  displayed content and rejects late read results. Preview bytes are not a
+  persistent copy or a new source of authority.
 
-The following paragraph is the unchanged historical M1 review record. Its
-pending-approval statement reflects that checkpoint and is superseded by the
-current status above.
+These are the existing limits implemented by `EvidencePreviewReader` and its
+preview consumers; recording them here does not change product behavior.
 
-Planning, Architecture, TPM, QA, Delivery Management, and Security/Privacy each
-reviewed the exact substantive M1 package and returned GO with Required 0,
-Optional 0, and Out of scope 0. The resulting status-only ledger update records
-those verdicts; owner approval remains pending.
+## Mutation and failure guarantees
 
-The owner subsequently approved M1 and accepted ADR-007. MDCP M2-M8 and their
-approved activation/cutover work later completed; their durable contract remains in
-this design and their execution history remains in catalogued briefs/evidence.
-Future app launch, storage or evidence mutation, catalog acceptance, document move,
-publication, or external issue work still requires its own current authorization;
-historical milestone approval is not reusable authority.
+Managed mutations are typed, project-scoped, audited, idempotent and bound to
+the exact inspected catalog snapshot. Replay receipts use stable IDs, digests
+and request hashes; omit bookmark bytes, document content and unnecessary
+absolute paths or free-form reasons from audit, receipt, log and UI surfaces.
+Missing or malformed documentation yields a recoverable, read-only failure
+without unrelated mutation. The app remains the only SQLite writer; filename
+inference and silent evidence-path rewrites cannot establish authority.
 
 ## Phase 5B source revision and readback extension — 2026-09-09
 
@@ -811,14 +595,10 @@ and retirement history, reverse impacts, binding/root/repository mismatch, unsaf
 or unstable reads, bounds, stale revisions, replay/rollback, migration with no
 inferred links, lifecycle/recovery, and complete wide/compact accessible navigation.
 
-The completed [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
-is provenance for the delivered extension and its test history, not current command,
-recovery, acceptance or execution authority.
 
 ## Protected activation artifacts and recovery
 
-The completed [M6A activation runbook](../delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
-is historical provenance. Its continuing custody rules remain current: approved
+Continuing custody rules apply to historical activation resources: approved
 protected copies, backups, disposable restores, migration snapshots and quarantined
 failed state remain retained under their exact owner-approved custody and disposal
 terms. Routine work must not inspect protected owner paths, bookmark bytes, evidence
