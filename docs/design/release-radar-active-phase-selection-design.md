@@ -1,6 +1,6 @@
 # Release Radar Active Phase Selection Design
 
-- Status: Approved outcome; implementation pending independent release
+- Status: Delivered active-phase selection contract; current changes are tracked in GitHub
 - Date: 2026-08-29
 - Delivery ID: RR-R9
 
@@ -51,7 +51,6 @@ or makes an incomplete checkpoint a finished RR-R9 delivery.
 - `docs/architecture/ADR-003-active-phase-selection.md`, the accepted owner
   exception, current-request publication ordering, model guard, and
   cross-phase dependency-reference contract
-- Historical background: `docs/delivery/archive/2026-08-23-release-radar-mvp.md`
   records the original RR-02, RR-03, RR-06, and RR-10 boundaries; current
   architecture and this accepted design govern execution
 

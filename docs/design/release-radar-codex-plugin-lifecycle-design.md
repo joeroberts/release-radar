@@ -349,16 +349,11 @@ both validation and the unchanged normalized digest. Handle and entry identity,
 mode, size, modification/change times and directory entries are checked before
 returning. The signed-resource marketplace reader retains its prior behavior.
 
-The [dedicated containment brief](../delivery/task-briefs/2026-09-15-installed-plugin-cache-containment/brief.md)
-requires native synthetic tests of the actual helper reader and independent
-code/security review. On September 15, 2026 the actual reader compiled with
-Swift 6 and all ten native synthetic XCTest methods passed with no failures or
-exceptions, using a worktree-local temporary directory. Main reported no Required
-findings from the independent static review of the implementation candidate;
-review of the bounded test temporary-path correction remains part of closeout.
-These repository checks do not establish installed helper behavior or application
-catalog acceptance. No owner cache or installed application state is accessed by
-the synthetic checks.
+Native synthetic tests exercise the actual helper reader, both recognized file
+inventories and frozen digests, symlink/nonregular/FIFO rejection, replacement and
+same-size mutation races, read errors and path-free failures. Signed sandbox checks
+must separately establish legitimate traversal-only home access without broader
+entitlements. Synthetic reader success alone does not prove installed-helper behavior.
 
 The XPC listener accepts only the same effective user and the signed Release
 Radar application identity. The helper exposes no MCP, STDIO, URL, network, or

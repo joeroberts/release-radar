@@ -1,5 +1,24 @@
 # Release Radar Agent Instructions
 
+## Standalone Repository Development
+
+This repository is no longer tracked or governed by the Release Radar application.
+Use ordinary Codex tasks, Git worktrees, repository-native checks and the GitHub
+CLI (`gh`). GitHub issues hold the work list and task results.
+
+Development does not require RR registration, phase or ticket transitions,
+Delivery Goal assignment, catalog acceptance, managed worker preparation,
+execution hooks, or the release-radar/shared-execution skills. Do not re-onboard
+this repository or restore those requirements without explicit owner direction.
+Existing plans, briefs, catalogs and delivery records remain reference material;
+their former RR execution procedures do not govern this repository. Preserve
+applicable product requirements and accepted architectural decisions.
+
+Agents may perform authorized work directly. Use independent review for material
+changes without requiring standing roles or an RR-managed assignment. No mandatory
+task brief, ledger mutation or app-state synchronization is needed to start or
+finish repository work.
+
 ## Scope and Controlling Artifacts
 
 These instructions apply to the entire repository.
@@ -7,8 +26,8 @@ These instructions apply to the entire repository.
 Treat the user's explicit request and the approved project artifacts as the
 controlling sources for Release Radar. Current artifacts include:
 
-- `docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md`
-  for the delivered RR-R10 scope and retained task boundaries
+- `docs/design/release-radar-ticket-tasks-design.md`
+  for the delivered ticket-task product contract
 - `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`
   for whole-product dependencies and assessed future direction; preserve its
   distinction between approved inclusion, proposed contracts and implementation
@@ -20,8 +39,8 @@ controlling sources for Release Radar. Current artifacts include:
 - `docs/architecture/ADR-001-release-radar-boundaries.md` for architecture,
   data, integration, sandbox, and signing boundaries
 - `docs/brand/README.md` for the approved product identity
-- `docs/delivery/progress.md` for delivery status, decisions, verification,
-  risks, and the next eligible task
+- GitHub issues for current work, status and verification;
+  `docs/delivery/progress.md` is retained delivery history
 
 Do not silently override approved artifacts with assumptions, generated plans,
 repository indexes, or implementation convenience. Treat `.codegraph` output
@@ -31,8 +50,8 @@ appropriate.
 
 Accepted ADRs are immutable decision records. Current implementation
 specifications belong in the owning mutable design documents; operative agent
-rules belong in `AGENTS.md`; current authorization and delivery state belong in
-`docs/delivery/progress.md`. Plans, briefs, skills, reviews and implementation
+rules belong in `AGENTS.md`; current authorization comes from the owner and
+current work is recorded in GitHub issues. Plans, briefs, skills, reviews and implementation
 assignments cannot authorize editing an accepted ADR. Routine specification
 maintenance must preserve accepted ADR text. A future architectural change
 requires a separately authorized decision; it is not permission to amend an
@@ -62,18 +81,10 @@ Radar deliverables.
 
 - Persist durable Release Radar design documents under `docs/design/`.
 - Persist approved Release Radar mockups under `docs/design/mockups/`.
-- Persist every approved or controlling implementation task brief under
-  `docs/delivery/task-briefs/` before implementation begins. A tracked artifact
-  must never cite `/tmp`, `.superpowers/sdd/`, another Git-ignored path, build
-  output, or agent-session storage as its controlling brief.
-- When an approved brief originates in temporary or ignored storage, move the
-  exact reviewed artifact to the tracked task-brief path, verify the copy, and
-  update every controlling reference before releasing a writer.
 - Preserve human-authored historical drafts, role reports, review packages, and
   superseded briefs under `docs/delivery/archive/` when the owner requests
   archaeological retention. Archive content must be labelled historical and
-  non-authoritative; it does not compete with `docs/delivery/progress.md` for
-  current status or sequencing.
+  non-authoritative; it does not determine current work or sequencing.
 - Never present a scratch path as the final deliverable.
 - Before requesting approval or declaring completion, classify every created
   file as durable or temporary.
@@ -160,109 +171,6 @@ layers or authorize scope expansion.
   state.
 
 Review matrices, mutable-document checksums, exact-brief hashes, commit-parent formulas, repeated remote-equality gates, and validation-of-validation requirements recorded in plans or briefs before the M1A proportional-delivery decision do not control unopened work. Their product requirements, architecture and security boundaries, dependencies, tests, and acceptance criteria remain controlling. Any exception to this proportional model requires explicit owner approval identifying the concrete risk it addresses.
-
-## Task Briefs
-
-Task briefs are required only for multi-step, cross-subsystem, destructive,
-migration, security-sensitive, or otherwise high-risk work. A brief contains
-only:
-
-- Objective and outcome
-- Scope and exclusions
-- Dependencies
-- Material risks
-- Test strategy
-- Acceptance criteria
-- Risk-triggered reviews
-- Assignment: owner, baseline branch/revision, file/shared-state ownership,
-  model and effort with rationale and escalation ceiling
-- Relevant accepted architecture and future consumers, with links; identify
-  migration, compatibility and recovery implications or state why none apply
-- Delivery endpoint: documentation disposition, checks and local commit expected;
-  separately state authorization for push, PR, merge, installation and app state
-
-Briefs must not reproduce entire designs or ADRs, reviewer transcripts, exact
-commit-parent choreography, long inventories of unchanged files,
-mutable-document checksums, or validation evidence whose only purpose is
-proving another validation.
-
-## Progress Ledger
-
-Use `docs/delivery/progress.md` as the durable delivery source of truth. Do not
-create a competing ledger.
-
-Record only:
-
-- Current outcome and active task
-- Current authorization state
-- Controlling plan or brief
-- Current blockers and risks
-- Concise verification result or link
-- Next eligible work
-
-Do not add complete review transcripts, exhaustive command output, candidate
-hashes, repeated Git-state evidence, or detailed closed-task chronology. Code
-or compilation alone does not make a task complete.
-
-## Task Ownership and Lifecycle
-
-The orchestrator coordinates separate Codex tasks and monitors their outcomes.
-It must not spawn or reuse subagents. Under the owner's task-creation authorization,
-use fresh tasks for separate outcomes and fresh worktrees for delivery writers.
-Task creation is asynchronous: resolve setup, then monitor completion, blockers and
-required owner decisions. A successful dispatch is not a completed assignment.
-
-- **Orchestrator:** programme-level scope, dependencies, assignments, integration
-  ownership and follow-through. It owns the progress ledger by default. It does
-  not perform product implementation; route that work to bounded delivery tasks.
-- **Chief architect:** a separate peer task responsible for whole-application
-  direction, accepted/proposed decisions, future dependencies and tradeoffs. Consult
-  it for shared identities, persistence, public contracts, authority, recovery or
-  cross-feature boundaries. It cannot invent scope or override owner decisions.
-- **Delivery owner:** one complete brief/slice, including affected documentation,
-  direct verification, corrections and the authorized commit/PR endpoint. Use a
-  phase only when it is itself a bounded, coherent outcome. Feature architecture
-  and QA expertise may sit within this task; substantial prerequisite design can
-  have its own bounded task.
-- **Independent reviewer:** one specified candidate and its required corrections
-  in a fresh task. Provide the original outcome, relevant product constraints,
-  candidate and direct evidence; do not fork the implementer's conversation. An
-  author cannot independently review their own implementation or material design.
-- **Integration owner:** one bounded set of related changes. Usually the delivery
-  owner; create a separate task only for substantial coordination or conflicts.
-  Assign one writer for each integration checkout and shared resource.
-- **Delivery management:** records state and ensures the agreed endpoint is reached;
-  normally the orchestrator's responsibility, not an extra technical approval.
-
-Orchestrator and chief-architect responsibilities persist across slices, but their
-conversations may be replaced from the existing plan, ADRs and progress ledger.
-Delivery, integration and review tasks end with their assigned outcome, including
-required corrections. The orchestrator must archive each bounded task promptly
-once that work is complete, useful results are preserved in the repository and
-its work/processes are known to have stopped. Parent-level owner review or approval
-is not a reason to leave a completed child task open. Record its result and archive
-status concisely in the existing progress ledger; archiving is not cancellation.
-
-Reuse or restore a task only for required corrections to the same assigned outcome.
-A new candidate outside that correction scope, unrelated outcome or separate
-handoff review requires a fresh task. Do not reuse a completed reviewer for kickoff-prompt review merely
-because its context or tools remain available. Orchestrator and chief-architect
-standing responsibilities retain the conversation-replacement rules above.
-
-Delivery tasks may use subagents only for concrete bounded work with relevant
-requirements, explicit model/effort and separate ownership. Never use an implementer
-as their own independent reviewer. Do not create a chain of reviewers. If the
-interface cannot retire a subagent, stop using it when its assignment ends; use a
-fresh delivery task when fresh context/capacity is needed.
-
-Worktrees isolate checked-out files, not application SQLite, Keychain, installed
-apps, ports or all Git metadata. Serialize authorized shared-state mutations. Each
-worker starts from the assigned committed baseline containing the operating docs
-and product plan, not an implicit default branch or dirty canonical checkout.
-The orchestrator releases dependent work only after the needed contract/change is
-available in that worker's baseline. Parallel writers need disjoint ownership.
-Workers report commits, changed behavior/docs, direct checks and unresolved risks;
-only the designated ledger writer integrates status.
 
 ## Model and Effort Assignments
 
@@ -418,41 +326,3 @@ repository's ordinary files and tools.
 
 Compilation, static analysis, repository-index output, or the presence of a
 required process does not prove runtime correctness.
-
-<!-- release-radar-shared-execution:v1:start -->
-## Shared execution integration
-
-For authorized implementation or substantive review work, invoke the installed
-`$release-radar:shared-execution` skill and apply shared-execution standard v1.
-This repository's explicit owner authorization, controlling product and architecture
-documents, and delivery ledger remain authoritative. The shared standard supplies
-bounded context, repository-native check reporting, and compatibility diagnostics
-only; it cannot grant authority, accept work, identify an independent reviewer,
-change delivery state, or trigger installation, trust, permissions, publication,
-or any other action. If the skill is missing, modified, incompatible, or unavailable,
-report that state and use only this repository's own governing instructions. The
-repository must independently retain its requirements for material independent
-review, explicit owner acceptance and external effects, and material safety and
-recovery. If those local fallbacks do not cover every removed required clause, stop
-the affected material work; unrelated read-only and product work may continue under
-the local instructions.
-<!-- release-radar-shared-execution:end -->
-
-<!-- release-radar-guidance:v3:start -->
-## Release Radar tracking
-
-This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, changing tracked delivery state, or adopting generic ticket tasks, invoke the installed `release-radar` skill and follow it.
-
-- Read `docs/catalog.json` and begin documentation discovery at `docs/README.md`. Follow generated local indexes before broad search and load only task-relevant controlling artifacts.
-- The catalog owns documentation identity, lifecycle, authority, and navigation. `docs/delivery/progress.md` remains the durable delivery source of truth; the catalog and indexes never authorize or infer ticket or phase state.
-- Under owner authorization, update the catalog, collection/index metadata, active references, and applicable checksums in the same change as any durable add, move, rename, supersession, closeout, restoration, or deletion. Preserve stable artifact IDs and never reuse retired IDs.
-- Keep only active operational detail in `docs/delivery/progress.md`; move closed detail to `docs/delivery/archive/` and label it historical and non-authoritative. Place implementation plans in `docs/delivery/plans/` and controlling task briefs in `docs/delivery/task-briefs/`.
-- Add no new content under `docs/superpowers/` during transition and never recreate it after cutover.
-- Release Radar is the only SQLite writer. Never edit that database or repair a managed evidence path directly. Use supported read-only inventory and typed, audited operations with exact project identity, request identity, expected revision, and task identity.
-- Managed operations require the exact authorized root and accepted repository ID, catalog version, and digest. Only explicit repository binding establishes a missing binding; only catalog acceptance advances an accepted snapshot. Treat a changed catalog as pending until Release Radar accepts its validated transition.
-- Before generic task adoption, require a complete `release_radar_delivery_inventory` result for the exact authorized project and root. Prepare one exact reconciliation for every scoped non-Accepted ticket, classifying it as atomic, non-atomic, already-planned, or blocked, with rationale, exact plan baseline, additions, definition revisions, supersessions, and unchanged rows. Owner approval must identify that exact reconciliation. General approval of code or a delivery task is not approval to mutate Release Radar state.
-- Apply an approved reconciliation only through `release_radar_revise_ticket_task_plan` and `release_radar_complete_ticket_task`. Preserve the exact command envelope for replay after an uncertain outcome, chain subsequent operations from the returned `ticketTaskPlanRevision`, and stop for refreshed inventory and approval if the baseline changes. Omission never deletes a task; Accepted or retired tickets and completed phases are not mutable, and unassigned tickets may receive definitions but cannot complete tasks until placed.
-- Prior completion is explicit only when an applicable Release Radar delivery-evidence target has an explicitly applicable, available, successful observation for the same ticket and task scope. A failed, stale, superseded, unavailable, unknown, or generic observation does not imply task completion. Keep uncertain work pending; runtime commands enforce normal authority, lifecycle, revision, and replay rules rather than conversational approval or evidence sufficiency.
-- Run the repository documentation check and read back the resulting repository and application state before completion. Do not claim completion while catalog, indexes, lifecycle, authority, references, applicable checksums, evidence resolution, task history, or application readback disagree. Preserve exact requests across uncertain outcomes.
-- Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state. Repository-local rules outside this block may narrow this contract but must not weaken or duplicate it.
-<!-- release-radar-guidance:end -->

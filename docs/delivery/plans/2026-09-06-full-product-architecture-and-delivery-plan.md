@@ -51,6 +51,11 @@ phases.
 | Repository-plan reconstruction | After Outcome 3 release closeout, reconcile Release Radar repository documentation, then implement this reviewed supported-projection import feature. Reconciliation resolves scattered/stale plans, contradictory status/next-work and overlapping IDs while preserving historical records; it does not parse prose into application state. Implementation remains unstarted; any live owner-data reconstruction is a separately authorized exact operation. |
 
 Phase 7, Phase 8 and the unscheduled backlog remain outside P6-remediation.
+
+Repository-plan reconstruction follows Outcome 3 closeout and repository-documentation
+reconciliation. It consumes only the supported versioned planning projection, not
+Markdown prose. Live owner-data reconstruction requires separate exact-operation
+approval. Guided setup is not an inferred prerequisite or a new phase.
 Self-onboarding is explicitly **UNSCHEDULED**; Jira ticket pending.
 
 Phase 3 source delivery is merged through PR #35 (`6f528c5`). The owner authorized
@@ -75,8 +80,7 @@ publication, owner-data or application-catalog operation.
 
 Phase 4 source delivery completed through owner-approved
 [PR #36](https://github.com/joeroberts/release-radar/pull/36), merged 2026-09-08 at
-`356e134`. The [verification record](../evidence/2026-09-08-phase4-navigation.md)
-preserves focused tests, native evidence and independent review. The assessment
+`356e134`, with focused tests, native verification and independent review. The assessment
 below records the accepted contract; future surface contracts remain proposed.
 
 ### Phase 4 prerequisite assessment — 2026-09-08
@@ -307,8 +311,7 @@ resolution, atomic typed link mutations and read-only native recorded-impact
 navigation. The owning current contracts are the
 [managed-documentation](../../design/managed-repository-documentation-contract.md#phase-5b-source-revision-and-readback-extension--2026-09-09)
 and [dashboard](../../design/agent-driven-delivery-dashboard-design.md#phase-5b-references-and-recorded-impacts--2026-09-09)
-designs. The completed [Phase 5B brief](../task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
-retains delivery provenance only. No unresolved owner choice was identified;
+designs. No unresolved owner choice was identified;
 proposals, successor obligations and lifecycle remained later slices at that point.
 
 Each actual new record participates in additive migration, archive/restore,
@@ -325,13 +328,12 @@ implementation, including disjoint parallel work and later integration of review
 Phase 5B source. Candidate `dd486f04459f9ceae7e4e2163d0274402fba78ee` implements
 the packaged V1 skill/exact capability registry, additive read-only diagnose,
 root-bound compatibility observation and Project Overview presentation. The
-[design](../../design/shared-execution-integration-v1-design.md) and
-[evidence](../evidence/2026-09-09-shared-execution-integration-v1.md) distinguish
+[design](../../design/shared-execution-integration-v1-design.md) distinguishes
 source delivery from installed behavior. Direct affected checks report 101 passed,
 2 environment-gated skips and no failures. Metadata integration and the same
 independent reviewer’s correction recheck are complete at source
 `0c4c08969c7dd7d869a69acf3d5b0e40e6e89bba`, with all four Required findings
-closed; the evidence records focused correction results. This completes the
+closed after focused correction checks. This completes the
 authorized local source endpoint.
 
 This authorization does not establish consumer adoption, application catalog
@@ -956,7 +958,7 @@ this paragraph owns the current no-go requirement.
 RM8 uses the owner-selected read-only publication boundary, retaining Mac delivery
 authority and repository document custody. Cloud authority and document relocation
 are not selected. The current proposed companion specification is the
-[CloudKit iPhone companion](../../design/cloudkit-iphone-companion-draft.md); it
+[iPhone companion (#93)](https://github.com/joeroberts/release-radar/issues/93); it
 retains the completed discovery's complete corpus, manifest/withdrawal consistency,
 limits, privacy, account, deletion, reset and schema-recovery requirements.
 Separate local commit time, publication time and source observation freshness;
@@ -976,8 +978,7 @@ must account for portable helper behavior and nested executables, as well as
 
 ### Conditional I7/I8 execution-owner constraints
 
-The completed [run-ownership discovery](../task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md)
-is historical provenance. If I7/I8 is later selected, the following constraints
+If I7/I8 is later selected, the following constraints
 remain **proposed** and must be resolved by its separately authorized design and
 feasibility work; they do not describe current runtime behavior.
 
@@ -1058,11 +1059,9 @@ context and tooling. **Ultra is prohibited everywhere, including subagents and
 escalation.** Review independence and acceptance criteria are unchanged by model
 choice. Review findings do not create another review layer.
 
-The owner authorized updating/reviewing these operating documents and establishing
-a local committed baseline. The
-[baseline brief](../task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
-defines this documentation task. Owner review/approval of the committed baseline
-precedes the new-task pilot prompt; no pilot is launched by this update.
+The operating-baseline preparation and C8 pilot are completed historical work.
+Their old task assignments confer no current authority; current repository
+instructions and explicit owner direction govern new work.
 
 The first proposed pilot is the C8 OS-metadata validator repair above: Terra Medium
 delivery, Sol High independent review covering reader correctness and filesystem
@@ -1294,8 +1293,8 @@ Controlling documents and directional inputs:
 - [Documentation catalog](../../catalog.json) and [documentation entry point](../../README.md).
 - [Application boundaries / portable archive v1](../../architecture/ADR-001-release-radar-boundaries.md), [plugin lifecycle](../../architecture/ADR-002-codex-plugin-lifecycle.md), [active context](../../architecture/ADR-003-active-phase-selection.md), [goals/readiness](../../architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md), [Ticket Tasks](../../architecture/ADR-005-ticket-task-work-plans.md), [managed documentation](../../architecture/ADR-006-managed-repository-documentation-contract.md), [proportional validation](../../architecture/ADR-007-proportional-delivery-validation.md).
 - [Dashboard product design](../../design/agent-driven-delivery-dashboard-design.md), [managed documentation design](../../design/managed-repository-documentation-contract.md), [active phase](../../design/release-radar-active-phase-selection-design.md), [plugin lifecycle design](../../design/release-radar-codex-plugin-lifecycle-design.md), [goal/board presentation](../../design/release-radar-delivery-goals-phase-board-design.md), [task presentation](../../design/release-radar-ticket-tasks-design.md).
-- [Approved six-goal/eleven-ticket roadmap](../../design/2026-08-29-delivery-goals-roadmap-readiness-design.md), [RR-R10 implementation plan](2026-08-29-delivery-goals-roadmap-readiness.md).
-- Proposed [Project Plan](../../design/release-radar-project-planning-ux-proposal.md), [UX study](../../design/release-radar-ux-redesign-study.md), [interactive study](../../design/release-radar-ux-redesign.html), [companion](../../design/cloudkit-iphone-companion-draft.md), [mockups and maturity](../../design/README.md), and [brand](../../brand/README.md).
+- [Approved six-goal/eleven-ticket roadmap](../../design/2026-08-29-delivery-goals-roadmap-readiness-design.md), [Current product specification](../../design/release-radar-ticket-tasks-design.md).
+- Proposed [Current product specification](../../design/agent-driven-delivery-dashboard-design.md), [Current product specification](../../design/agent-driven-delivery-dashboard-design.md), [Current product specification](../../design/agent-driven-delivery-dashboard-design.md), [iPhone companion (#93)](https://github.com/joeroberts/release-radar/issues/93), [mockups and maturity](../../design/README.md), and [brand](../../brand/README.md).
 - RekonDesignSystem local package: `Package.swift`, `README.md`, `docs/integration.md`, `docs/compatibility.md`, `docs/accessibility.md`, `docs/release-policy.md` and public component source, inspected in the separate owner-designated UILib repository. No changes were made there.
 
 Code references use the immutable reviewed GitHub tree so they do not misleadingly
@@ -1308,6 +1307,6 @@ point into the older canonical checkout:
 | S3 | [DeliveryStore](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/Store/DeliveryStore.swift): connection/availability 63–108; transaction/audit 169–206. [StoreMigrations](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/Store/StoreMigrations.swift): base identity/placement 935 onward; newer goal/task relationships. |
 | S4 | [AppRoute](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar/Navigation/AppRoute.swift#L3), [AppModel](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar/App/AppModel.swift#L813), [DashboardProjection](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar/Projects/DashboardProjection.swift#L96): incomplete route state, active dependency scope, all-phase loading. |
 | S5 | [ProjectActivityProjection](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar/Activity/ProjectActivityProjection.swift#L58): event union and current-state decoration; #18/#19 document reported freshness/recovery gaps. |
-| S6 | [SettingsView](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar/Notifications/SettingsView.swift#L273), [test scheme](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar.xcodeproj/xcshareddata/xcschemes/ReleaseRadar.xcscheme), [prior installed repair evidence](../evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md). |
+| S6 | [SettingsView](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar/Notifications/SettingsView.swift#L273), [test scheme](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadar.xcodeproj/xcshareddata/xcschemes/ReleaseRadar.xcscheme). |
 | S7 | [AgentQuery](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/Documentation/DocumentationOperations.swift#L50), [AgentCommand](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/AgentBridge/AgentCommand.swift#L40), [dispatcher attribution](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift#L71). |
 | S8 | [CodexPluginLifecycle](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift), [observer](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/Codex/CodexObserver.swift), [runtime models](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarCore/Codex/CodexRuntimeModels.swift#L87), [helper entitlements](https://github.com/joeroberts/release-radar/blob/fcb432bf2c6f5e5bab63418adb9b6ec647e1baef/ReleaseRadarPluginLifecycleHelper/ReleaseRadarPluginLifecycleHelper.entitlements#L7). |

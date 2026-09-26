@@ -1,11 +1,16 @@
 # Product design
 
+These documents define product behavior, interfaces, constraints and design
+proposals. Delivery sequences, task assignments and rollout gates belong in
+[delivery plans](../delivery/plans/). A feature named Project Plan is still a
+product design; its name does not make it an implementation plan.
+
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: design
 
 - Path: [docs/design](.)
-- Purpose: Accepted product contracts and clearly classified proposals
+- Purpose: Product behavior, interfaces, constraints and clearly classified design proposals
 - Allowed contents: Mockup collection; Product design documents; Visual study sources
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [98f5320c-208e-4ca1-aacf-c8df5701a1d4](agent-driven-delivery-dashboard-design.md)
@@ -19,18 +24,12 @@
 | eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7 | [docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md](2026-08-29-delivery-goals-roadmap-readiness-design.md) | document | controlling &#40;product.delivery-goals-readiness&#41; | active | none | none |
 | da877bf9-71c1-4b8b-8431-298121a2f41e | [docs/design/README.md](README.md) | collectionIndex | supporting | active | none | none |
 | 98f5320c-208e-4ca1-aacf-c8df5701a1d4 | [docs/design/agent-driven-delivery-dashboard-design.md](agent-driven-delivery-dashboard-design.md) | document | controlling &#40;product.dashboard&#41; | active | none | none |
-| 37a68186-3912-480d-a755-de5cfdfecb9f | [docs/design/cloudkit-iphone-companion-draft.md](cloudkit-iphone-companion-draft.md) | document | supporting | proposed | none | none |
-| eddbab98-7db3-48d5-9015-4e1b7fd54cdf | [docs/design/delivery-dashboard-seven-mockups.html](delivery-dashboard-seven-mockups.html) | designAsset | nonAuthoritative | completed | none | none |
 | 5790258e-3166-423e-a5b9-45cd6d8a530d | [docs/design/managed-repository-documentation-contract.md](managed-repository-documentation-contract.md) | document | controlling &#40;product.managed-documentation&#41; | active | none | none |
-| rr-outcome3-runtime-enforcement-assessment-2026-09-14 | [docs/design/outcome3-runtime-enforcement-assessment.md](outcome3-runtime-enforcement-assessment.md) | document | supporting | proposed | none | none |
-| rr-phase6-workspace-toolbar-proposal-2026-09-12 | [docs/design/phase6-workspace-toolbar-proposal.md](phase6-workspace-toolbar-proposal.md) | document | supporting | proposed | none | none |
+| rr-outcome3-runtime-enforcement-assessment-2026-09-14 | [docs/design/project-execution-design.md](project-execution-design.md) | document | supporting | active | none | none |
 | 466140f5-f952-474b-8c65-aad1a1727b2e | [docs/design/release-radar-active-phase-selection-design.md](release-radar-active-phase-selection-design.md) | document | controlling &#40;product.active-phase-selection&#41; | active | none | none |
 | a428dba8-6027-43e5-91d8-5c677ef34841 | [docs/design/release-radar-codex-plugin-lifecycle-design.md](release-radar-codex-plugin-lifecycle-design.md) | document | controlling &#40;product.codex-plugin-lifecycle&#41; | active | none | none |
 | eacc4905-ad05-4c51-aecc-6fd32fcb7b9b | [docs/design/release-radar-delivery-goals-phase-board-design.md](release-radar-delivery-goals-phase-board-design.md) | document | controlling &#40;product.delivery-goals-presentation&#41; | active | none | none |
-| cb2f2641-c86c-4a72-b3fe-e2fc3b700f6d | [docs/design/release-radar-project-planning-ux-proposal.md](release-radar-project-planning-ux-proposal.md) | document | supporting | proposed | none | none |
 | 8d761556-f57d-4271-90a7-17c59348660b | [docs/design/release-radar-ticket-tasks-design.md](release-radar-ticket-tasks-design.md) | document | controlling &#40;product.ticket-task-presentation&#41; | active | none | none |
-| a1208906-0e77-4e17-8b0f-74d51231a2cd | [docs/design/release-radar-ux-redesign-study.md](release-radar-ux-redesign-study.md) | document | supporting | proposed | none | none |
-| 3619538f-28d6-4114-b132-9e6ee3f8aa6d | [docs/design/release-radar-ux-redesign.html](release-radar-ux-redesign.html) | designAsset | supporting | proposed | none | none |
 | rr-repository-plan-reconstruction-design-2026-09-12 | [docs/design/repository-plan-reconstruction-design.md](repository-plan-reconstruction-design.md) | document | supporting | proposed | none | none |
 | rr-shared-execution-integration-v1-design-2026-09-09 | [docs/design/shared-execution-integration-v1-design.md](shared-execution-integration-v1-design.md) | document | controlling &#40;product.shared-execution-v1&#41; | active | none | none |
 

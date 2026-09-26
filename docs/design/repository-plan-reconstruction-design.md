@@ -7,7 +7,7 @@ only after the preceding repository-documentation reconciliation and the scoped
 design prerequisites identified below. Publication and live owner-data recovery
 remain separately authorized operations.
 
-## Outcome and sequence
+## Product outcome
 
 Allow an owner whose registered project has no recorded plan to preview and approve
 a one-time reconstruction of its current operational plan from one identified,
@@ -15,18 +15,7 @@ supported, versioned repository planning projection. Preserve the existing proje
 registration and current application data. This is not database restoration or
 recurring repository synchronization.
 
-The owner corrected the sequencing request: within **P6-remediation**, Outcome 3
-closeout comes first, followed by Release Radar repository-documentation
-reconciliation, then this reconstruction feature. Documentation reconciliation
-resolves scattered or stale plans, contradictory status/next-work statements and
-overlapping IDs while preserving historical records; it does not parse prose into
-application state. This feature still consumes only its supported, versioned
-structured planning projection, with its scoped implementation/design prerequisites.
-A live owner-data reconstruction remains a separate exact-operation approval.
-Preserve the existing 6F metric, 6G management and 6H toolbar/lifecycle outcomes
-in the [Phase 6 proposal](phase6-workspace-toolbar-proposal.md). The separately
-proposed guided-setup label 6I is not accepted or a silently added recovery
-dependency. Do not assign a recovery slice number or resume Phase 7 by inference.
+Delivery dependencies and sequencing are in the [full-product plan](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md#p6-remediation-grouping--owner-correction-2026-09-18).
 
 ## Approved source and state rules
 

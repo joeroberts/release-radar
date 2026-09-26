@@ -319,7 +319,7 @@ unavailable are separate facts. Missing files do not prove catalog retirement.
 Never relink automatically or present current bytes as an unavailable historical
 revision. Link retirement retains history and does not require the source to remain
 readable. New/revised links still require full managed authorization; no operation
-implicitly binds or accepts a catalog. See the [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md).
+implicitly binds or accepts a catalog. See the [Phase 5B brief](https://github.com/joeroberts/release-radar/blob/c521851730ba9be5d51c012489ea049bdd402022/docs/delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md).
 
 ## Phase 5C proposal source-impact amendment — 2026-09-10
 

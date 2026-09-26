@@ -1,6 +1,6 @@
 # Release Radar Delivery Goals Phase Board contract
 
-- Status: Owner-confirmed direction; implementation pending
+- Status: Delivered Delivery Goals Phase Board contract
 - Date: 2026-08-29
 - Governing specification:
   `docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md`
