@@ -4,6 +4,16 @@
   "retiredArtifactIDs": [],
   "collections": [
     {
+      "collectionID": "delivery.task-briefs.rr-p6-documentation-lifecycle",
+      "path": "docs/delivery/task-briefs/rr-p6-documentation-lifecycle",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Active execution details for rr-p6-documentation-lifecycle; full agreed plan in GitHub issue 118",
+      "allowedContents": ["Active ticket execution brief"],
+      "prohibitedContents": ["Closed delivery history", "Owner data and credentials", "Temporary build output"],
+      "isLeaf": true,
+      "firstRead": "rr-p6-documentation-lifecycle-brief"
+    },
+    {
       "collectionID": "delivery.task-briefs.2026-09-14-shared-execution-v1-adoption",
       "path": "docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption",
       "parentCollection": "delivery.task-briefs",
@@ -995,6 +1005,18 @@
     }
   ],
   "artifacts": [
+    {
+      "artifactID": "rr-p6-documentation-lifecycle-brief",
+      "path": "docs/delivery/task-briefs/rr-p6-documentation-lifecycle/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.documentation-lifecycle",
+      "parentCollection": "delivery.task-briefs.rr-p6-documentation-lifecycle",
+      "supersedes": [],
+      "applicationSensitivity": ["guidance"],
+      "checksum": {"policy": "notApplicable"}
+    },
     {
       "artifactID": "rr-shared-execution-v1-adoption-brief-2026-09-14",
       "path": "docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md",
@@ -7554,6 +7576,22 @@
       "supersedes": [],
       "applicationSensitivity": [
         "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-documentation-reconciliation-2026-09-21",
+      "path": "docs/delivery/task-briefs/2026-09-21-documentation-reconciliation.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.documentation-reconciliation",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
       ],
       "checksum": {
         "policy": "notApplicable"

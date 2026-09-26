@@ -10,7 +10,7 @@
 
 **Specs:** `docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md` and `docs/design/release-radar-ticket-tasks-design.md`
 
-**Package status:** owner-authorized post-MDCP plan, updated 2026-09-02. Tasks 1A/1B/2A/2B/3/4A and MDCP are delivered; Task 4B implementation and acceptance are complete with PR delivery in progress. Current authorization and the next eligible task are recorded in `docs/delivery/progress.md`; this plan alone does not authorize feature execution or owner-state changes.
+**Package status (historical September 2 checkpoint):** owner-authorized post-MDCP plan, updated 2026-09-02. Tasks 1A/1B/2A/2B/3/4A and MDCP are delivered; Task 4B implementation and acceptance are complete with PR delivery in progress. Current authorization and the next eligible task are recorded in `docs/delivery/progress.md`; this plan alone does not authorize feature execution or owner-state changes.
 
 ## Global Constraints
 

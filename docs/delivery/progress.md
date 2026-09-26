@@ -1,5 +1,110 @@
 # Release Radar delivery state
 
+## Current work — documentation lifecycle Task01
+
+Owner authorized `rr-p6-documentation-lifecycle-task-01` assessment and necessary
+tracking only. Plan: [GitHub #118](https://github.com/joeroberts/release-radar/issues/118);
+active [brief](task-briefs/rr-p6-documentation-lifecycle/brief.md).
+Ticket is In progress; four tasks remain pending at task-plan revision 1.
+Owner-selected goal is `rr-goal-p6-documentation`; phase plan finalized at revision 14.
+Supported inventory confirms In progress. Build's native documentation check passed.
+Ledger committed at `959e7650`. Exact preparation replay now conflicts at
+targetProvisioning: its retained locked clean worktree is at old `07f9b615`.
+Request `c7a65068-88e1-4bde-8b39-510faeac3a05` and full recovery details are in #118.
+Owner authorized fixing the failed setup. Build may commit this tracking update
+and fast-forward only its clean, never-launched worktree to the canonical baseline;
+then Main replays the exact preparation request. No reset, deletion or new request.
+Assessment worker launch is pending successful preparation and settings verification.
+Task01 only: no cleanup, rule/hook changes, Tasks02–04, push, PR, merge or release.
+GitHub operations use `gh`. Assessment and independent review remain pending.
+
+Committed requirement-link request; no replay pending:
+```json
+{"tool":"release_radar_upsert_ticket_reference","disposition":"committed","auditEventID":"A9263BBC-1A45-4069-8B9B-BE10209C3C1A","ticketReferenceLinkSetRevision":1,"arguments":{"version":1,"projectRoot":"/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar","registrationID":"8edc840e-2847-4eeb-af68-282d5ed12b11","registrationProjectID":"project-fffdc0e0b15b9b86","requestGeneration":1,"assertedThreadID":"01a0c4b2-46c6-7e81-ae75-da56109621d1","requestID":"f1b7d53a-b018-48c9-966a-2199c0696d04","ticketID":"rr-p6-documentation-lifecycle","target":{"catalogDigest":"8b299262cfcc79b35854aa4602c8ea2ba0fd88c385323fce1935cc1d505813c0","catalogVersion":1,"projectID":"project-fffdc0e0b15b9b86","repositoryID":"e7475429-ef51-4368-ad9e-61d9073d5a4f","rootID":"project-fffdc0e0b15b9b86-root-0"},"artifactID":"rr-p6-documentation-lifecycle-brief","expectedContentDigest":"6217b6c8f81e5c2fe64a6c8a132ae7d59ac7638c3eadc25f2645d34bcfa91525","expectedLinkSetRevision":0,"kind":"requirement","linkID":"rr-p6-documentation-lifecycle-requirement","reason":"Owner explicitly approved linking this accepted active execution brief to the new ticket. Full agreed plan is linked in GitHub issue118; retain Backlog, pending tasks and separate implementation authorization."}}
+```
+
+## September 21 — Documentation reconciliation Accepted
+
+Owner approved the stated documentation outcome and instructed closeout.
+Supported readback confirms `rr-p6-doc-reconciliation` is **Accepted**, owner
+acceptance `accepted`, all three original tasks completed at plan revision **4**,
+and all three scoped evidence expectations satisfied at evidence revision **4**.
+Acceptance audit: `273E4930-33D5-4DFA-9B9C-8B44E0E26982`. Exact committed
+commands and receipts are retained in the brief. No further implementation remains.
+The original three-task definitions are unchanged. Kickoff moved to In progress (audit
+`B1AF6D1F-E3ED-4B3E-8D6E-CCB4E2D3CAD4`). Main task
+`01a0c4b2-46c6-7e81-ae75-da56109621d1` solely owns coordination and this ledger.
+The extra coordinator stopped and was archived at the owner's direction;
+remaining delivery and review use the existing RR roles.
+Controlling [brief](task-briefs/2026-09-21-documentation-reconciliation.md).
+Owner approved catalog acceptance adding only that brief: accepted/candidate v1
+digest `bca9a86264e9e97e11f78c49acc87f5fe0f0a24de3da27f10c30a8d06c4824b4`
+matches on supported readback (request `3b927db2-fd56-46e8-bbb7-f3c947020201`,
+audit `68427B92-744D-42D3-B0F0-4D997BDA1F78`). Task02 assignment
+`delivery-3b927db2-fd56-46e8-bbb7-f3c947020202` prepared at `a5e71b23`
+(audit `0FE4208C-84E3-46C6-ADC5-0FCA8985650E`); worker
+`E2B6B371-C2F4-4823-960C-06AC87520CA7` uses verified Terra/medium and its exact
+managed profile/root. Main retains ledger ownership.
+Task02 is integrated (`77c08ac4`, clean reviewed worker candidate `c402372d`).
+Task03 independent documentation review passed with no Required findings; Build's
+native documentation and diff checks passed at candidate and canonical roots.
+Delivery/review connections are closed and bounded tasks archived. Owner-approved
+evidence/completion reconciliation is committed and read back in RR.
+Scope: identify concrete current-document conflicts, reconcile active references
+and status while preserving IDs, accepted ADRs and historical records, then run
+the native documentation checker and one independent review. No product changes,
+release, push or PR is authorized by this work; owner acceptance was explicitly
+granted at closeout.
+
+Kickoff provenance: merged main `c521851730ba9be5d51c012489ea049bdd402022`.
+Task01 executed from committed documentation branch baseline
+`fe204d32f68b73fb4c9617d6bcd6d5aac3f6f50f` (`codex/doc-reconciliation`).
+Navigation is Accepted and PR #117 is merged. Its branch was removed locally and
+remotely. Project-scoped build cleanup ran; managed worker retirement remains
+partially blocked by dependency/state conflicts. Configuration, tags, installers,
+dirty work and uncertain resources were preserved. Older statements below about
+Navigation publication, cleanup and documentation reconciliation remaining Backlog
+are superseded by this current entry; preserve them as historical evidence until
+the scoped reconciliation organizes that history.
+
+The initial Task01 preparation did not launch a worker. The supported operation returned
+`pendingPreparationRequest`, blocking request
+`ED7F673E-008D-4C59-B916-8DDD725DF118` (observed at failure).
+Owner subsequently approved exact replay of the original stored request. Recovery
+succeeded (audit `5B576FC9-D9F5-4C1C-8E85-AC946393C2AA`), preparing
+`delivery-ed7f673e-008d-4c59-b916-8ddd725df118` at `fe204d32`.
+Worker `5051AA5F-3FF9-47D3-8527-302B3868E30F` started read-only Task01 inventory;
+effective Terra/medium and exact managed profile/root were verified. No code or
+database edits were needed. Task01 returned its read-only inventory; Main verified
+completion and closed the session-bound connection, and the completed task is archived.
+Tracked task completion was subsequently explicitly reconciled at closeout.
+Findings: preserve kickoff/execution provenance separately and mark the RR-R10
+plan opening as a dated checkpoint. No identifier collision was found; historical
+sections and active catalog lifecycle do not establish open work.
+The original stored request omitted thread attribution and used reason:
+"Identify exact current controlling documents, conflicting statuses and overlapping IDs before bounded documentation edits. Read-only discovery; preserve approved scope and history."
+All other project, registration, task and revision fields match below; its request
+ID is `ED7F673E-008D-4C59-B916-8DDD725DF118`. The following later request was refused
+and is retained only as history, not a pending replay:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "projectID": "project-fffdc0e0b15b9b86",
+  "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+  "registrationProjectID": "project-fffdc0e0b15b9b86",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0c4b2-46c6-7e81-ae75-da56109621d1",
+  "requestID": "aa78c0bd-a112-4cc8-b05e-154758330802",
+  "ticketID": "rr-p6-doc-reconciliation",
+  "taskID": "rr-p6-doc-reconciliation-task-01",
+  "expectedPhaseRevision": 1,
+  "expectedTaskPlanRevision": 1,
+  "reason": "Owner authorized documentation reconciliation. Task01 is bounded read-only inventory of current controlling documents, conflicting status and overlapping delivery identifiers, starting merged main c5218517; do not implement or alter history. Main retains ledger ownership."
+}
+```
+
 ## September 21 — Manage Project delivered 0.1.34; restart handoff
 
 Manage Project Task01/02 implementation and Task03 independent verification are
