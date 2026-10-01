@@ -1,7 +1,8 @@
 # Delivery documentation
 
 [Plans](plans/) describe delivery scope, dependencies, sequencing and rollout.
-They reference [product designs](../design/README.md) for behavior and contracts.
+They reference the canonical [Product Specifications](https://github.com/joeroberts/release-radar/wiki/Product-Specifications)
+for behavior and contracts.
 Completed plans are removed after preserving continuing requirements; current
 work remains in GitHub and the
 short [progress snapshot](progress.md).

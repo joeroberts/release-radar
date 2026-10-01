@@ -309,8 +309,8 @@ Phase 5B delivered separate retained ticket-link versions, complete safe-byte
 content digests distinct from catalog acceptance, current versus historical
 resolution, atomic typed link mutations and read-only native recorded-impact
 navigation. The owning current contracts are the
-[managed-documentation](../../design/managed-repository-documentation-contract.md#phase-5b-source-revision-and-readback-extension--2026-09-09)
-and [dashboard](../../design/agent-driven-delivery-dashboard-design.md#phase-5b-references-and-recorded-impacts--2026-09-09)
+[managed-documentation](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation#phase-5b-source-revision-and-readback-extension--2026-09-09)
+and [dashboard](https://github.com/joeroberts/release-radar/wiki/Spec-Agent-Driven-Delivery-Dashboard#phase-5b-references-and-recorded-impacts--2026-09-09)
 designs. No unresolved owner choice was identified;
 proposals, successor obligations and lifecycle remained later slices at that point.
 
@@ -328,7 +328,7 @@ implementation, including disjoint parallel work and later integration of review
 Phase 5B source. Candidate `dd486f04459f9ceae7e4e2163d0274402fba78ee` implements
 the packaged V1 skill/exact capability registry, additive read-only diagnose,
 root-bound compatibility observation and Project Overview presentation. The
-[design](../../design/shared-execution-integration-v1-design.md) distinguishes
+[design](https://github.com/joeroberts/release-radar/wiki/Spec-Shared-Execution-V1) distinguishes
 source delivery from installed behavior. Direct affected checks report 101 passed,
 2 environment-gated skips and no failures. Metadata integration and the same
 independent reviewer’s correction recheck are complete at source
@@ -394,7 +394,7 @@ not newly created application tickets.
 ## Owner-approved continuity choices — 2026-09-06
 
 The owner selected all three recommendations after reviewing their product
-consequences. [ADR-001](../../architecture/ADR-001-release-radar-boundaries.md)
+consequences. [ADR-001](https://github.com/joeroberts/release-radar/wiki/ADR-001-Release-Radar-Boundaries)
 records their controlling scope; details not settled there remain design work.
 
 | Choice | Approved direction | Effect on later work |
@@ -556,7 +556,7 @@ separate recovery limitations.
 
 At the assessment baseline,
 `RepositoryDocumentReader.isProhibited` and the directory walk rejected dot-prefixed
-paths, following the [managed-documentation contract](../../design/managed-repository-documentation-contract.md).
+paths, following the [managed-documentation contract](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation).
 This is a validator design defect: Finder metadata must not invalidate otherwise
 valid documentation. Repeated deletion and changes to `.gitignore` are not the fix.
 
@@ -1023,7 +1023,7 @@ feasibility work; they do not describe current runtime behavior.
 ### Operating baseline and task ownership
 
 The owner selected the operating model recorded in
-[ADR-007](../../architecture/ADR-007-proportional-delivery-validation.md) and root
+[ADR-007](https://github.com/joeroberts/release-radar/wiki/ADR-007-Proportional-Delivery-Validation) and root
 AGENTS.md: an orchestrator with no subagents coordinates separate delivery tasks;
 a separate chief architect maintains whole-product alignment. Writers use worktrees;
 delivery tasks may use bounded subagents. Independent review uses a fresh task for
@@ -1291,10 +1291,10 @@ validation limitations remain explicit rather than being hidden by isolation.
 Controlling documents and directional inputs:
 
 - [Documentation catalog](../../catalog.json) and [documentation entry point](../../README.md).
-- [Application boundaries / portable archive v1](../../architecture/ADR-001-release-radar-boundaries.md), [plugin lifecycle](../../architecture/ADR-002-codex-plugin-lifecycle.md), [active context](../../architecture/ADR-003-active-phase-selection.md), [goals/readiness](../../architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md), [Ticket Tasks](../../architecture/ADR-005-ticket-task-work-plans.md), [managed documentation](../../architecture/ADR-006-managed-repository-documentation-contract.md), [proportional validation](../../architecture/ADR-007-proportional-delivery-validation.md).
-- [Dashboard product design](../../design/agent-driven-delivery-dashboard-design.md), [managed documentation design](../../design/managed-repository-documentation-contract.md), [active phase](../../design/release-radar-active-phase-selection-design.md), [plugin lifecycle design](../../design/release-radar-codex-plugin-lifecycle-design.md), [goal/board presentation](../../design/release-radar-delivery-goals-phase-board-design.md), [task presentation](../../design/release-radar-ticket-tasks-design.md).
-- [Approved six-goal/eleven-ticket roadmap](../../design/2026-08-29-delivery-goals-roadmap-readiness-design.md), [Current product specification](../../design/release-radar-ticket-tasks-design.md).
-- Proposed [Current product specification](../../design/agent-driven-delivery-dashboard-design.md), [Current product specification](../../design/agent-driven-delivery-dashboard-design.md), [Current product specification](../../design/agent-driven-delivery-dashboard-design.md), [iPhone companion (#93)](https://github.com/joeroberts/release-radar/issues/93), [mockups and maturity](../../design/README.md), and [brand](../../brand/README.md).
+- [Application boundaries / portable archive v1](https://github.com/joeroberts/release-radar/wiki/ADR-001-Release-Radar-Boundaries), [plugin lifecycle](https://github.com/joeroberts/release-radar/wiki/ADR-002-Codex-Plugin-Lifecycle), [active context](https://github.com/joeroberts/release-radar/wiki/ADR-003-Active-Phase-Selection), [goals/readiness](https://github.com/joeroberts/release-radar/wiki/ADR-004-Delivery-Goals-and-Phase-Plan-Readiness), [Ticket Tasks](../../architecture/ADR-005-ticket-task-work-plans.md), [managed documentation](../../architecture/ADR-006-managed-repository-documentation-contract.md), [proportional validation](https://github.com/joeroberts/release-radar/wiki/ADR-007-Proportional-Delivery-Validation).
+- [Dashboard product design](https://github.com/joeroberts/release-radar/wiki/Spec-Agent-Driven-Delivery-Dashboard), [managed documentation design](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation), [active phase](https://github.com/joeroberts/release-radar/wiki/Spec-Active-Phase-Selection), [plugin lifecycle design](https://github.com/joeroberts/release-radar/wiki/Spec-Codex-Plugin-Lifecycle), [goal/board presentation](https://github.com/joeroberts/release-radar/wiki/Spec-Delivery-Goals-Phase-Board), [task presentation](https://github.com/joeroberts/release-radar/wiki/Spec-Ticket-Tasks).
+- [Approved six-goal/eleven-ticket roadmap](https://github.com/joeroberts/release-radar/wiki/Spec-Delivery-Goals-Roadmap-Readiness), [Current product specification](https://github.com/joeroberts/release-radar/wiki/Spec-Ticket-Tasks).
+- Proposed [Current product specification](https://github.com/joeroberts/release-radar/wiki/Spec-Agent-Driven-Delivery-Dashboard), [Current product specification](https://github.com/joeroberts/release-radar/wiki/Spec-Agent-Driven-Delivery-Dashboard), [Current product specification](https://github.com/joeroberts/release-radar/wiki/Spec-Agent-Driven-Delivery-Dashboard), [iPhone companion (#93)](https://github.com/joeroberts/release-radar/issues/93), [mockups and maturity](../../design/README.md), and [brand](../../brand/README.md).
 - RekonDesignSystem local package: `Package.swift`, `README.md`, `docs/integration.md`, `docs/compatibility.md`, `docs/accessibility.md`, `docs/release-policy.md` and public component source, inspected in the separate owner-designated UILib repository. No changes were made there.
 
 Code references use the immutable reviewed GitHub tree so they do not misleadingly

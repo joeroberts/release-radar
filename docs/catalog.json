@@ -404,9 +404,10 @@
       "collectionID": "architecture",
       "path": "docs/architecture",
       "parentCollection": "docs",
-      "purpose": "Accepted architecture and delivery-policy decisions",
+      "purpose": "Repository routing stubs for accepted Wiki decisions and repository-canonical pending decisions",
       "allowedContents": [
-        "Architecture decision records"
+        "Wiki routing stubs",
+        "Pending or proposed repository-canonical architecture records"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -488,9 +489,9 @@
       "collectionID": "design",
       "path": "docs/design",
       "parentCollection": "docs",
-      "purpose": "Product behavior, interfaces, constraints and clearly classified design proposals",
+      "purpose": "Repository routing stubs for canonical Wiki product specifications and repository-owned visual references",
       "allowedContents": [
-        "Product design documents",
+        "Wiki routing stubs",
         "Visual study sources",
         "Mockup collection"
       ],
@@ -565,8 +566,7 @@
       "path": "docs/architecture/ADR-001-release-radar-boundaries.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.boundaries",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [
@@ -581,8 +581,7 @@
       "path": "docs/architecture/ADR-002-codex-plugin-lifecycle.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.codex-plugin-lifecycle",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [
@@ -598,8 +597,7 @@
       "path": "docs/architecture/ADR-003-active-phase-selection.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.active-phase-selection",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [
@@ -614,8 +612,7 @@
       "path": "docs/architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.delivery-goals-readiness",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [
@@ -665,8 +662,7 @@
       "path": "docs/architecture/ADR-007-proportional-delivery-validation.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.validation-policy",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [
@@ -880,8 +876,7 @@
       "path": "docs/design/agent-driven-delivery-dashboard-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.dashboard",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -896,8 +891,7 @@
       "path": "docs/design/managed-repository-documentation-contract.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.managed-documentation",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1170,8 +1164,7 @@
       "path": "docs/design/release-radar-active-phase-selection-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.active-phase-selection",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1186,8 +1179,7 @@
       "path": "docs/design/release-radar-codex-plugin-lifecycle-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.codex-plugin-lifecycle",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1203,8 +1195,7 @@
       "path": "docs/design/release-radar-delivery-goals-phase-board-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.delivery-goals-presentation",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1219,8 +1210,7 @@
       "path": "docs/design/release-radar-ticket-tasks-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.ticket-task-presentation",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1235,8 +1225,7 @@
       "path": "docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.delivery-goals-readiness",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1266,8 +1255,7 @@
       "path": "docs/design/shared-execution-integration-v1-design.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "product.shared-execution-v1",
+      "authorityLevel": "supporting",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -1493,8 +1481,7 @@
       "path": "docs/architecture/ADR-008-opt-in-project-execution.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.project-execution",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [

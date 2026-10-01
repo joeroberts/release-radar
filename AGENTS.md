@@ -51,20 +51,19 @@ tracker, or archive workaround.
 These instructions apply to the entire repository.
 
 Treat the user's explicit request and the approved project artifacts as the
-controlling sources for Release Radar. Current artifacts include:
+controlling sources for Release Radar. Start at the
+[Wiki Home](https://github.com/joeroberts/release-radar/wiki) and use its task
+router to load only ticket-relevant product specifications and accepted
+architecture decisions, preserving every recorded approval and dependency
+qualification. Current repository-owned artifacts include:
 
-- `docs/design/release-radar-ticket-tasks-design.md`
-  for the delivered ticket-task product contract
 - `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`
   for whole-product dependencies and assessed future direction; preserve its
   distinction between approved inclusion, proposed contracts and implementation
-- `docs/architecture/ADR-007-proportional-delivery-validation.md` as the record
-  of the operating-model and proportional-validation decision; `AGENTS.md`
-  contains the operative agent rules
-- `docs/design/agent-driven-delivery-dashboard-design.md` and
-  `docs/design/mockups/` for product and visual design
-- `docs/architecture/ADR-001-release-radar-boundaries.md` for architecture,
-  data, integration, sandbox, and signing boundaries
+- `docs/design/mockups/` for repository-owned visual design references
+- `docs/architecture/ADR-005-ticket-task-work-plans.md` and
+  `docs/architecture/ADR-006-managed-repository-documentation-contract.md` as
+  qualified pending repository-canonical decisions
 - `docs/brand/README.md` for the approved product identity
 - GitHub issues for current work, status and verification;
   `docs/delivery/progress.md` is the bounded current handoff snapshot
@@ -76,9 +75,9 @@ source, tests, configuration, application bundle, or running app as
 appropriate.
 
 Accepted ADRs are immutable decision records. Current implementation
-specifications belong in the owning mutable design documents; operative agent
-rules belong in `AGENTS.md`; current authorization comes from the owner and
-current work is recorded in GitHub issues. Plans, briefs, skills, reviews and implementation
+specifications belong in the owning mutable Wiki product specifications;
+operative agent rules belong in `AGENTS.md`; current authorization comes from
+the owner and current work is recorded in GitHub issues. Plans, briefs, skills, reviews and implementation
 assignments cannot authorize editing an accepted ADR. Routine specification
 maintenance must preserve accepted ADR text. A future architectural change
 requires a separately authorized decision; it is not permission to amend an
@@ -96,9 +95,9 @@ identifies the section or feature it represents.
   interaction design.
 - Compare the running application with the screenshots. Source inspection alone
   is not evidence of visual correctness.
-- Record necessary deviations and their rationale in the owning mutable design
-  document. A deviation requiring an architectural change needs a separately
-  authorized decision; preserve accepted ADRs.
+- Record necessary deviations and their rationale in the owning mutable Wiki
+  product specification. A deviation requiring an architectural change needs a
+  separately authorized decision; preserve accepted ADRs.
 
 ## Durable Artifact Placement
 
@@ -106,7 +105,9 @@ Paths under `~/.codex`, `/tmp`, and thread-scoped visualization directories are
 temporary scratch space only. They are never the source of truth for Release
 Radar deliverables.
 
-- Persist durable Release Radar design documents under `docs/design/`.
+- Persist product specifications and accepted architecture decisions in their
+  canonical Wiki pages. Keep repository code, assets, fixtures, mockups,
+  application resources, and documentation catalog machinery in the repository.
 - Persist approved Release Radar mockups under `docs/design/mockups/`.
 - Preserve human-authored historical drafts, role reports, review packages, and
   superseded briefs under `docs/delivery/archive/` when the owner requests
@@ -115,10 +116,11 @@ Radar deliverables.
 - Never present a scratch path as the final deliverable.
 - Before requesting approval or declaring completion, classify every created
   file as durable or temporary.
-- Completion is blocked while any durable artifact exists only outside the
-  repository.
-- Verify repository copies before reporting persistence.
-- Final responses must link to repository paths, not scratch copies.
+- Completion is blocked while any durable artifact exists only outside its
+  canonical repository or owner-designated Wiki location.
+- Verify canonical copies before reporting persistence.
+- Final responses must link to canonical repository paths or Wiki pages, not
+  scratch copies.
 - List any remaining temporary files and request authorization before deleting
   them.
 
