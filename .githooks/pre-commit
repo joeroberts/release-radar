@@ -17,8 +17,9 @@ if [[ "$validator_stage" != "0" || ( "$validator_mode" != "100644" && "$validato
     fail 'staged validator must be a regular file, not a symlink or other non-regular entry'
 fi
 
-validator=$(mktemp "${TMPDIR:-/tmp}/release-radar-validator.XXXXXX.swift") || fail 'could not create a temporary staged validator'
-trap 'rm -f "$validator"' EXIT
+validator_dir=$(mktemp -d "${TMPDIR:-/tmp}/release-radar-validator.XXXXXX") || fail 'could not create a temporary staged validator directory'
+validator="$validator_dir/check_development_docs.swift"
+trap 'rm -rf "$validator_dir"' EXIT
 if ! git show ":$validator_path" >"$validator"; then
     fail "could not materialize staged validator at $validator_path"
 fi
