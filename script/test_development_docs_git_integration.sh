@@ -92,6 +92,26 @@ if [[ $failures -eq 0 ]]; then
   expect_status 1 missing_progress commit "$missing_progress" missing-progress
   expect_diagnostic missing_progress 'progress|staged|read|file'
 
+  staged_symlink=$(new_repo staged-symlink)
+  printf 'valid target\n' >"$staged_symlink/valid-progress.md"
+  ln -s ../../valid-progress.md "$staged_symlink/docs/delivery/progress.md"
+  git -C "$staged_symlink" add valid-progress.md docs/delivery/progress.md
+  install_hook "$staged_symlink"
+  expect_status 1 staged_symlink commit "$staged_symlink" staged-symlink
+  expect_diagnostic staged_symlink 'regular|symlink|progress|staged'
+
+  root_symlink="$fixture_root/root-symlink"
+  mkdir -p "$root_symlink/docs/delivery"
+  printf 'valid target\n' >"$root_symlink/valid-progress.md"
+  ln -s ../../valid-progress.md "$root_symlink/docs/delivery/progress.md"
+  expect_status 1 root_symlink swift "$repo_root/script/check_development_docs.swift" --root "$root_symlink"
+  expect_diagnostic root_symlink 'regular|symlink|progress|file'
+
+  root_nonregular="$fixture_root/root-nonregular"
+  mkdir -p "$root_nonregular/docs/delivery/progress.md"
+  expect_status 1 root_nonregular swift "$repo_root/script/check_development_docs.swift" --root "$root_nonregular"
+  expect_diagnostic root_nonregular 'regular|progress|read|file'
+
   deleted_progress=$(new_repo deleted-progress)
   printf 'valid baseline\n' >"$deleted_progress/docs/delivery/progress.md"
   git -C "$deleted_progress" add docs/delivery/progress.md
@@ -143,6 +163,9 @@ if [[ $failures -eq 0 ]]; then
   [[ $(git -C "$configured_hooks" config --get core.hooksPath) == "$configured_path" ]] || fail 'configured_hooks: core.hooksPath changed'
   [[ -x "$configured_path/pre-commit" ]] || fail 'configured_hooks: hook was not installed in configured hooks path'
   expect_status 0 installer_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
+  chmod -x "$configured_path/pre-commit"
+  expect_status 1 nonexecutable_hook_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
+  expect_diagnostic nonexecutable_hook_status 'not installed|executable|pre-commit'
 
   workflow="$repo_root/.github/workflows/development-documentation.yml"
   grep -Eq 'pull_request:' "$workflow" || fail 'workflow: pull_request trigger missing'
