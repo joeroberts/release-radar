@@ -1,17 +1,19 @@
-# Product design
+# Product specification routes and visual references
 
-These documents define product behavior, interfaces, constraints and design
-proposals. Delivery sequences, task assignments and rollout gates belong in
-[delivery plans](../delivery/plans/). A feature named Project Plan is still a
-product design; its name does not make it an implementation plan.
+Canonical product specifications are indexed in the
+[GitHub Wiki](https://github.com/joeroberts/release-radar/wiki/Product-Specifications).
+The Markdown files in this directory are non-authoritative routing stubs;
+repository-owned mockups remain the visual references linked by those
+specifications. Delivery sequences and rollout gates remain in
+[delivery plans](../delivery/plans/).
 
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: design
 
 - Path: [docs/design](.)
-- Purpose: Product behavior, interfaces, constraints and clearly classified design proposals
-- Allowed contents: Mockup collection; Product design documents; Visual study sources
+- Purpose: Repository routing stubs for canonical Wiki product specifications and repository-owned visual references
+- Allowed contents: Mockup collection; Visual study sources; Wiki routing stubs
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [98f5320c-208e-4ca1-aacf-c8df5701a1d4](agent-driven-delivery-dashboard-design.md)
 - Archive destination: none
@@ -21,17 +23,17 @@ product design; its name does not make it an implementation plan.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7 | [docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md](2026-08-29-delivery-goals-roadmap-readiness-design.md) | document | controlling &#40;product.delivery-goals-readiness&#41; | active | none | none |
+| eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7 | [docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md](2026-08-29-delivery-goals-roadmap-readiness-design.md) | document | supporting | active | none | none |
 | da877bf9-71c1-4b8b-8431-298121a2f41e | [docs/design/README.md](README.md) | collectionIndex | supporting | active | none | none |
-| 98f5320c-208e-4ca1-aacf-c8df5701a1d4 | [docs/design/agent-driven-delivery-dashboard-design.md](agent-driven-delivery-dashboard-design.md) | document | controlling &#40;product.dashboard&#41; | active | none | none |
-| 5790258e-3166-423e-a5b9-45cd6d8a530d | [docs/design/managed-repository-documentation-contract.md](managed-repository-documentation-contract.md) | document | controlling &#40;product.managed-documentation&#41; | active | none | none |
+| 98f5320c-208e-4ca1-aacf-c8df5701a1d4 | [docs/design/agent-driven-delivery-dashboard-design.md](agent-driven-delivery-dashboard-design.md) | document | supporting | active | none | none |
+| 5790258e-3166-423e-a5b9-45cd6d8a530d | [docs/design/managed-repository-documentation-contract.md](managed-repository-documentation-contract.md) | document | supporting | active | none | none |
 | rr-outcome3-runtime-enforcement-assessment-2026-09-14 | [docs/design/project-execution-design.md](project-execution-design.md) | document | supporting | active | none | none |
-| 466140f5-f952-474b-8c65-aad1a1727b2e | [docs/design/release-radar-active-phase-selection-design.md](release-radar-active-phase-selection-design.md) | document | controlling &#40;product.active-phase-selection&#41; | active | none | none |
-| a428dba8-6027-43e5-91d8-5c677ef34841 | [docs/design/release-radar-codex-plugin-lifecycle-design.md](release-radar-codex-plugin-lifecycle-design.md) | document | controlling &#40;product.codex-plugin-lifecycle&#41; | active | none | none |
-| eacc4905-ad05-4c51-aecc-6fd32fcb7b9b | [docs/design/release-radar-delivery-goals-phase-board-design.md](release-radar-delivery-goals-phase-board-design.md) | document | controlling &#40;product.delivery-goals-presentation&#41; | active | none | none |
-| 8d761556-f57d-4271-90a7-17c59348660b | [docs/design/release-radar-ticket-tasks-design.md](release-radar-ticket-tasks-design.md) | document | controlling &#40;product.ticket-task-presentation&#41; | active | none | none |
+| 466140f5-f952-474b-8c65-aad1a1727b2e | [docs/design/release-radar-active-phase-selection-design.md](release-radar-active-phase-selection-design.md) | document | supporting | active | none | none |
+| a428dba8-6027-43e5-91d8-5c677ef34841 | [docs/design/release-radar-codex-plugin-lifecycle-design.md](release-radar-codex-plugin-lifecycle-design.md) | document | supporting | active | none | none |
+| eacc4905-ad05-4c51-aecc-6fd32fcb7b9b | [docs/design/release-radar-delivery-goals-phase-board-design.md](release-radar-delivery-goals-phase-board-design.md) | document | supporting | active | none | none |
+| 8d761556-f57d-4271-90a7-17c59348660b | [docs/design/release-radar-ticket-tasks-design.md](release-radar-ticket-tasks-design.md) | document | supporting | active | none | none |
 | rr-repository-plan-reconstruction-design-2026-09-12 | [docs/design/repository-plan-reconstruction-design.md](repository-plan-reconstruction-design.md) | document | supporting | proposed | none | none |
-| rr-shared-execution-integration-v1-design-2026-09-09 | [docs/design/shared-execution-integration-v1-design.md](shared-execution-integration-v1-design.md) | document | controlling &#40;product.shared-execution-v1&#41; | active | none | none |
+| rr-shared-execution-integration-v1-design-2026-09-09 | [docs/design/shared-execution-integration-v1-design.md](shared-execution-integration-v1-design.md) | document | supporting | active | none | none |
 
 ### Children
 
