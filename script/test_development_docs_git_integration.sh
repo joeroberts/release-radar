@@ -79,26 +79,26 @@ if [[ $failures -eq 0 ]]; then
 
   invalid_staged_valid_unstaged=$(new_repo invalid-staged-valid-unstaged)
   printf 'x\n%.0s' {1..61} >"$invalid_staged_valid_unstaged/docs/delivery/progress.md"
-  git -C "$invalid_staged_valid_unstaged" add docs/delivery/progress.md
+  git -C "$invalid_staged_valid_unstaged" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$invalid_staged_valid_unstaged"
   printf 'valid unstaged content\n' >"$invalid_staged_valid_unstaged/docs/delivery/progress.md"
   expect_status 1 invalid_staged_valid_unstaged commit "$invalid_staged_valid_unstaged" invalid-staged
-  expect_diagnostic invalid_staged_valid_unstaged 'progress|line|60|staged'
+  expect_diagnostic invalid_staged_valid_unstaged 'has 61 lines|reduce it to 60'
 
   missing_progress=$(new_repo missing-progress)
   printf 'ordinary change\n' >"$missing_progress/README.md"
-  git -C "$missing_progress" add README.md
+  git -C "$missing_progress" add README.md script/check_development_docs.swift
   install_hook "$missing_progress"
   expect_status 1 missing_progress commit "$missing_progress" missing-progress
-  expect_diagnostic missing_progress 'progress|staged|read|file'
+  expect_diagnostic missing_progress 'staged docs/delivery/progress\.md is unavailable'
 
   staged_symlink=$(new_repo staged-symlink)
   printf 'valid target\n' >"$staged_symlink/valid-progress.md"
   ln -s ../../valid-progress.md "$staged_symlink/docs/delivery/progress.md"
-  git -C "$staged_symlink" add valid-progress.md docs/delivery/progress.md
+  git -C "$staged_symlink" add valid-progress.md docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$staged_symlink"
   expect_status 1 staged_symlink commit "$staged_symlink" staged-symlink
-  expect_diagnostic staged_symlink 'regular|symlink|progress|staged'
+  expect_diagnostic staged_symlink 'progress\.md must be a regular file'
 
   root_symlink="$fixture_root/root-symlink"
   mkdir -p "$root_symlink/docs/delivery"
@@ -114,23 +114,23 @@ if [[ $failures -eq 0 ]]; then
 
   deleted_progress=$(new_repo deleted-progress)
   printf 'valid baseline\n' >"$deleted_progress/docs/delivery/progress.md"
-  git -C "$deleted_progress" add docs/delivery/progress.md
+  git -C "$deleted_progress" add docs/delivery/progress.md script/check_development_docs.swift
   commit "$deleted_progress" baseline
   install_hook "$deleted_progress"
   rm "$deleted_progress/docs/delivery/progress.md"
   git -C "$deleted_progress" add -u docs/delivery/progress.md
   expect_status 1 deleted_progress commit "$deleted_progress" deleted-progress
-  expect_diagnostic deleted_progress 'progress|staged|read|file'
+  expect_diagnostic deleted_progress 'staged docs/delivery/progress\.md is unavailable'
 
   unchanged_invalid=$(new_repo unchanged-invalid)
   printf 'x\n%.0s' {1..61} >"$unchanged_invalid/docs/delivery/progress.md"
-  git -C "$unchanged_invalid" add docs/delivery/progress.md
+  git -C "$unchanged_invalid" add docs/delivery/progress.md script/check_development_docs.swift
   commit "$unchanged_invalid" invalid-baseline
   install_hook "$unchanged_invalid"
   printf 'ordinary change\n' >"$unchanged_invalid/README.md"
   git -C "$unchanged_invalid" add README.md
   expect_status 1 unchanged_invalid commit "$unchanged_invalid" unchanged-invalid
-  expect_diagnostic unchanged_invalid 'progress|line|60|staged'
+  expect_diagnostic unchanged_invalid 'has 61 lines|reduce it to 60'
 
   staged_invalid_unstaged_noop_validator=$(new_repo staged-invalid-unstaged-noop-validator)
   printf 'x\n%.0s' {1..61} >"$staged_invalid_unstaged_noop_validator/docs/delivery/progress.md"
@@ -138,7 +138,7 @@ if [[ $failures -eq 0 ]]; then
   install_hook "$staged_invalid_unstaged_noop_validator"
   printf 'import Foundation\n' >"$staged_invalid_unstaged_noop_validator/script/check_development_docs.swift"
   expect_status 1 staged_invalid_unstaged_noop_validator commit "$staged_invalid_unstaged_noop_validator" staged-invalid
-  expect_diagnostic staged_invalid_unstaged_noop_validator 'progress|line|60|staged'
+  expect_diagnostic staged_invalid_unstaged_noop_validator 'has 61 lines|reduce it to 60'
 
   staged_valid_unstaged_broken_validator=$(new_repo staged-valid-unstaged-broken-validator)
   printf 'valid staged progress\n' >"$staged_valid_unstaged_broken_validator/docs/delivery/progress.md"
@@ -165,18 +165,17 @@ if [[ $failures -eq 0 ]]; then
 
   unavailable_swift=$(new_repo unavailable-swift)
   printf 'valid\n' >"$unavailable_swift/docs/delivery/progress.md"
-  git -C "$unavailable_swift" add docs/delivery/progress.md
+  git -C "$unavailable_swift" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$unavailable_swift"
   expect_status 1 unavailable_swift env PATH=/bin /usr/bin/git -C "$unavailable_swift" commit -qm unavailable-swift
   expect_diagnostic unavailable_swift 'swift|validator|unavailable'
 
-  unavailable_validator=$(new_repo unavailable-validator)
-  printf 'valid\n' >"$unavailable_validator/docs/delivery/progress.md"
-  git -C "$unavailable_validator" add docs/delivery/progress.md
-  install_hook "$unavailable_validator"
-  mv "$unavailable_validator/script/check_development_docs.swift" "$unavailable_validator/script/check_development_docs.swift.off"
-  expect_status 1 unavailable_validator commit "$unavailable_validator" unavailable-validator
-  expect_diagnostic unavailable_validator 'validator|read|missing|unable'
+  staged_validator_unavailable_worktree=$(new_repo staged-validator-unavailable-worktree)
+  printf 'valid\n' >"$staged_validator_unavailable_worktree/docs/delivery/progress.md"
+  git -C "$staged_validator_unavailable_worktree" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$staged_validator_unavailable_worktree"
+  mv "$staged_validator_unavailable_worktree/script/check_development_docs.swift" "$staged_validator_unavailable_worktree/script/check_development_docs.swift.off"
+  expect_status 0 staged_validator_unavailable_worktree commit "$staged_validator_unavailable_worktree" staged-validator-unavailable-worktree
 
   collision=$(new_repo collision)
   hooks_path=$(git -C "$collision" rev-parse --path-format=absolute --git-path hooks)
