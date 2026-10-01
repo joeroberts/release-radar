@@ -67,7 +67,7 @@ controlling sources for Release Radar. Current artifacts include:
   data, integration, sandbox, and signing boundaries
 - `docs/brand/README.md` for the approved product identity
 - GitHub issues for current work, status and verification;
-  `docs/delivery/progress.md` is retained delivery history
+  `docs/delivery/progress.md` is the bounded current handoff snapshot
 
 Do not silently override approved artifacts with assumptions, generated plans,
 repository indexes, or implementation convenience. Treat `.codegraph` output
