@@ -68,5 +68,5 @@ private func validate(_ data: Data) {
     }
 }
 
-let input = parseInput(arguments: Array(CommandLine.arguments.dropFirst()))
+private let input = parseInput(arguments: Array(CommandLine.arguments.dropFirst()))
 validate(progressData(for: input))
