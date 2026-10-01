@@ -96,6 +96,28 @@ settings alone did not redirect the manifest compiler cache, and the public
 `-packageCachePath` attempt did not relocate its `.dia` output. Recheck behavior
 after toolchain updates. Installation timing follows the current delivery ledger.
 
+## Development documentation checks
+
+Run the repository validator against the working tree with:
+
+```sh
+swift script/check_development_docs.swift --root "$(git rev-parse --show-toplevel)"
+```
+
+The checked-in pre-commit hook validates the staged
+`docs/delivery/progress.md` snapshot, including when that file was not changed
+in the current commit. To opt in locally, run
+`script/install_development_docs_hook.sh --install`; use `--status` to report
+whether this repository's resolved hook location contains the checked-in hook.
+Installation refuses to overwrite an existing hook and does not change
+`core.hooksPath`.
+
+Local hooks can be bypassed with Git's `--no-verify` option. The checked-in
+hook, local installation, GitHub workflow, and any repository required-check
+setting are separate states. The workflow validates pull requests and pushes to
+`main` with read-only repository permission; enabling it as a required check
+remains a separate repository-settings decision.
+
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: docs

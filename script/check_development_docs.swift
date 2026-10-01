@@ -41,12 +41,24 @@ private func readBoundedData(from handle: FileHandle, description: String) -> Da
     }
 }
 
+private func requireRegularFile(at url: URL) {
+    var metadata = stat()
+    guard lstat(url.path, &metadata) == 0 else {
+        fail("Could not inspect progress file at \(url.path). Check that docs/delivery/progress.md exists and is a regular readable file.")
+    }
+
+    guard (metadata.st_mode & S_IFMT) == S_IFREG else {
+        fail("Progress file at \(url.path) must be a regular file, not a symbolic link or another special file.")
+    }
+}
+
 private func progressData(for input: Input) -> Data {
     switch input {
     case .standardInput:
         return readBoundedData(from: .standardInput, description: "progress content from standard input")
     case let .root(root):
         let progress = root.appendingPathComponent("docs/delivery/progress.md", isDirectory: false)
+        requireRegularFile(at: progress)
         do {
             return readBoundedData(
                 from: try FileHandle(forReadingFrom: progress),
