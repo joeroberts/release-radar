@@ -72,7 +72,7 @@ expect_file "$repo_root/.github/workflows/development-documentation.yml"
 if [[ $failures -eq 0 ]]; then
   valid_staged_invalid_unstaged=$(new_repo valid-staged-invalid-unstaged)
   printf 'valid staged snapshot\n' >"$valid_staged_invalid_unstaged/docs/delivery/progress.md"
-  git -C "$valid_staged_invalid_unstaged" add docs/delivery/progress.md
+  git -C "$valid_staged_invalid_unstaged" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$valid_staged_invalid_unstaged"
   printf 'x\n%.0s' {1..61} >"$valid_staged_invalid_unstaged/docs/delivery/progress.md"
   expect_status 0 valid_staged_invalid_unstaged commit "$valid_staged_invalid_unstaged" valid-staged
