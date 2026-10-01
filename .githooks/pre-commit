@@ -7,9 +7,21 @@ fail() {
 }
 
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || fail 'could not determine the repository root'
-validator="$repo_root/script/check_development_docs.swift"
+validator_path='script/check_development_docs.swift'
 
-[[ -f "$validator" ]] || fail "validator is unavailable at $validator"
+validator_entry=$(git ls-files --stage -- "$validator_path")
+[[ -n "$validator_entry" ]] || fail "staged validator is unavailable at $validator_path; add and stage it before committing"
+
+read -r validator_mode _ validator_stage _ <<<"$validator_entry"
+if [[ "$validator_stage" != "0" || ( "$validator_mode" != "100644" && "$validator_mode" != "100755" ) ]]; then
+    fail 'staged validator must be a regular file, not a symlink or other non-regular entry'
+fi
+
+validator=$(mktemp "${TMPDIR:-/tmp}/release-radar-validator.XXXXXX.swift") || fail 'could not create a temporary staged validator'
+trap 'rm -f "$validator"' EXIT
+if ! git show ":$validator_path" >"$validator"; then
+    fail "could not materialize staged validator at $validator_path"
+fi
 
 if ! git cat-file -e ':docs/delivery/progress.md' 2>/dev/null; then
     fail 'staged docs/delivery/progress.md is unavailable; restore and stage it before committing'
