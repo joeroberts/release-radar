@@ -5,12 +5,12 @@ Updated: October 1, 2026.
 ## Current outcome
 
 Develop RR through a lightweight, bounded process independent of the full
-harness RR provides to other projects. The first development baseline—canonical
+harness RR provides to other projects. The first three delivery steps—canonical
 reading routes, fixture-based product-contract test inputs, the repository
-documentation validator, and staged-Git/GitHub integration—has been implemented,
-reviewed, and merged. Changes and acceptance evidence are recorded in the
-linked epic and child issues. This repository is not managed by the RR product
-harness, and no app release is implied.
+documentation validator, and staged-Git/GitHub integration—have been
+implemented, reviewed, and merged. Changes and acceptance evidence are recorded
+in the linked epic and child issues. This repository is not managed by the RR
+product harness, and no app release is implied.
 
 ## Active links
 
