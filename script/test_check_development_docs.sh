@@ -81,12 +81,14 @@ expect_root 0 exact_byte_limit "$exact_bytes"
 expect_root 1 byte_overflow "$overflow_bytes"
 expect_root 0 multibyte_exact_byte_limit "$multibyte_exact"
 expect_root 1 multibyte_byte_overflow "$multibyte_overflow"
+expect_root 1 split_multibyte_over_limit "$multibyte_exact"$'\xc3'
 expect_root 0 final_nonempty_segment $'one\ntwo'
 expect_root 0 final_empty_segment $'one\ntwo\n'
 
 parity_content=$'one\ntwo\n'
 expect_root 0 root_mode "$parity_content"
 expect_stdin 0 stdin_mode "$parity_content"
+expect_stdin 1 split_multibyte_stdin_over_limit "$multibyte_exact"$'\xc3'
 
 invalid_root="$fixture_root/invalid_utf8"
 mkdir -p "$invalid_root/docs/delivery"
@@ -102,6 +104,34 @@ directory_root="$fixture_root/directory"
 mkdir -p "$directory_root/docs/delivery/progress.md"
 expect_status 1 unreadable_progress_path swift "$validator" --root "$directory_root"
 
+symlink_root="$fixture_root/symlink"
+mkdir -p "$symlink_root/docs/delivery"
+printf 'valid' >"$symlink_root/payload"
+ln -s "$symlink_root/payload" "$symlink_root/docs/delivery/progress.md"
+expect_status 1 symlink_progress_path swift "$validator" --root "$symlink_root"
+
+fifo="$fixture_root/oversize-stdin"
+mkfifo "$fifo"
+(
+  exec 3>"$fifo"
+  printf 'a%.0s' {1..6145} >&3
+  sleep 3
+) &
+writer_pid=$!
+SECONDS=0
+set +e
+swift "$validator" --progress-stdin <"$fifo" >/dev/null 2>"$fixture_root/stderr-oversize_stdin_before_eof"
+oversize_status=$?
+set -e
+oversize_elapsed=$SECONDS
+wait "$writer_pid"
+if [[ $oversize_status -ne 1 || $oversize_elapsed -ge 2 ]]; then
+  printf 'FAIL oversize_stdin_before_eof: expected prompt exit 1, got %s after %ss\n' "$oversize_status" "$oversize_elapsed" >&2
+  failures=$((failures + 1))
+else
+  printf 'PASS oversize_stdin_before_eof\n'
+fi
+
 expect_status 64 missing_mode swift "$validator"
 expect_status 64 unknown_argument swift "$validator" --unknown
 expect_status 64 relative_root swift "$validator" --root relative
@@ -109,10 +139,14 @@ expect_status 64 relative_root swift "$validator" --root relative
 expect_diagnostic line_overflow 'line|60'
 expect_diagnostic byte_overflow 'byte|6144'
 expect_diagnostic multibyte_byte_overflow 'byte|6144'
+expect_diagnostic split_multibyte_over_limit 'byte|6144|6145'
+expect_diagnostic split_multibyte_stdin_over_limit 'byte|6144|6145'
 expect_diagnostic invalid_utf8_root 'utf|encoding|valid'
 expect_diagnostic invalid_utf8_stdin 'utf|encoding|valid'
 expect_diagnostic missing_progress_file 'progress|read|file|path'
 expect_diagnostic unreadable_progress_path 'progress|read|file|path'
+expect_diagnostic symlink_progress_path 'regular|progress|file|path'
+expect_diagnostic oversize_stdin_before_eof 'byte|6144'
 expect_diagnostic missing_mode 'usage|argument|root|stdin'
 expect_diagnostic unknown_argument 'usage|argument|root|stdin'
 expect_diagnostic relative_root 'absolute|root|path'
