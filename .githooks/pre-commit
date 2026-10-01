@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'error: development documentation pre-commit check: %s\n' "$*" >&2
+    exit 1
+}
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || fail 'could not determine the repository root'
+validator="$repo_root/script/check_development_docs.swift"
+
+[[ -f "$validator" ]] || fail "validator is unavailable at $validator"
+
+if ! git cat-file -e ':docs/delivery/progress.md' 2>/dev/null; then
+    fail 'staged docs/delivery/progress.md is unavailable; restore and stage it before committing'
+fi
+
+if ! git show ':docs/delivery/progress.md' | swift "$validator" --progress-stdin; then
+    fail 'staged docs/delivery/progress.md did not pass validation'
+fi
