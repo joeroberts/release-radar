@@ -3,6 +3,7 @@ import Foundation
 
 private let maximumLines = 60
 private let maximumBytes = 6_144
+private let maximumReadBytes = maximumBytes + 1
 
 private enum Input {
     case root(URL)
@@ -32,14 +33,25 @@ private func parseInput(arguments: [String]) -> Input {
     return .root(URL(fileURLWithPath: arguments[1], isDirectory: true))
 }
 
+private func readBoundedData(from handle: FileHandle, description: String) -> Data {
+    do {
+        return try handle.read(upToCount: maximumReadBytes) ?? Data()
+    } catch {
+        fail("Could not read \(description). Check that it is readable and retry.")
+    }
+}
+
 private func progressData(for input: Input) -> Data {
     switch input {
     case .standardInput:
-        return FileHandle.standardInput.readDataToEndOfFile()
+        return readBoundedData(from: .standardInput, description: "progress content from standard input")
     case let .root(root):
         let progress = root.appendingPathComponent("docs/delivery/progress.md", isDirectory: false)
         do {
-            return try Data(contentsOf: progress)
+            return readBoundedData(
+                from: try FileHandle(forReadingFrom: progress),
+                description: "progress file at \(progress.path)"
+            )
         } catch {
             fail("Could not read progress file at \(progress.path). Check that docs/delivery/progress.md exists and is a regular readable file.")
         }
@@ -47,6 +59,10 @@ private func progressData(for input: Input) -> Data {
 }
 
 private func validate(_ data: Data) {
+    guard data.count <= maximumBytes else {
+        fail("Progress file has at least \(maximumReadBytes) UTF-8 bytes; reduce it to \(maximumBytes) or fewer.")
+    }
+
     guard String(data: data, encoding: .utf8) != nil else {
         fail("Progress content must be valid UTF-8. Repair the file encoding and retry.")
     }
@@ -54,14 +70,10 @@ private func validate(_ data: Data) {
     let lineCount = data.reduce(into: 0) { count, byte in
         if byte == 0x0A { count += 1 }
     } + (data.last == nil || data.last == 0x0A ? 0 : 1)
-    let byteCount = data.count
     var violations: [String] = []
 
     if lineCount > maximumLines {
         violations.append("has \(lineCount) lines; reduce it to \(maximumLines) or fewer")
-    }
-    if byteCount > maximumBytes {
-        violations.append("has \(byteCount) UTF-8 bytes; reduce it to \(maximumBytes) or fewer")
     }
     if !violations.isEmpty {
         fail("Progress file \(violations.joined(separator: "; ")).")
