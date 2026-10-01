@@ -5,29 +5,35 @@ Updated: October 1, 2026.
 ## Current outcome
 
 Develop RR through a lightweight, bounded process independent of the full
-harness RR provides to other projects. Preserve the documentation cleanup on
-`codex/doc-reconciliation` and establish focused guardrails against conflicting
-instructions, duplicate documents, and stale context.
+harness RR provides to other projects. The first development baseline—canonical
+reading routes, fixture-based product-contract test inputs, the repository
+documentation validator, and staged-Git/GitHub integration—has been implemented,
+reviewed, and merged. Changes and acceptance evidence are recorded in the
+linked epic and child issues. This repository is not managed by the RR product
+harness, and no app release is implied.
 
 ## Active links
 
 [#133 — workflow baseline](https://github.com/joeroberts/release-radar/issues/133)
-contains the first delivery batch. [#134 — reading-route reconciliation](https://github.com/joeroberts/release-radar/issues/134)
-is its first story; [#135 — documentation reconciliation](https://github.com/joeroberts/release-radar/issues/135)
-is the active delivery task. GitHub owns current work, acceptance criteria,
-status, and results; current owner instructions and `AGENTS.md` govern execution.
-This snapshot provides context and links, not additional authorization.
+contains the first delivery batch. The [GitHub Issue Standard](https://github.com/joeroberts/release-radar/wiki/GitHub-Issue-Standard),
+[RR Development Delegation Model](https://github.com/joeroberts/release-radar/wiki/RR-Development-Delegation-Model),
+and linked role prompts are the operating references. GitHub owns current work,
+acceptance criteria, status, and results; current owner instructions and
+`AGENTS.md` govern execution. This snapshot provides context and links, not
+additional authorization.
 
-## Blockers and next action
+## Blockers
 
-- The Wiki is available. Product specifications and accepted decisions remain in
-  repository documents until migration and link cutover are verified; preserve
+- Same-ticket handling when a closed ticket reopens remains an owner decision.
+- Checked-in integrations and disposable installer tests do not imply live hook
+  installation, branch protection, or required-check activation; none was
+  changed here.
+- Product specifications and accepted decisions remain canonical in repository
+  documents until any Wiki migration and link cutover are verified. Preserve
   accepted ADR decision text and do not create duplicate authorities.
-- #135 reconciles documentation reading routes and their inbound links. The validator, Git/GitHub
-  integration, and conditional hook/skill work remain separately scoped in later
-  #133 children. RR product tests do not make the product harness this
-  repository's development process.
-- Unresolved: role-task handling when a closed ticket reopens remains an owner
-  choice.
-- Next: obtain independent review of the #135 documentation candidate, then let
-  the coordinator integrate it before starting the next ticket.
+
+## Next action
+
+Follow the current GitHub issue and PR state for authorized work and handoffs.
+Keep direct review and check evidence on the owning issues; do not create a
+competing tracker, authorization path, workflow platform, or archive workaround.
