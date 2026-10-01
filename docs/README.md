@@ -14,11 +14,20 @@ about document use; it does not approve product work or change delivery state.
 
 | Need | Read in order |
 | --- | --- |
-| Current authorization, active outcome, or next work | [Delivery state](delivery/progress.md), then its linked active brief |
+| Authorization and development rules | The owner's current instructions, then [repository agent instructions](../AGENTS.md). Documents and issue status do not grant additional authorization. |
+| Current work, acceptance criteria, status, or results | The relevant [GitHub issue](https://github.com/joeroberts/release-radar/issues). Confirm its current state before acting. |
+| Initialize a development task | The [RR Development Delegation Model](https://github.com/joeroberts/release-radar/wiki/RR-Development-Delegation-Model), its appropriate role prompt, and the ticket-specific assignment. Consult the [GitHub Issue Standard](https://github.com/joeroberts/release-radar/wiki/GitHub-Issue-Standard) only when creating an issue. |
+| Resume the current development task | The relevant GitHub work and current owner instructions, then the [current handoff](delivery/progress.md) for additional context. The handoff is a navigation aid, not an authorization source. |
 | Existing product behavior or a product change | [Product design index](design/README.md), the owning active design, and only the accepted ADRs it cites |
-| Managed-document change, lifecycle change, or rename | [Managed repository documentation contract](design/managed-repository-documentation-contract.md), [ADR-006](architecture/ADR-006-managed-repository-documentation-contract.md), then the current delivery state |
+| RR product behavior for managed documents, lifecycle changes, or renames | [Managed repository documentation contract](design/managed-repository-documentation-contract.md) and [ADR-006](architecture/ADR-006-managed-repository-documentation-contract.md). These define RR product behavior, not the process for developing RR. |
 | Shared Execution V1 compatibility or adoption diagnosis | [Shared Execution Integration V1](design/shared-execution-integration-v1-design.md), then the consumer's own instructions and delivery state. V1 source delivery does not prove installation, runtime loading, or adoption. |
 | Proposed whole-product or companion work | [Full-product plan](delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md) and the linked proposed design. Read each section's approval qualification; proposal inclusion is not implementation authority. |
+
+Product specifications and accepted decisions each have one canonical location.
+GitHub Wiki is the intended destination. Until content and links have been
+migrated and verified, the existing repository documents remain canonical. Cut
+over to the Wiki and retire the former sources together; do not maintain a second
+authoritative copy. Preserve accepted ADR decision text.
 
 Current specifications own continuing product requirements. Completed delivery
 paperwork is removed rather than retained in a competing archive. Git preserves

@@ -6,6 +6,10 @@ This repository is no longer tracked or governed by the Release Radar applicatio
 Use ordinary Codex tasks, Git worktrees, repository-native checks and the GitHub
 CLI (`gh`). GitHub issues hold the work list and task results.
 
+When creating a GitHub issue, consult and follow the
+[GitHub Issue Standard](https://github.com/joeroberts/release-radar/wiki/GitHub-Issue-Standard).
+It is not required for other work.
+
 Development does not require RR registration, phase or ticket transitions,
 Delivery Goal assignment, catalog acceptance, managed worker preparation,
 execution hooks, or the release-radar/shared-execution skills. Do not re-onboard
@@ -14,10 +18,33 @@ Existing plans, briefs, catalogs and delivery records remain reference material;
 their former RR execution procedures do not govern this repository. Preserve
 applicable product requirements and accepted architectural decisions.
 
-Agents may perform authorized work directly. Use independent review for material
-changes without requiring standing roles or an RR-managed assignment. No mandatory
-task brief, ledger mutation or app-state synchronization is needed to start or
-finish repository work.
+Initialize a Codex task with its ticket-specific assignment and the appropriate
+role prompt from the [RR Development Delegation Model](https://github.com/joeroberts/release-radar/wiki/RR-Development-Delegation-Model).
+The assignment names the scope, acceptance criteria, exclusions, relevant context,
+dependencies, and authorized endpoint. The coordinator owns owner communication,
+role selection, delegation, sequencing, integration, and delivery follow-through;
+it does not spawn subagents. Role tasks may use bounded subagents within their
+assignment. No mandatory task brief, ledger mutation or RR app-state synchronization
+is needed to start or finish work.
+
+Role tasks remain available through their ticket's closure, then are archived.
+If a role task is unavailable or exhausts useful context before closure, preserve
+a concise handoff, create a linked successor that names its predecessor, and
+notify the owner. This replacement does not expand the ticket's authorization.
+
+Developer / Senior Software Engineer owns implementation; QA owns test code and
+execution; Build owns CI/CD; and Delivery owns ticket state, dependencies, and
+handoffs. Reviewer independently reviews the delivered candidate. Use independent
+review for material changes.
+The role model assigns responsibility; it is not runtime enforcement and does
+not grant authority beyond the ticket and owner direction.
+
+`docs/delivery/progress.md` is one replace-in-place current snapshot, limited to
+60 lines and 6,144 raw UTF-8 bytes (including line terminators). Count each
+LF-terminated line plus one final nonempty unterminated line; an empty file has
+zero lines. It contains the outcome, active links, blockers,
+and next action; do not turn it into a diary, copied plan, test log, second
+tracker, or archive workaround.
 
 ## Scope and Controlling Artifacts
 
@@ -40,7 +67,7 @@ controlling sources for Release Radar. Current artifacts include:
   data, integration, sandbox, and signing boundaries
 - `docs/brand/README.md` for the approved product identity
 - GitHub issues for current work, status and verification;
-  `docs/delivery/progress.md` is retained delivery history
+  `docs/delivery/progress.md` is the bounded current handoff snapshot
 
 Do not silently override approved artifacts with assumptions, generated plans,
 repository indexes, or implementation convenience. Treat `.codegraph` output
@@ -118,6 +145,15 @@ must receive independent review by someone other than its implementer.
   additional technical approval.
 - Reviewers explicitly requested by the owner remain required for the task in
   which they were requested.
+
+Chief-architect input is required when a change affects a public contract,
+persistence schema, or component boundary; conflicts with an accepted decision;
+risks coupling RR development to the RR product harness; introduces substantial
+or duplicate infrastructure; or presents a named unresolved architectural problem.
+Do not invoke it for routine fixes, ordinary documentation, or established designs.
+Requests must bound the relevant requirements, source or contracts, constraints,
+alternatives, and decision needed. Recommendations cannot expand scope or amend
+accepted ADRs; no standing committee or report document is required.
 
 An agent may not review, approve, or independently verify its own
 implementation.
