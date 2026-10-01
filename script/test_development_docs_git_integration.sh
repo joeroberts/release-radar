@@ -121,7 +121,7 @@ if [[ $failures -eq 0 ]]; then
   expect_diagnostic unavailable_validator 'validator|read|missing|unable'
 
   collision=$(new_repo collision)
-  hooks_path=$(git -C "$collision" rev-parse --git-path hooks)
+  hooks_path=$(git -C "$collision" rev-parse --path-format=absolute --git-path hooks)
   mkdir -p "$hooks_path"
   printf '#!/usr/bin/env bash\necho preserved\n' >"$hooks_path/pre-commit"
   chmod +x "$hooks_path/pre-commit"
