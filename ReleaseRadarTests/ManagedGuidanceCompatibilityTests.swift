@@ -155,9 +155,9 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         XCTAssertFalse(prompt.contains("create docs/delivery/progress.md"))
     }
 
-    func testNormalWorkflowChecksActualRepositoryWithAcceptedIndexTool() throws {
+    func testNormalWorkflowChecksValidRepositoryFixtureWithAcceptedIndexTool() throws {
         XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 3)
-        try RepositoryDocumentIndexTool().check(authorizedRoot: Self.repository)
+        try RepositoryDocumentIndexTool().check(authorizedRoot: fixture())
     }
 
     func testReadableV3ReportsEveryUnavailableCatalogWithoutMutation() throws {
@@ -183,17 +183,10 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         }
     }
 
-    func testOrdinaryConformanceRejectsDamagedDisposableRealRepository() throws {
-        let parent = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-M5-Conformance-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: parent) }
-        try FileManager.default.copyItem(at: Self.repository.appendingPathComponent("docs"), to: parent.appendingPathComponent("docs"))
-        let fixturePath = "ReleaseRadarTests/Fixtures/SchemaV12/release-radar-v12.sqlite"
-        let fixture = parent.appendingPathComponent(fixturePath)
-        try FileManager.default.createDirectory(at: fixture.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: Self.repository.appendingPathComponent(fixturePath), to: fixture)
-        let catalog = parent.appendingPathComponent("docs/catalog.json")
-        let index = parent.appendingPathComponent("docs/README.md")
+    func testOrdinaryConformanceRejectsDamagedDisposableRepositoryFixture() throws {
+        let root = try fixture()
+        let catalog = root.appendingPathComponent("docs/catalog.json")
+        let index = root.appendingPathComponent("docs/README.md")
         let catalogBytes = try Data(contentsOf: catalog), indexBytes = try Data(contentsOf: index)
         for failure in ["missing", "malformed", "unsafe", "stale"] {
             switch failure {
@@ -201,33 +194,38 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
             case "malformed": try Data("{".utf8).write(to: catalog)
             case "unsafe":
                 try FileManager.default.removeItem(at: catalog)
-                let target = parent.appendingPathComponent("catalog-original.json")
+                let target = root.appendingPathComponent("catalog-original.json")
                 try catalogBytes.write(to: target)
                 try FileManager.default.createSymbolicLink(at: catalog, withDestinationURL: target)
             default:
                 let text = String(decoding: indexBytes, as: UTF8.self).replacingOccurrences(of: "## Collection: docs", with: "## Stale collection")
                 try Data(text.utf8).write(to: index)
             }
-            XCTAssertThrowsError(try RepositoryDocumentIndexTool().check(authorizedRoot: parent), failure) { error in
+            XCTAssertThrowsError(try RepositoryDocumentIndexTool().check(authorizedRoot: root), failure) { error in
                 if failure == "stale" { XCTAssertEqual((error as? RepositoryDocumentIndexError)?.code, .staleIndex) }
                 else { XCTAssertNotNil(error as? RepositoryDocumentError) }
             }
             if FileManager.default.fileExists(atPath: catalog.path) { try FileManager.default.removeItem(at: catalog) }
             try catalogBytes.write(to: catalog); try indexBytes.write(to: index)
         }
-        try RepositoryDocumentIndexTool().check(authorizedRoot: parent)
+        try RepositoryDocumentIndexTool().check(authorizedRoot: root)
         XCTAssertEqual(try Data(contentsOf: catalog), catalogBytes)
         XCTAssertEqual(try Data(contentsOf: index), indexBytes)
     }
 
     private func fixture() throws -> URL {
-        let parent = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+        let parent = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-M5-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: parent) }
         let root = parent.appendingPathComponent("repository")
         try FileManager.default.copyItem(at: Self.repository.appendingPathComponent("ReleaseRadarTests/Fixtures/RepositoryDocuments/valid"), to: root)
         try Data(Self.v3.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        for path in ["docs/README.md", "docs/plans/README.md"] {
+            let contents = "# Human heading\n\n\(RepositoryDocumentContract.managedIndexStart)\nstale\n\(RepositoryDocumentContract.managedIndexEnd)\n\nHuman footer.\n"
+            try Data(contents.utf8).write(to: root.appendingPathComponent(path))
+        }
+        _ = try RepositoryDocumentIndexTool().write(authorizedRoot: root)
         return root
     }
 
