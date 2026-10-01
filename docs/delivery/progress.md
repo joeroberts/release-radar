@@ -27,5 +27,7 @@ This snapshot provides context and links, not additional authorization.
   integration, and conditional hook/skill work remain separately scoped in later
   #133 children. RR product tests do not make the product harness this
   repository's development process.
+- Unresolved: role-task handling when a closed ticket reopens remains an owner
+  choice.
 - Next: obtain independent review of the #135 documentation candidate, then let
   the coordinator integrate it before starting the next ticket.

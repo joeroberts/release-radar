@@ -32,9 +32,10 @@ If a role task is unavailable or exhausts useful context before closure, preserv
 a concise handoff, create a linked successor that names its predecessor, and
 notify the owner. This replacement does not expand the ticket's authorization.
 
-Developer owns implementation; QA owns authoring and running tests; Build owns
-CI/CD; and Delivery owns ticket state, dependencies, and handoffs. Reviewer independently
-reviews the delivered candidate. Use independent review for material changes.
+Developer / Senior Software Engineer owns implementation; QA owns test code and
+execution; Build owns CI/CD; and Delivery owns ticket state, dependencies, and
+handoffs. Reviewer independently reviews the delivered candidate. Use independent
+review for material changes.
 The role model assigns responsibility; it is not runtime enforcement and does
 not grant authority beyond the ticket and owner direction.
 
