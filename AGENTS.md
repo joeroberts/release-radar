@@ -33,13 +33,15 @@ a concise handoff, create a linked successor that names its predecessor, and
 notify the owner. This replacement does not expand the ticket's authorization.
 
 Developer owns implementation; QA owns authoring and running tests; Build owns
-CI/CD; and Delivery owns current state and handoffs. Reviewer independently
+CI/CD; and Delivery owns ticket state, dependencies, and handoffs. Reviewer independently
 reviews the delivered candidate. Use independent review for material changes.
 The role model assigns responsibility; it is not runtime enforcement and does
 not grant authority beyond the ticket and owner direction.
 
 `docs/delivery/progress.md` is one replace-in-place current snapshot, limited to
-60 lines and 6,144 UTF-8 bytes. It contains the outcome, active links, blockers,
+60 lines and 6,144 raw UTF-8 bytes (including line terminators). Count each
+LF-terminated line plus one final nonempty unterminated line; an empty file has
+zero lines. It contains the outcome, active links, blockers,
 and next action; do not turn it into a diary, copied plan, test log, second
 tracker, or archive workaround.
 
