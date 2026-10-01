@@ -19,7 +19,7 @@ fi
 
 validator_dir=$(mktemp -d "${TMPDIR:-/tmp}/release-radar-validator.XXXXXX") || fail 'could not create a temporary staged validator directory'
 validator="$validator_dir/check_development_docs.swift"
-trap 'rm -rf "$validator_dir"' EXIT
+trap 'rm -f "$validator"; rmdir "$validator_dir"' EXIT
 if ! git show ":$validator_path" >"$validator"; then
     fail "could not materialize staged validator at $validator_path"
 fi
