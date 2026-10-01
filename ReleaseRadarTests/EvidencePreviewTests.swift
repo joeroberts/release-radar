@@ -211,7 +211,11 @@ final class EvidencePreviewTests: XCTestCase {
 
     func testRasterPreviewValidatesDecodedMetadataAndRejectsMalformedBytes() throws {
         let reader = EvidencePreviewReader()
-        let image = try Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("docs/delivery/evidence/rr10-needs-review.png"))
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/ProductContracts/EvidencePreview/valid-png.base64")
+        let encodedImage = try String(contentsOf: fixtureURL, encoding: .utf8)
+        let image = try XCTUnwrap(Data(base64Encoded: encodedImage.trimmingCharacters(in: .whitespacesAndNewlines)))
         let valid = reader.decode(identity: .managedDocument(artifactID: "image"), path: "docs/evidence/image.png", bytes: image)
         XCTAssertEqual(valid.status, .available)
         guard case let .raster(_, _, width, height) = valid.content else { return XCTFail("Expected raster preview") }

@@ -7,11 +7,6 @@ final class ProjectExecutionPackageTests: XCTestCase {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/CodexPluginLifecycle/v2")
         let target = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         try FileManager.default.copyItem(at: source, to: target)
-        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-        let skill = repository.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/shared-execution/SKILL.md")
-        let destination = target.appendingPathComponent("plugins/release-radar/skills/shared-execution/SKILL.md")
-        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: skill, to: destination)
         try writeMCP(root: target, coordinator: ["command": "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator", "args": ["--mcp"]])
         return target
     }

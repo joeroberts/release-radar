@@ -5,8 +5,7 @@ import XCTest
 final class SharedExecutionSkillContractTests: XCTestCase {
     func testBundledSkillCarriesTheReviewedV1ContractAndExactAdoptionBlock() throws {
         let skill = try String(contentsOf: skillURL, encoding: .utf8)
-        let design = try String(contentsOf: designURL, encoding: .utf8)
-        let adoptionBlock = try fencedAdoptionBlock(in: design)
+        let adoptionBlock = try String(contentsOf: expectedAdoptionBlockURL, encoding: .utf8)
 
         XCTAssertTrue(skill.contains("name: shared-execution"))
         XCTAssertTrue(skill.contains("description: Use when"))
@@ -62,17 +61,9 @@ final class SharedExecutionSkillContractTests: XCTestCase {
         packageRoot.appendingPathComponent("skills/shared-execution/SKILL.md")
     }
 
-    private var designURL: URL {
-        repositoryRoot.appendingPathComponent("docs/design/shared-execution-integration-v1-design.md")
-    }
-
-    private func fencedAdoptionBlock(in design: String) throws -> String {
-        let fence = "```markdown\n<!-- release-radar-shared-execution:v1:start -->"
-        let fencedStart = try XCTUnwrap(design.range(of: fence))
-        let blockStart = design.index(fencedStart.lowerBound, offsetBy: "```markdown\n".count)
-        let blockEnd = try XCTUnwrap(
-            design.range(of: "\n```", range: blockStart..<design.endIndex)
-        ).lowerBound
-        return String(design[blockStart..<blockEnd])
+    private var expectedAdoptionBlockURL: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/ProductContracts/SharedExecution/expected-adoption-block.md")
     }
 }
