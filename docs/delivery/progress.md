@@ -23,7 +23,7 @@ This snapshot provides context and links, not additional authorization.
 - The Wiki is available. Product specifications and accepted decisions remain in
   repository documents until migration and link cutover are verified; preserve
   accepted ADR decision text and do not create duplicate authorities.
-- #135 reconciles the three documentation routes only. The validator, Git/GitHub
+- #135 reconciles documentation reading routes and their inbound links. The validator, Git/GitHub
   integration, and conditional hook/skill work remain separately scoped in later
   #133 children. RR product tests do not make the product harness this
   repository's development process.
