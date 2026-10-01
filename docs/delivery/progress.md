@@ -28,9 +28,10 @@ additional authorization.
 - Checked-in integrations and disposable installer tests do not imply live hook
   installation, branch protection, or required-check activation; none was
   changed here.
-- Product specifications and accepted decisions remain canonical in repository
-  documents until any Wiki migration and link cutover are verified. Preserve
-  accepted ADR decision text and do not create duplicate authorities.
+- Documentation migration is no longer a blocker: product specifications and
+  accepted decisions are canonical in the Wiki. ADR-005 and ADR-006 remain
+  qualified pending repository-canonical decisions. Preserve accepted decision
+  text and do not create duplicate authorities.
 
 ## Next action
 
