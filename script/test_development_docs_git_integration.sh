@@ -147,6 +147,24 @@ if [[ $failures -eq 0 ]]; then
   printf 'this is not Swift\n' >"$staged_valid_unstaged_broken_validator/script/check_development_docs.swift"
   expect_status 0 staged_valid_unstaged_broken_validator commit "$staged_valid_unstaged_broken_validator" staged-valid
 
+  concurrent_staged_validator=$(new_repo concurrent-staged-validator)
+  printf 'valid staged progress\n' >"$concurrent_staged_validator/docs/delivery/progress.md"
+  git -C "$concurrent_staged_validator" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$concurrent_staged_validator"
+  set +e
+  (cd "$concurrent_staged_validator" && ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-1.stdout" 2>"$fixture_root/concurrent-staged-validator-1.stderr" &
+  concurrent_first_pid=$!
+  (cd "$concurrent_staged_validator" && ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-2.stdout" 2>"$fixture_root/concurrent-staged-validator-2.stderr" &
+  concurrent_second_pid=$!
+  wait "$concurrent_first_pid"; concurrent_first_status=$?
+  wait "$concurrent_second_pid"; concurrent_second_status=$?
+  set -e
+  if [[ $concurrent_first_status -ne 0 || $concurrent_second_status -ne 0 ]]; then
+    fail "concurrent_staged_validator: both hook invocations must pass (got $concurrent_first_status and $concurrent_second_status)"
+  else
+    printf 'PASS concurrent_staged_validator\n'
+  fi
+
   staged_missing_validator=$(new_repo staged-missing-validator)
   printf 'valid staged progress\n' >"$staged_missing_validator/docs/delivery/progress.md"
   git -C "$staged_missing_validator" add docs/delivery/progress.md
