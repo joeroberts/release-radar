@@ -72,33 +72,33 @@ expect_file "$repo_root/.github/workflows/development-documentation.yml"
 if [[ $failures -eq 0 ]]; then
   valid_staged_invalid_unstaged=$(new_repo valid-staged-invalid-unstaged)
   printf 'valid staged snapshot\n' >"$valid_staged_invalid_unstaged/docs/delivery/progress.md"
-  git -C "$valid_staged_invalid_unstaged" add docs/delivery/progress.md
+  git -C "$valid_staged_invalid_unstaged" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$valid_staged_invalid_unstaged"
   printf 'x\n%.0s' {1..61} >"$valid_staged_invalid_unstaged/docs/delivery/progress.md"
   expect_status 0 valid_staged_invalid_unstaged commit "$valid_staged_invalid_unstaged" valid-staged
 
   invalid_staged_valid_unstaged=$(new_repo invalid-staged-valid-unstaged)
   printf 'x\n%.0s' {1..61} >"$invalid_staged_valid_unstaged/docs/delivery/progress.md"
-  git -C "$invalid_staged_valid_unstaged" add docs/delivery/progress.md
+  git -C "$invalid_staged_valid_unstaged" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$invalid_staged_valid_unstaged"
   printf 'valid unstaged content\n' >"$invalid_staged_valid_unstaged/docs/delivery/progress.md"
   expect_status 1 invalid_staged_valid_unstaged commit "$invalid_staged_valid_unstaged" invalid-staged
-  expect_diagnostic invalid_staged_valid_unstaged 'progress|line|60|staged'
+  expect_diagnostic invalid_staged_valid_unstaged 'has 61 lines|reduce it to 60'
 
   missing_progress=$(new_repo missing-progress)
   printf 'ordinary change\n' >"$missing_progress/README.md"
-  git -C "$missing_progress" add README.md
+  git -C "$missing_progress" add README.md script/check_development_docs.swift
   install_hook "$missing_progress"
   expect_status 1 missing_progress commit "$missing_progress" missing-progress
-  expect_diagnostic missing_progress 'progress|staged|read|file'
+  expect_diagnostic missing_progress 'staged docs/delivery/progress\.md is unavailable'
 
   staged_symlink=$(new_repo staged-symlink)
   printf 'valid target\n' >"$staged_symlink/valid-progress.md"
   ln -s ../../valid-progress.md "$staged_symlink/docs/delivery/progress.md"
-  git -C "$staged_symlink" add valid-progress.md docs/delivery/progress.md
+  git -C "$staged_symlink" add valid-progress.md docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$staged_symlink"
   expect_status 1 staged_symlink commit "$staged_symlink" staged-symlink
-  expect_diagnostic staged_symlink 'regular|symlink|progress|staged'
+  expect_diagnostic staged_symlink 'progress\.md must be a regular file'
 
   root_symlink="$fixture_root/root-symlink"
   mkdir -p "$root_symlink/docs/delivery"
@@ -114,38 +114,88 @@ if [[ $failures -eq 0 ]]; then
 
   deleted_progress=$(new_repo deleted-progress)
   printf 'valid baseline\n' >"$deleted_progress/docs/delivery/progress.md"
-  git -C "$deleted_progress" add docs/delivery/progress.md
+  git -C "$deleted_progress" add docs/delivery/progress.md script/check_development_docs.swift
   commit "$deleted_progress" baseline
   install_hook "$deleted_progress"
   rm "$deleted_progress/docs/delivery/progress.md"
   git -C "$deleted_progress" add -u docs/delivery/progress.md
   expect_status 1 deleted_progress commit "$deleted_progress" deleted-progress
-  expect_diagnostic deleted_progress 'progress|staged|read|file'
+  expect_diagnostic deleted_progress 'staged docs/delivery/progress\.md is unavailable'
 
   unchanged_invalid=$(new_repo unchanged-invalid)
   printf 'x\n%.0s' {1..61} >"$unchanged_invalid/docs/delivery/progress.md"
-  git -C "$unchanged_invalid" add docs/delivery/progress.md
+  git -C "$unchanged_invalid" add docs/delivery/progress.md script/check_development_docs.swift
   commit "$unchanged_invalid" invalid-baseline
   install_hook "$unchanged_invalid"
   printf 'ordinary change\n' >"$unchanged_invalid/README.md"
   git -C "$unchanged_invalid" add README.md
   expect_status 1 unchanged_invalid commit "$unchanged_invalid" unchanged-invalid
-  expect_diagnostic unchanged_invalid 'progress|line|60|staged'
+  expect_diagnostic unchanged_invalid 'has 61 lines|reduce it to 60'
+
+  staged_invalid_unstaged_noop_validator=$(new_repo staged-invalid-unstaged-noop-validator)
+  printf 'x\n%.0s' {1..61} >"$staged_invalid_unstaged_noop_validator/docs/delivery/progress.md"
+  git -C "$staged_invalid_unstaged_noop_validator" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$staged_invalid_unstaged_noop_validator"
+  printf 'import Foundation\n' >"$staged_invalid_unstaged_noop_validator/script/check_development_docs.swift"
+  expect_status 1 staged_invalid_unstaged_noop_validator commit "$staged_invalid_unstaged_noop_validator" staged-invalid
+  expect_diagnostic staged_invalid_unstaged_noop_validator 'has 61 lines|reduce it to 60'
+
+  staged_valid_unstaged_broken_validator=$(new_repo staged-valid-unstaged-broken-validator)
+  printf 'valid staged progress\n' >"$staged_valid_unstaged_broken_validator/docs/delivery/progress.md"
+  git -C "$staged_valid_unstaged_broken_validator" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$staged_valid_unstaged_broken_validator"
+  printf 'this is not Swift\n' >"$staged_valid_unstaged_broken_validator/script/check_development_docs.swift"
+  expect_status 0 staged_valid_unstaged_broken_validator commit "$staged_valid_unstaged_broken_validator" staged-valid
+
+  concurrent_staged_validator=$(new_repo concurrent-staged-validator)
+  printf 'valid staged progress\n' >"$concurrent_staged_validator/docs/delivery/progress.md"
+  printf 'import Foundation\nsleep(1)\n' >"$concurrent_staged_validator/script/check_development_docs.swift"
+  git -C "$concurrent_staged_validator" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$concurrent_staged_validator"
+  mkdir -p "$fixture_root/concurrent-staged-validator-tmp"
+  set +e
+  (cd "$concurrent_staged_validator" && TMPDIR="$fixture_root/concurrent-staged-validator-tmp" ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-1.stdout" 2>"$fixture_root/concurrent-staged-validator-1.stderr" &
+  concurrent_first_pid=$!
+  (cd "$concurrent_staged_validator" && TMPDIR="$fixture_root/concurrent-staged-validator-tmp" ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-2.stdout" 2>"$fixture_root/concurrent-staged-validator-2.stderr" &
+  concurrent_second_pid=$!
+  wait "$concurrent_first_pid"; concurrent_first_status=$?
+  wait "$concurrent_second_pid"; concurrent_second_status=$?
+  set -e
+  if [[ $concurrent_first_status -ne 0 || $concurrent_second_status -ne 0 ]]; then
+    fail "concurrent_staged_validator: both hook invocations must pass (got $concurrent_first_status and $concurrent_second_status)"
+  else
+    printf 'PASS concurrent_staged_validator\n'
+  fi
+
+  staged_missing_validator=$(new_repo staged-missing-validator)
+  printf 'valid staged progress\n' >"$staged_missing_validator/docs/delivery/progress.md"
+  git -C "$staged_missing_validator" add docs/delivery/progress.md
+  install_hook "$staged_missing_validator"
+  expect_status 1 staged_missing_validator commit "$staged_missing_validator" staged-missing-validator
+  expect_diagnostic staged_missing_validator 'validator|staged|missing|unavailable'
+
+  staged_symlink_validator=$(new_repo staged-symlink-validator)
+  printf 'valid staged progress\n' >"$staged_symlink_validator/docs/delivery/progress.md"
+  mv "$staged_symlink_validator/script/check_development_docs.swift" "$staged_symlink_validator/script/check_development_docs.swift.real"
+  ln -s check_development_docs.swift.real "$staged_symlink_validator/script/check_development_docs.swift"
+  git -C "$staged_symlink_validator" add docs/delivery/progress.md script/check_development_docs.swift script/check_development_docs.swift.real
+  install_hook "$staged_symlink_validator"
+  expect_status 1 staged_symlink_validator commit "$staged_symlink_validator" staged-symlink-validator
+  expect_diagnostic staged_symlink_validator 'validator|regular|symlink|staged'
 
   unavailable_swift=$(new_repo unavailable-swift)
   printf 'valid\n' >"$unavailable_swift/docs/delivery/progress.md"
-  git -C "$unavailable_swift" add docs/delivery/progress.md
+  git -C "$unavailable_swift" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$unavailable_swift"
   expect_status 1 unavailable_swift env PATH=/bin /usr/bin/git -C "$unavailable_swift" commit -qm unavailable-swift
   expect_diagnostic unavailable_swift 'swift|validator|unavailable'
 
-  unavailable_validator=$(new_repo unavailable-validator)
-  printf 'valid\n' >"$unavailable_validator/docs/delivery/progress.md"
-  git -C "$unavailable_validator" add docs/delivery/progress.md
-  install_hook "$unavailable_validator"
-  mv "$unavailable_validator/script/check_development_docs.swift" "$unavailable_validator/script/check_development_docs.swift.off"
-  expect_status 1 unavailable_validator commit "$unavailable_validator" unavailable-validator
-  expect_diagnostic unavailable_validator 'validator|read|missing|unable'
+  staged_validator_unavailable_worktree=$(new_repo staged-validator-unavailable-worktree)
+  printf 'valid\n' >"$staged_validator_unavailable_worktree/docs/delivery/progress.md"
+  git -C "$staged_validator_unavailable_worktree" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$staged_validator_unavailable_worktree"
+  mv "$staged_validator_unavailable_worktree/script/check_development_docs.swift" "$staged_validator_unavailable_worktree/script/check_development_docs.swift.off"
+  expect_status 0 staged_validator_unavailable_worktree commit "$staged_validator_unavailable_worktree" staged-validator-unavailable-worktree
 
   collision=$(new_repo collision)
   hooks_path=$(git -C "$collision" rev-parse --path-format=absolute --git-path hooks)
