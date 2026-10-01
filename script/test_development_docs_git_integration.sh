@@ -132,6 +132,37 @@ if [[ $failures -eq 0 ]]; then
   expect_status 1 unchanged_invalid commit "$unchanged_invalid" unchanged-invalid
   expect_diagnostic unchanged_invalid 'progress|line|60|staged'
 
+  staged_invalid_unstaged_noop_validator=$(new_repo staged-invalid-unstaged-noop-validator)
+  printf 'x\n%.0s' {1..61} >"$staged_invalid_unstaged_noop_validator/docs/delivery/progress.md"
+  git -C "$staged_invalid_unstaged_noop_validator" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$staged_invalid_unstaged_noop_validator"
+  printf 'import Foundation\n' >"$staged_invalid_unstaged_noop_validator/script/check_development_docs.swift"
+  expect_status 1 staged_invalid_unstaged_noop_validator commit "$staged_invalid_unstaged_noop_validator" staged-invalid
+  expect_diagnostic staged_invalid_unstaged_noop_validator 'progress|line|60|staged'
+
+  staged_valid_unstaged_broken_validator=$(new_repo staged-valid-unstaged-broken-validator)
+  printf 'valid staged progress\n' >"$staged_valid_unstaged_broken_validator/docs/delivery/progress.md"
+  git -C "$staged_valid_unstaged_broken_validator" add docs/delivery/progress.md script/check_development_docs.swift
+  install_hook "$staged_valid_unstaged_broken_validator"
+  printf 'this is not Swift\n' >"$staged_valid_unstaged_broken_validator/script/check_development_docs.swift"
+  expect_status 0 staged_valid_unstaged_broken_validator commit "$staged_valid_unstaged_broken_validator" staged-valid
+
+  staged_missing_validator=$(new_repo staged-missing-validator)
+  printf 'valid staged progress\n' >"$staged_missing_validator/docs/delivery/progress.md"
+  git -C "$staged_missing_validator" add docs/delivery/progress.md
+  install_hook "$staged_missing_validator"
+  expect_status 1 staged_missing_validator commit "$staged_missing_validator" staged-missing-validator
+  expect_diagnostic staged_missing_validator 'validator|staged|missing|unavailable'
+
+  staged_symlink_validator=$(new_repo staged-symlink-validator)
+  printf 'valid staged progress\n' >"$staged_symlink_validator/docs/delivery/progress.md"
+  mv "$staged_symlink_validator/script/check_development_docs.swift" "$staged_symlink_validator/script/check_development_docs.swift.real"
+  ln -s check_development_docs.swift.real "$staged_symlink_validator/script/check_development_docs.swift"
+  git -C "$staged_symlink_validator" add docs/delivery/progress.md script/check_development_docs.swift script/check_development_docs.swift.real
+  install_hook "$staged_symlink_validator"
+  expect_status 1 staged_symlink_validator commit "$staged_symlink_validator" staged-symlink-validator
+  expect_diagnostic staged_symlink_validator 'validator|regular|symlink|staged'
+
   unavailable_swift=$(new_repo unavailable-swift)
   printf 'valid\n' >"$unavailable_swift/docs/delivery/progress.md"
   git -C "$unavailable_swift" add docs/delivery/progress.md
