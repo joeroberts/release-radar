@@ -15,7 +15,7 @@ fail() {
 
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || fail 'run this command from a Git working tree'
 source_hook="$repo_root/.githooks/pre-commit"
-hooks_path=$(git rev-parse --git-path hooks 2>/dev/null) || fail 'could not resolve this repository\'s hooks directory'
+hooks_path=$(git rev-parse --git-path hooks 2>/dev/null) || fail "could not resolve this repository's hooks directory"
 target_hook="$hooks_path/pre-commit"
 
 [[ -f "$source_hook" ]] || fail "checked-in hook is unavailable at $source_hook"
