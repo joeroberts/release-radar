@@ -112,6 +112,13 @@ if [[ $failures -eq 0 ]]; then
   expect_status 1 unchanged_invalid commit "$unchanged_invalid" unchanged-invalid
   expect_diagnostic unchanged_invalid 'progress|line|60|staged'
 
+  unavailable_swift=$(new_repo unavailable-swift)
+  printf 'valid\n' >"$unavailable_swift/docs/delivery/progress.md"
+  git -C "$unavailable_swift" add docs/delivery/progress.md
+  install_hook "$unavailable_swift"
+  expect_status 1 unavailable_swift env PATH=/bin /usr/bin/git -C "$unavailable_swift" commit -qm unavailable-swift
+  expect_diagnostic unavailable_swift 'swift|validator|unavailable'
+
   unavailable_validator=$(new_repo unavailable-validator)
   printf 'valid\n' >"$unavailable_validator/docs/delivery/progress.md"
   git -C "$unavailable_validator" add docs/delivery/progress.md
