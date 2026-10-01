@@ -149,6 +149,7 @@ if [[ $failures -eq 0 ]]; then
 
   concurrent_staged_validator=$(new_repo concurrent-staged-validator)
   printf 'valid staged progress\n' >"$concurrent_staged_validator/docs/delivery/progress.md"
+  printf 'import Foundation\nsleep(1)\n' >"$concurrent_staged_validator/script/check_development_docs.swift"
   git -C "$concurrent_staged_validator" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$concurrent_staged_validator"
   set +e
