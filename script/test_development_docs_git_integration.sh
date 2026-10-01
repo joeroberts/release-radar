@@ -152,10 +152,11 @@ if [[ $failures -eq 0 ]]; then
   printf 'import Foundation\nsleep(1)\n' >"$concurrent_staged_validator/script/check_development_docs.swift"
   git -C "$concurrent_staged_validator" add docs/delivery/progress.md script/check_development_docs.swift
   install_hook "$concurrent_staged_validator"
+  mkdir -p "$fixture_root/concurrent-staged-validator-tmp"
   set +e
-  (cd "$concurrent_staged_validator" && ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-1.stdout" 2>"$fixture_root/concurrent-staged-validator-1.stderr" &
+  (cd "$concurrent_staged_validator" && TMPDIR="$fixture_root/concurrent-staged-validator-tmp" ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-1.stdout" 2>"$fixture_root/concurrent-staged-validator-1.stderr" &
   concurrent_first_pid=$!
-  (cd "$concurrent_staged_validator" && ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-2.stdout" 2>"$fixture_root/concurrent-staged-validator-2.stderr" &
+  (cd "$concurrent_staged_validator" && TMPDIR="$fixture_root/concurrent-staged-validator-tmp" ./.githooks/pre-commit) >"$fixture_root/concurrent-staged-validator-2.stdout" 2>"$fixture_root/concurrent-staged-validator-2.stderr" &
   concurrent_second_pid=$!
   wait "$concurrent_first_pid"; concurrent_first_status=$?
   wait "$concurrent_second_pid"; concurrent_second_status=$?
