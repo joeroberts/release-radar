@@ -24,6 +24,12 @@ within their assignment. Use the linked Coordinator prompt for coordination and
 the linked role prompt for each role. If a required standard or role prompt is
 unavailable, report the blocker rather than inventing a replacement.
 
+On resumption or after context compaction, recover the current assignment,
+owner corrections, ticket state, applicable instructions, and authorized
+endpoint. Confirm the checkout and branch before relying on their files; do not
+substitute a stale progress summary or another worktree for current source or
+authorization.
+
 Keep role tasks available through ticket closure. Developer owns implementation,
 QA owns test code and execution, Build owns CI/CD and installation, Delivery
 owns ticket state and handoffs, and Reviewer independently reviews material
@@ -80,6 +86,30 @@ remain in the owning issue and linked PR. Documentation that must match the
 checkout remains in its existing repository location. Keep one authoritative
 authoring location per document and use links rather than competing copies.
 
+Before changing documentation:
+
+- Identify the existing owning document and whether it describes implemented
+  behavior, an accepted decision, or a proposal.
+- Check relevant content against current source, configuration, tests, and owner
+  decisions. Use current official sources for external technical claims and
+  distinguish verified facts from assumptions.
+- If the ticket lacks a necessary source link, use the documentation index to
+  locate it. Report an authority conflict that remains ambiguous rather than
+  inventing a resolution.
+- Prefer updating the owning document. Create another only when the authorized
+  outcome requires a distinct deliverable with no suitable existing home.
+
+Maintain and retire documentation as one coherent change. Update owning
+documentation when delivery makes it inaccurate; preserve the distinction
+between proposed and delivered behavior. When moving a document, verify the
+destination, update affected links and reading routes, then retire the former
+authoritative copy. Wiki availability alone is not migration. Preserve
+continuing requirements before removing completed plans or superseded
+proposals, and use Git history rather than a competing archive unless the owner
+explicitly requests archaeological retention. Do not remove retained evidence
+or accepted decisions as incidental cleanup. Reconcile affected documentation
+and links with the delivered result before completion.
+
 `docs/delivery/progress.md` is one replace-in-place current snapshot, limited
 to 60 lines and 6,144 raw UTF-8 bytes including line terminators. Count every
 LF-terminated line plus one final nonempty unterminated line; an empty file has
@@ -90,6 +120,10 @@ Persist durable deliverables in the repository's canonical paths, never under
 `~/.codex` or `/tmp`, unless the owner designates a canonical Wiki location.
 Identify the canonical source before completion, verify its copy, and
 distinguish it from temporary worktree artifacts.
+
+Repository work may be developed in an isolated worktree, but it must reach the
+authorized repository endpoint; a disposable worktree or scratch copy is not a
+completed deliverable.
 
 ## Execution boundaries
 
@@ -109,6 +143,24 @@ Do not infer authority from eligibility, a plan, a review suggestion, or a
 passing command. Preserve unrelated owner changes. Use the narrowest supported
 tooling, avoid speculative infrastructure, and report concrete blockers rather
 than broadening scope.
+
+Before declaring completion:
+
+- Confirm every acceptance criterion and authorized delivery step.
+- Reconcile affected documentation and links.
+- Record actual changes, checks, outcomes, and material limitations on the
+  owning ticket.
+- Identify failed, skipped, unavailable, or pending checks accurately.
+- Complete the authorized commit, PR, merge, or release endpoint rather than
+  stopping at an uncommitted or disposable candidate.
+
+Keep commits manageable. For authorized PR delivery, request Copilot review,
+address its feedback and Required independent findings, and merge only when
+applicable checks and reviews are green. Report an unavailable required review
+as a blocker. Successful checks are terminal unless a relevant change or
+concrete defect requires repeating the affected check; Optional findings do not
+reopen completion. A finished role response or merged PR alone does not close
+the owning ticket.
 
 ## Roles, models, and review
 
