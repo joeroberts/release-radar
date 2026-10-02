@@ -42,11 +42,12 @@ new_repo() {
   git -C "$repo" init -q
   git -C "$repo" config user.name 'QA Fixture'
   git -C "$repo" config user.email 'qa@example.invalid'
-  mkdir -p "$repo/script" "$repo/.githooks" "$repo/docs/delivery"
+  mkdir -p "$repo/script" "$repo/.githooks" "$repo/.codex/hooks" "$repo/docs/delivery"
   cp "$repo_root/script/check_development_docs.swift" "$repo/script/"
   cp "$repo_root/.githooks/pre-commit" "$repo/.githooks/"
+  cp "$repo_root/.codex/hooks/block_no_verify_commit.py" "$repo/.codex/hooks/"
   cp "$repo_root/script/install_development_docs_hook.sh" "$repo/script/"
-  chmod +x "$repo/.githooks/pre-commit" "$repo/script/install_development_docs_hook.sh"
+  chmod +x "$repo/.githooks/pre-commit" "$repo/.codex/hooks/block_no_verify_commit.py" "$repo/script/install_development_docs_hook.sh"
   printf '%s' "$repo"
 }
 
@@ -66,6 +67,7 @@ expect_file() {
 }
 
 expect_file "$repo_root/.githooks/pre-commit"
+expect_file "$repo_root/.codex/hooks/block_no_verify_commit.py"
 expect_file "$repo_root/script/install_development_docs_hook.sh"
 expect_file "$repo_root/.github/workflows/development-documentation.yml"
 

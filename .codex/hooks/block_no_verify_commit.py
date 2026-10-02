@@ -6,8 +6,42 @@ import shlex
 import sys
 
 
-SHELL_OPERATORS = {";", "&&", "||", "|", "&", "(", ")", "<", ">", ">>", "<<"}
 BYPASS_OPTIONS = {"--no-verify", "-n"}
+OPTIONS_WITH_VALUES = {
+    "-m",
+    "--message",
+    "-F",
+    "--file",
+    "-t",
+    "--template",
+    "-C",
+    "--reuse-message",
+    "-c",
+    "--reedit-message",
+    "--author",
+    "--date",
+    "--cleanup",
+    "--trailer",
+    "--pathspec-from-file",
+}
+
+
+def has_unquoted_shell_operator(command: str) -> bool:
+    quote = None
+    escaped = False
+    for character in command:
+        if escaped:
+            escaped = False
+        elif character == "\\" and quote != "'":
+            escaped = True
+        elif quote:
+            if character == quote:
+                quote = None
+        elif character in {"'", '"'}:
+            quote = character
+        elif character in ";|&()<>":
+            return True
+    return quote is not None
 
 
 def bypasses_pre_commit(command: object) -> bool:
@@ -20,9 +54,7 @@ def bypasses_pre_commit(command: object) -> bool:
     except ValueError:
         return False
 
-    if len(arguments) < 3 or arguments[:2] != ["git", "commit"]:
-        return False
-    if any(argument in SHELL_OPERATORS for argument in arguments):
+    if len(arguments) < 3 or arguments[:2] != ["git", "commit"] or has_unquoted_shell_operator(command):
         return False
 
     try:
@@ -30,7 +62,13 @@ def bypasses_pre_commit(command: object) -> bool:
     except ValueError:
         end_of_options = len(arguments)
 
-    return any(argument in BYPASS_OPTIONS for argument in arguments[2:end_of_options])
+    index = 2
+    while index < end_of_options:
+        argument = arguments[index]
+        if argument in BYPASS_OPTIONS:
+            return True
+        index += 2 if argument in OPTIONS_WITH_VALUES else 1
+    return False
 
 
 def main() -> None:
