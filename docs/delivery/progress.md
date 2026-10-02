@@ -29,8 +29,8 @@ additional authorization.
   installation, branch protection, or required-check activation; none was
   changed here.
 - Documentation migration is no longer a blocker: product specifications and
-  accepted decisions are canonical in the Wiki. ADR-005 and ADR-006 remain
-  qualified pending repository-canonical decisions. Preserve accepted decision
+  accepted decisions are canonical in the Wiki. ADR-005 and ADR-006 are also
+  Wiki-canonical, with their pending acceptance qualifications preserved. Preserve accepted decision
   text and do not create duplicate authorities.
 
 ## Next action
