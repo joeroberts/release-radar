@@ -371,7 +371,11 @@
     "rr-lost-worker-recovery-brief-2026-09-20",
     "rr-recovery-ancestry-repair-brief-2026-09-21",
     "rr-p6-navigation-brief-2026-09-21",
-    "rr-documentation-reconciliation-2026-09-21"
+    "rr-documentation-reconciliation-2026-09-21",
+    "a14ff940-cfc1-4735-974b-895ab63f1364",
+    "b445b788-23e7-4630-a4d1-648845c1ebcc",
+    "0ad29467-a31f-4574-9a98-05b2188a540f",
+    "7e761c7f-890f-46f8-80ac-17139b378c52"
   ],
   "collections": [
     {
@@ -390,7 +394,7 @@
       "purpose": "Release Radar documentation, current authority, and retained history",
       "allowedContents": [
         "Catalog and navigation indexes",
-        "Architecture, design, brand, and delivery collections"
+        "Architecture, design, and delivery collections"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -414,23 +418,6 @@
       ],
       "isLeaf": true,
       "firstRead": "fd278d0d-b43f-4145-9033-2906f32a6ab8"
-    },
-    {
-      "collectionID": "brand",
-      "path": "docs/brand",
-      "parentCollection": "docs",
-      "purpose": "Approved V1 brand direction and retained design references",
-      "allowedContents": [
-        "Brand guidance",
-        "Historical raster and vector references"
-      ],
-      "prohibitedContents": [
-        "Temporary build output",
-        "Owner data and credentials"
-      ],
-      "isLeaf": false,
-      "indexArtifactID": "37012d12-2f27-4282-a8ab-8e21d3c6eb14",
-      "firstRead": "37012d12-2f27-4282-a8ab-8e21d3c6eb14"
     },
     {
       "collectionID": "delivery",
@@ -492,7 +479,8 @@
       "allowedContents": [
         "Wiki routing stubs",
         "Visual study sources",
-        "Mockup collection"
+        "Mockup collection",
+        "Brand collection"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -501,6 +489,23 @@
       "isLeaf": false,
       "indexArtifactID": "da877bf9-71c1-4b8b-8431-298121a2f41e",
       "firstRead": "98f5320c-208e-4ca1-aacf-c8df5701a1d4"
+    },
+    {
+      "collectionID": "design.brand",
+      "path": "docs/design/brand",
+      "parentCollection": "design",
+      "purpose": "Approved V1 brand direction and retained design references",
+      "allowedContents": [
+        "Brand guidance",
+        "Historical raster and vector references"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "37012d12-2f27-4282-a8ab-8e21d3c6eb14",
+      "firstRead": "37012d12-2f27-4282-a8ab-8e21d3c6eb14"
     },
     {
       "collectionID": "design.mockups",
@@ -671,12 +676,12 @@
     },
     {
       "artifactID": "37012d12-2f27-4282-a8ab-8e21d3c6eb14",
-      "path": "docs/brand/README.md",
+      "path": "docs/design/brand/README.md",
       "kind": "collectionIndex",
       "lifecycle": "active",
       "authorityLevel": "controlling",
       "authorityRole": "product.brand",
-      "parentCollection": "brand",
+      "parentCollection": "design.brand",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -687,11 +692,11 @@
     },
     {
       "artifactID": "a357e108-aae8-4f15-a44a-3bad0e98c9d5",
-      "path": "docs/brand/release-radar-icon-v1.png",
+      "path": "docs/design/brand/release-radar-icon-v1.png",
       "kind": "designAsset",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "brand",
+      "parentCollection": "design.brand",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -702,11 +707,11 @@
     },
     {
       "artifactID": "69ed9247-6243-4511-bf52-594c98e9d649",
-      "path": "docs/brand/release-radar-icon-v1.svg",
+      "path": "docs/design/brand/release-radar-icon-v1.svg",
       "kind": "designAsset",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "brand",
+      "parentCollection": "design.brand",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -717,11 +722,11 @@
     },
     {
       "artifactID": "9484b9ea-9656-471a-92ee-cd0aac9f000a",
-      "path": "docs/brand/release-radar-lockup-v1.png",
+      "path": "docs/design/brand/release-radar-lockup-v1.png",
       "kind": "designAsset",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "brand",
+      "parentCollection": "design.brand",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -740,66 +745,6 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
-      ],
-      "checksum": {
-        "policy": "notApplicable"
-      }
-    },
-    {
-      "artifactID": "a14ff940-cfc1-4735-974b-895ab63f1364",
-      "path": "docs/delivery/evidence/rr-r9-active-phase-board-compact.png",
-      "kind": "verificationEvidence",
-      "lifecycle": "completed",
-      "authorityLevel": "nonAuthoritative",
-      "parentCollection": "delivery.evidence",
-      "supersedes": [],
-      "applicationSensitivity": [
-        "evidence"
-      ],
-      "checksum": {
-        "policy": "notApplicable"
-      }
-    },
-    {
-      "artifactID": "b445b788-23e7-4630-a4d1-648845c1ebcc",
-      "path": "docs/delivery/evidence/rr-r9-active-phase-board-wide.png",
-      "kind": "verificationEvidence",
-      "lifecycle": "completed",
-      "authorityLevel": "nonAuthoritative",
-      "parentCollection": "delivery.evidence",
-      "supersedes": [],
-      "applicationSensitivity": [
-        "evidence"
-      ],
-      "checksum": {
-        "policy": "notApplicable"
-      }
-    },
-    {
-      "artifactID": "0ad29467-a31f-4574-9a98-05b2188a540f",
-      "path": "docs/delivery/evidence/rr-r9-active-phase-overview.png",
-      "kind": "verificationEvidence",
-      "lifecycle": "completed",
-      "authorityLevel": "nonAuthoritative",
-      "parentCollection": "delivery.evidence",
-      "supersedes": [],
-      "applicationSensitivity": [
-        "evidence"
-      ],
-      "checksum": {
-        "policy": "notApplicable"
-      }
-    },
-    {
-      "artifactID": "7e761c7f-890f-46f8-80ac-17139b378c52",
-      "path": "docs/delivery/evidence/rr-r9-active-phase-recovery.png",
-      "kind": "verificationEvidence",
-      "lifecycle": "completed",
-      "authorityLevel": "nonAuthoritative",
-      "parentCollection": "delivery.evidence",
-      "supersedes": [],
-      "applicationSensitivity": [
-        "evidence"
       ],
       "checksum": {
         "policy": "notApplicable"

@@ -55,10 +55,6 @@ and results remain in GitHub and the short [progress snapshot](progress.md).
 | rr-phase6e-search-compact | [docs/delivery/evidence/2026-09-10-phase6e-search-compact.png](evidence/2026-09-10-phase6e-search-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase6e-search-wide | [docs/delivery/evidence/2026-09-10-phase6e-search-wide.png](evidence/2026-09-10-phase6e-search-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase5e-lifecycle-native | [docs/delivery/evidence/phase5e-lifecycle-native.png](evidence/phase5e-lifecycle-native.png) | verificationEvidence | nonAuthoritative | completed | none | none |
-| a14ff940-cfc1-4735-974b-895ab63f1364 | [docs/delivery/evidence/rr-r9-active-phase-board-compact.png](evidence/rr-r9-active-phase-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
-| b445b788-23e7-4630-a4d1-648845c1ebcc | [docs/delivery/evidence/rr-r9-active-phase-board-wide.png](evidence/rr-r9-active-phase-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
-| 0ad29467-a31f-4574-9a98-05b2188a540f | [docs/delivery/evidence/rr-r9-active-phase-overview.png](evidence/rr-r9-active-phase-overview.png) | verificationEvidence | nonAuthoritative | completed | none | none |
-| 7e761c7f-890f-46f8-80ac-17139b378c52 | [docs/delivery/evidence/rr-r9-active-phase-recovery.png](evidence/rr-r9-active-phase-recovery.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 7b8828f1-697e-4140-9c9b-f5b3da58408d | [docs/delivery/evidence/rr10-needs-review.png](evidence/rr10-needs-review.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 
 ### Children

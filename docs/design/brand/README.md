@@ -40,7 +40,7 @@ exploration. It remains deferred until explicitly released in
 
 ## Collection: brand
 
-- Path: [docs/brand](.)
+- Path: [docs/design/brand](.)
 - Purpose: Approved V1 brand direction and retained design references
 - Allowed contents: Brand guidance; Historical raster and vector references
 - Prohibited contents: Owner data and credentials; Temporary build output
@@ -52,10 +52,10 @@ exploration. It remains deferred until explicitly released in
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| 37012d12-2f27-4282-a8ab-8e21d3c6eb14 | [docs/brand/README.md](README.md) | collectionIndex | controlling &#40;product.brand&#41; | active | none | none |
-| a357e108-aae8-4f15-a44a-3bad0e98c9d5 | [docs/brand/release-radar-icon-v1.png](release-radar-icon-v1.png) | designAsset | nonAuthoritative | completed | none | none |
-| 69ed9247-6243-4511-bf52-594c98e9d649 | [docs/brand/release-radar-icon-v1.svg](release-radar-icon-v1.svg) | designAsset | nonAuthoritative | completed | none | none |
-| 9484b9ea-9656-471a-92ee-cd0aac9f000a | [docs/brand/release-radar-lockup-v1.png](release-radar-lockup-v1.png) | designAsset | nonAuthoritative | completed | none | none |
+| 37012d12-2f27-4282-a8ab-8e21d3c6eb14 | [docs/design/brand/README.md](README.md) | collectionIndex | controlling &#40;product.brand&#41; | active | none | none |
+| a357e108-aae8-4f15-a44a-3bad0e98c9d5 | [docs/design/brand/release-radar-icon-v1.png](release-radar-icon-v1.png) | designAsset | nonAuthoritative | completed | none | none |
+| 69ed9247-6243-4511-bf52-594c98e9d649 | [docs/design/brand/release-radar-icon-v1.svg](release-radar-icon-v1.svg) | designAsset | nonAuthoritative | completed | none | none |
+| 9484b9ea-9656-471a-92ee-cd0aac9f000a | [docs/design/brand/release-radar-lockup-v1.png](release-radar-lockup-v1.png) | designAsset | nonAuthoritative | completed | none | none |
 
 ### Children
 
