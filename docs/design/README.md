@@ -5,18 +5,16 @@ Canonical product specifications are indexed in the
 This repository retains [mockups](mockups/), the approved V1
 [brand direction](brand/README.md), and historical visual references attached
 to [issue #153](https://github.com/joeroberts/release-radar/issues/153#issuecomment-5962140229).
-The Markdown specification routes in this directory remain non-authoritative
-until their scheduled cleanup.
 
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: design
 
 - Path: [docs/design](.)
-- Purpose: Repository routing stubs for canonical Wiki product specifications and repository-owned visual references
-- Allowed contents: Brand collection; Mockup collection; Visual study sources; Wiki routing stubs
+- Purpose: Repository-owned visual references
+- Allowed contents: Brand collection; Mockup collection
 - Prohibited contents: Owner data and credentials; Temporary build output
-- First read: [98f5320c-208e-4ca1-aacf-c8df5701a1d4](agent-driven-delivery-dashboard-design.md)
+- First read: [da877bf9-71c1-4b8b-8431-298121a2f41e](README.md)
 - Archive destination: none
 - Historical boundary: archived artifacts are non-authoritative.
 
@@ -24,45 +22,12 @@ until their scheduled cleanup.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7 | [docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md](2026-08-29-delivery-goals-roadmap-readiness-design.md) | document | supporting | active | none | none |
 | da877bf9-71c1-4b8b-8431-298121a2f41e | [docs/design/README.md](README.md) | collectionIndex | supporting | active | none | none |
-| 98f5320c-208e-4ca1-aacf-c8df5701a1d4 | [docs/design/agent-driven-delivery-dashboard-design.md](agent-driven-delivery-dashboard-design.md) | document | supporting | active | none | none |
-| 5790258e-3166-423e-a5b9-45cd6d8a530d | [docs/design/managed-repository-documentation-contract.md](managed-repository-documentation-contract.md) | document | supporting | active | none | none |
-| rr-outcome3-runtime-enforcement-assessment-2026-09-14 | [docs/design/project-execution-design.md](project-execution-design.md) | document | supporting | active | none | none |
-| 466140f5-f952-474b-8c65-aad1a1727b2e | [docs/design/release-radar-active-phase-selection-design.md](release-radar-active-phase-selection-design.md) | document | supporting | active | none | none |
-| a428dba8-6027-43e5-91d8-5c677ef34841 | [docs/design/release-radar-codex-plugin-lifecycle-design.md](release-radar-codex-plugin-lifecycle-design.md) | document | supporting | active | none | none |
-| eacc4905-ad05-4c51-aecc-6fd32fcb7b9b | [docs/design/release-radar-delivery-goals-phase-board-design.md](release-radar-delivery-goals-phase-board-design.md) | document | supporting | active | none | none |
-| 8d761556-f57d-4271-90a7-17c59348660b | [docs/design/release-radar-ticket-tasks-design.md](release-radar-ticket-tasks-design.md) | document | supporting | active | none | none |
-| rr-repository-plan-reconstruction-design-2026-09-12 | [docs/design/repository-plan-reconstruction-design.md](repository-plan-reconstruction-design.md) | document | supporting | proposed | none | none |
-| rr-shared-execution-integration-v1-design-2026-09-09 | [docs/design/shared-execution-integration-v1-design.md](shared-execution-integration-v1-design.md) | document | supporting | active | none | none |
 
 ### Children
 
 - [design.brand](brand/README.md) — indexed; Approved V1 brand direction and retained design references
 - [design.mockups](mockups) — leaf; Accepted visual references, proposal evidence, and superseded mockups
-
-## Collection: design.brand
-
-- Path: [docs/design/brand](brand)
-- Purpose: Approved V1 brand direction and retained design references
-- Allowed contents: Brand guidance; Historical raster and vector references
-- Prohibited contents: Owner data and credentials; Temporary build output
-- First read: [37012d12-2f27-4282-a8ab-8e21d3c6eb14](brand/README.md)
-- Archive destination: none
-- Historical boundary: archived artifacts are non-authoritative.
-
-### Artifacts
-
-| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
-| --- | --- | --- | --- | --- | --- | --- |
-| 37012d12-2f27-4282-a8ab-8e21d3c6eb14 | [docs/design/brand/README.md](brand/README.md) | collectionIndex | controlling &#40;product.brand&#41; | active | none | none |
-| a357e108-aae8-4f15-a44a-3bad0e98c9d5 | [docs/design/brand/release-radar-icon-v1.png](brand/release-radar-icon-v1.png) | designAsset | nonAuthoritative | completed | none | none |
-| 69ed9247-6243-4511-bf52-594c98e9d649 | [docs/design/brand/release-radar-icon-v1.svg](brand/release-radar-icon-v1.svg) | designAsset | nonAuthoritative | completed | none | none |
-| 9484b9ea-9656-471a-92ee-cd0aac9f000a | [docs/design/brand/release-radar-lockup-v1.png](brand/release-radar-lockup-v1.png) | designAsset | nonAuthoritative | completed | none | none |
-
-### Children
-
-No child collections.
 
 ## Leaf collection: design.mockups
 
