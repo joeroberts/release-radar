@@ -373,6 +373,11 @@ class ADRCheckerContractTests(unittest.TestCase):
         cases.append(("record-missing-fields", (json.dumps({**base, "records": [{"id": "ADR-001"}]}) + "\n").encode()))
         valid_record = self.fixture(name="catalog-shape-source").catalog()["records"][0]
         cases.append(("record-wrong-field-type", (json.dumps({**base, "records": [{**valid_record, "id": 1}]}) + "\n").encode()))
+        invalid_baseline = {
+            **valid_record,
+            "baseline": {**valid_record["baseline"], "commit": []},
+        }
+        cases.append(("baseline-commit-wrong-type", (json.dumps({**base, "records": [invalid_baseline]}) + "\n").encode()))
 
         for index, (name, raw) in enumerate(cases):
             with self.subTest(name=name):
@@ -1013,7 +1018,7 @@ class ADRCheckerContractTests(unittest.TestCase):
         fixture.push()
         diagnostics = self.snapshot(fixture, expected_exit=2)
         self.assert_blocked(diagnostics, "ADR_MISSING")
-        self.assert_blocked(diagnostics, "ADR_BASELINE_UNAVAILABLE")
+        self.assert_blocked(diagnostics, "ADR_FORMAT_INVALID")
         failure = {
             "code": "ADR_MISSING",
             "revision": fixture.head,
