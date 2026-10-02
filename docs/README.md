@@ -3,11 +3,12 @@
 ## Product knowledge and delivery
 
 The [Product Specifications](https://github.com/joeroberts/release-radar/wiki/Product-Specifications)
-and accepted entries in [Architecture Decisions](https://github.com/joeroberts/release-radar/wiki/Architecture-Decisions)
-own product behavior and architectural decisions. Repository routing stubs
-preserve stable local links. `docs/delivery/plans/` owns implementation
-sequences, dependencies, and rollout gates. ADR-005 and ADR-006 are also Wiki-canonical, with their existing pending
-approval qualifications.
+own product behavior. Wiki ADRs own architectural decisions subject to their
+catalogued scope and applicability; use the repository's `$adr-management` skill
+for every ADR read or change. Repository routing stubs preserve stable local
+links. Implementation plans may be Wiki- or repository-owned as identified by
+the current route; the owning GitHub issue records authorization, status and
+results.
 
 ## Current reading routes
 
@@ -20,15 +21,16 @@ about document use; it does not approve product work or change delivery state.
 | Current work, acceptance criteria, status, or results | The relevant [GitHub issue](https://github.com/joeroberts/release-radar/issues). Confirm its current state before acting. |
 | Initialize a development task | The [RR Development Delegation Model](https://github.com/joeroberts/release-radar/wiki/RR-Development-Delegation-Model), its appropriate role prompt, and the ticket-specific assignment. Consult the [GitHub Issue Standard](https://github.com/joeroberts/release-radar/wiki/GitHub-Issue-Standard) only when creating an issue. |
 | Resume the current development task | The relevant GitHub work and current owner instructions, then the [current handoff](delivery/progress.md) for additional context. The handoff is a navigation aid, not an authorization source. |
+| Read or change an architecture decision | Invoke `$adr-management` with the ticket, exact operation and relevant scopes from the assignment. Use `$development-exception` only after an eligible integrity failure and exact trusted owner approval. |
 | Existing product behavior or a product change | [Product Specifications](https://github.com/joeroberts/release-radar/wiki/Product-Specifications), the ticket-relevant specification, and only the accepted decisions it cites |
-| RR product behavior for managed documents, lifecycle changes, or renames | [Managed repository documentation specification](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation) and pending [ADR-006](https://github.com/joeroberts/release-radar/wiki/ADR-006-Managed-Repository-Documentation-Contract). These define RR product behavior, not the process for developing RR. |
+| RR product behavior for managed documents, lifecycle changes, or renames | [Managed repository documentation specification](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation) and the scope-selected [ADR-006](https://github.com/joeroberts/release-radar/wiki/ADR-006-Managed-Repository-Documentation-Contract). These define RR product behavior, not the process for developing RR. |
 | Shared Execution V1 compatibility or adoption diagnosis | [Shared Execution V1](https://github.com/joeroberts/release-radar/wiki/Spec-Shared-Execution-V1), then the consumer's own instructions and delivery state. V1 source delivery does not prove installation, runtime loading, or adoption. |
 | Proposed whole-product or companion work | [Full-product plan](delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md) and the linked proposed design. Read each section's approval qualification; proposal inclusion is not implementation authority. |
 
-Product specifications and accepted decisions each have one canonical Wiki
-location. The former repository authoring paths are non-authoritative routing
-stubs. ADR-005 and ADR-006 retain their recorded pending owner acceptance
-status in the Wiki. Preserve accepted ADR decision text.
+Product specifications and ADRs each have one canonical Wiki location. The
+former repository authoring paths are non-authoritative routing stubs. The Wiki
+ADR catalog, not a repository stub or this index, records decision status and
+scope applicability. Preserve accepted ADR protected bytes.
 
 Current specifications own continuing product requirements. Completed delivery
 paperwork is removed rather than retained in a competing archive. Git preserves

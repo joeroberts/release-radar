@@ -1,11 +1,11 @@
 # Delivery documentation
 
-[Plans](plans/) describe delivery scope, dependencies, sequencing and rollout.
-They reference the canonical [Product Specifications](https://github.com/joeroberts/release-radar/wiki/Product-Specifications)
-for behavior and contracts.
-Completed plans are removed after preserving continuing requirements; current
-work remains in GitHub and the
-short [progress snapshot](progress.md).
+[Repository plans](plans/) retain the supporting implementation plans catalogued
+here. A current plan may instead live in the Wiki when its task route identifies
+that page. Plans reference the canonical
+[Product Specifications](https://github.com/joeroberts/release-radar/wiki/Product-Specifications)
+for behavior and contracts; they do not grant authority. Current work, status
+and results remain in GitHub and the short [progress snapshot](progress.md).
 
 <!-- release-radar-docs:v1:start -->
 
