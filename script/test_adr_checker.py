@@ -229,7 +229,8 @@ class ADRCheckerContractTests(unittest.TestCase):
         return WikiFixture(self.temp / name, specs)
 
     def checker(self, fixture: WikiFixture, command: str, *arguments: str,
-                expected_exit: int | None = None) -> tuple[subprocess.CompletedProcess[bytes], dict[str, object] | None]:
+                expected_exit: int | None = None,
+                parse_json: bool = True) -> tuple[subprocess.CompletedProcess[bytes], dict[str, object] | None]:
         self.assertTrue(CHECKER.is_file(), f"production checker is missing: {CHECKER}")
         completed = run(
             ["python3", str(CHECKER), command, *arguments],
@@ -244,7 +245,7 @@ class ADRCheckerContractTests(unittest.TestCase):
                 completed.stderr.decode(errors="replace") or completed.stdout.decode(errors="replace"),
             )
         result = None
-        if completed.stdout:
+        if completed.stdout and parse_json:
             result = json.loads(completed.stdout)
         return completed, result
 
@@ -311,6 +312,7 @@ class ADRCheckerContractTests(unittest.TestCase):
             fixture,
             "render-index", "--repository", str(fixture.work), "--revision", fixture.head,
             expected_exit=0,
+            parse_json=False,
         )
         after = fixture.git("status", "--porcelain=v1").stdout
         self.assertEqual(before, after)
