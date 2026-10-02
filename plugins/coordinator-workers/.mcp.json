@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "coordinator-workers": {
+      "command": "python3",
+      "args": [
+        "-B",
+        "scripts/server.py"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "COORDINATOR_WORKERS_POLICY"
+      ]
+    }
+  }
+}

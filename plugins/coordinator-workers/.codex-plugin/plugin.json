@@ -1,0 +1,19 @@
+{
+  "name": "coordinator-workers",
+  "version": "0.1.0",
+  "description": "Launch bounded Codex workers with explicit checkout and permission settings.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Coordinator Workers",
+    "shortDescription": "Use Coordinator Workers in Codex.",
+    "longDescription": "Launch bounded Codex workers with explicit checkout and permission settings.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me use Coordinator Workers."
+  },
+  "mcpServers": "./.mcp.json"
+}

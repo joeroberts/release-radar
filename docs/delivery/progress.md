@@ -2,6 +2,19 @@
 
 ## Current outcome
 
+**September 16: coordinator plugin local candidate complete; not installed or published.**
+The owner approved one-time Main implementation and independent-review launch
+exceptions. The [bounded brief](task-briefs/2026-09-16-coordinator-app-server-plugin.md)
+records the working-tree candidate, 25 passing tests, live MCP RO/RW checks, explicit
+history/common-Git protection and the independent review. Reviewer
+01a0abab-2c2b-7930-bb0f-1a8d5c6bd098 passed the three required corrections; the
+superseded inaccessible reviewer was archived. No required implementation findings
+remain. Source and documentation are uncommitted on codex/coordinator-app-server-plugin;
+primary-checkout work and native hooks are untouched. Branch-local catalog/indexes
+validate; application acceptance is pending any later adoption, not claimed here.
+Next eligible action is owner disposition of this reviewed local candidate. Push,
+PR, installation, configuration and application mutations remain separate endpoints.
+
 **Owner-approved continuation: complete the simple workspace setup.** The owner
 explicitly directed the coordinator to work from the canonical checkout on main,
 create fresh delivery/review tasks, use a reusable workspace-relative restricted
