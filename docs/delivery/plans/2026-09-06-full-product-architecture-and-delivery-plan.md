@@ -708,9 +708,9 @@ Concrete contradictions requiring reconciliation in the owning slice:
 - **ADR-006 authority:** The owner approved the substantive M1 Managed Repository
   Documentation Contract architecture and planning direction and required the
   reviewed package to be committed without revision. ADR-006 therefore retains
-  its original pending-approval wording as historical text. Its active/controlling
-  catalog classification identifies the accepted M1 architectural direction; it
-  does not establish blanket approval of every paragraph or later appendix. The
+  its original pending-approval wording as historical text. The architectural record is now Wiki-canonical; the repository catalog entry
+  describes a supporting routing stub. Neither its location nor that metadata
+  establishes blanket approval of every paragraph or later appendix. The
   approval expressly excluded M1's full-role review matrix, mutable-brief checksums
   and validation-of-validation requirements, and did not authorize implementation
   or application/external mutations. Later additions retain their separately
@@ -1238,7 +1238,7 @@ another authority system. On approval, reconcile these exact sources:
 | Dashboard design, onboarding and mutation principles | Phase-required completion and guidance-only prompt deadlock; early “no delivery gates” language conflicts with accepted readiness/acceptance rules. | Adopt complete setup semantics and distinguish authorization/readiness/acceptance from agent execution. |
 | ADR-001 archive v1 and companion boundary | V1 lacks newer domain sections and file bytes; its audit exclusion conflicts with retained assignment-event history. The old companion draft proposed cloud authority. | The owner-approved continuity amendment selects a complete project-record/document/evidence package and Mac/repository authority with read-only cloud publication. Preserve v1 meanings and design the new format explicitly; detailed RM8 implementation remains unapproved. |
 | ADR-003 and Project Plan proposal | Active context versus proposed lifecycle “Current.” | Retain one active-context authority and choose separate lifecycle/order names. |
-| ADR-004/005/006 headers and implementation claims | “Pending/proposed” text competes with active controlling catalog and delivered behavior. | Use the ADR-006 authority clarification above and reconcile any remaining status outside ADR files after checking approvals; do not infer authority from a header or mark proposals implemented. |
+| ADR-004/005/006 headers and implementation claims | Recorded pending/proposed qualifications must remain distinct from delivery evidence. Repository catalog entries now describe supporting routing stubs to Wiki records. | Use the ADR-006 authority clarification above and reconcile any remaining status outside ADR files after checking approvals; do not infer authority from a header or mark proposals implemented. |
 | Managed-documentation contract / shipped catalog reference | Blanket prohibition of hidden OS files causes `.DS_Store` to invalidate otherwise valid documentation. | Implement C8's narrow, tested discovery exclusion and document its versioned compatibility rule; retain artifact and filesystem safety requirements. |
 | RR-R10 archive statements / roadmap | Export/import remain future RM5/6; the design requires v1 lane conversion to Backlog while ADR-001 preserves source lanes and DG2 requires lossless continuity. | Approve one versioned preservation/readiness contract, reject unsupported state without omission, and state delivered capability accurately. Keep RM10 Help distinct from completed RR-R10. |
 | Planning/UX studies and mockups | Outdated no-phase-discovery claim; two goal domains; additional surfaces not scheduled as implementation. | Preserve intended jobs, update obsolete diagnosis, make chosen IA and added outcomes explicit, label declined alternatives. |
