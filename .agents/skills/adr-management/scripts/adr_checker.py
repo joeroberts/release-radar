@@ -372,9 +372,9 @@ def validate_catalog(catalog: Any, object_format: str) -> tuple[dict[str, dict[s
         return records_by_id, [diagnostic("ADR_FORMAT_INVALID", "Catalog fields are invalid.", path=CATALOG_PATH)]
     if type(catalog["version"]) is not int or catalog["version"] != 1:
         diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "Catalog version must be integer 1.", path=CATALOG_PATH))
-    if catalog["wikiRepository"] != CANONICAL_WIKI:
+    if type(catalog["wikiRepository"]) is not str or catalog["wikiRepository"] != CANONICAL_WIKI:
         diagnostics.append(diagnostic("ADR_SOURCE_UNSAFE", "Catalog Wiki identity is not canonical.", path=CATALOG_PATH, expected=CANONICAL_WIKI, actual=catalog["wikiRepository"]))
-    if catalog["objectFormat"] not in {"sha1", "sha256"} or catalog["objectFormat"] != object_format:
+    if type(catalog["objectFormat"]) is not str or catalog["objectFormat"] not in {"sha1", "sha256"} or catalog["objectFormat"] != object_format:
         diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "Catalog object format does not match Git.", path=CATALOG_PATH, expected=object_format, actual=catalog["objectFormat"]))
     if type(catalog["records"]) is not list or len(catalog["records"]) > MAX_ADRS:
         diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "Catalog records must be an array within the record limit.", path=CATALOG_PATH))
@@ -405,20 +405,22 @@ def validate_catalog(catalog: Any, object_format: str) -> tuple[dict[str, dict[s
         normalized_paths.add(normalized)
         if len(record["path"].encode("ascii")) > 255 or not nonempty_string(record["title"], 255) or "\n" in record["title"]:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "ADR path or title exceeds its format limit.", id=record["id"], path=record["path"]))
-        if record["status"] not in STATUSES or record["domain"] not in DOMAINS:
+        status = record["status"] if type(record["status"]) is str else ""
+        domain = record["domain"] if type(record["domain"]) is str else ""
+        if status not in STATUSES or domain not in DOMAINS:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "ADR status or domain is invalid.", id=record["id"], path=record["path"]))
         if type(record["scopes"]) is not list or not record["scopes"] or len(record["scopes"]) > 100:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "ADR scopes are invalid.", id=record["id"], path=record["path"]))
         else:
             seen_scopes: set[str] = set()
             for scope in record["scopes"]:
-                if not exact_fields(scope, {"key", "applicability"}) or not nonempty_string(scope.get("key"), 128) or SCOPE_KEY.fullmatch(scope["key"]) is None or scope["applicability"] not in APPLICABILITIES or scope["key"] in seen_scopes:
+                if not exact_fields(scope, {"key", "applicability"}) or not nonempty_string(scope.get("key"), 128) or SCOPE_KEY.fullmatch(scope["key"]) is None or type(scope["applicability"]) is not str or scope["applicability"] not in APPLICABILITIES or scope["key"] in seen_scopes:
                     diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "ADR scope entry is invalid.", id=record["id"], path=record["path"]))
                     continue
                 seen_scopes.add(scope["key"])
                 expected_applicabilities = (
-                    {"proposed"} if record["status"] == "Proposed" else
-                    {"historical"} if record["status"] in {"Rejected", "Superseded"} else
+                    {"proposed"} if status == "Proposed" else
+                    {"historical"} if status in {"Rejected", "Superseded"} else
                     {"current", "historical", "unresolved"}
                 )
                 if scope["applicability"] not in expected_applicabilities:
@@ -426,7 +428,7 @@ def validate_catalog(catalog: Any, object_format: str) -> tuple[dict[str, dict[s
         if type(record["blob"]) is not str or oid_pattern.fullmatch(record["blob"]) is None:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "Current blob ID is invalid.", id=record["id"], path=record["path"]))
         baseline = record["baseline"]
-        requires_baseline = record["status"] in {"Accepted", "Superseded"}
+        requires_baseline = status in {"Accepted", "Superseded"}
         if baseline is None:
             if requires_baseline:
                 diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Accepted decision has no fixed baseline.", id=record["id"], path=record["path"]))
@@ -495,9 +497,9 @@ def validate_snapshot_content(
             parsed = strict_json_bytes(catalog_raw, MAX_JSON_BYTES)
             if type(parsed) is not dict:
                 raise StrictJSONError("catalog root is not an object")
-            catalog = parsed
-            records, catalog_diagnostics = validate_catalog(catalog, object_format)
+            records, catalog_diagnostics = validate_catalog(parsed, object_format)
             diagnostics.extend(catalog_diagnostics)
+            catalog = parsed if not catalog_diagnostics else None
         except (ValueError, OverflowError, StrictJSONError) as error:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", f"ADR catalog is invalid: {error}", path=CATALOG_PATH))
 
@@ -667,7 +669,7 @@ def actual_transition_actions(
                 if before["status"] == after["status"] == "Proposed":
                     changed.add("proposed-body")
                 else:
-                    changed.add("remove")
+                    changed.add("title")
             if before["blob"] != after["blob"] and not ({"status", "path", "baseline"} & changed):
                 try:
                     before_raw = read_blob(repository, prior.revision, before["path"], MAX_ADR_BYTES)
@@ -696,9 +698,25 @@ def validate_lifecycle_transition(
         ("Proposed", "Rejected"),
         ("Accepted", "Superseded"),
     }
+    for adr_id in set(candidate.records) - set(prior.records):
+        record = candidate.records[adr_id]
+        if record["status"] != "Proposed":
+            diagnostics.append(diagnostic(
+                "ADR_TRANSITION_UNAUTHORIZED",
+                "A normal transition can add only a Proposed decision.",
+                id=adr_id, path=record["path"], actual=record["status"],
+            ))
     for adr_id in set(prior.records) & set(candidate.records):
         before = prior.records[adr_id]
         after = candidate.records[adr_id]
+        if before["title"] != after["title"] and not (
+            before["status"] == after["status"] == "Proposed"
+        ):
+            diagnostics.append(diagnostic(
+                "ADR_TRANSITION_UNAUTHORIZED",
+                "A non-Proposed decision title cannot change in place.",
+                id=adr_id, expected=before["title"], actual=after["title"],
+            ))
         if before["status"] != after["status"]:
             transition = (before["status"], after["status"])
             if transition not in allowed_status_changes:
