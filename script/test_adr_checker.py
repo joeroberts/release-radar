@@ -370,6 +370,9 @@ class ADRCheckerContractTests(unittest.TestCase):
         cases.append(("bom", b"\xef\xbb\xbf" + (json.dumps(base) + "\n").encode()))
         cases.append(("invalid-utf8", b"{\xff}\n"))
         cases.append(("wrong-type", (json.dumps({**base, "records": {}}) + "\n").encode()))
+        cases.append(("record-missing-fields", (json.dumps({**base, "records": [{"id": "ADR-001"}]}) + "\n").encode()))
+        valid_record = self.fixture(name="catalog-shape-source").catalog()["records"][0]
+        cases.append(("record-wrong-field-type", (json.dumps({**base, "records": [{**valid_record, "id": 1}]}) + "\n").encode()))
 
         for index, (name, raw) in enumerate(cases):
             with self.subTest(name=name):
@@ -535,14 +538,15 @@ class ADRCheckerContractTests(unittest.TestCase):
         self.assertIsInstance(result, dict)
         return result  # type: ignore[return-value]
 
-    def authorization(self, prior: str, candidate: str, actions: list[str]) -> dict[str, object]:
+    def authorization(self, prior: str, candidate: str, actions: list[str],
+                      *, adr_id: str = "ADR-001") -> dict[str, object]:
         return {
             "version": 1,
             "ticket": TICKET,
             "operation": OPERATION,
             "priorRevision": prior,
             "candidateRevision": candidate,
-            "changes": [{"id": "ADR-001", "actions": actions}],
+            "changes": [{"id": adr_id, "actions": actions}],
             "approvalRef": "trusted-owner-handoff:qa-fixture",
         }
 
@@ -605,6 +609,121 @@ class ADRCheckerContractTests(unittest.TestCase):
             initial_catalog=True,
         )
         self.assert_blocked(result, "ADR_TRANSITION_UNAUTHORIZED")
+
+    def test_normal_transition_requires_status_and_baseline_authorization_for_new_accepted_record(self) -> None:
+        accepted = self.fixture(name="new-accepted")
+        prior = accepted.head
+        path = "ADR-002-New-Decision.md"
+        proposed_raw = document_bytes("ADR-002", "Proposed", "\n## Decision\n\nNew boundary.\n")
+        accepted.write(path, proposed_raw)
+        proposed_candidate = accepted.commit("prepare proposed ADR candidate")
+        proposed_blob = accepted.blob(proposed_candidate, path)
+        accepted.write(path, document_bytes("ADR-002", "Accepted", "\n## Decision\n\nNew boundary.\n"))
+        records = list(accepted.catalog()["records"])
+        records.append({
+            "id": "ADR-002",
+            "path": path,
+            "title": "New Decision",
+            "status": "Accepted",
+            "domain": "product",
+            "scopes": [{"key": SCOPE, "applicability": "current"}],
+            "blob": accepted.git("hash-object", path).stdout.decode().strip(),
+            "baseline": {
+                "commit": proposed_candidate,
+                "path": path,
+                "blob": proposed_blob,
+                "bodySha256": hashlib.sha256(protected_body(proposed_raw)).hexdigest(),
+            },
+            "evidence": [TICKET],
+        })
+        accepted.write_catalog(records)
+        accepted.write("Architecture-Decisions.md", render_index(records))
+        candidate = accepted.commit("add accepted ADR")
+
+        add_only = self.transition(
+            accepted,
+            prior,
+            candidate,
+            self.authorization(prior, candidate, ["add"], adr_id="ADR-002"),
+            expected_exit=2,
+        )
+        self.assert_blocked(add_only, "ADR_TRANSITION_UNAUTHORIZED")
+
+        explicitly_nonproposed = self.transition(
+            accepted,
+            prior,
+            candidate,
+            self.authorization(prior, candidate, ["add", "status", "baseline"], adr_id="ADR-002"),
+            expected_exit=2,
+        )
+        self.assert_blocked(explicitly_nonproposed, "ADR_TRANSITION_UNAUTHORIZED")
+
+        proposed = self.fixture(name="new-proposed")
+        proposed_prior = proposed.head
+        proposed_path = "ADR-002-Proposal.md"
+        proposed.write(proposed_path, document_bytes("ADR-002", "Proposed", "\n## Decision\n\nCandidate only.\n"))
+        proposed_records = list(proposed.catalog()["records"])
+        proposed_records.append({
+            "id": "ADR-002",
+            "path": proposed_path,
+            "title": "Proposal",
+            "status": "Proposed",
+            "domain": "product",
+            "scopes": [{"key": SCOPE, "applicability": "proposed"}],
+            "blob": proposed.git("hash-object", proposed_path).stdout.decode().strip(),
+            "baseline": None,
+            "evidence": [TICKET],
+        })
+        proposed.write_catalog(proposed_records)
+        proposed.write("Architecture-Decisions.md", render_index(proposed_records))
+        proposed_candidate_commit = proposed.commit("add proposed ADR")
+        proposed_result = self.transition(
+            proposed,
+            proposed_prior,
+            proposed_candidate_commit,
+            self.authorization(proposed_prior, proposed_candidate_commit, ["add"], adr_id="ADR-002"),
+            expected_exit=0,
+        )
+        self.assertEqual("verified", proposed_result["status"])
+
+    def test_title_only_transition_is_proposed_body_or_rejected_not_remove(self) -> None:
+        accepted = self.fixture(name="accepted-title")
+        accepted_prior = accepted.head
+        accepted_records = list(accepted.catalog()["records"])
+        accepted_records[0]["title"] = "Renamed Accepted Decision"
+        accepted.write_catalog(accepted_records)
+        accepted.write("Architecture-Decisions.md", render_index(accepted_records))
+        accepted_candidate = accepted.commit("rename accepted catalog title")
+        disguised_remove = self.transition(
+            accepted,
+            accepted_prior,
+            accepted_candidate,
+            self.authorization(accepted_prior, accepted_candidate, ["remove"]),
+            expected_exit=2,
+        )
+        self.assert_blocked(disguised_remove, "ADR_TRANSITION_UNAUTHORIZED")
+
+        specs = [{
+            "id": "ADR-001", "path": "ADR-001-Proposal.md", "title": "Proposal",
+            "status": "Proposed", "domain": "product",
+            "scopes": [{"key": SCOPE, "applicability": "proposed"}],
+            "body": "\n## Decision\n\nCandidate only.\n",
+        }]
+        proposed = self.fixture(specs, name="proposed-title")
+        proposed_prior = proposed.head
+        proposed_records = list(proposed.catalog()["records"])
+        proposed_records[0]["title"] = "Renamed Proposal"
+        proposed.write_catalog(proposed_records)
+        proposed.write("Architecture-Decisions.md", render_index(proposed_records))
+        proposed_candidate = proposed.commit("rename proposed catalog title")
+        proposed_result = self.transition(
+            proposed,
+            proposed_prior,
+            proposed_candidate,
+            self.authorization(proposed_prior, proposed_candidate, ["proposed-body"]),
+            expected_exit=0,
+        )
+        self.assertEqual("verified", proposed_result["status"])
 
     def test_transition_rejects_unbound_change_and_stale_prior(self) -> None:
         fixture = self.fixture(name="unbound")
