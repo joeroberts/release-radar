@@ -430,7 +430,7 @@ def validate_catalog(catalog: Any, object_format: str) -> tuple[dict[str, dict[s
         if baseline is None:
             if requires_baseline:
                 diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Accepted decision has no fixed baseline.", id=record["id"], path=record["path"]))
-        elif not exact_fields(baseline, {"commit", "path", "blob", "bodySha256"}) or type(baseline.get("commit")) is not str or oid_pattern.fullmatch(baseline["commit"]) is None or type(baseline.get("path")) is not str or ADR_FILENAME.fullmatch(baseline["path"]) is None or type(baseline.get("blob")) is not str or oid_pattern.fullmatch(baseline["blob"]) is None or type(baseline.get("bodySha256")) is not str or SHA256.fullmatch(baseline["bodySha256"]) is None:
+        elif not exact_fields(baseline, {"commit", "path", "blob", "bodySha256"}) or type(baseline.get("commit")) is not str or oid_pattern.fullmatch(baseline["commit"]) is None or type(baseline.get("path")) is not str or ADR_FILENAME.fullmatch(baseline["path"]) is None or baseline["path"].split("-", 2)[:2] != record["id"].split("-", 1) or type(baseline.get("blob")) is not str or oid_pattern.fullmatch(baseline["blob"]) is None or type(baseline.get("bodySha256")) is not str or SHA256.fullmatch(baseline["bodySha256"]) is None:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "Accepted baseline is malformed.", id=record["id"], path=record["path"]))
         elif not requires_baseline:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "Never-accepted decision must have a null baseline.", id=record["id"], path=record["path"]))
@@ -513,6 +513,30 @@ def validate_snapshot_content(
     combined_size = 0
     for adr_id, record in records.items():
         path = record.get("path")
+        baseline = record.get("baseline")
+        baseline_metadata: dict[str, str] | None = None
+        baseline_body: bytes | None = None
+        if baseline is not None and exact_fields(baseline, {"commit", "path", "blob", "bodySha256"}):
+            try:
+                baseline_tree = parse_tree(repository, baseline["commit"])
+                baseline_entry = baseline_tree.get(baseline["path"])
+                if baseline_entry is None or baseline_entry.mode != "100644" or baseline_entry.kind != "blob" or baseline_entry.oid != baseline["blob"]:
+                    raise ValueError("baseline path/blob is unavailable")
+                baseline_raw = read_blob(repository, baseline["commit"], baseline["path"], MAX_ADR_BYTES)
+                baseline_metadata, baseline_body = parse_metadata(baseline_raw, baseline["path"])
+                if baseline_metadata["ID"] != adr_id or baseline_metadata["Status"] not in {"Proposed", "Accepted"}:
+                    raise ValueError("baseline identity or source status is invalid")
+                actual_body_hash = hashlib.sha256(baseline_body).hexdigest()
+                if actual_body_hash != baseline["bodySha256"]:
+                    raise ValueError("baseline body hash is inconsistent")
+            except (ValueError, OverflowError) as error:
+                diagnostics.append(diagnostic(
+                    "ADR_BASELINE_UNAVAILABLE",
+                    f"Fixed accepted baseline cannot be resolved: {error}",
+                    id=adr_id, path=path, expected=baseline.get("blob"),
+                ))
+                baseline_metadata = None
+                baseline_body = None
         entry = tree.get(path) if type(path) is str else None
         if entry is None or entry.kind != "blob" or entry.mode != "100644":
             continue
@@ -527,21 +551,7 @@ def validate_snapshot_content(
             diagnostics.append(diagnostic("ADR_BLOB_MISMATCH", "Catalog blob does not match the pinned ADR blob.", id=adr_id, path=path, expected=record.get("blob"), actual=entry.oid))
         if metadata["ID"] != adr_id or metadata["Status"] != record.get("status"):
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", "ADR metadata disagrees with the catalog.", id=adr_id, path=path))
-        baseline = record.get("baseline")
-        if baseline is not None and exact_fields(baseline, {"commit", "path", "blob", "bodySha256"}):
-            try:
-                baseline_tree = parse_tree(repository, baseline["commit"])
-                baseline_entry = baseline_tree.get(baseline["path"])
-                if baseline_entry is None or baseline_entry.mode != "100644" or baseline_entry.kind != "blob" or baseline_entry.oid != baseline["blob"]:
-                    raise ValueError("baseline path/blob is unavailable")
-                baseline_raw = read_blob(repository, baseline["commit"], baseline["path"], MAX_ADR_BYTES)
-                baseline_metadata, baseline_body = parse_metadata(baseline_raw, baseline["path"])
-            except (ValueError, OverflowError):
-                diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Fixed accepted baseline cannot be resolved.", id=adr_id, path=path, expected=baseline.get("blob")))
-                continue
-            actual_body_hash = hashlib.sha256(baseline_body).hexdigest()
-            if actual_body_hash != baseline["bodySha256"]:
-                diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Fixed accepted baseline body hash is inconsistent.", id=adr_id, path=path, expected=baseline["bodySha256"], actual=actual_body_hash))
+        if baseline_metadata is not None and baseline_body is not None:
             immutable_keys = ("ID", "Date", "Date meaning", "Implementation", "Approval qualification")
             immutable_changed = any(metadata[key] != baseline_metadata[key] for key in immutable_keys)
             if body != baseline_body or immutable_changed:
@@ -855,10 +865,10 @@ def extract_exception_block(body: str) -> bytes:
 def validate_issue_snapshot(value: Any) -> str | None:
     if not exact_fields(value, {"version", "issue", "comments", "commentsComplete"}) or value["version"] != 1 or type(value["commentsComplete"]) is not bool or type(value["comments"]) is not list or not exact_fields(value["issue"], {"url", "state", "body"}):
         return "issue snapshot shape is invalid"
-    if not all(nonempty_string(value["issue"].get(key), 4096 if key == "body" else 2048) for key in ("url", "state", "body")):
+    if not nonempty_string(value["issue"].get("url"), 2048) or not nonempty_string(value["issue"].get("state"), 128) or type(value["issue"].get("body")) is not str or "\x00" in value["issue"]["body"]:
         return "issue snapshot values are invalid"
     for comment in value["comments"]:
-        if not exact_fields(comment, {"id", "url", "updatedAt", "body"}) or not all(nonempty_string(comment.get(key), 65536 if key == "body" else 2048) for key in ("id", "url", "updatedAt", "body")):
+        if not exact_fields(comment, {"id", "url", "updatedAt", "body"}) or not all(nonempty_string(comment.get(key), 2048) for key in ("id", "url", "updatedAt")) or type(comment.get("body")) is not str or "\x00" in comment["body"]:
             return "issue comment shape is invalid"
     return None
 
@@ -922,6 +932,8 @@ def reliance_for_document(
     commit: str,
     path: str,
     expected_blob: str | None = None,
+    expected_id: str | None = None,
+    allowed_statuses: set[str] | None = None,
 ) -> dict[str, str]:
     tree = parse_tree(repository, commit)
     entry = tree.get(path)
@@ -930,7 +942,11 @@ def reliance_for_document(
     if expected_blob is not None and entry.oid != expected_blob:
         raise ValueError("relied-on ADR blob does not match its fixed identity")
     raw = read_blob(repository, commit, path, MAX_ADR_BYTES)
-    _, body = parse_metadata(raw, path)
+    metadata, body = parse_metadata(raw, path)
+    if expected_id is not None and metadata["ID"] != expected_id:
+        raise ValueError("relied-on ADR metadata ID does not match its catalog record")
+    if allowed_statuses is not None and metadata["Status"] not in allowed_statuses:
+        raise ValueError("relied-on ADR source status is invalid")
     return {
         "commit": commit,
         "path": path,
@@ -956,10 +972,16 @@ def validate_exception_semantics(
         entry = current.tree.get(record["path"])
         try:
             if entry is not None and entry.mode == "100644" and entry.kind == "blob":
-                expected_reliance.append(reliance_for_document(repository, current.revision, record["path"], entry.oid))
+                expected_reliance.append(reliance_for_document(
+                    repository, current.revision, record["path"], entry.oid,
+                    expected_id=adr_id, allowed_statuses={record["status"]},
+                ))
             elif record["status"] in {"Accepted", "Superseded"} and record["baseline"] is not None:
                 baseline = record["baseline"]
-                expected_reliance.append(reliance_for_document(repository, baseline["commit"], baseline["path"], baseline["blob"]))
+                expected_reliance.append(reliance_for_document(
+                    repository, baseline["commit"], baseline["path"], baseline["blob"],
+                    expected_id=adr_id, allowed_statuses={"Proposed", "Accepted"},
+                ))
         except (ValueError, OverflowError):
             diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Selected relied-on ADR bytes cannot be verified.", id=adr_id, path=record["path"]))
 
@@ -984,10 +1006,15 @@ def validate_exception_semantics(
                 if record is None or record["status"] not in {"Accepted", "Superseded"} or record["baseline"] is None:
                     continue
                 baseline = record["baseline"]
-                baseline_reliance = {
-                    "commit": baseline["commit"], "path": baseline["path"],
-                    "blob": baseline["blob"], "bodySha256": baseline["bodySha256"],
-                }
+                try:
+                    baseline_reliance = reliance_for_document(
+                        repository, baseline["commit"], baseline["path"], baseline["blob"],
+                        expected_id=record["id"], allowed_statuses={"Proposed", "Accepted"},
+                    )
+                except (ValueError, OverflowError):
+                    continue
+                if baseline_reliance["bodySha256"] != baseline["bodySha256"]:
+                    continue
                 if (
                     failure["path"] == record["path"]
                     and failure["expectedBlob"] == record["blob"]
@@ -1003,7 +1030,10 @@ def validate_exception_semantics(
                 try:
                     raw = read_blob(repository, current.revision, path, MAX_ADR_BYTES)
                     metadata, _ = parse_metadata(raw, path)
-                    proposed_reliance = reliance_for_document(repository, current.revision, path, entry.oid)
+                    proposed_reliance = reliance_for_document(
+                        repository, current.revision, path, entry.oid,
+                        expected_id=metadata["ID"], allowed_statuses={"Proposed"},
+                    )
                 except (ValueError, OverflowError):
                     continue
                 if (
@@ -1023,7 +1053,10 @@ def validate_exception_semantics(
                 if entry is None or entry.mode != "100644" or entry.kind != "blob":
                     continue
                 try:
-                    observed_reliance = reliance_for_document(repository, current.revision, record["path"], entry.oid)
+                    observed_reliance = reliance_for_document(
+                        repository, current.revision, record["path"], entry.oid,
+                        expected_id=record["id"], allowed_statuses={record["status"]},
+                    )
                 except (ValueError, OverflowError):
                     continue
                 if (
