@@ -38,7 +38,7 @@ exploration. It remains deferred until explicitly released in
 
 <!-- release-radar-docs:v1:start -->
 
-## Collection: brand
+## Collection: design.brand
 
 - Path: [docs/design/brand](.)
 - Purpose: Approved V1 brand direction and retained design references
