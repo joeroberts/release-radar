@@ -499,7 +499,11 @@ def validate_snapshot_content(
                 raise StrictJSONError("catalog root is not an object")
             records, catalog_diagnostics = validate_catalog(parsed, object_format)
             diagnostics.extend(catalog_diagnostics)
-            catalog = parsed if not catalog_diagnostics else None
+            if catalog_diagnostics:
+                records = {}
+                catalog = None
+            else:
+                catalog = parsed
         except (ValueError, OverflowError, StrictJSONError) as error:
             diagnostics.append(diagnostic("ADR_FORMAT_INVALID", f"ADR catalog is invalid: {error}", path=CATALOG_PATH))
 
