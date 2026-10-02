@@ -53,17 +53,14 @@ These instructions apply to the entire repository.
 Treat the user's explicit request and the approved project artifacts as the
 controlling sources for Release Radar. Start at the
 [Wiki Home](https://github.com/joeroberts/release-radar/wiki) and use its task
-router to load only ticket-relevant product specifications and accepted
-architecture decisions, preserving every recorded approval and dependency
+router to load only ticket-relevant product specifications and architecture
+records, including pending decisions, preserving every recorded approval and dependency
 qualification. Current repository-owned artifacts include:
 
 - `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`
   for whole-product dependencies and assessed future direction; preserve its
   distinction between approved inclusion, proposed contracts and implementation
 - `docs/design/mockups/` for repository-owned visual design references
-- `docs/architecture/ADR-005-ticket-task-work-plans.md` and
-  `docs/architecture/ADR-006-managed-repository-documentation-contract.md` as
-  qualified pending repository-canonical decisions
 - `docs/brand/README.md` for the approved product identity
 - GitHub issues for current work, status and verification;
   `docs/delivery/progress.md` is the bounded current handoff snapshot

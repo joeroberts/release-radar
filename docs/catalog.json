@@ -404,10 +404,9 @@
       "collectionID": "architecture",
       "path": "docs/architecture",
       "parentCollection": "docs",
-      "purpose": "Repository routing stubs for accepted Wiki decisions and repository-canonical pending decisions",
+      "purpose": "Repository routing stubs for Wiki architecture records, including pending decisions",
       "allowedContents": [
-        "Wiki routing stubs",
-        "Pending or proposed repository-canonical architecture records"
+        "Wiki routing stubs"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -627,8 +626,7 @@
       "path": "docs/architecture/ADR-005-ticket-task-work-plans.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.ticket-tasks",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [
@@ -643,8 +641,7 @@
       "path": "docs/architecture/ADR-006-managed-repository-documentation-contract.md",
       "kind": "document",
       "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "architecture.managed-documentation",
+      "authorityLevel": "supporting",
       "parentCollection": "architecture",
       "supersedes": [],
       "applicationSensitivity": [

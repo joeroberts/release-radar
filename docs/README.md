@@ -6,8 +6,8 @@ The [Product Specifications](https://github.com/joeroberts/release-radar/wiki/Pr
 and accepted entries in [Architecture Decisions](https://github.com/joeroberts/release-radar/wiki/Architecture-Decisions)
 own product behavior and architectural decisions. Repository routing stubs
 preserve stable local links. `docs/delivery/plans/` owns implementation
-sequences, dependencies, and rollout gates. Pending ADR-005 and ADR-006 remain
-repository-canonical with their existing approval qualifications.
+sequences, dependencies, and rollout gates. ADR-005 and ADR-006 are also Wiki-canonical, with their existing pending
+approval qualifications.
 
 ## Current reading routes
 
@@ -21,14 +21,14 @@ about document use; it does not approve product work or change delivery state.
 | Initialize a development task | The [RR Development Delegation Model](https://github.com/joeroberts/release-radar/wiki/RR-Development-Delegation-Model), its appropriate role prompt, and the ticket-specific assignment. Consult the [GitHub Issue Standard](https://github.com/joeroberts/release-radar/wiki/GitHub-Issue-Standard) only when creating an issue. |
 | Resume the current development task | The relevant GitHub work and current owner instructions, then the [current handoff](delivery/progress.md) for additional context. The handoff is a navigation aid, not an authorization source. |
 | Existing product behavior or a product change | [Product Specifications](https://github.com/joeroberts/release-radar/wiki/Product-Specifications), the ticket-relevant specification, and only the accepted decisions it cites |
-| RR product behavior for managed documents, lifecycle changes, or renames | [Managed repository documentation specification](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation) and repository-canonical [ADR-006](architecture/ADR-006-managed-repository-documentation-contract.md). These define RR product behavior, not the process for developing RR. |
+| RR product behavior for managed documents, lifecycle changes, or renames | [Managed repository documentation specification](https://github.com/joeroberts/release-radar/wiki/Spec-Managed-Repository-Documentation) and pending [ADR-006](https://github.com/joeroberts/release-radar/wiki/ADR-006-Managed-Repository-Documentation-Contract). These define RR product behavior, not the process for developing RR. |
 | Shared Execution V1 compatibility or adoption diagnosis | [Shared Execution V1](https://github.com/joeroberts/release-radar/wiki/Spec-Shared-Execution-V1), then the consumer's own instructions and delivery state. V1 source delivery does not prove installation, runtime loading, or adoption. |
 | Proposed whole-product or companion work | [Full-product plan](delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md) and the linked proposed design. Read each section's approval qualification; proposal inclusion is not implementation authority. |
 
 Product specifications and accepted decisions each have one canonical Wiki
 location. The former repository authoring paths are non-authoritative routing
-stubs. ADR-005 and ADR-006 remain repository-canonical pending their recorded
-owner acceptance. Preserve accepted ADR decision text.
+stubs. ADR-005 and ADR-006 retain their recorded pending owner acceptance
+status in the Wiki. Preserve accepted ADR decision text.
 
 Current specifications own continuing product requirements. Completed delivery
 paperwork is removed rather than retained in a competing archive. Git preserves
@@ -139,7 +139,7 @@ remains a separate repository-settings decision.
 
 ### Children
 
-- [architecture](architecture) — leaf; Repository routing stubs for accepted Wiki decisions and repository-canonical pending decisions
+- [architecture](architecture) — leaf; Repository routing stubs for Wiki architecture records, including pending decisions
 - [brand](brand/README.md) — indexed; Approved V1 brand direction and retained design references
 - [delivery](delivery/README.md) — indexed; Current delivery status and durable task/evidence history
 - [design](design/README.md) — indexed; Repository routing stubs for canonical Wiki product specifications and repository-owned visual references
@@ -147,8 +147,8 @@ remains a separate repository-settings decision.
 ## Leaf collection: architecture
 
 - Path: [docs/architecture](architecture)
-- Purpose: Repository routing stubs for accepted Wiki decisions and repository-canonical pending decisions
-- Allowed contents: Pending or proposed repository-canonical architecture records; Wiki routing stubs
+- Purpose: Repository routing stubs for Wiki architecture records, including pending decisions
+- Allowed contents: Wiki routing stubs
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [fd278d0d-b43f-4145-9033-2906f32a6ab8](architecture/ADR-001-release-radar-boundaries.md)
 - Archive destination: none
@@ -162,8 +162,8 @@ remains a separate repository-settings decision.
 | de35fa8c-3615-4b7f-a028-100aaadaeaf8 | [docs/architecture/ADR-002-codex-plugin-lifecycle.md](architecture/ADR-002-codex-plugin-lifecycle.md) | document | supporting | active | none | none |
 | f7cd9af5-0cd1-4707-b05e-007222e0ca8a | [docs/architecture/ADR-003-active-phase-selection.md](architecture/ADR-003-active-phase-selection.md) | document | supporting | active | none | none |
 | 6369c974-23ac-467b-90b7-0c0d0ad426fd | [docs/architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md](architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md) | document | supporting | active | none | none |
-| 9c1cf54c-99cf-4348-af72-1aedc07deb02 | [docs/architecture/ADR-005-ticket-task-work-plans.md](architecture/ADR-005-ticket-task-work-plans.md) | document | controlling &#40;architecture.ticket-tasks&#41; | active | none | none |
-| 874c6a9a-f7e9-444e-b38d-c32ceb18a536 | [docs/architecture/ADR-006-managed-repository-documentation-contract.md](architecture/ADR-006-managed-repository-documentation-contract.md) | document | controlling &#40;architecture.managed-documentation&#41; | active | none | none |
+| 9c1cf54c-99cf-4348-af72-1aedc07deb02 | [docs/architecture/ADR-005-ticket-task-work-plans.md](architecture/ADR-005-ticket-task-work-plans.md) | document | supporting | active | none | none |
+| 874c6a9a-f7e9-444e-b38d-c32ceb18a536 | [docs/architecture/ADR-006-managed-repository-documentation-contract.md](architecture/ADR-006-managed-repository-documentation-contract.md) | document | supporting | active | none | none |
 | a3918ee6-cc82-40f2-ae84-2d59571b2020 | [docs/architecture/ADR-007-proportional-delivery-validation.md](architecture/ADR-007-proportional-delivery-validation.md) | document | supporting | active | none | none |
 | rr-adr-008-opt-in-project-execution | [docs/architecture/ADR-008-opt-in-project-execution.md](architecture/ADR-008-opt-in-project-execution.md) | document | supporting | active | none | none |
 
