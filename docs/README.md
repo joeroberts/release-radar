@@ -127,7 +127,7 @@ remains a separate repository-settings decision.
 
 - Path: [docs](.)
 - Purpose: Release Radar documentation, current authority, and retained history
-- Allowed contents: Architecture, design, brand, and delivery collections; Catalog and navigation indexes
+- Allowed contents: Architecture, design, and delivery collections; Catalog and navigation indexes
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [c48466fb-a4fd-4f9e-96bf-967dfa173216](README.md)
 - Archive destination: none
@@ -142,7 +142,6 @@ remains a separate repository-settings decision.
 ### Children
 
 - [architecture](architecture) — leaf; Repository routing stubs for Wiki architecture records, including pending decisions
-- [brand](brand/README.md) — indexed; Approved V1 brand direction and retained design references
 - [delivery](delivery/README.md) — indexed; Current delivery status and durable task/evidence history
 - [design](design/README.md) — indexed; Repository routing stubs for canonical Wiki product specifications and repository-owned visual references
 

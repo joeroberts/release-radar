@@ -1,11 +1,12 @@
-# Product specification routes and visual references
+# Design references
 
 Canonical product specifications are indexed in the
 [GitHub Wiki](https://github.com/joeroberts/release-radar/wiki/Product-Specifications).
-The Markdown files in this directory are non-authoritative routing stubs;
-repository-owned mockups remain the visual references linked by those
-specifications. Delivery sequences and rollout gates remain in
-[delivery plans](../delivery/plans/).
+This repository retains [mockups](mockups/), the approved V1
+[brand direction](brand/README.md), and historical visual references attached
+to [issue #153](https://github.com/joeroberts/release-radar/issues/153#issuecomment-5962140229).
+The Markdown specification routes in this directory remain non-authoritative
+until their scheduled cleanup.
 
 <!-- release-radar-docs:v1:start -->
 
@@ -13,7 +14,7 @@ specifications. Delivery sequences and rollout gates remain in
 
 - Path: [docs/design](.)
 - Purpose: Repository routing stubs for canonical Wiki product specifications and repository-owned visual references
-- Allowed contents: Mockup collection; Visual study sources; Wiki routing stubs
+- Allowed contents: Brand collection; Mockup collection; Visual study sources; Wiki routing stubs
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [98f5320c-208e-4ca1-aacf-c8df5701a1d4](agent-driven-delivery-dashboard-design.md)
 - Archive destination: none
@@ -37,7 +38,31 @@ specifications. Delivery sequences and rollout gates remain in
 
 ### Children
 
+- [design.brand](brand/README.md) — indexed; Approved V1 brand direction and retained design references
 - [design.mockups](mockups) — leaf; Accepted visual references, proposal evidence, and superseded mockups
+
+## Collection: design.brand
+
+- Path: [docs/design/brand](brand)
+- Purpose: Approved V1 brand direction and retained design references
+- Allowed contents: Brand guidance; Historical raster and vector references
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [37012d12-2f27-4282-a8ab-8e21d3c6eb14](brand/README.md)
+- Archive destination: none
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 37012d12-2f27-4282-a8ab-8e21d3c6eb14 | [docs/design/brand/README.md](brand/README.md) | collectionIndex | controlling &#40;product.brand&#41; | active | none | none |
+| a357e108-aae8-4f15-a44a-3bad0e98c9d5 | [docs/design/brand/release-radar-icon-v1.png](brand/release-radar-icon-v1.png) | designAsset | nonAuthoritative | completed | none | none |
+| 69ed9247-6243-4511-bf52-594c98e9d649 | [docs/design/brand/release-radar-icon-v1.svg](brand/release-radar-icon-v1.svg) | designAsset | nonAuthoritative | completed | none | none |
+| 9484b9ea-9656-471a-92ee-cd0aac9f000a | [docs/design/brand/release-radar-lockup-v1.png](brand/release-radar-lockup-v1.png) | designAsset | nonAuthoritative | completed | none | none |
+
+### Children
+
+No child collections.
 
 ## Leaf collection: design.mockups
 
