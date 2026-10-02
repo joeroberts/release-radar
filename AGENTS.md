@@ -23,6 +23,7 @@ does not spawn subagents. Persistent role tasks may use bounded subagents only
 within their assignment. Use the linked Coordinator prompt for coordination and
 the linked role prompt for each role. If a required standard or role prompt is
 unavailable, report the blocker rather than inventing a replacement.
+Proposed or unresolved Wiki text is not approved policy.
 
 On resumption or after context compaction, recover the current assignment,
 owner corrections, ticket state, applicable instructions, and authorized

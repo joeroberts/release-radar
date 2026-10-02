@@ -8,8 +8,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import sys
 import unicodedata
@@ -19,6 +21,17 @@ from typing import Any
 SCHEMA_VERSION = 1
 CANONICAL_WIKI = "https://github.com/joeroberts/release-radar.wiki.git"
 DEVELOPMENT_REPOSITORY = "https://github.com/joeroberts/release-radar"
+ACCEPTED_CONTRACT_REVISION = "38cc05e4300df71faa16dfcdd234fe0f8cd46124"
+ACCEPTED_CONTRACTS = {
+    "adr-lifecycle": (
+        "Contract-ADR-Lifecycle-and-Integrity.md",
+        "2a0df264aa8a550476dcdb6981bd390210a0e54c",
+    ),
+    "development-exception": (
+        "Scoped-Development-Exceptions-Contract.md",
+        "d9c16ee8f4036b6b0876b4d2946d2072f635478f",
+    ),
+}
 CATALOG_PATH = "ADR-Catalog.json"
 INDEX_PATH = "Architecture-Decisions.md"
 INDEX_INTRODUCTION = (
@@ -45,7 +58,7 @@ ADR_ID = re.compile(r"^ADR-([0-9]{3,})$")
 SCOPE_KEY = re.compile(r"^[a-z0-9][a-z0-9.-]*$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 URL = re.compile(r"^https://[^\s]+$")
-RFC3339_UTC = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+RFC3339_UTC = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?Z$")
 OPEN_MARKER = b"<!-- adr-metadata:v1 -->"
 CLOSE_MARKER = b"<!-- /adr-metadata:v1 -->"
 METADATA_KEYS = (
@@ -135,7 +148,12 @@ def run_git(repository: Path | None, *arguments: str) -> subprocess.CompletedPro
     if repository is not None:
         command += ["-C", str(repository)]
     command += list(arguments)
-    return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    environment = os.environ.copy()
+    environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+    return subprocess.run(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        env=environment,
+    )
 
 
 def git_bytes(repository: Path, *arguments: str) -> bytes:
@@ -147,6 +165,15 @@ def git_bytes(repository: Path, *arguments: str) -> bytes:
 
 def object_id_pattern(object_format: str) -> re.Pattern[str]:
     return re.compile(r"^[0-9a-f]{40}$" if object_format == "sha1" else r"^[0-9a-f]{64}$")
+
+
+def git_blob_id(raw: bytes, object_format: str) -> str:
+    framed = f"blob {len(raw)}\0".encode("ascii") + raw
+    if object_format == "sha1":
+        return hashlib.sha1(framed).hexdigest()
+    if object_format == "sha256":
+        return hashlib.sha256(framed).hexdigest()
+    raise ValueError("unsupported Git object format")
 
 
 def verify_repository_identity(repository: Path, wiki_repository: str) -> list[dict[str, Any]]:
@@ -188,6 +215,9 @@ def remote_head(wiki_repository: str) -> tuple[str | None, dict[str, Any] | None
 
 
 def parse_tree(repository: Path, revision: str) -> dict[str, TreeEntry]:
+    object_type = git_bytes(repository, "cat-file", "-t", revision).decode("ascii").strip()
+    if object_type != "commit":
+        raise ValueError(f"revision is not a commit: {revision}")
     raw = git_bytes(repository, "ls-tree", "-z", revision)
     entries: dict[str, TreeEntry] = {}
     for record in raw.split(b"\0"):
@@ -203,9 +233,16 @@ def parse_tree(repository: Path, revision: str) -> dict[str, TreeEntry]:
 
 
 def read_blob(repository: Path, revision: str, path: str, limit: int | None = None) -> bytes:
-    raw = git_bytes(repository, "cat-file", "blob", f"{revision}:{path}")
-    if limit is not None and len(raw) > limit:
+    size_raw = git_bytes(repository, "cat-file", "-s", f"{revision}:{path}")
+    try:
+        size = int(size_raw.decode("ascii").strip())
+    except (UnicodeDecodeError, ValueError) as error:
+        raise ValueError(f"{path} has an invalid Git object size") from error
+    if limit is not None and size > limit:
         raise OverflowError(f"{path} exceeds {limit} bytes")
+    raw = git_bytes(repository, "cat-file", "blob", f"{revision}:{path}")
+    if len(raw) != size:
+        raise ValueError(f"{path} size changed during its pinned read")
     return raw
 
 
@@ -235,7 +272,26 @@ def strict_json_bytes(raw: bytes, maximum: int) -> Any:
 
 def strict_json_file(path: Path, maximum: int = MAX_JSON_BYTES) -> Any:
     try:
-        return strict_json_bytes(path.read_bytes(), maximum)
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        descriptor = os.open(path, flags)
+        try:
+            details = os.fstat(descriptor)
+            if not stat.S_ISREG(details.st_mode) or details.st_size > maximum:
+                raise StrictJSONError("JSON input is not a bounded regular file")
+            chunks: list[bytes] = []
+            remaining = maximum + 1
+            while remaining:
+                chunk = os.read(descriptor, min(65536, remaining))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            raw = b"".join(chunks)
+            if len(raw) > maximum or len(raw) != details.st_size:
+                raise StrictJSONError("JSON input changed or exceeds its size limit")
+        finally:
+            os.close(descriptor)
+        return strict_json_bytes(raw, maximum)
     except OSError as error:
         raise StrictJSONError(f"cannot read {path}: {error}") from error
 
@@ -513,6 +569,14 @@ def validate_snapshot_content(
         for adr_id in selected_ids:
             if adr_id not in records:
                 diagnostics.append(diagnostic("ADR_MISSING", "Selected ADR is absent from the catalog.", id=adr_id))
+                continue
+            selected_scopes = records[adr_id].get("scopes", [])
+            if not any(scope.get("key") in scopes for scope in selected_scopes):
+                diagnostics.append(diagnostic(
+                    "ADR_SCOPE_UNRESOLVED",
+                    "Selected ADR does not cover any requested decision scope.",
+                    id=adr_id,
+                ))
     else:
         selected_ids = sorted(
             [adr_id for adr_id, record in records.items() if any(scope.get("key") in scopes for scope in record.get("scopes", []))],
@@ -611,6 +675,59 @@ def actual_transition_actions(
     return actions
 
 
+def validate_lifecycle_transition(
+    repository: Path,
+    prior: SnapshotData,
+    candidate: SnapshotData,
+) -> list[dict[str, Any]]:
+    diagnostics: list[dict[str, Any]] = []
+    allowed_status_changes = {
+        ("Proposed", "Accepted"),
+        ("Proposed", "Rejected"),
+        ("Accepted", "Superseded"),
+    }
+    for adr_id in set(prior.records) & set(candidate.records):
+        before = prior.records[adr_id]
+        after = candidate.records[adr_id]
+        if before["status"] != after["status"]:
+            transition = (before["status"], after["status"])
+            if transition not in allowed_status_changes:
+                diagnostics.append(diagnostic(
+                    "ADR_TRANSITION_UNAUTHORIZED",
+                    "Decision status change is not an allowed lifecycle transition.",
+                    id=adr_id, expected=before["status"], actual=after["status"],
+                ))
+            elif transition == ("Proposed", "Accepted"):
+                baseline = after["baseline"]
+                expected_blob = prior.tree.get(before["path"])
+                try:
+                    previous_raw = read_blob(repository, prior.revision, before["path"], MAX_ADR_BYTES)
+                    _, previous_body = parse_metadata(previous_raw, before["path"])
+                    expected_body_hash = hashlib.sha256(previous_body).hexdigest()
+                except (ValueError, OverflowError):
+                    expected_body_hash = None
+                if (
+                    baseline is None
+                    or baseline.get("commit") != prior.revision
+                    or baseline.get("path") != before["path"]
+                    or expected_blob is None
+                    or baseline.get("blob") != expected_blob.oid
+                    or baseline.get("bodySha256") != expected_body_hash
+                ):
+                    diagnostics.append(diagnostic(
+                        "ADR_TRANSITION_UNAUTHORIZED",
+                        "Acceptance baseline is not the exact previously committed Proposed candidate.",
+                        id=adr_id, path=before["path"],
+                    ))
+        if not set(before["evidence"]).issubset(set(after["evidence"])):
+            diagnostics.append(diagnostic(
+                "ADR_TRANSITION_UNAUTHORIZED",
+                "Transition removed prior approval or provenance evidence.",
+                id=adr_id, path=after["path"],
+            ))
+    return diagnostics
+
+
 def transition_command(arguments: argparse.Namespace) -> int:
     repository = Path(arguments.repository).resolve()
     diagnostics = verify_repository_identity(repository, arguments.wiki_repository)
@@ -656,6 +773,7 @@ def transition_command(arguments: argparse.Namespace) -> int:
         prior = validate_snapshot_content(repository, arguments.prior_revision, arguments.scope, [])
         diagnostics.extend(prior.diagnostics)
         if authorization is not None and prior.catalog is not None and candidate.catalog is not None:
+            diagnostics.extend(validate_lifecycle_transition(repository, prior, candidate))
             actual = actual_transition_actions(repository, prior, candidate)
             approved = {change["id"]: set(change["actions"]) for change in authorization["changes"]}
             if actual != approved:
@@ -681,6 +799,42 @@ def render_index_command(arguments: argparse.Namespace) -> int:
     if diagnostics:
         raise ValueError("pinned ADR catalog is invalid")
     sys.stdout.buffer.write(render_index(catalog))
+    return 0
+
+
+def read_contract_command(arguments: argparse.Namespace) -> int:
+    repository = Path(arguments.repository).resolve()
+    diagnostics = verify_repository_identity(repository, CANONICAL_WIKI)
+    path, expected_blob = ACCEPTED_CONTRACTS[arguments.contract]
+    try:
+        tree = parse_tree(repository, ACCEPTED_CONTRACT_REVISION)
+        entry = tree.get(path)
+        if entry is None or entry.mode != "100644" or entry.kind != "blob" or entry.oid != expected_blob:
+            diagnostics.append(diagnostic(
+                "ADR_SOURCE_UNSAFE",
+                "Accepted supporting contract object is missing, changed, or unsafe.",
+                path=path, expected=expected_blob,
+                actual=entry.oid if entry is not None and entry.kind == "blob" else None,
+            ))
+        else:
+            raw = read_blob(repository, ACCEPTED_CONTRACT_REVISION, path, MAX_ADR_BYTES)
+            if git_blob_id(raw, "sha1") != expected_blob:
+                diagnostics.append(diagnostic(
+                    "ADR_SOURCE_UNSAFE",
+                    "Accepted supporting contract bytes do not hash to the fixed blob ID.",
+                    path=path, expected=expected_blob,
+                    actual=git_blob_id(raw, "sha1"),
+                ))
+    except (ValueError, OverflowError) as error:
+        diagnostics.append(diagnostic(
+            "ADR_SOURCE_UNSAFE",
+            f"Accepted supporting contract cannot be read safely: {error}",
+            path=path, expected=expected_blob,
+        ))
+    if diagnostics:
+        sys.stderr.write(json.dumps({"status": "blocked", "diagnostics": diagnostics}, separators=(",", ":")) + "\n")
+        return 2
+    sys.stdout.buffer.write(raw)
     return 0
 
 
@@ -748,7 +902,7 @@ def validate_exception_record(value: Any, object_format: str) -> str | None:
     relied_fields = {"commit", "path", "blob", "bodySha256"}
     seen: set[tuple[str, str, str]] = set()
     for failure in value["failures"]:
-        if not exact_fields(failure, failure_fields) or failure["code"] not in ELIGIBLE_FAILURES or type(failure["revision"]) is not str or oid_pattern.fullmatch(failure["revision"]) is None or not nonempty_string(failure["path"], 255) or type(failure["reliedOn"]) is not list or not failure["reliedOn"]:
+        if not exact_fields(failure, failure_fields) or failure["code"] not in ELIGIBLE_FAILURES or type(failure["revision"]) is not str or oid_pattern.fullmatch(failure["revision"]) is None or not nonempty_string(failure["path"], 255) or (ADR_FILENAME.fullmatch(failure["path"]) is None and failure["path"] not in {CATALOG_PATH, INDEX_PATH}) or type(failure["reliedOn"]) is not list or not failure["reliedOn"]:
             return "exception failure tuple is invalid"
         for key in ("expectedBlob", "observedBlob"):
             if failure[key] is not None and (type(failure[key]) is not str or oid_pattern.fullmatch(failure[key]) is None):
@@ -758,9 +912,148 @@ def validate_exception_record(value: Any, object_format: str) -> str | None:
             return "exception failure tuple is duplicated"
         seen.add(identity)
         for relied in failure["reliedOn"]:
-            if not exact_fields(relied, relied_fields) or type(relied["commit"]) is not str or oid_pattern.fullmatch(relied["commit"]) is None or not nonempty_string(relied["path"], 255) or type(relied["blob"]) is not str or oid_pattern.fullmatch(relied["blob"]) is None or type(relied["bodySha256"]) is not str or SHA256.fullmatch(relied["bodySha256"]) is None:
+            if not exact_fields(relied, relied_fields) or type(relied["commit"]) is not str or oid_pattern.fullmatch(relied["commit"]) is None or not nonempty_string(relied["path"], 255) or ADR_FILENAME.fullmatch(relied["path"]) is None or type(relied["blob"]) is not str or oid_pattern.fullmatch(relied["blob"]) is None or type(relied["bodySha256"]) is not str or SHA256.fullmatch(relied["bodySha256"]) is None:
                 return "relied-on ADR tuple is invalid"
     return None
+
+
+def reliance_for_document(
+    repository: Path,
+    commit: str,
+    path: str,
+    expected_blob: str | None = None,
+) -> dict[str, str]:
+    tree = parse_tree(repository, commit)
+    entry = tree.get(path)
+    if entry is None or entry.mode != "100644" or entry.kind != "blob":
+        raise ValueError("relied-on ADR is not a safe regular blob")
+    if expected_blob is not None and entry.oid != expected_blob:
+        raise ValueError("relied-on ADR blob does not match its fixed identity")
+    raw = read_blob(repository, commit, path, MAX_ADR_BYTES)
+    _, body = parse_metadata(raw, path)
+    return {
+        "commit": commit,
+        "path": path,
+        "blob": entry.oid,
+        "bodySha256": hashlib.sha256(body).hexdigest(),
+    }
+
+
+def validate_exception_semantics(
+    repository: Path,
+    current: SnapshotData,
+    exception_record: dict[str, Any],
+) -> list[dict[str, Any]]:
+    diagnostics: list[dict[str, Any]] = []
+    failures = exception_record["failures"]
+    remaining = list(failures)
+    expected_reliance: list[dict[str, str]] = []
+
+    for adr_id in current.selected_ids:
+        record = current.records.get(adr_id)
+        if record is None:
+            continue
+        entry = current.tree.get(record["path"])
+        try:
+            if entry is not None and entry.mode == "100644" and entry.kind == "blob":
+                expected_reliance.append(reliance_for_document(repository, current.revision, record["path"], entry.oid))
+            elif record["status"] in {"Accepted", "Superseded"} and record["baseline"] is not None:
+                baseline = record["baseline"]
+                expected_reliance.append(reliance_for_document(repository, baseline["commit"], baseline["path"], baseline["blob"]))
+        except (ValueError, OverflowError):
+            diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Selected relied-on ADR bytes cannot be verified.", id=adr_id, path=record["path"]))
+
+    for item in current.diagnostics:
+        match: dict[str, Any] | None = None
+        for failure in remaining:
+            if failure["code"] != item["code"] or failure["revision"] != current.revision:
+                continue
+            code = item["code"]
+            if code in {"ADR_SNAPSHOT_STALE", "ADR_FRESHNESS_UNAVAILABLE"}:
+                retained_catalog = current.tree.get(CATALOG_PATH)
+                if retained_catalog is None or retained_catalog.mode != "100644" or retained_catalog.kind != "blob":
+                    continue
+                if (
+                    failure["path"] == CATALOG_PATH
+                    and failure["expectedBlob"] == retained_catalog.oid
+                    and failure["observedBlob"] == retained_catalog.oid
+                ):
+                    match = failure
+            elif code == "ADR_MISSING":
+                record = next((record for record in current.records.values() if record["path"] == item.get("path")), None)
+                if record is None or record["status"] not in {"Accepted", "Superseded"} or record["baseline"] is None:
+                    continue
+                baseline = record["baseline"]
+                baseline_reliance = {
+                    "commit": baseline["commit"], "path": baseline["path"],
+                    "blob": baseline["blob"], "bodySha256": baseline["bodySha256"],
+                }
+                if (
+                    failure["path"] == record["path"]
+                    and failure["expectedBlob"] == record["blob"]
+                    and failure["observedBlob"] is None
+                    and baseline_reliance in failure["reliedOn"]
+                ):
+                    match = failure
+            elif code == "ADR_UNCATALOGUED":
+                path = item.get("path")
+                entry = current.tree.get(path) if type(path) is str else None
+                if entry is None or entry.mode != "100644" or entry.kind != "blob":
+                    continue
+                try:
+                    raw = read_blob(repository, current.revision, path, MAX_ADR_BYTES)
+                    metadata, _ = parse_metadata(raw, path)
+                    proposed_reliance = reliance_for_document(repository, current.revision, path, entry.oid)
+                except (ValueError, OverflowError):
+                    continue
+                if (
+                    metadata["Status"] == "Proposed"
+                    and failure["path"] == path
+                    and failure["expectedBlob"] is None
+                    and failure["observedBlob"] == entry.oid
+                    and proposed_reliance in failure["reliedOn"]
+                ):
+                    match = failure
+                    expected_reliance.append(proposed_reliance)
+            elif code == "ADR_BLOB_MISMATCH":
+                record = next((record for record in current.records.values() if record["path"] == item.get("path")), None)
+                if record is None or record["status"] not in {"Accepted", "Superseded"} or record["baseline"] is None:
+                    continue
+                entry = current.tree.get(record["path"])
+                if entry is None or entry.mode != "100644" or entry.kind != "blob":
+                    continue
+                try:
+                    observed_reliance = reliance_for_document(repository, current.revision, record["path"], entry.oid)
+                except (ValueError, OverflowError):
+                    continue
+                if (
+                    failure["path"] == record["path"]
+                    and failure["expectedBlob"] == record["blob"]
+                    and failure["observedBlob"] == entry.oid
+                    and observed_reliance in failure["reliedOn"]
+                ):
+                    match = failure
+            if match is not None:
+                break
+        if match is None:
+            diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception failure does not satisfy its exact eligible-condition binding.", actual=item["code"]))
+        else:
+            remaining.remove(match)
+
+    if remaining:
+        diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception contains failures not present in the current check."))
+
+    actual_reliance = {
+        (item["commit"], item["path"], item["blob"], item["bodySha256"])
+        for failure in failures for item in failure["reliedOn"]
+    }
+    required_reliance = {
+        (item["commit"], item["path"], item["blob"], item["bodySha256"])
+        for item in expected_reliance
+    }
+    if actual_reliance != required_reliance:
+        diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception reliedOn entries do not exactly bind every consumed ADR."))
+    return diagnostics
 
 
 def exception_command(arguments: argparse.Namespace) -> int:
@@ -842,12 +1135,12 @@ def exception_command(arguments: argparse.Namespace) -> int:
             if trusted["repository"] != DEVELOPMENT_REPOSITORY or any(exception_record[key] != expected for key, expected in bindings.items()) or trusted["wikiRepository"] != arguments.wiki_repository or trusted["issue"] != arguments.ticket or trusted["operation"] != arguments.operation or exception_record["scopes"] != arguments.scope:
                 approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception terms do not bind this repository, issue, operation, scope, or approval."))
             try:
-                now = datetime.strptime(arguments.now, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                expires = datetime.strptime(exception_record["expiresAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                now = datetime.now(timezone.utc)
+                expires = datetime.fromisoformat(exception_record["expiresAt"][:-1] + "+00:00")
                 if now >= expires:
                     approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception has expired."))
             except ValueError:
-                approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Invocation time or expiry is invalid."))
+                approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception expiry is invalid."))
             if exception_record["catalogRevision"] != arguments.revision:
                 approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception catalog revision is not the current checked revision."))
             catalog_entry = current.tree.get(CATALOG_PATH)
@@ -855,30 +1148,7 @@ def exception_command(arguments: argparse.Namespace) -> int:
             if catalog_entry is None or index_entry is None or exception_record["catalogBlob"] != catalog_entry.oid or exception_record["indexBlob"] != index_entry.oid:
                 approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception catalog or index blob binding is stale."))
 
-            failure_keys = {
-                (item["code"], item.get("path"), item.get("expected"), item.get("actual"))
-                for item in current.diagnostics
-            }
-            record_failure_keys = {
-                (item["code"], item["path"], item["expectedBlob"], item["observedBlob"])
-                for item in exception_record["failures"]
-            }
-            if failure_keys != record_failure_keys or any(item["revision"] != arguments.revision for item in exception_record["failures"]):
-                approval_diagnostics.append(diagnostic("ADR_TRANSITION_UNAUTHORIZED", "Exception failures do not exactly match current diagnostics."))
-
-            for failure in exception_record["failures"]:
-                for relied in failure["reliedOn"]:
-                    try:
-                        tree = parse_tree(repository, relied["commit"])
-                        entry = tree.get(relied["path"])
-                        if entry is None or entry.mode != "100644" or entry.kind != "blob" or entry.oid != relied["blob"]:
-                            raise ValueError("relied-on blob is unavailable")
-                        raw = read_blob(repository, relied["commit"], relied["path"], MAX_ADR_BYTES)
-                        _, body = parse_metadata(raw, relied["path"])
-                        if hashlib.sha256(body).hexdigest() != relied["bodySha256"]:
-                            raise ValueError("relied-on body hash differs")
-                    except (ValueError, OverflowError):
-                        approval_diagnostics.append(diagnostic("ADR_BASELINE_UNAVAILABLE", "Relied-on ADR bytes cannot be verified.", path=relied.get("path"), expected=relied.get("blob")))
+            approval_diagnostics.extend(validate_exception_semantics(repository, current, exception_record))
 
     diagnostics.extend(approval_diagnostics)
     if not approval_diagnostics and exception_record is not None:
@@ -891,6 +1161,13 @@ def exception_command(arguments: argparse.Namespace) -> int:
             "approvalRef": exception_record["approvalRef"],
             "issue": exception_record["issue"],
             "failures": exception_record["failures"],
+            "currentness": (
+                "unknown"
+                if any(item["code"] == "ADR_FRESHNESS_UNAVAILABLE" for item in current.diagnostics)
+                else "retained-not-current"
+                if any(item["code"] == "ADR_SNAPSHOT_STALE" for item in current.diagnostics)
+                else "current"
+            ),
         }
         value = result(
             "proceeding_under_exception", arguments.ticket, arguments.operation,
@@ -940,12 +1217,16 @@ def build_parser() -> Parser:
     renderer.add_argument("--revision", required=True)
     renderer.set_defaults(handler=render_index_command)
 
+    contract = subparsers.add_parser("read-contract")
+    contract.add_argument("--repository", required=True)
+    contract.add_argument("--contract", choices=sorted(ACCEPTED_CONTRACTS), required=True)
+    contract.set_defaults(handler=read_contract_command)
+
     exception = subparsers.add_parser("exception")
     common(exception)
     exception.add_argument("--diagnostics", required=True)
     exception.add_argument("--issue-snapshot", required=True)
     exception.add_argument("--trusted-approval", required=True)
-    exception.add_argument("--now", required=True)
     exception.set_defaults(handler=exception_command)
     return parser
 
