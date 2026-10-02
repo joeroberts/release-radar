@@ -1,0 +1,5 @@
+interface:
+  display_name: "RR Development Exception"
+  short_description: "Validate bounded RR ADR exceptions"
+  default_prompt: "Use $development-exception to validate this explicitly approved Release Radar ADR integrity exception."
+
