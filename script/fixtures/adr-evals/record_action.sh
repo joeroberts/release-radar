@@ -25,8 +25,11 @@ parent, leaf = os.path.split(output_path)
 if not leaf or leaf in {".", ".."}:
     fail("recorder output must name a new file")
 
-directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC
-directory_flags |= getattr(os, "O_NOFOLLOW", 0)
+required_flags = ("O_DIRECTORY", "O_CLOEXEC", "O_NOFOLLOW")
+if any(not hasattr(os, name) for name in required_flags) or os.open not in os.supports_dir_fd:
+    fail("recorder requires no-follow directory-relative file creation")
+
+directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW
 try:
     directory_fd = os.open(parent, directory_flags)
 except OSError as error:
@@ -37,8 +40,7 @@ try:
     if details.st_uid != os.geteuid() or stat.S_IMODE(details.st_mode) != 0o700:
         fail("recorder directory must be owner-only and owned by the current user")
 
-    output_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC
-    output_flags |= getattr(os, "O_NOFOLLOW", 0)
+    output_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW
     try:
         output_fd = os.open(leaf, output_flags, 0o600, dir_fd=directory_fd)
     except OSError as error:
