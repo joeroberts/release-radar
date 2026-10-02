@@ -1,0 +1,5 @@
+interface:
+  display_name: "RR ADR Management"
+  short_description: "Verify and maintain Release Radar ADRs"
+  default_prompt: "Use $adr-management to verify or maintain the relevant Release Radar architecture decisions."
+
