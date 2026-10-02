@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import shutil
 import stat
@@ -26,6 +27,7 @@ DEVELOPMENT_REPOSITORY = "https://github.com/joeroberts/release-radar"
 TICKET = "https://github.com/joeroberts/release-radar/issues/133"
 OPERATION = "qa-contract-check"
 SCOPE = "architecture.core"
+ACCEPTED_CONTRACT_REVISION = "38cc05e4300df71faa16dfcdd234fe0f8cd46124"
 INDEX_INTRODUCTION = (
     "Architecture decisions do not authorize work. Accepted status does not by "
     "itself establish current applicability, and historical records do not override "
@@ -468,6 +470,16 @@ class ADRCheckerContractTests(unittest.TestCase):
         self.assertEqual("verified", result["status"])
         self.assertEqual(["ADR-001", "ADR-002"], result["selectedIds"])
 
+    def test_explicit_selected_id_must_cover_a_requested_scope(self) -> None:
+        fixture = self.fixture()
+        result = self.snapshot(
+            fixture,
+            ids=["ADR-001"],
+            scopes=["different.scope"],
+            expected_exit=2,
+        )
+        self.assert_blocked(result, "ADR_SCOPE_UNRESOLVED")
+
     def test_stale_and_unavailable_freshness_never_verify(self) -> None:
         fixture = self.fixture(name="stale")
         retained = fixture.head
@@ -484,6 +496,22 @@ class ADRCheckerContractTests(unittest.TestCase):
         path = self.temp / name
         path.write_text(json.dumps(value, separators=(",", ":")) + "\n")
         return path
+
+    def read_exception_record(self, issue_snapshot: dict[str, object]) -> dict[str, object]:
+        comment = issue_snapshot["comments"][0]
+        body = comment["body"]
+        prefix = "```adr-exception-v1\n"
+        self.assertTrue(body.startswith(prefix))
+        self.assertTrue(body.endswith("```\n"))
+        return json.loads(body[len(prefix):-4])
+
+    def bind_exception_record(self, issue_snapshot: dict[str, object],
+                              trusted: dict[str, object], record: dict[str, object]) -> None:
+        block = (json.dumps(record, separators=(",", ":")) + "\n").encode()
+        issue_snapshot["comments"][0]["body"] = (
+            "```adr-exception-v1\n" + block.decode() + "```\n"
+        )
+        trusted["blockSha256"] = hashlib.sha256(block).hexdigest()
 
     def transition(self, fixture: WikiFixture, prior: str, candidate: str,
                    authorization: dict[str, object], expected_exit: int,
@@ -643,6 +671,65 @@ class ADRCheckerContractTests(unittest.TestCase):
         self.assertIsInstance(duplicate, dict)
         self.assert_blocked(duplicate, "ADR_TRANSITION_UNAUTHORIZED")  # type: ignore[arg-type]
 
+    def exception_inputs(self, fixture: WikiFixture, revision: str,
+                         failures: list[dict[str, object]],
+                         *, exception_id: str = "qa-exception-1") -> tuple[dict[str, object], dict[str, object]]:
+        exception_record = {
+            "version": 1,
+            "exceptionId": exception_id,
+            "repository": DEVELOPMENT_REPOSITORY,
+            "wikiRepository": CANONICAL_WIKI,
+            "issue": TICKET,
+            "operation": OPERATION,
+            "scopes": [SCOPE],
+            "failures": failures,
+            "catalogBlob": fixture.blob(revision, "ADR-Catalog.json"),
+            "indexBlob": fixture.blob(revision, "Architecture-Decisions.md"),
+            "catalogRevision": revision,
+            "reason": "The current record is unavailable during bounded repair.",
+            "risk": "The retained decision may not reflect a later current publication.",
+            "accountablePerson": "Repository owner",
+            "expiresAt": (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "resolutionCriteria": "Restore ordinary ADR verification.",
+            "approvalRef": "trusted-owner-handoff:qa-fixture",
+        }
+        block = (json.dumps(exception_record, separators=(",", ":")) + "\n").encode()
+        comment = {
+            "id": "5960064851",
+            "url": f"{TICKET}#issuecomment-5960064851",
+            "updatedAt": "2026-10-02T12:00:00Z",
+            "body": "```adr-exception-v1\n" + block.decode() + "```\n",
+        }
+        issue_snapshot = {
+            "version": 1,
+            "issue": {"url": TICKET, "state": "OPEN", "body": "Owning issue."},
+            "comments": [comment],
+            "commentsComplete": True,
+        }
+        trusted = {
+            "version": 1,
+            "exceptionId": exception_id,
+            "repository": DEVELOPMENT_REPOSITORY,
+            "wikiRepository": CANONICAL_WIKI,
+            "issue": TICKET,
+            "operation": OPERATION,
+            "commentId": comment["id"],
+            "commentUpdatedAt": comment["updatedAt"],
+            "blockSha256": hashlib.sha256(block).hexdigest(),
+            "approvalRef": "trusted-owner-handoff:qa-fixture",
+            "revokedOrResolvedIds": [],
+        }
+        return issue_snapshot, trusted
+
+    def relied_on(self, fixture: WikiFixture, revision: str, path: str) -> dict[str, object]:
+        raw = fixture.git("show", f"{revision}:{path}").stdout
+        return {
+            "commit": revision,
+            "path": path,
+            "blob": fixture.blob(revision, path),
+            "bodySha256": hashlib.sha256(protected_body(raw)).hexdigest(),
+        }
+
     def missing_exception_fixture(self, name: str = "exception") -> tuple[WikiFixture, dict[str, object], dict[str, object], dict[str, object]]:
         fixture = self.fixture(name=name)
         baseline_commit = fixture.baseline_revision
@@ -656,17 +743,10 @@ class ADRCheckerContractTests(unittest.TestCase):
         diagnostics = self.snapshot(fixture, expected_exit=2)
         self.assert_blocked(diagnostics, "ADR_MISSING")
 
-        catalog_blob = fixture.blob(fixture.head, "ADR-Catalog.json")
-        index_blob = fixture.blob(fixture.head, "Architecture-Decisions.md")
-        exception_record = {
-            "version": 1,
-            "exceptionId": "qa-exception-1",
-            "repository": DEVELOPMENT_REPOSITORY,
-            "wikiRepository": CANONICAL_WIKI,
-            "issue": TICKET,
-            "operation": OPERATION,
-            "scopes": [SCOPE],
-            "failures": [
+        issue_snapshot, trusted = self.exception_inputs(
+            fixture,
+            fixture.head,
+            [
                 {
                     "code": "ADR_MISSING",
                     "revision": fixture.head,
@@ -683,48 +763,13 @@ class ADRCheckerContractTests(unittest.TestCase):
                     ],
                 }
             ],
-            "catalogBlob": catalog_blob,
-            "indexBlob": index_blob,
-            "catalogRevision": fixture.head,
-            "reason": "The current record is unavailable during bounded repair.",
-            "risk": "The retained decision may not reflect a later current publication.",
-            "accountablePerson": "Repository owner",
-            "expiresAt": "2026-10-03T00:00:00Z",
-            "resolutionCriteria": "Restore the catalogued ADR and pass an ordinary snapshot check.",
-            "approvalRef": "trusted-owner-handoff:qa-fixture",
-        }
-        block = (json.dumps(exception_record, separators=(",", ":")) + "\n").encode()
-        body = "```adr-exception-v1\n" + block.decode() + "```\n"
-        comment = {
-            "id": "5960064851",
-            "url": f"{TICKET}#issuecomment-5960064851",
-            "updatedAt": "2026-10-02T12:00:00Z",
-            "body": body,
-        }
-        issue_snapshot = {
-            "version": 1,
-            "issue": {"url": TICKET, "state": "OPEN", "body": "Owning issue."},
-            "comments": [comment],
-            "commentsComplete": True,
-        }
-        trusted = {
-            "version": 1,
-            "exceptionId": "qa-exception-1",
-            "repository": DEVELOPMENT_REPOSITORY,
-            "wikiRepository": CANONICAL_WIKI,
-            "issue": TICKET,
-            "operation": OPERATION,
-            "commentId": comment["id"],
-            "commentUpdatedAt": comment["updatedAt"],
-            "blockSha256": hashlib.sha256(block).hexdigest(),
-            "approvalRef": "trusted-owner-handoff:qa-fixture",
-            "revokedOrResolvedIds": [],
-        }
+        )
         return fixture, diagnostics, issue_snapshot, trusted
 
     def exception(self, fixture: WikiFixture, diagnostics: dict[str, object],
                   issue_snapshot: dict[str, object], trusted: dict[str, object],
-                  expected_exit: int) -> dict[str, object]:
+                  expected_exit: int, *, revision: str | None = None) -> dict[str, object]:
+        checked_revision = revision or fixture.head
         diagnostics_path = self.write_json("diagnostics.json", diagnostics)
         issue_path = self.write_json("issue-snapshot.json", issue_snapshot)
         trusted_path = self.write_json("trusted-approval.json", trusted)
@@ -733,14 +778,13 @@ class ADRCheckerContractTests(unittest.TestCase):
             "exception",
             "--repository", str(fixture.work),
             "--wiki-repository", CANONICAL_WIKI,
-            "--revision", fixture.head,
+            "--revision", checked_revision,
             "--ticket", TICKET,
             "--operation", OPERATION,
             "--scope", SCOPE,
             "--diagnostics", str(diagnostics_path),
             "--issue-snapshot", str(issue_path),
             "--trusted-approval", str(trusted_path),
-            "--now", "2026-10-02T13:00:00Z",
             expected_exit=expected_exit,
         )
         self.assertIsInstance(result, dict)
@@ -752,6 +796,218 @@ class ADRCheckerContractTests(unittest.TestCase):
         self.assertEqual("proceeding_under_exception", result["status"])
         self.assertNotEqual("verified", result["status"])
         self.assertEqual("qa-exception-1", result["exception"]["exceptionId"])
+
+    def test_exception_expiry_uses_wall_clock_and_rejects_caller_time_override(self) -> None:
+        fixture, diagnostics, issue, trusted = self.missing_exception_fixture("wall-clock")
+        record = self.read_exception_record(issue)
+        record["expiresAt"] = (
+            datetime.now(timezone.utc) - timedelta(minutes=1)
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.bind_exception_record(issue, trusted, record)
+        result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=2)
+        self.assertTrue(any("expired" in item["message"].lower() for item in result["diagnostics"]))
+
+        diagnostics_path = self.write_json("override-diagnostics.json", diagnostics)
+        issue_path = self.write_json("override-issue.json", issue)
+        trusted_path = self.write_json("override-trusted.json", trusted)
+        completed, parsed = self.checker(
+            fixture,
+            "exception",
+            "--repository", str(fixture.work),
+            "--wiki-repository", CANONICAL_WIKI,
+            "--revision", fixture.head,
+            "--ticket", TICKET,
+            "--operation", OPERATION,
+            "--scope", SCOPE,
+            "--diagnostics", str(diagnostics_path),
+            "--issue-snapshot", str(issue_path),
+            "--trusted-approval", str(trusted_path),
+            "--now", "2000-01-01T00:00:00Z",
+            expected_exit=64,
+        )
+        self.assertIsNone(parsed)
+        self.assertIn(b"unrecognized arguments", completed.stderr)
+
+    def test_missing_exception_requires_that_records_exact_fixed_baseline(self) -> None:
+        specs = [
+            {
+                "id": "ADR-001", "path": "ADR-001-Core-Boundary.md", "title": "Core Boundary",
+                "status": "Accepted", "domain": "product",
+                "scopes": [{"key": SCOPE, "applicability": "current"}],
+                "body": "\n## Decision\n\nKeep the boundary exact.\n",
+            },
+            {
+                "id": "ADR-002", "path": "ADR-002-Other.md", "title": "Other",
+                "status": "Accepted", "domain": "product",
+                "scopes": [{"key": SCOPE, "applicability": "current"}],
+                "body": "\n## Decision\n\nA different accepted decision.\n",
+            },
+        ]
+        fixture = self.fixture(specs, name="wrong-missing-baseline")
+        nonbaseline_commit = fixture.head
+        (fixture.work / "ADR-001-Core-Boundary.md").unlink()
+        fixture.head = fixture.commit("missing current ADR")
+        fixture.push()
+        diagnostics = self.snapshot(fixture, expected_exit=2)
+        expected = fixture.catalog()["records"][0]["baseline"]["blob"]
+        failure = {
+            "code": "ADR_MISSING",
+            "revision": fixture.head,
+            "path": "ADR-001-Core-Boundary.md",
+            "expectedBlob": expected,
+            "observedBlob": None,
+            "reliedOn": [
+                self.relied_on(fixture, nonbaseline_commit, "ADR-001-Core-Boundary.md"),
+                self.relied_on(fixture, fixture.head, "ADR-002-Other.md"),
+            ],
+        }
+        issue, trusted = self.exception_inputs(fixture, fixture.head, [failure])
+        result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=2)
+        self.assertTrue(any(
+            item["code"] == "ADR_TRANSITION_UNAUTHORIZED"
+            and "reliedon" in item["message"].lower()
+            for item in result["diagnostics"]
+        ))
+
+    def test_uncatalogued_exception_is_limited_to_exact_proposed_information(self) -> None:
+        for index, status_value in enumerate(("Proposed", "Accepted")):
+            with self.subTest(status=status_value):
+                fixture = self.fixture(name=f"uncatalogued-{index}")
+                path = "ADR-002-Uncatalogued.md"
+                fixture.write(path, document_bytes("ADR-002", status_value))
+                fixture.head = fixture.commit(f"add {status_value} uncatalogued ADR")
+                fixture.push()
+                diagnostics = self.snapshot(fixture, expected_exit=2)
+                observed = fixture.blob(fixture.head, path)
+                failure = {
+                    "code": "ADR_UNCATALOGUED",
+                    "revision": fixture.head,
+                    "path": path,
+                    "expectedBlob": None,
+                    "observedBlob": observed,
+                    "reliedOn": [
+                        self.relied_on(fixture, fixture.head, "ADR-001-Core-Boundary.md"),
+                        self.relied_on(fixture, fixture.head, path),
+                    ],
+                }
+                issue, trusted = self.exception_inputs(fixture, fixture.head, [failure])
+                expected_exit = 0 if status_value == "Proposed" else 2
+                result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=expected_exit)
+                expected_status = "proceeding_under_exception" if status_value == "Proposed" else "blocked"
+                self.assertEqual(expected_status, result["status"])
+
+    def test_blob_mismatch_exception_requires_unchanged_body_and_immutable_metadata(self) -> None:
+        fixture = self.fixture(name="blob-mismatch")
+        observed = fixture.blob(fixture.head, "ADR-001-Core-Boundary.md")
+        wrong = fixture.blob(fixture.head, "Architecture-Decisions.md")
+        records = list(fixture.catalog()["records"])
+        records[0]["blob"] = wrong
+        fixture.write_catalog(records)
+        fixture.write("Architecture-Decisions.md", render_index(records))
+        fixture.head = fixture.commit("leave a stale catalog blob")
+        fixture.push()
+        diagnostics = self.snapshot(fixture, expected_exit=2)
+        self.assertEqual({"ADR_BLOB_MISMATCH"}, {item["code"] for item in diagnostics["diagnostics"]})
+        failure = {
+            "code": "ADR_BLOB_MISMATCH",
+            "revision": fixture.head,
+            "path": "ADR-001-Core-Boundary.md",
+            "expectedBlob": wrong,
+            "observedBlob": observed,
+            "reliedOn": [self.relied_on(fixture, fixture.head, "ADR-001-Core-Boundary.md")],
+        }
+        issue, trusted = self.exception_inputs(fixture, fixture.head, [failure])
+        result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=0)
+        self.assertEqual("proceeding_under_exception", result["status"])
+
+        path = fixture.work / "ADR-001-Core-Boundary.md"
+        path.write_bytes(path.read_bytes().replace(b"Recorded implementation fact.", b"Changed immutable fact."))
+        fixture.head = fixture.commit("change immutable accepted metadata")
+        fixture.push()
+        changed_diagnostics = self.snapshot(fixture, expected_exit=2)
+        self.assert_blocked(changed_diagnostics, "ADR_BODY_CHANGED")
+        changed_failure = dict(failure)
+        changed_failure["revision"] = fixture.head
+        changed_failure["observedBlob"] = fixture.blob(fixture.head, "ADR-001-Core-Boundary.md")
+        changed_failure["reliedOn"] = [self.relied_on(fixture, fixture.head, "ADR-001-Core-Boundary.md")]
+        changed_issue, changed_trusted = self.exception_inputs(fixture, fixture.head, [changed_failure])
+        changed_result = self.exception(
+            fixture, changed_diagnostics, changed_issue, changed_trusted, expected_exit=2,
+        )
+        self.assertEqual("blocked", changed_result["status"])
+
+    def test_global_freshness_exceptions_bind_the_retained_catalog_and_all_consumed_adrs(self) -> None:
+        for index, failure_code in enumerate(("ADR_SNAPSHOT_STALE", "ADR_FRESHNESS_UNAVAILABLE")):
+            with self.subTest(code=failure_code):
+                fixture = self.fixture(name=f"freshness-{index}")
+                retained = fixture.head
+                if failure_code == "ADR_SNAPSHOT_STALE":
+                    fixture.write("Home.md", b"new remote head\n")
+                    fixture.head = fixture.commit("advance remote")
+                    fixture.push()
+                else:
+                    shutil.rmtree(fixture.remote)
+                diagnostics = self.snapshot(fixture, retained, expected_exit=2)
+                self.assert_blocked(diagnostics, failure_code)
+                catalog_blob = fixture.blob(retained, "ADR-Catalog.json")
+                failure = {
+                    "code": failure_code,
+                    "revision": retained,
+                    "path": "ADR-Catalog.json",
+                    "expectedBlob": catalog_blob,
+                    "observedBlob": catalog_blob,
+                    "reliedOn": [self.relied_on(fixture, retained, "ADR-001-Core-Boundary.md")],
+                }
+                issue, trusted = self.exception_inputs(fixture, retained, [failure])
+                result = self.exception(
+                    fixture, diagnostics, issue, trusted, expected_exit=0, revision=retained,
+                )
+                self.assertEqual("proceeding_under_exception", result["status"])
+                self.assertIn(failure_code, {item["code"] for item in result["diagnostics"]})
+
+    def test_read_contract_blocks_when_fixed_accepted_objects_are_unavailable(self) -> None:
+        fixture = self.fixture(name="missing-fixed-contracts")
+        for contract in ("adr-lifecycle", "development-exception"):
+            with self.subTest(contract=contract):
+                completed, result = self.checker(
+                    fixture,
+                    "read-contract",
+                    "--repository", str(fixture.work),
+                    "--contract", contract,
+                    expected_exit=2,
+                    parse_json=False,
+                )
+                self.assertIsNone(result)
+                self.assertEqual(b"", completed.stdout)
+                self.assertNotEqual(b"", completed.stderr)
+
+    def test_read_contract_ignores_local_git_replacement_objects(self) -> None:
+        fixture = self.fixture(name="replacement-object")
+        fixture.git(
+            "update-ref",
+            f"refs/replace/{ACCEPTED_CONTRACT_REVISION}",
+            fixture.head,
+        )
+        self.assertEqual(
+            b"commit\n",
+            fixture.git("cat-file", "-t", ACCEPTED_CONTRACT_REVISION).stdout,
+            "fixture must prove the replacement attack is active for ordinary Git reads",
+        )
+        completed, result = self.checker(
+            fixture,
+            "read-contract",
+            "--repository", str(fixture.work),
+            "--contract", "adr-lifecycle",
+            expected_exit=2,
+            parse_json=False,
+        )
+        self.assertIsNone(result)
+        self.assertEqual(b"", completed.stdout)
+        blocked = json.loads(completed.stderr)
+        self.assertTrue(any(
+            "cannot be read safely" in item["message"]
+            for item in blocked["diagnostics"]
+        ))
 
     def test_exception_binding_rejects_wrong_repository_issue_operation_scope_and_content(self) -> None:
         mutations = [
@@ -774,9 +1030,11 @@ class ADRCheckerContractTests(unittest.TestCase):
             with self.subTest(name=name):
                 fixture, diagnostics, issue, trusted = self.missing_exception_fixture(f"validity-{index}")
                 if name == "expired":
-                    issue["comments"][0]["body"] = issue["comments"][0]["body"].replace(
-                        "2026-10-03T00:00:00Z", "2026-10-02T12:30:00Z"
-                    )
+                    record = self.read_exception_record(issue)
+                    record["expiresAt"] = (
+                        datetime.now(timezone.utc) - timedelta(minutes=1)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    self.bind_exception_record(issue, trusted, record)
                 elif name == "closed":
                     issue["issue"]["state"] = "CLOSED"
                 elif name == "incomplete":
@@ -801,6 +1059,47 @@ class ADRCheckerContractTests(unittest.TestCase):
         fixture.push()
         result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=2)
         self.assertEqual("blocked", result["status"])
+
+    def test_exception_external_json_inputs_must_be_bounded_regular_files(self) -> None:
+        fixture, diagnostics, issue, trusted = self.missing_exception_fixture("external-json")
+        diagnostics_path = self.write_json("regular-diagnostics.json", diagnostics)
+        issue_path = self.write_json("regular-issue.json", issue)
+        trusted_target = self.write_json("trusted-target.json", trusted)
+        trusted_link = self.temp / "trusted-link.json"
+        trusted_link.symlink_to(trusted_target)
+        _, linked = self.checker(
+            fixture,
+            "exception",
+            "--repository", str(fixture.work),
+            "--wiki-repository", CANONICAL_WIKI,
+            "--revision", fixture.head,
+            "--ticket", TICKET,
+            "--operation", OPERATION,
+            "--scope", SCOPE,
+            "--diagnostics", str(diagnostics_path),
+            "--issue-snapshot", str(issue_path),
+            "--trusted-approval", str(trusted_link),
+            expected_exit=2,
+        )
+        self.assertEqual("blocked", linked["status"])
+
+        oversized = self.temp / "oversized-diagnostics.json"
+        oversized.write_bytes(b" " * (1024 * 1024 + 1))
+        _, large = self.checker(
+            fixture,
+            "exception",
+            "--repository", str(fixture.work),
+            "--wiki-repository", CANONICAL_WIKI,
+            "--revision", fixture.head,
+            "--ticket", TICKET,
+            "--operation", OPERATION,
+            "--scope", SCOPE,
+            "--diagnostics", str(oversized),
+            "--issue-snapshot", str(issue_path),
+            "--trusted-approval", str(trusted_target),
+            expected_exit=2,
+        )
+        self.assertEqual("blocked", large["status"])
 
     def test_exception_rejects_ineligible_body_change(self) -> None:
         fixture = self.fixture(name="ineligible")
