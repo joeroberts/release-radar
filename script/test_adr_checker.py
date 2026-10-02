@@ -145,6 +145,15 @@ class WikiFixture:
         self.git("push", "-u", "origin", "main")
 
     def _build(self) -> None:
+        # Model the real cutover history: A is a legacy Wiki revision without a
+        # catalog, B contains normalized ADR candidates, and C adds the catalog
+        # and index whose accepted baselines point at B. Only C is published.
+        for spec in self.specs:
+            self.write(
+                str(spec["path"]),
+                (f"- Status: {spec['status']}\n\n## Decision\n\nLegacy source text.\n").encode(),
+            )
+        self.source_revision = self.commit("legacy ADR source without catalog")
         for spec in self.specs:
             doc = document_bytes(str(spec["id"]), str(spec["status"]), str(spec["body"]))
             self.write(str(spec["path"]), doc)
@@ -529,7 +538,7 @@ class ADRCheckerContractTests(unittest.TestCase):
     def test_initial_catalog_cutover_requires_absent_prior_catalog_and_full_add_coverage(self) -> None:
         fixture = self.fixture(name="bootstrap")
         candidate = fixture.head
-        prior = fixture.baseline_revision
+        prior = fixture.source_revision
         fixture.git("push", "--force", "origin", f"{prior}:main")
         authorization = self.authorization(prior, candidate, ["add"])
         result = self.transition(
