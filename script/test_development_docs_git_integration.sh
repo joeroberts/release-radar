@@ -215,6 +215,14 @@ if [[ $failures -eq 0 ]]; then
   [[ $(git -C "$configured_hooks" config --get core.hooksPath) == "$configured_path" ]] || fail 'configured_hooks: core.hooksPath changed'
   [[ -x "$configured_path/pre-commit" ]] || fail 'configured_hooks: hook was not installed in configured hooks path'
   expect_status 0 installer_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
+
+  partial_agent_handler=$(new_repo partial-agent-handler)
+  install_hook "$partial_agent_handler"
+  partial_agent_path=$(git -C "$partial_agent_handler" rev-parse --path-format=absolute --git-common-dir)/hooks/block_no_verify_commit.py
+  rm "$partial_agent_path"
+  expect_status 1 missing_agent_handler_status bash -c "cd '$partial_agent_handler' && ./script/install_development_docs_hook.sh --status"
+  expect_diagnostic missing_agent_handler_status 'not installed|handler'
+
   chmod -x "$configured_path/pre-commit"
   expect_status 1 nonexecutable_hook_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
   expect_diagnostic nonexecutable_hook_status 'not installed|executable|pre-commit'
