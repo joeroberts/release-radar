@@ -869,6 +869,47 @@ class ADRCheckerContractTests(unittest.TestCase):
             for item in result["diagnostics"]
         ))
 
+    def test_missing_exception_rejects_catalog_baseline_borrowed_from_another_adr(self) -> None:
+        specs = [
+            {
+                "id": "ADR-001", "path": "ADR-001-Core-Boundary.md", "title": "Core Boundary",
+                "status": "Accepted", "domain": "product",
+                "scopes": [{"key": SCOPE, "applicability": "current"}],
+                "body": "\n## Decision\n\nKeep the boundary exact.\n",
+            },
+            {
+                "id": "ADR-002", "path": "ADR-002-Other.md", "title": "Other",
+                "status": "Accepted", "domain": "product",
+                "scopes": [{"key": SCOPE, "applicability": "current"}],
+                "body": "\n## Decision\n\nA different accepted decision.\n",
+            },
+        ]
+        fixture = self.fixture(specs, name="borrowed-missing-baseline")
+        records = list(fixture.catalog()["records"])
+        records[0]["baseline"] = dict(records[1]["baseline"])
+        fixture.write_catalog(records)
+        fixture.write("Architecture-Decisions.md", render_index(records))
+        (fixture.work / "ADR-001-Core-Boundary.md").unlink()
+        fixture.head = fixture.commit("borrow another ADR baseline for a missing record")
+        fixture.push()
+        diagnostics = self.snapshot(fixture, expected_exit=2)
+        self.assert_blocked(diagnostics, "ADR_MISSING")
+        self.assert_blocked(diagnostics, "ADR_BASELINE_UNAVAILABLE")
+        failure = {
+            "code": "ADR_MISSING",
+            "revision": fixture.head,
+            "path": "ADR-001-Core-Boundary.md",
+            "expectedBlob": records[0]["blob"],
+            "observedBlob": None,
+            "reliedOn": [
+                self.relied_on(fixture, records[1]["baseline"]["commit"], "ADR-002-Other.md"),
+                self.relied_on(fixture, fixture.head, "ADR-002-Other.md"),
+            ],
+        }
+        issue, trusted = self.exception_inputs(fixture, fixture.head, [failure])
+        result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=2)
+        self.assertEqual("blocked", result["status"])
+
     def test_uncatalogued_exception_is_limited_to_exact_proposed_information(self) -> None:
         for index, status_value in enumerate(("Proposed", "Accepted")):
             with self.subTest(status=status_value):
@@ -1023,6 +1064,12 @@ class ADRCheckerContractTests(unittest.TestCase):
                 mutate(issue, trusted)
                 result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=2)
                 self.assertEqual("blocked", result["status"])
+
+    def test_exception_accepts_realistic_bounded_issue_body_size(self) -> None:
+        fixture, diagnostics, issue, trusted = self.missing_exception_fixture("large-issue-body")
+        issue["issue"]["body"] = "x" * 10257
+        result = self.exception(fixture, diagnostics, issue, trusted, expected_exit=0)
+        self.assertEqual("proceeding_under_exception", result["status"])
 
     def test_exception_rejects_expired_closed_incomplete_edited_deleted_and_marked_records(self) -> None:
         cases = ["expired", "closed", "incomplete", "edited", "deleted", "revoked", "resolved", "remembered"]
