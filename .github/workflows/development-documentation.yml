@@ -16,3 +16,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate development documentation
         run: swift script/check_development_docs.swift --root "$GITHUB_WORKSPACE"
+      - name: Test ADR checker
+        run: python3 -m unittest -v script.test_adr_checker
