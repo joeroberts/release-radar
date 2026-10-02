@@ -66,9 +66,11 @@ expect_allow() {
 expect_deny no_verify '{"tool_name":"Bash","tool_input":{"command":"git commit --no-verify -m test"}}'
 expect_deny short_no_verify '{"tool_name":"Bash","tool_input":{"command":"git commit -n -m test"}}'
 expect_allow ordinary_commit '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}'
+expect_allow quoted_option_value "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git commit -m '--no-verify'\"}}"
 expect_allow push '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}'
 expect_allow option_after_separator '{"tool_name":"Bash","tool_input":{"command":"git commit -- --no-verify"}}'
 expect_allow compound_command '{"tool_name":"Bash","tool_input":{"command":"git commit --no-verify && echo afterward"}}'
+expect_deny quoted_semicolon_option_value "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git commit --no-verify -m ';'\"}}"
 expect_allow missing_command '{"tool_name":"Bash","tool_input":{}}'
 expect_allow unknown_input '{"tool_name":"Bash","tool_input":[]}'
 expect_allow malformed_json '{'
