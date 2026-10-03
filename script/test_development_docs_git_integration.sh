@@ -42,11 +42,12 @@ new_repo() {
   git -C "$repo" init -q
   git -C "$repo" config user.name 'QA Fixture'
   git -C "$repo" config user.email 'qa@example.invalid'
-  mkdir -p "$repo/script" "$repo/.githooks" "$repo/docs/delivery"
+  mkdir -p "$repo/script" "$repo/.githooks" "$repo/.codex/hooks" "$repo/docs/delivery"
   cp "$repo_root/script/check_development_docs.swift" "$repo/script/"
   cp "$repo_root/.githooks/pre-commit" "$repo/.githooks/"
+  cp "$repo_root/.codex/hooks/block_no_verify_commit.py" "$repo/.codex/hooks/"
   cp "$repo_root/script/install_development_docs_hook.sh" "$repo/script/"
-  chmod +x "$repo/.githooks/pre-commit" "$repo/script/install_development_docs_hook.sh"
+  chmod +x "$repo/.githooks/pre-commit" "$repo/.codex/hooks/block_no_verify_commit.py" "$repo/script/install_development_docs_hook.sh"
   printf '%s' "$repo"
 }
 
@@ -66,6 +67,7 @@ expect_file() {
 }
 
 expect_file "$repo_root/.githooks/pre-commit"
+expect_file "$repo_root/.codex/hooks/block_no_verify_commit.py"
 expect_file "$repo_root/script/install_development_docs_hook.sh"
 expect_file "$repo_root/.github/workflows/development-documentation.yml"
 
@@ -213,6 +215,19 @@ if [[ $failures -eq 0 ]]; then
   [[ $(git -C "$configured_hooks" config --get core.hooksPath) == "$configured_path" ]] || fail 'configured_hooks: core.hooksPath changed'
   [[ -x "$configured_path/pre-commit" ]] || fail 'configured_hooks: hook was not installed in configured hooks path'
   expect_status 0 installer_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
+
+  partial_agent_handler=$(new_repo partial-agent-handler)
+  install_hook "$partial_agent_handler"
+  partial_agent_path=$(git -C "$partial_agent_handler" rev-parse --path-format=absolute --git-common-dir)/hooks/block_no_verify_commit.py
+  rm "$partial_agent_path"
+  expect_status 1 missing_agent_handler_status bash -c "cd '$partial_agent_handler' && ./script/install_development_docs_hook.sh --status"
+  if ! grep -Fq "not installed: missing or non-executable Codex hook handler at $partial_agent_path" "$fixture_root/missing_agent_handler_status.stderr"; then
+    fail 'missing_agent_handler_status: expected the missing Codex handler target in the diagnostic'
+  fi
+  if grep -Fq 'no development documentation or Codex hook handlers are installed' "$fixture_root/missing_agent_handler_status.stderr"; then
+    fail 'missing_agent_handler_status: accepted the former broad no-handlers diagnostic'
+  fi
+
   chmod -x "$configured_path/pre-commit"
   expect_status 1 nonexecutable_hook_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
   expect_diagnostic nonexecutable_hook_status 'not installed|executable|pre-commit'

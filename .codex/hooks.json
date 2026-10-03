@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "common_dir=$(git rev-parse --path-format=absolute --git-common-dir) || exit 0; handler=\"$common_dir/hooks/block_no_verify_commit.py\"; [ -x \"$handler\" ] || exit 0; exec /usr/bin/env python3 \"$handler\"",
+            "timeout": 5,
+            "statusMessage": "Checking Git commit options"
+          }
+        ]
+      }
+    ]
+  }
+}
