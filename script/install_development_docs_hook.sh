@@ -48,7 +48,10 @@ case "$1" in
         if [[ -e "$target_hook" || -L "$target_hook" ]] && ! matches_source "$source_hook" "$target_hook"; then
             fail "not installed: existing pre-commit hook at $target_hook is preserved"
         fi
-        fail "not installed: no development documentation or Codex hook handlers are installed"
+        missing_handlers=()
+        matches_source "$source_hook" "$target_hook" || missing_handlers+=("pre-commit at $target_hook")
+        matches_source "$source_agent_hook" "$target_agent_hook" || missing_handlers+=("Codex hook handler at $target_agent_hook")
+        fail "not installed: missing or non-executable ${missing_handlers[*]}"
         ;;
     --install)
         if [[ -e "$target_hook" || -L "$target_hook" ]] && ! matches_source "$source_hook" "$target_hook"; then
