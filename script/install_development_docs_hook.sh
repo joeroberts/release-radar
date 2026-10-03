@@ -42,10 +42,10 @@ case "$1" in
             printf 'installed: development documentation and Codex hook handlers at %s and %s\n' "$target_hook" "$target_agent_hook"
             exit 0
         fi
-        if [[ -e "$target_agent_hook" || -L "$target_agent_hook" ]]; then
+        if [[ -e "$target_agent_hook" || -L "$target_agent_hook" ]] && ! matches_source "$source_agent_hook" "$target_agent_hook"; then
             fail "not installed: existing Codex hook handler at $target_agent_hook is preserved"
         fi
-        if [[ -e "$target_hook" || -L "$target_hook" ]]; then
+        if [[ -e "$target_hook" || -L "$target_hook" ]] && ! matches_source "$source_hook" "$target_hook"; then
             fail "not installed: existing pre-commit hook at $target_hook is preserved"
         fi
         fail "not installed: no development documentation or Codex hook handlers are installed"
