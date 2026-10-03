@@ -221,7 +221,12 @@ if [[ $failures -eq 0 ]]; then
   partial_agent_path=$(git -C "$partial_agent_handler" rev-parse --path-format=absolute --git-common-dir)/hooks/block_no_verify_commit.py
   rm "$partial_agent_path"
   expect_status 1 missing_agent_handler_status bash -c "cd '$partial_agent_handler' && ./script/install_development_docs_hook.sh --status"
-  expect_diagnostic missing_agent_handler_status 'not installed|handler'
+  if ! grep -Fq "not installed: missing or non-executable Codex hook handler at $partial_agent_path" "$fixture_root/missing_agent_handler_status.stderr"; then
+    fail 'missing_agent_handler_status: expected the missing Codex handler target in the diagnostic'
+  fi
+  if grep -Fq 'no development documentation or Codex hook handlers are installed' "$fixture_root/missing_agent_handler_status.stderr"; then
+    fail 'missing_agent_handler_status: accepted the former broad no-handlers diagnostic'
+  fi
 
   chmod -x "$configured_path/pre-commit"
   expect_status 1 nonexecutable_hook_status bash -c "cd '$configured_hooks' && ./script/install_development_docs_hook.sh --status"
