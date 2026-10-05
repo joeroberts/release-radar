@@ -4,8 +4,8 @@ Updated: October 5, 2026.
 
 Epic #160 is executing the authorized reusable-skill delivery. All eleven role
 implementations exist. #174 and #228 retain active source or QA work; #162,
-#164, #170, #171, #173, #234, #235, #237, #238, #239, and #240 are in delivery
-evidence. #161, #169, #172, #230, and #236 are closed.
+#164, #170, #171, #173, #234, #235, #237, #238, and #240 are in delivery
+evidence. #161, #169, #172, #230, #236, and #239 are closed (8 of 23).
 ## Active links
 
 - [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
@@ -14,13 +14,12 @@ evidence. #161, #169, #172, #230, and #236 are closed.
   [#174](https://github.com/joeroberts/release-radar/issues/174),
   [#228](https://github.com/joeroberts/release-radar/issues/228),
   [#238](https://github.com/joeroberts/release-radar/issues/238),
-  [#239](https://github.com/joeroberts/release-radar/issues/239), and
   [#240](https://github.com/joeroberts/release-radar/issues/240) have bounded
-  role lanes. #174 corrected normal-policy discovery runs passed; its
-  delivered-child audit remains pending; #228 initial RR `1960d6b`/Wiki `bdb0901` block
-  passed but final all-version/new-host integration is pending. #173 QA/review
+  role lanes. #174 initial chunk merged at `d1f8ac4`; its delivered-child audit
+  remains pending. #228 initial RR `ced0de1`/Wiki `0c8d75a` chunk is canonical,
+  but final all-version/new-host integration is pending. #173 QA/review
   passed ai-tools `9aee996` and Wiki `b76f29d`; #238 passed final review at
-  `58cbd4d`; #239 has bounded required fixture fixes; #240 passed `18ef366`
+  `58cbd4d`; #240 passed `18ef366`
   with its explicit pinned-runtime handoff. Remaining delivery gates apply.
 - [#162](https://github.com/joeroberts/release-radar/issues/162),
   [#164](https://github.com/joeroberts/release-radar/issues/164),
@@ -28,8 +27,8 @@ evidence. #161, #169, #172, #230, and #236 are closed.
   [#171](https://github.com/joeroberts/release-radar/issues/171),
   [#234](https://github.com/joeroberts/release-radar/issues/234),
   [#235](https://github.com/joeroberts/release-radar/issues/235), and
-  [#237](https://github.com/joeroberts/release-radar/issues/237) require their
-  remaining review, delivery, installation, or fresh-use evidence.
+  [#237](https://github.com/joeroberts/release-radar/issues/237) require
+  remaining evidence; #170 is merged/installed and awaits fresh use.
 - [#231](https://github.com/joeroberts/release-radar/issues/231) and
   [#233](https://github.com/joeroberts/release-radar/issues/233) remain gated
   by hosted-runner acquisition during an [active GitHub Actions incident](https://www.githubstatus.com/incidents/3q1yb5m7ltvb);
@@ -38,7 +37,8 @@ evidence. #161, #169, #172, #230, and #236 are closed.
   [#169](https://github.com/joeroberts/release-radar/issues/169), and
   [#172](https://github.com/joeroberts/release-radar/issues/172),
   [#230](https://github.com/joeroberts/release-radar/issues/230), and
-  [#236](https://github.com/joeroberts/release-radar/issues/236) are closed.
+  [#236](https://github.com/joeroberts/release-radar/issues/236), and
+  [#239](https://github.com/joeroberts/release-radar/issues/239) are closed.
 - [Wiki Home](https://github.com/joeroberts/release-radar/wiki) routes current
   development standards and role guidance.
 ## Current constraints
