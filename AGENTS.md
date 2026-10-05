@@ -94,6 +94,13 @@ behavioral result as separate facts in the owning issue or assignment. A merged
 source, closed implementation issue, valid discovery link or successful
 invocation establishes only that named state; none substitutes for the others.
 
+Before entering any skill-folder subshell below, resolve every file-system
+input against the assignment checkout and store its absolute path. In
+particular, `$issue_spec`, `$issue_spec_with_url`, `$recovery_spec`,
+`$repository`, `$worktree`, and every cleanup artifact, cleanup worktree and
+task-observation file must be absolute. Do not pass a caller-relative path after
+`cd` changes the resolution base.
+
 For `github-issue-creation`, run the supported subcommand from its discovered
 skill folder. Draft and validation are non-mutating; live operations require
 the exact authorized input:
@@ -144,7 +151,10 @@ For `completion-cleanup`, run the inspector from the discovered skill folder
 against the exact assigned resources. Add only the repeatable resource options
 that are actually in scope: `--local-branch`, `--remote-branch remote:name`,
 `--remote-tracking-ref`, `--worktree`, `--artifact`, `--task`, and paired
-`--task-observations` as applicable.
+`--task-observations` as applicable. When provider delivery evidence is needed,
+add `--delivery-evidence "$delivery_evidence"`, where `$delivery_evidence` is
+the absolute path to provider JSON. Omit that option when the exact
+`--delivered-ref` is the applicable delivery evidence.
 
 ```sh
 (
@@ -155,7 +165,6 @@ that are actually in scope: `--local-branch`, `--remote-branch remote:name`,
     --authorized-endpoint "$authorized_endpoint" \
     --candidate-ref "$candidate_ref" \
     --delivered-ref "$delivered_ref" \
-    --delivery-evidence "$delivery_evidence" \
     --artifact "$artifact"
 )
 ```
