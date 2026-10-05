@@ -31,12 +31,15 @@ endpoint. Confirm the checkout and branch before relying on their files; do not
 substitute a stale progress summary or another worktree for current source or
 authorization.
 
-Keep role tasks available through ticket closure. Developer owns implementation,
-QA owns test code and execution, Build owns CI/CD and installation, Delivery
-owns ticket state and handoffs, and Reviewer independently reviews material
-changes. A role assignment does not grant authority beyond the ticket and owner
-direction. At closure, archive role tasks; replace an unavailable task only
-with a linked successor and concise handoff, then notify the owner.
+Keep role tasks available through ticket closure. Senior Software Developer and
+assigned specialists own implementation; QA owns test code and execution;
+Senior CI/CD Engineer owns CI/CD and installation; Delivery Management owns
+ticket state and handoffs. Reviewer/Auditor independently reviews material
+changes and checks claimed completed work blocks against their agreed outcomes
+and relevant evidence. A role assignment does not grant authority beyond the
+ticket and owner direction. At closure, archive role tasks; replace an
+unavailable task only with a linked successor and concise handoff, then notify
+the owner.
 
 ## Scope, authority, and records
 
