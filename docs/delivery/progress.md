@@ -54,6 +54,6 @@ worktree was deleted.
 
 ## Next action
 
-Record queued #174, #228, and #240 delivery states after the GitHub API
-cooldown is explicitly lifted. Continue active lanes and collect remaining
-evidence; #228 must reconcile the original eight roles plus eleven added roles.
+Continue active lanes and collect remaining delivery, installation, and
+fresh-use evidence; #228 must reconcile the original eight roles plus eleven
+added roles. Do not retry or bypass the #231/#233 hosted-runner gate.
