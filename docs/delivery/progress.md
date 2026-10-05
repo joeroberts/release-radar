@@ -21,10 +21,10 @@ implementations exist. #228 retains active integration work; #234, #235, #237,
   [#235](https://github.com/joeroberts/release-radar/issues/235), and
   [#237](https://github.com/joeroberts/release-radar/issues/237) require
   remaining evidence.
-- [#233](https://github.com/joeroberts/release-radar/issues/233) remains gated
-  by hosted-runner acquisition during an [active GitHub Actions incident](https://www.githubstatus.com/incidents/3q1yb5m7ltvb);
-  do not retry, bypass, merge, or close pending owner direction.
-  [#232](https://github.com/joeroberts/release-radar/issues/232) remains in review.
+- [#233](https://github.com/joeroberts/release-radar/issues/233) is in
+  current-base source delivery at `94c8719`; required CI, installation,
+  fresh-use, and final-review gates remain. [#232](https://github.com/joeroberts/release-radar/issues/232)
+  remains in review pending an evidence-backed disposition of Copilot feedback.
 - [#161](https://github.com/joeroberts/release-radar/issues/161),
   [#162](https://github.com/joeroberts/release-radar/issues/162),
   [#164](https://github.com/joeroberts/release-radar/issues/164),
@@ -54,6 +54,7 @@ lacks their SHAs; no guessed recovery was attempted and no source, branch, or
 worktree was deleted.
 ## Next action
 
-Continue active lanes and collect remaining delivery, installation, and
-fresh-use evidence; #228 must reconcile the original eight roles plus eleven
-added roles. Do not retry or bypass the #231/#233 hosted-runner gate.
+Continue active lanes and collect remaining delivery, installation, fresh-use,
+and review evidence. #228 must reconcile the original eight method/guidance
+inputs plus eleven role skills; #232 needs a feedback disposition and #233
+continues through its required current-base delivery gates.
