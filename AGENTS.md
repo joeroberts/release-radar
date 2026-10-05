@@ -41,6 +41,57 @@ ticket and owner direction. At closure, archive role tasks; replace an
 unavailable task only with a linked successor and concise handoff, then notify
 the owner.
 
+### Development skill selection
+
+Use only the skills relevant to the current ticket and assigned role. Do not
+load the complete skill suite for a simple task. A skill must be present in the
+current host's discovered skill catalog before it is described as available;
+source files, an installation request, or another session's result do not prove
+current discovery or invocation. If an assigned skill is missing, report its
+name, expected canonical source and discovery location, and the effect on the
+work instead of claiming success or manually reproducing its algorithm.
+
+Reusable development-method and role skills are canonically authored in
+[`joeroberts/ai-tools`](https://github.com/joeroberts/ai-tools) under
+`integrations/codex/skills/<name>/`. For the owner-authorized local rollout,
+their user discovery links are `~/.codex/skills/<name>` and target the stable
+ai-tools checkout, never a disposable worktree or installed cache. Record the
+exact delivered source revision and verified discovery location in the owning
+issue or assignment. Release Radar-specific skills remain tracked directly in
+this repository under `.agents/skills/<name>/`; their files and relative
+resources must resolve from a fresh checkout or worktree. Do not copy reusable
+skills into Release Radar merely to expose them. The
+[official Codex skill guidance](https://learn.chatgpt.com/docs/build-skills)
+documents repository discovery from `.agents/skills` and following symlinked
+skill folders; the owner-selected user endpoint for this rollout remains a
+host-specific arrangement that must be verified on the target host.
+
+For every selected skill, the assignment names its invocation condition,
+required project inputs and target context, supported command or project check
+when one exists, expected result, failure response, and result destination.
+Instruction-only skills have no fictitious universal command: use the
+project-owned checks relevant to their output and identify what remains a
+judgment. Skill loading does not create a role task, configure its model, grant
+authority, satisfy independent review, or turn a successful tool call into
+permission to mutate.
+
+When an authorized Release Radar handoff uses `progress-handoff`, validate the
+complete proposed bytes before replacing the existing snapshot:
+
+```sh
+swift "$repository_root/script/check_development_docs.swift" --progress-stdin < "$proposed_content"
+swift "$repository_root/script/check_development_docs.swift" --root "$repository_root"
+```
+
+Resolve `proposed_content` and `repository_root` for the exact worktree. The
+first command must succeed before the single snapshot is replaced; after the
+write, read back the target and run the second command. On an unavailable or
+failed check, leave the prior snapshot unchanged when it has not yet been
+replaced and report the exact failure. The validator deterministically enforces
+the byte and line limits; evidence selection, content accuracy, authority, and
+the next action remain judgment. Delivery Management owns the snapshot, and
+current results belong in the owning issue rather than a new tracker.
+
 ## Scope, authority, and records
 
 The Wiki standards, delegation model, and role prompts govern how repository
