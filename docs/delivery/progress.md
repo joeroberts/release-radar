@@ -3,28 +3,26 @@ Updated: October 5, 2026.
 ## Current outcome
 
 Epic #160 is executing the authorized reusable-skill delivery. All eleven role
-implementations exist. #228 retains active integration work; #234, #235, #237,
+implementations exist. #228 retains final integration work; #233, #235, #237,
 #238, and #240 are in delivery evidence. #161, #162, #164, #169, #170, #171,
-#172, #173, #174, #230, #231, #236, and #239 are closed (15 of 23).
+#172, #173, #174, #230, #231, #232, #234, #236, and #239 are closed (17 of 23).
 ## Active links
 
 - [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
   complete outcome and child acceptance criteria.
-- [#228](https://github.com/joeroberts/release-radar/issues/228),
-  [#238](https://github.com/joeroberts/release-radar/issues/238),
-  [#240](https://github.com/joeroberts/release-radar/issues/240) have bounded
-  role lanes. #228 initial RR `ced0de1`/Wiki `0c8d75a` chunk is canonical, but
-  final all-version/new-host integration is pending. #238 passed final review
-  at `58cbd4d`; #240 passed `18ef366`
-  with its explicit pinned-runtime handoff. Remaining delivery gates apply.
-- [#234](https://github.com/joeroberts/release-radar/issues/234),
-  [#235](https://github.com/joeroberts/release-radar/issues/235), and
+- [#228](https://github.com/joeroberts/release-radar/issues/228) has delivered
+  integration batches through [PR #248](https://github.com/joeroberts/release-radar/pull/248)
+  at `4361a18` and Wiki revision `b0d9e73`; its final integration will add
+  the remaining seven roles and complete fresh-host evidence.
+- [#233](https://github.com/joeroberts/release-radar/issues/233) has delivered
+  source and stable installation through ai-tools [PR #149](https://github.com/joeroberts/ai-tools/pull/149)
+  at `e8bba95`; fresh actual use and final criterion recording remain.
+- [#235](https://github.com/joeroberts/release-radar/issues/235) and
   [#237](https://github.com/joeroberts/release-radar/issues/237) require
-  remaining evidence.
-- [#233](https://github.com/joeroberts/release-radar/issues/233) is in
-  current-base source delivery at `94c8719`; required CI, installation,
-  fresh-use, and final-review gates remain. [#232](https://github.com/joeroberts/release-radar/issues/232)
-  remains in review pending an evidence-backed disposition of Copilot feedback.
+  remaining delivery evidence. [#238](https://github.com/joeroberts/release-radar/issues/238)
+  passed final review at `58cbd4d`; [#240](https://github.com/joeroberts/release-radar/issues/240)
+  passed `18ef366` with its pinned-runtime handoff. Remaining delivery gates
+  apply.
 - [#161](https://github.com/joeroberts/release-radar/issues/161),
   [#162](https://github.com/joeroberts/release-radar/issues/162),
   [#164](https://github.com/joeroberts/release-radar/issues/164),
@@ -36,6 +34,8 @@ implementations exist. #228 retains active integration work; #234, #235, #237,
   [#174](https://github.com/joeroberts/release-radar/issues/174),
   [#230](https://github.com/joeroberts/release-radar/issues/230), and
   [#231](https://github.com/joeroberts/release-radar/issues/231),
+  [#232](https://github.com/joeroberts/release-radar/issues/232),
+  [#234](https://github.com/joeroberts/release-radar/issues/234),
   [#236](https://github.com/joeroberts/release-radar/issues/236), and
   [#239](https://github.com/joeroberts/release-radar/issues/239) are closed.
 - [Wiki Home](https://github.com/joeroberts/release-radar/wiki) routes current
@@ -54,7 +54,6 @@ lacks their SHAs; no guessed recovery was attempted and no source, branch, or
 worktree was deleted.
 ## Next action
 
-Continue active lanes and collect remaining delivery, installation, fresh-use,
-and review evidence. #228 must reconcile the original eight method/guidance
-inputs plus eleven role skills; #232 needs a feedback disposition and #233
-continues through its required current-base delivery gates.
+Continue active lanes and collect delivery, installation, fresh-use, and review
+evidence. #228's final integration must add its remaining seven roles; #233
+needs fresh actual use and final criterion recording.
