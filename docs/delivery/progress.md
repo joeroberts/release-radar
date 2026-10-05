@@ -3,9 +3,9 @@ Updated: October 5, 2026.
 ## Current outcome
 
 Epic #160 is executing the authorized reusable-skill delivery. All eleven role
-implementations exist, but only #230 is closed. #174 and #228 retain active
-source or QA work; #162, #164, #170, #171, #172, #173, #234, #235, #236, #237,
-#238, #239, and #240 are in delivery evidence. #161 and #169 are closed.
+implementations exist. #174 and #228 retain active source or QA work; #162,
+#164, #170, #171, #172, #173, #234, #235, #237, #238, #239, and #240 are in
+delivery evidence. #161, #169, #230, and #236 are closed.
 ## Active links
 
 - [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
@@ -36,7 +36,8 @@ source or QA work; #162, #164, #170, #171, #172, #173, #234, #235, #236, #237,
   do not retry, bypass, merge, or close pending owner direction. [#232](https://github.com/joeroberts/release-radar/issues/232) remains in review.
 - [#161](https://github.com/joeroberts/release-radar/issues/161),
   [#169](https://github.com/joeroberts/release-radar/issues/169), and
-  [#230](https://github.com/joeroberts/release-radar/issues/230) are closed.
+  [#230](https://github.com/joeroberts/release-radar/issues/230), and
+  [#236](https://github.com/joeroberts/release-radar/issues/236) are closed.
 - [Wiki Home](https://github.com/joeroberts/release-radar/wiki) routes current
   development standards and role guidance.
 ## Current constraints
