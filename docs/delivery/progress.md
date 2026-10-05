@@ -3,9 +3,9 @@ Updated: October 5, 2026.
 ## Current outcome
 
 Epic #160 is executing the authorized reusable-skill delivery. All eleven role
-implementations exist. #228 retains final integration work; #235, #237, #238,
-and #240 are in delivery evidence. #161, #162, #164, #169, #170, #171, #172,
-#173, #174, #230, #231, #232, #233, #234, #236, and #239 are closed (18 of 23).
+implementations exist. #228 retains final integration work; #238 and #240 are
+in delivery evidence. #161, #162, #164, #169, #170, #171, #172, #173, #174,
+#230, #231, #232, #233, #234, #235, #236, #237, and #239 are closed (20 of 23).
 ## Active links
 
 - [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
@@ -14,12 +14,10 @@ and #240 are in delivery evidence. #161, #162, #164, #169, #170, #171, #172,
   integration batches through [PR #248](https://github.com/joeroberts/release-radar/pull/248)
   at `4361a18` and Wiki revision `b0d9e73`; its final integration will add
   the remaining seven roles and complete fresh-host evidence.
-- [#235](https://github.com/joeroberts/release-radar/issues/235) and
-  [#237](https://github.com/joeroberts/release-radar/issues/237) require
-  remaining delivery evidence. [#238](https://github.com/joeroberts/release-radar/issues/238)
-  passed final review at `58cbd4d`; [#240](https://github.com/joeroberts/release-radar/issues/240)
-  passed `18ef366` with its pinned-runtime handoff. Remaining delivery gates
-  apply.
+- [#238](https://github.com/joeroberts/release-radar/issues/238) has delivered
+  source and stable installation through ai-tools [PR #162](https://github.com/joeroberts/ai-tools/pull/162)
+  at `f3b30be`; fresh QA is underway. [#240](https://github.com/joeroberts/release-radar/issues/240)
+  remains in final role delivery. Remaining delivery gates apply.
 - [#161](https://github.com/joeroberts/release-radar/issues/161),
   [#162](https://github.com/joeroberts/release-radar/issues/162),
   [#164](https://github.com/joeroberts/release-radar/issues/164),
@@ -34,7 +32,9 @@ and #240 are in delivery evidence. #161, #162, #164, #169, #170, #171, #172,
   [#232](https://github.com/joeroberts/release-radar/issues/232),
   [#233](https://github.com/joeroberts/release-radar/issues/233),
   [#234](https://github.com/joeroberts/release-radar/issues/234),
-  [#236](https://github.com/joeroberts/release-radar/issues/236), and
+  [#235](https://github.com/joeroberts/release-radar/issues/235),
+  [#236](https://github.com/joeroberts/release-radar/issues/236),
+  [#237](https://github.com/joeroberts/release-radar/issues/237), and
   [#239](https://github.com/joeroberts/release-radar/issues/239) are closed.
 - [Wiki Home](https://github.com/joeroberts/release-radar/wiki) routes current
   development standards and role guidance.
