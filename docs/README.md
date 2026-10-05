@@ -5,6 +5,13 @@ Current work, acceptance criteria, and delivery results belong to the owning
 product specifications and architecture decisions are maintained in the
 [Release Radar Wiki](https://github.com/joeroberts/release-radar/wiki).
 
+For Release Radar development assignments and task-relevant skill routing,
+start with the repository [agent instructions](../AGENTS.md) and the Wiki's
+[RR Development Delegation Model](https://github.com/joeroberts/release-radar/wiki/RR-Development-Delegation-Model).
+The owning issue or assignment records exact delivered skill revisions and
+actual discovery or invocation results; this documentation index does not prove
+that a reusable skill is installed or available in the current session.
+
 Repository documentation retains the current [delivery snapshot](delivery/progress.md)
 and repository-owned [design references](design/README.md). For proposed
 whole-product work, use the published
