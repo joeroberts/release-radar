@@ -29,9 +29,9 @@ corrected full project instruction load. These are not blockers to delivered
 skill routing.
 ## Next action
 
-Complete the already-authorized exact #228 evaluator-worktree cleanup/readback
-at `/Users/jroberts/.codex/worktrees/6947/release_radar`; preserve the listed
+The #228 implementation, Wiki, evaluator-worktree, and issue-ref cleanup
+readbacks are complete; its two CLI sessions are archived. Preserve the listed
 temporary artifacts and retained session logs pending an owner retention/disposal
-decision. Then Delivery Management may record final administrative reconciliation
-and the owner may close Epic #160.
-
+decision. After this final snapshot merges and Delivery Management records its
+own workspace reconciliation, the owner may close Epic #160 or select the next
+authorized ticket; no epic implementation work remains.
