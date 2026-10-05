@@ -2,55 +2,36 @@
 Updated: October 5, 2026.
 ## Current outcome
 
-Epic #160 is executing the authorized reusable-skill delivery. All eleven role
-implementations exist. #228 retains final integration work; #238 and #240 are
-in delivery evidence. #161, #162, #164, #169, #170, #171, #172, #173, #174,
-#230, #231, #232, #233, #234, #235, #236, #237, and #239 are closed (20 of 23).
+Epic #160 has delivered the authorized reusable-skill outcome. All 23 child
+issues are closed, including final integration #228. Canonical Release Radar
+main is `3f613a469916d196b898344aa63c59dc332bc893`; canonical Wiki master is
+`0fe31d7610442ae185eba7f4ef8f9f406eb1aaae`.
 ## Active links
 
 - [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
-  complete outcome and child acceptance criteria.
-- [#228](https://github.com/joeroberts/release-radar/issues/228) has delivered
-  integration batches through [PR #248](https://github.com/joeroberts/release-radar/pull/248)
-  at `4361a18` and Wiki revision `b0d9e73`; its final integration will add
-  the remaining seven roles and complete fresh-host evidence.
-- [#238](https://github.com/joeroberts/release-radar/issues/238) has delivered
-  source and stable installation through ai-tools [PR #162](https://github.com/joeroberts/ai-tools/pull/162)
-  at `f3b30be`; fresh QA is underway. [#240](https://github.com/joeroberts/release-radar/issues/240)
-  remains in final role delivery. Remaining delivery gates apply.
-- [#161](https://github.com/joeroberts/release-radar/issues/161),
-  [#162](https://github.com/joeroberts/release-radar/issues/162),
-  [#164](https://github.com/joeroberts/release-radar/issues/164),
-  [#169](https://github.com/joeroberts/release-radar/issues/169),
-  [#170](https://github.com/joeroberts/release-radar/issues/170), and
-  [#171](https://github.com/joeroberts/release-radar/issues/171),
-  [#172](https://github.com/joeroberts/release-radar/issues/172),
-  [#173](https://github.com/joeroberts/release-radar/issues/173),
-  [#174](https://github.com/joeroberts/release-radar/issues/174),
-  [#230](https://github.com/joeroberts/release-radar/issues/230), and
-  [#231](https://github.com/joeroberts/release-radar/issues/231),
-  [#232](https://github.com/joeroberts/release-radar/issues/232),
-  [#233](https://github.com/joeroberts/release-radar/issues/233),
-  [#234](https://github.com/joeroberts/release-radar/issues/234),
-  [#235](https://github.com/joeroberts/release-radar/issues/235),
-  [#236](https://github.com/joeroberts/release-radar/issues/236),
-  [#237](https://github.com/joeroberts/release-radar/issues/237), and
-  [#239](https://github.com/joeroberts/release-radar/issues/239) are closed.
-- [Wiki Home](https://github.com/joeroberts/release-radar/wiki) routes current
-  development standards and role guidance.
+  delivered outcome and its retained-evidence record.
+- [#228](https://github.com/joeroberts/release-radar/issues/228) is closed with
+  its [final criterion record](https://github.com/joeroberts/release-radar/issues/228#issuecomment-6005066876).
+  [PR #250](https://github.com/joeroberts/release-radar/pull/250) delivered
+  final routing at `3f613a46`; the published Wiki revision is `0fe31d76`.
+- The original eight method/guidance inputs and eleven role skills are now
+  routed through canonical repository/Wiki documentation. Source, installation,
+  catalog, and actual-use evidence are recorded on the owning child issues.
+- [Temporary-artifact inventory](https://github.com/joeroberts/release-radar/issues/160#issuecomment-6004577519)
+  lists retained noncanonical fixtures, provider evidence, and the withdrawn
+  #236 draft. They are not deliverables and require separate authority to alter.
 ## Current constraints
 
-#177 and #178 remain closed completed inputs; do not reopen without a newly
-authorized defect. Do not close a child from source delivery or a completed task
-alone: record its criteria, merged source, stable installation/discovery, exact
-fresh-session invocation, checks, and review.
-#169 retains seven run-owned temporary QA evidence directories pending explicit
-owner deletion authority; they are not durable deliverables or a closure defect.
-Its broad cleanup prune also removed unrelated stale local remote-tracking
-references. Exact recovery is unavailable because retained pre-operation output
-lacks their SHAs; no guessed recovery was attempted and no source, branch, or
-worktree was deleted.
+Accepted limitations remain accurately scoped: browser and pinned FastAPI runtime
+behavior was not claimed where unavailable, and the initial managed-app #228
+evaluator had no usable task. Final normal-policy CLI evidence verified the
+corrected full project instruction load. These are not blockers to delivered
+skill routing.
 ## Next action
 
-Continue active lanes and collect delivery, installation, fresh-use, and review
-evidence. #228's final integration must add its remaining seven roles.
+Complete the already-authorized exact #228 evaluator-worktree cleanup/readback
+at `/Users/jroberts/.codex/worktrees/6947/release_radar`; preserve the listed
+temporary artifacts and retained session logs pending an owner retention/disposal
+decision. Then Delivery Management may record final administrative reconciliation
+and the owner may close Epic #160.
+
