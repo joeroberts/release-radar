@@ -3,40 +3,39 @@ Updated: October 5, 2026.
 ## Current outcome
 
 Epic #160 is executing the authorized reusable-skill delivery. All eleven role
-implementations exist. #174 and #228 retain active source or QA work; #162,
-#164, #170, #171, #173, #234, #235, #237, #238, and #240 are in delivery
-evidence. #161, #169, #172, #230, #236, and #239 are closed (8 of 23).
+implementations exist. #228 retains active integration work; #234, #235, #237,
+#238, and #240 are in delivery evidence. #161, #162, #164, #169, #170, #171,
+#172, #173, #174, #230, #231, #236, and #239 are closed (15 of 23).
 ## Active links
 
 - [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
   complete outcome and child acceptance criteria.
-- [#173](https://github.com/joeroberts/release-radar/issues/173),
-  [#174](https://github.com/joeroberts/release-radar/issues/174),
-  [#228](https://github.com/joeroberts/release-radar/issues/228),
+- [#228](https://github.com/joeroberts/release-radar/issues/228),
   [#238](https://github.com/joeroberts/release-radar/issues/238),
   [#240](https://github.com/joeroberts/release-radar/issues/240) have bounded
-  role lanes. #174 initial chunk merged at `d1f8ac4`; its delivered-child audit
-  remains pending. #228 initial RR `ced0de1`/Wiki `0c8d75a` chunk is canonical,
-  but final all-version/new-host integration is pending. #173 QA/review
-  passed ai-tools `9aee996` and Wiki `b76f29d`; #238 passed final review at
-  `58cbd4d`; #240 passed `18ef366`
+  role lanes. #228 initial RR `ced0de1`/Wiki `0c8d75a` chunk is canonical, but
+  final all-version/new-host integration is pending. #238 passed final review
+  at `58cbd4d`; #240 passed `18ef366`
   with its explicit pinned-runtime handoff. Remaining delivery gates apply.
-- [#162](https://github.com/joeroberts/release-radar/issues/162),
-  [#164](https://github.com/joeroberts/release-radar/issues/164),
-  [#170](https://github.com/joeroberts/release-radar/issues/170),
-  [#171](https://github.com/joeroberts/release-radar/issues/171),
-  [#234](https://github.com/joeroberts/release-radar/issues/234),
+- [#234](https://github.com/joeroberts/release-radar/issues/234),
   [#235](https://github.com/joeroberts/release-radar/issues/235), and
   [#237](https://github.com/joeroberts/release-radar/issues/237) require
-  remaining evidence; #170 is merged/installed and awaits fresh use.
-- [#231](https://github.com/joeroberts/release-radar/issues/231) and
-  [#233](https://github.com/joeroberts/release-radar/issues/233) remain gated
+  remaining evidence.
+- [#233](https://github.com/joeroberts/release-radar/issues/233) remains gated
   by hosted-runner acquisition during an [active GitHub Actions incident](https://www.githubstatus.com/incidents/3q1yb5m7ltvb);
-  do not retry, bypass, merge, or close pending owner direction. [#232](https://github.com/joeroberts/release-radar/issues/232) remains in review.
+  do not retry, bypass, merge, or close pending owner direction.
+  [#232](https://github.com/joeroberts/release-radar/issues/232) remains in review.
 - [#161](https://github.com/joeroberts/release-radar/issues/161),
-  [#169](https://github.com/joeroberts/release-radar/issues/169), and
+  [#162](https://github.com/joeroberts/release-radar/issues/162),
+  [#164](https://github.com/joeroberts/release-radar/issues/164),
+  [#169](https://github.com/joeroberts/release-radar/issues/169),
+  [#170](https://github.com/joeroberts/release-radar/issues/170), and
+  [#171](https://github.com/joeroberts/release-radar/issues/171),
   [#172](https://github.com/joeroberts/release-radar/issues/172),
+  [#173](https://github.com/joeroberts/release-radar/issues/173),
+  [#174](https://github.com/joeroberts/release-radar/issues/174),
   [#230](https://github.com/joeroberts/release-radar/issues/230), and
+  [#231](https://github.com/joeroberts/release-radar/issues/231),
   [#236](https://github.com/joeroberts/release-radar/issues/236), and
   [#239](https://github.com/joeroberts/release-radar/issues/239) are closed.
 - [Wiki Home](https://github.com/joeroberts/release-radar/wiki) routes current
