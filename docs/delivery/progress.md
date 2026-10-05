@@ -3,8 +3,8 @@ Updated: October 5, 2026.
 ## Current outcome
 
 Epic #160 has delivered the authorized reusable-skill outcome. All 23 child
-issues are closed, including final integration #228. Canonical Release Radar
-main is `3f613a469916d196b898344aa63c59dc332bc893`; canonical Wiki master is
+issues are closed, including final integration #228. Final integration was
+delivered at `3f613a469916d196b898344aa63c59dc332bc893`; canonical Wiki master is
 `0fe31d7610442ae185eba7f4ef8f9f406eb1aaae`.
 ## Active links
 
@@ -29,9 +29,7 @@ corrected full project instruction load. These are not blockers to delivered
 skill routing.
 ## Next action
 
-The #228 implementation, Wiki, evaluator-worktree, and issue-ref cleanup
-readbacks are complete; its two CLI sessions are archived. Preserve the listed
-temporary artifacts and retained session logs pending an owner retention/disposal
-decision. After this final snapshot merges and Delivery Management records its
-own workspace reconciliation, the owner may close Epic #160 or select the next
-authorized ticket; no epic implementation work remains.
+#228 cleanup readbacks are complete and its two CLI sessions are archived.
+Preserve the listed temporary artifacts and retained session logs pending an
+owner retention/disposal decision. Await the next owner-authorized ticket; no
+epic implementation work remains.
