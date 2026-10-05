@@ -75,6 +75,21 @@ judgment. Skill loading does not create a role task, configure its model, grant
 authority, satisfy independent review, or turn a successful tool call into
 permission to mutate.
 
+Use these delivered reusable entry points only under their listed conditions:
+
+| Entry point | Invoke with | Execution, result and failure response |
+| --- | --- | --- |
+| `progress-handoff` | An authorized replacement of the existing progress snapshot; exact repository root, target, candidate, evidence, limits and validators. | Use the deterministic pre-write and saved-file commands below. Return the resolved target, actual outcomes and next owner; retain the prior snapshot when the proposed check fails. |
+| `acceptance-verification` | A complete outcome and criteria, exact candidate and target, project check recipes, evidence destination and check ownership. | Use the smallest relevant project-owned checks and return criterion statuses with observed evidence. In RR, QA owns test execution. Missing inputs remain `Blocked` or `Not Run`; no universal helper or successful unrelated command supplies acceptance. |
+| `decision-investigation` | One bounded rationale, approval or applicability question; named anchor, repository/provider and revision, governing authority and time perspective. | This read-oriented, instruction-only skill uses narrowly resolved project Git, provider and decision tools rather than a packaged helper. For RR ADR evidence, compose it with the repository `adr-management` skill and consume only that skill's verified pinned bytes. Return cited facts, intent, demonstrated behavior, inference, conflicts and unknowns; stop with a qualified unresolved result when evidence or authority is missing. |
+| `chief-architect` | A named public-contract, persistence, component-boundary or accepted-decision question with the affected consumers, constraints and decision endpoint. | This instruction-only role method returns alternatives and a qualified recommendation using relevant project checks. It does not accept a decision or implement it; missing boundary evidence remains unresolved. |
+| `senior-macos-native-software-developer` | Substantive macOS SwiftUI/AppKit behavior; exact candidate, deployment target, project shape, reproduction/design, runtime availability and project ownership rules. | This instruction-only role method implements or diagnoses native behavior and hands the exact candidate and scenarios to QA/CI/CD/review. It has no generic helper; unavailable runtime evidence stays unverified, and packaging, signing, installation and release remain with CI/CD. |
+
+Record actual source revision, installation, host discovery, invocation and
+behavioral result as separate facts in the owning issue or assignment. A merged
+source, closed implementation issue, valid discovery link or successful
+invocation establishes only that named state; none substitutes for the others.
+
 When an authorized Release Radar handoff uses `progress-handoff`, validate the
 complete proposed bytes before replacing the existing snapshot:
 
