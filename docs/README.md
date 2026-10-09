@@ -17,6 +17,34 @@ and repository-owned [design references](design/README.md). For proposed
 whole-product work, use the published
 [full-product architecture and delivery plan](https://github.com/joeroberts/release-radar/wiki/Full-Product-Architecture-and-Delivery-Plan).
 
+## Development documentation CI routing
+
+[`development-documentation.yml`](../.github/workflows/development-documentation.yml)
+always creates its `validate` job for pull requests to `main` and pushes to
+`main`. It uses the checked-in
+[`collect_development_changed_paths.sh`](../script/collect_development_changed_paths.sh)
+and [`classify_development_changes.py`](../script/classify_development_changes.py)
+helpers to select documentation-owned checks from the complete diff.
+
+| Changed input | Selected documentation checks |
+| --- | --- |
+| `docs/**` or a root Markdown document | Documentation validation |
+| Documentation-checker implementation or focused tests | Documentation validation and checker tests |
+| ADR-checker implementation, tests, or fixtures | Documentation validation and ADR-checker tests |
+| Workflow or routing-helper changes | Routing contract tests |
+| Mixed changes | Union of applicable checks |
+| Application, build, dependency, runtime-resource, or marketplace input | No documentation check solely for that input; app/build CI remains pending [#119](https://github.com/joeroberts/release-radar/issues/119) |
+
+The classifier treats unknown, malformed, empty, or unavailable diff input as
+a visible fail-closed fallback and runs all documentation-owned checks. The
+collector uses `--no-renames`, so deleted paths and both sides of a rename are classified.
+For an unexpected run or skip, first inspect the workflow's **Classify changed
+paths** JSON output: a non-null `fallback_reason` means broad validation was
+intentional; otherwise compare the reported categories with the table. The
+`validate` job itself should not be absent for supported PR/push triggers.
+An application-only change may pass `validate` while #119 lacks an app-build
+gate; that is routing behavior, not application verification.
+
 ## Development skill guidance
 
 Read only the entry relevant to the current ticket and assigned role. The
