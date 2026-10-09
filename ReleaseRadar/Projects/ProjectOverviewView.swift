@@ -41,6 +41,14 @@ private struct ManageProjectPresentation: Identifiable {
     var id: ProjectRegistration { registration }
 }
 
+private struct ProjectOverviewContentWidthKey: PreferenceKey {
+    static let defaultValue = CGFloat.infinity
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
@@ -85,16 +93,15 @@ struct ProjectOverviewView: View {
     @State private var documentationActionErrorGeneration = 0
     @AccessibilityFocusState private var documentationActionErrorFocused: Bool
     @State private var isPerformingDocumentationSetup = false
+    @State private var contentWidth = CGFloat.infinity
     private let documentationActionErrorAnchor = "project-documentation-action-error-anchor"
+    private let compactHeaderWidth: CGFloat = 720
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
-                    VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
-                }
+                projectHeader
                 HStack(spacing: 14) {
                     summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag", accessibilityID: "active-phase")
                     summaryCard("Current work", value: "\(project.currentWorkCount)", systemImage: "rectangle.stack", accessibilityID: "current-work")
@@ -161,9 +168,15 @@ struct ProjectOverviewView: View {
                 }
                 .padding(28)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: ProjectOverviewContentWidthKey.self, value: proxy.size.width)
+                    }
+                }
             }
         }
         .background(RekonTheme.background)
+        .onPreferenceChange(ProjectOverviewContentWidthKey.self) { contentWidth = $0 }
         .task { if health == nil { refreshHealth() } }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
         .sheet(item: $manageProjectPresentation) { presentation in
@@ -225,6 +238,15 @@ struct ProjectOverviewView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(project.name).font(.largeTitle.weight(.semibold))
             Text("Project overview").foregroundStyle(RekonTheme.secondaryText)
+        }
+    }
+
+    @ViewBuilder
+    private var projectHeader: some View {
+        if contentWidth < compactHeaderWidth {
+            VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
+        } else {
+            HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
         }
     }
 
