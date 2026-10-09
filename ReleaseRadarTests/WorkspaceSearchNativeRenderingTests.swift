@@ -300,6 +300,11 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.navigate(to: .search)
         try await settle(hosting)
 
+        if let token {
+            print("PHASE6E SEARCH BASELINE READY: inspect the isolated Ticket/Project Search result at wide and compact widths; record visible detail, filters, focus order, and exact-record action before marking the session complete")
+            try await waitForExternalNativeJourney(token: token, window: window)
+        }
+
         for width in [1_500.0, 760.0] {
             window.setContentSize(NSSize(width: width, height: 900))
             hosting.frame = window.contentView?.bounds ?? .zero
@@ -334,10 +339,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         hosting.frame = window.contentView?.bounds ?? .zero
         try await Task.sleep(for: .milliseconds(250))
         hosting.layoutSubtreeIfNeeded()
-
-        if let token {
-            try await waitForExternalNativeJourney(token: token, window: window)
-        }
 
         let activePhaseAfter = try await activePhase(in: store, projectID: projectID)
         XCTAssertEqual(activePhaseAfter, activePhaseBefore)
