@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Dispatch
 import SwiftUI
 import XCTest
 @testable import ReleaseRadar
@@ -115,6 +116,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.navigate(to: .search)
         try await settle(hosting)
         var nativeWindow = try requiredAccessibilityWindow(title: window.title)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Saved working search needs a newer Release Radar"))
         let runButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
         let saveButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save"))
         XCTAssertEqual(accessibilityBool(runButton, kAXEnabledAttribute), false)
@@ -141,6 +143,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         try await settle(hosting)
         nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
         XCTAssertTrue(model.workspaceSearchNeedsScopeReselection)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Search unavailable"))
         XCTAssertEqual(model.workspaceSearchDefinition.scope, saved.definition.scope)
         XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run")), kAXEnabledAttribute), false)
         XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save")), kAXEnabledAttribute), false)
@@ -177,6 +180,70 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
             print("PHASE6E HELP RECOVERY READY: use real keyboard input to verify the provenance, evidence applicability, and newer-version recovery queries and their exact actions")
             try await waitForExternalNativeJourney(token: token, window: window)
         }
+    }
+
+    func testSearchNoMatchAndLoadingStatesRenderNatively() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchStateNative-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed native Search state fixture") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('native-state-project', 'Native state project')")
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('native-state-project', 'native-state-registration', 1, 'complete')")
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Search states — isolated native acceptance"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.appearance = window.appearance
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        model.setWorkspaceSearchText("absent-native-state")
+        await model.runWorkspaceSearch()
+        try await settle(hosting)
+        var nativeWindow = try requiredAccessibilityWindow(title: window.title)
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-empty"))
+        XCTAssertFalse(model.workspaceSearchIsLoading)
+        XCTAssertNotNil(model.workspaceSearchProjection)
+
+        let gate = NativeSearchReadGate()
+        let blocker = Task {
+            try await store.read { _ in
+                gate.entered.signal()
+                gate.release.wait()
+            }
+        }
+        gate.entered.wait()
+        model.setWorkspaceSearchText("loading-native-state")
+        let pending = Task { await model.runWorkspaceSearch() }
+        let deadline = ContinuousClock.now + .seconds(2)
+        while !model.workspaceSearchIsLoading, ContinuousClock.now < deadline { await Task.yield() }
+        XCTAssertTrue(model.workspaceSearchIsLoading)
+        try await settle(hosting)
+        nativeWindow = try requiredAccessibilityWindow(title: window.title)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Searching recorded delivery data…"))
+
+        gate.release.signal()
+        try await blocker.value
+        await pending.value
+        XCTAssertFalse(model.workspaceSearchIsLoading)
     }
 
     func testSearchSavedViewsAndHelpRenderWideAndCompact() async throws {
@@ -510,4 +577,9 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+}
+
+private final class NativeSearchReadGate: @unchecked Sendable {
+    let entered = DispatchSemaphore(value: 0)
+    let release = DispatchSemaphore(value: 0)
 }
