@@ -1,4 +1,5 @@
 import Foundation
+import ReleaseRadarCore
 import SwiftUI
 import RekonDesignSystem
 
