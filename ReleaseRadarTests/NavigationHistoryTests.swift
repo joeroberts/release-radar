@@ -435,7 +435,16 @@ final class NavigationHistoryTests: XCTestCase {
         }
         await gate.waitUntilEntered()
         let first = Task { await model.updateWorkspaceSearchDomain(.ticket, enabled: false) }
-        while !model.workspaceSearchIsLoading { await Task.yield() }
+        let loadingDeadline = ContinuousClock.now + .seconds(2)
+        while !model.workspaceSearchIsLoading, ContinuousClock.now < loadingDeadline {
+            await Task.yield()
+        }
+        guard model.workspaceSearchIsLoading else {
+            gate.release.signal()
+            try await blocker.value
+            first.cancel()
+            return XCTFail("The first record-type update did not start loading")
+        }
         let latest = Task { await model.updateWorkspaceSearchDomain(.ticket, enabled: true) }
         gate.release.signal()
         try await blocker.value
