@@ -93,7 +93,7 @@ struct ProjectOverviewView: View {
                 VStack(alignment: .leading, spacing: 24) {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
-                    VStack(alignment: .leading, spacing: 12) { projectHeading; projectActions }
+                    VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
                 }
                 HStack(spacing: 14) {
                     summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag", accessibilityID: "active-phase")
@@ -230,15 +230,31 @@ struct ProjectOverviewView: View {
 
     private var projectActions: some View {
         HStack {
-            if loadProjectSettings != nil, project.registration != nil {
-                Button("Manage Project", action: openSettings)
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .accessibilityIdentifier("project-manage")
-            }
-            Button("Help") { showsHelp = true }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .accessibilityIdentifier("project-help")
+            manageProjectButton
+            helpButton
         }
+    }
+
+    private var compactProjectActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            manageProjectButton
+            helpButton
+        }
+    }
+
+    @ViewBuilder
+    private var manageProjectButton: some View {
+        if loadProjectSettings != nil, project.registration != nil {
+            Button("Manage Project", action: openSettings)
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("project-manage")
+        }
+    }
+
+    private var helpButton: some View {
+        Button("Help") { showsHelp = true }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityIdentifier("project-help")
     }
 
     private var deliveryHeading: some View {
