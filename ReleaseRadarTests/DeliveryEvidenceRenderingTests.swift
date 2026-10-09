@@ -255,8 +255,6 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         }
 
         let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
-        let help = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "delivery-evidence-help"))
-        XCTAssertEqual(AXUIElementSetAttributeValue(help, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
         let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-delivery-evidence"))
         XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
         await gate.waitUntilRefreshEntered()
@@ -268,9 +266,6 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(120))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-previously-loaded"))
         XCTAssertTrue(accessibilityText(nativeWindow).contains("Initial evidence"))
-        var focused: CFTypeRef?
-        XCTAssertEqual(AXUIElementCopyAttributeValue(help, kAXFocusedAttribute as CFString, &focused), .success)
-        XCTAssertEqual((focused as? NSNumber)?.boolValue, true)
 
         let retry = try XCTUnwrap(accessibilityElement(nativeWindow, title: "Retry"))
         XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)

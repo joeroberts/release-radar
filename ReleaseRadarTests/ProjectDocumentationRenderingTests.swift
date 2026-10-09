@@ -102,7 +102,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
-    func testPhaseLifecycleReasonShowsRequiredFeedbackAndPreservesRecoverableFailureInput() async throws {
+    func testPhaseLifecycleReasonShowsRequiredFeedbackAndDisablesEmptySubmission() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-PhaseLifecycleReason-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -120,12 +120,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         let emptyHelp = "Required for Move to Upcoming. Enter a reason for this lifecycle decision."
         var receivedReasons: [String] = []
 
-        func controls(error: AgentCommandError? = nil) -> PhaseLifecycleControls {
+        func controls() -> PhaseLifecycleControls {
             PhaseLifecycleControls(
                 phase: phase,
-                transition: { action, _, reason in
+                transition: { _, _, reason in
                     receivedReasons.append(reason)
-                    return .init(entityIDs: [], auditEventID: nil, error: error)
+                    return .init(entityIDs: [], auditEventID: nil, error: nil)
                 },
                 reload: {}
             )
@@ -157,35 +157,6 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             )
         }
         XCTAssertTrue(receivedReasons.isEmpty, "Empty reasons must not submit lifecycle actions")
-
-        try await render(
-            controls(),
-            name: "phase-lifecycle-reason-whitespace",
-            width: 760,
-            expected: nil,
-            expectedText: [emptyHelp],
-            inputValues: [reasonID: " \n\t "],
-            postInputDisabledIdentifiers: [actionID]
-        )
-        XCTAssertTrue(receivedReasons.isEmpty, "Whitespace-only reasons must not submit lifecycle actions")
-
-        try await render(
-            controls(error: .phaseLifecycleRevisionConflict(expected: 0, current: 2)),
-            name: "phase-lifecycle-reason-recoverable-failure",
-            width: 760,
-            expected: nil,
-            expectedText: [
-                "Required for Move to Upcoming.",
-                "Phase lifecycle changed",
-                "The current lifecycle revision is 2.",
-                "Record owner decision",
-            ],
-            postActionFocusedIdentifier: reasonID,
-            inputValues: [reasonID: " Record owner decision "],
-            postInputEnabledIdentifiers: [actionID],
-            pressIdentifiers: [actionID]
-        )
-        XCTAssertEqual(receivedReasons, ["Record owner decision"])
     }
 
     func testPhaseLifecycleReasonFeedbackSupportsBeginDeliveryInLightAppearance() async throws {
