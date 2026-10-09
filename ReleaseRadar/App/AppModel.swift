@@ -1271,6 +1271,12 @@ final class AppModel {
         captureCurrentNavigationContext()
     }
 
+    func updateWorkspaceSearchDomain(_ domain: WorkspaceSearchDomain, enabled: Bool) async {
+        guard canEditSupportedWorkspaceSearch else { return }
+        setWorkspaceSearchDomain(domain, enabled: enabled)
+        await runWorkspaceSearch()
+    }
+
     func setWorkspaceSearchAllAuthorizedScope() {
         guard canEditSupportedWorkspaceSearch else { return }
         invalidateWorkspaceSearchRun()
