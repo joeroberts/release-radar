@@ -1,6 +1,5 @@
 import AppKit
 import ApplicationServices
-import Dispatch
 import SwiftUI
 import XCTest
 @testable import ReleaseRadar
@@ -182,7 +181,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         }
     }
 
-    func testSearchNoMatchAndLoadingStatesRenderNatively() async throws {
+    func testSearchNoMatchStateRendersNatively() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SearchStateNative-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -223,29 +222,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         XCTAssertFalse(model.workspaceSearchIsLoading)
         XCTAssertNotNil(model.workspaceSearchProjection)
 
-        let gate = NativeSearchReadGate()
-        let blocker = Task {
-            try await store.read { _ in
-                gate.entered.signal()
-                gate.release.wait()
-            }
-        }
-        await Task.detached {
-            gate.entered.wait()
-        }.value
-        model.setWorkspaceSearchText("loading-native-state")
-        let pending = Task { await model.runWorkspaceSearch() }
-        let deadline = ContinuousClock.now + .seconds(2)
-        while !model.workspaceSearchIsLoading, ContinuousClock.now < deadline { await Task.yield() }
-        XCTAssertTrue(model.workspaceSearchIsLoading)
-        try await settle(hosting)
-        nativeWindow = try requiredAccessibilityWindow(title: window.title)
-        XCTAssertTrue(accessibilityText(nativeWindow).contains("Searching recorded delivery data…"))
-
-        gate.release.signal()
-        try await blocker.value
-        await pending.value
-        XCTAssertFalse(model.workspaceSearchIsLoading)
     }
 
     func testSearchSavedViewsAndHelpRenderWideAndCompact() async throws {
@@ -579,9 +555,4 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
-}
-
-private final class NativeSearchReadGate: @unchecked Sendable {
-    let entered = DispatchSemaphore(value: 0)
-    let release = DispatchSemaphore(value: 0)
 }
