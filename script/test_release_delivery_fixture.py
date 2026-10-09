@@ -136,8 +136,8 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.assertFalse(self.receipt.exists())
 
     def test_head_or_preflight_mismatch_records_bounded_failure_before_suite_or_build(self) -> None:
-        (self.root / "head").write_text("b" * 40 + "\n")
         self.initialize()
+        (self.root / "head").write_text("b" * 40 + "\n")
         self.stage("preflight", expected=1)
         receipt = self.receipt_json()
         self.assertEqual("preflight", receipt["failure"]["stage"])
