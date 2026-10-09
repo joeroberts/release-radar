@@ -81,7 +81,7 @@ final class ProjectArchiveAcceptanceTests: XCTestCase {
         BEGIN SELECT RAISE(ABORT, 'project owns task history'); END
         """)
         try legacy.execute("ALTER TABLE projects DROP COLUMN lifecycle")
-        try legacy.execute("DROP TABLE ticket_lane_order")
+        try legacy.execute("DROP TABLE IF EXISTS ticket_lane_order")
         try legacy.execute("PRAGMA user_version = 15")
 
         let reopened = DeliveryStore(databaseURL: url)

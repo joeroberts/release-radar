@@ -2371,7 +2371,7 @@ final class StoreAcceptanceTests: XCTestCase {
         ALTER TABLE notification_events DROP COLUMN project_id;
         DROP INDEX project_active_phases_phase_index;
         DROP TABLE project_active_phases;
-        DROP TABLE ticket_lane_order;
+        DROP TABLE IF EXISTS ticket_lane_order;
         PRAGMA user_version = 4;
         """)
 
@@ -2438,7 +2438,7 @@ final class StoreAcceptanceTests: XCTestCase {
         DROP TABLE alert_rules;
         DROP TABLE IF EXISTS ticket_goal_links;
         DROP INDEX IF EXISTS observed_goals_project_identity_unique;
-        DROP TABLE ticket_lane_order;
+        DROP TABLE IF EXISTS ticket_lane_order;
         PRAGMA user_version = 7;
         """)
 
@@ -3448,7 +3448,7 @@ final class StoreAcceptanceTests: XCTestCase {
         DROP TABLE IF EXISTS retained_project_activity_events;
         DROP TABLE IF EXISTS project_removal_authorizations;
         DROP TABLE IF EXISTS removed_projects;
-        DROP TABLE ticket_lane_order;
+        DROP TABLE IF EXISTS ticket_lane_order;
         ALTER TABLE audit_events DROP COLUMN historical_registration_id;
         ALTER TABLE audit_events DROP COLUMN historical_project_id;
         ALTER TABLE agent_command_requests DROP COLUMN request_generation;
