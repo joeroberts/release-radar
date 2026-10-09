@@ -247,10 +247,12 @@ bash script/build_and_run.sh release-delivery --version X.Y.Z --stage push_tag
 The workflow requires the configured Apple signing identity, the pinned
 libgit2 source used by `script/build_libgit2.sh`, Xcode's macOS test/build
 toolchain, and separate authority for every live delivery endpoint. It creates
-`dist/ReleaseRadar.app`, verifies the signed bundle and the copy mounted from
-`dist/ReleaseRadar-X.Y.Z.dmg`, retains the matching installer in Downloads,
-and verifies the installed bundle independently before allowing the exact
-annotated tag to be published.
+the generated intermediates `.build/releases/X.Y.Z/ReleaseRadar.app` and
+`.build/releases/X.Y.Z/ReleaseRadar-X.Y.Z.dmg`, verifies the signed staged
+bundle and the copy mounted from that DMG, retains the matching installer in
+Downloads, and verifies the installed bundle independently before allowing the
+exact annotated tag to be published. Existing legacy `dist` artifacts and
+build modes are not release intermediates and remain unchanged.
 
 Retry the failed stage with the same version. The receipt revalidates HEAD,
 required check evidence, canonical paths, bundle identities, DMG checksum, and

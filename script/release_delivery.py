@@ -76,9 +76,10 @@ class Context:
             root = self.repository
             downloads = Path.home() / "Downloads"
             self.installed_bundle = Path("/Applications/ReleaseRadar.app")
+        release_directory = root / ".build" / "releases" / version
         self.receipt_path = downloads / f"ReleaseRadar-{version}.release.json"
-        self.staged_bundle = root / "dist" / "ReleaseRadar.app"
-        self.dmg = root / "dist" / f"ReleaseRadar-{version}.dmg"
+        self.staged_bundle = release_directory / "ReleaseRadar.app"
+        self.dmg = release_directory / f"ReleaseRadar-{version}.dmg"
         self.installer = downloads / f"ReleaseRadar-{version}.dmg"
         if self.fixture_root:
             for destination in (

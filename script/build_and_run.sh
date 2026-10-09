@@ -562,15 +562,17 @@ package_release_dmg() {
     local expected_version="$4"
     local expected_build="$5"
     local expected_identity="$6"
+    local release_directory
     local package_directory
     local mount_directory
     local mounted_bundle
     local mounted_identity
 
     [[ ! -e "$dmg" && ! -e "$installer" ]] || { report_error "release package destination already exists"; return 1; }
-    mkdir -p "$(dirname "$dmg")" "$(dirname "$installer")"
-    package_directory="$(mktemp -d "$DIST_DIR/.${APP_NAME}.package.XXXXXX")"
-    mount_directory="$(mktemp -d "$DIST_DIR/.${APP_NAME}.mount.XXXXXX")"
+    release_directory="$(dirname "$dmg")"
+    mkdir -p "$release_directory" "$(dirname "$installer")"
+    package_directory="$(mktemp -d "$release_directory/.${APP_NAME}.package.XXXXXX")"
+    mount_directory="$(mktemp -d "$release_directory/.${APP_NAME}.mount.XXXXXX")"
     mounted_bundle="$mount_directory/$APP_NAME.app"
     if ! ditto "$source_bundle" "$package_directory/$APP_NAME.app" || \
        ! hdiutil create -volname "$APP_NAME" -srcfolder "$package_directory" -format UDZO "$dmg" >&2 || \
