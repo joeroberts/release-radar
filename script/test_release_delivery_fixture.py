@@ -34,8 +34,19 @@ fail = lambda name: (root / "operations" / ("fail-" + name)).exists()
 
 if operation == "head":
     print((root / "head").read_text().strip())
+elif operation == "source-state":
+    print(json.dumps({"clean": not fail("source-state")}, separators=(",", ":")))
 elif operation == "tag-state":
-    print('{"state":"absent"}')
+    if fail("tag-collision"):
+        print('{"state":"mismatch","peeled_sha":"' + "b" * 40 + '"}')
+    elif fail("tag-mismatched-peel"):
+        print('{"state":"matching-annotated","peeled_sha":"' + "b" * 40 + '"}')
+    elif fail("tag-after-create") and (root / "operations" / "tag-created").exists():
+        print('{"state":"mismatch","peeled_sha":"' + "b" * 40 + '"}')
+    elif (root / "operations" / "tag-created").exists():
+        print('{"state":"matching-annotated","peeled_sha":"' + (root / "head").read_text().strip() + '"}')
+    else:
+        print('{"state":"absent"}')
 elif operation == "signing-status":
     print('{"available":true,"team_matches":true,"authority_matches":true}')
 elif operation == "run-suite":
@@ -58,7 +69,10 @@ elif operation == "copy-bundle":
     pathlib.Path(operands[0]).with_suffix(pathlib.Path(operands[0]).suffix + ".identity").replace(target.with_suffix(target.suffix + ".identity"))
 elif operation == "remote-peeled-sha":
     print((root / "head").read_text().strip())
-elif operation in {"prepare-version", "commit-release-metadata", "prepare-libgit2", "stop-running", "create-tag", "push-tag"}:
+elif operation == "create-tag":
+    (root / "operations" / "tag-created").touch()
+    sys.exit(1 if fail(operation) else 0)
+elif operation in {"prepare-version", "commit-release-metadata", "prepare-libgit2", "stop-running", "push-tag"}:
     sys.exit(1 if fail(operation) else 0)
 else:
     raise SystemExit("unexpected operation: " + operation)
@@ -137,6 +151,21 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.assertNotEqual(0, escaped.returncode)
         self.assertFalse(self.receipt.exists())
 
+    def test_legacy_receipt_temp_symlink_cannot_escape_fixture_root(self) -> None:
+        outside_temporary = tempfile.TemporaryDirectory(prefix="rr-release-delivery-outside-")
+        self.addCleanup(outside_temporary.cleanup)
+        sentinel = Path(outside_temporary.name) / "sentinel"
+        sentinel.write_text("keep\n")
+        self.receipt.parent.mkdir(parents=True, exist_ok=True)
+        self.receipt.with_suffix(".json.tmp").symlink_to(sentinel)
+        result = self.command(
+            "release-init", "--version", VERSION, "--build", BUILD,
+            "--required-suite", SUITE, *self.flags(),
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual("keep\n", sentinel.read_text())
+        self.assertEqual([], self.operations())
+
     def test_head_or_preflight_mismatch_records_bounded_failure_before_suite_or_build(self) -> None:
         self.initialize()
         (self.root / "head").write_text("b" * 40 + "\n")
@@ -148,6 +177,40 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.assertNotIn("run-suite", self.operations())
         self.assertNotIn("build-stage", self.operations())
 
+    def test_dirty_source_after_init_blocks_checks_before_suite_execution(self) -> None:
+        self.initialize()
+        self.stage("preflight")
+        (self.root / "operations" / "fail-source-state").touch()
+        self.stage("checks", expected=1)
+        self.assertNotIn("prepare-libgit2", self.operations())
+        self.assertNotIn("run-suite", self.operations())
+
+    def test_tag_collision_stops_before_release_metadata_mutation(self) -> None:
+        (self.root / "operations" / "fail-tag-collision").touch()
+        result = self.command(
+            "release-init", "--version", VERSION, "--build", BUILD,
+            "--required-suite", SUITE, *self.flags(),
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("tag-state", self.operations())
+        self.assertNotIn("prepare-version", self.operations())
+        self.assertNotIn("commit-release-metadata", self.operations())
+
+    def test_shaped_but_wrong_tag_sha_fails_preflight(self) -> None:
+        self.initialize()
+        (self.root / "operations" / "fail-tag-mismatched-peel").touch()
+        self.stage("preflight", expected=1)
+        self.assertNotIn("create-tag", self.operations())
+
+    def test_tag_creation_requires_post_create_candidate_identity(self) -> None:
+        self.initialize()
+        for name in ("preflight", "checks", "stage", "package", "install"):
+            self.stage(name)
+        (self.root / "operations" / "fail-tag-after-create").touch()
+        self.stage("tag", expected=1)
+        self.assertIn("create-tag", self.operations())
+        self.assertNotIn("push-tag", self.operations())
+
     def test_missing_or_nonpassing_required_suite_cannot_unlock_stage(self) -> None:
         self.initialize()
         self.stage("preflight")
@@ -155,6 +218,35 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.assertNotIn("build-stage", self.operations())
         (self.root / "operations" / "fail-suite").touch()
         self.stage("checks", expected=1)
+        self.assertNotIn("build-stage", self.operations())
+
+    def test_failed_check_rerun_invalidates_prior_passing_evidence(self) -> None:
+        self.initialize()
+        self.stage("preflight")
+        self.stage("checks")
+        (self.root / "operations" / "fail-prepare-libgit2").touch()
+        self.stage("checks", expected=1)
+        self.stage("stage", expected=1)
+        self.assertNotIn("build-stage", self.operations())
+
+    def test_failed_check_rerun_invalidates_prior_tag_before_push(self) -> None:
+        self.initialize()
+        for name in ("preflight", "checks", "stage", "package", "install", "tag"):
+            self.stage(name)
+        (self.root / "operations" / "fail-prepare-libgit2").touch()
+        self.stage("checks", expected=1)
+        self.stage("push_tag", expected=1)
+        self.assertNotIn("push-tag", self.operations())
+
+    def test_unrecorded_staged_bundle_is_not_adopted(self) -> None:
+        self.initialize()
+        self.stage("preflight")
+        self.stage("checks")
+        staged = self.root / "dist" / "ReleaseRadar.app"
+        staged.parent.mkdir(parents=True, exist_ok=True)
+        staged.write_text("old staged app\n")
+        staged.with_suffix(staged.suffix + ".identity").write_text("old identity\n")
+        self.stage("stage", expected=1)
         self.assertNotIn("build-stage", self.operations())
 
     def test_libgit2_or_package_failure_never_reaches_install_or_tag(self) -> None:
@@ -199,6 +291,29 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.assertNotIn("stop-running", self.operations())
         self.assertNotIn("copy-bundle", self.operations())
         self.assertNotIn("create-tag", self.operations())
+
+    def test_failed_package_rerun_invalidates_install_eligibility(self) -> None:
+        self.initialize()
+        for name in ("preflight", "checks", "stage", "package"):
+            self.stage(name)
+        (self.root / "operations" / "fail-installer-digest").touch()
+        self.stage("package", expected=1)
+        self.stage("install", expected=1)
+        self.assertNotIn("stop-running", self.operations())
+        self.assertNotIn("copy-bundle", self.operations())
+
+    def test_incompatible_existing_destination_is_rejected_before_stop(self) -> None:
+        self.initialize()
+        for name in ("preflight", "checks", "stage", "package"):
+            self.stage(name)
+        installed = self.root / "Applications" / "ReleaseRadar.app"
+        installed.parent.mkdir(parents=True, exist_ok=True)
+        installed.write_text("old installed app\n")
+        installed.with_suffix(installed.suffix + ".identity").write_text("old identity\n")
+        (self.root / "operations" / "fail-verify").touch()
+        self.stage("install", expected=1)
+        self.assertNotIn("stop-running", self.operations())
+        self.assertNotIn("copy-bundle", self.operations())
 
     def test_tag_and_push_require_matching_verified_identity(self) -> None:
         self.initialize()
