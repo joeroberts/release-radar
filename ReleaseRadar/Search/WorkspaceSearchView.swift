@@ -93,7 +93,9 @@ struct WorkspaceSearchView: View {
                     domain.title,
                     isOn: Binding(
                         get: { model.workspaceSearchDefinition.domains.contains(domain) },
-                        set: { Task { await model.updateWorkspaceSearchDomain(domain, enabled: $0) } }
+                        set: { enabled in
+                            Task { await model.updateWorkspaceSearchDomain(domain, enabled: enabled) }
+                        }
                     )
                 )
             }
