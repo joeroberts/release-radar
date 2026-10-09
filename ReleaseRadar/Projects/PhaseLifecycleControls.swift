@@ -62,12 +62,31 @@ struct PhaseLifecycleControls: View {
             .frame(maxWidth: 420)
             .frame(height: 42)
 
-            TextField("Reason for this lifecycle decision", text: $reason)
-                .textFieldStyle(.roundedBorder)
-                .focused($reasonFocused)
-                .accessibilityFocused($reasonAccessibilityFocused)
-                .accessibilityIdentifier("phase-lifecycle-reason-\(phase.id.rawValue)")
-                .accessibilityHint("Required owner reason recorded in immutable lifecycle history.")
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Lifecycle decision reason")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(RekonTheme.primaryText)
+                    Text("Required")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(RekonTheme.warning)
+                        .accessibilityIdentifier("phase-lifecycle-reason-required-\(phase.id.rawValue)")
+                }
+                TextField("Enter a reason for this lifecycle decision", text: $reason)
+                    .textFieldStyle(RekonQuietTextFieldStyle(
+                        boundaryStatus: trimmedReason.isEmpty ? .warning : .standard
+                    ))
+                    .focused($reasonFocused)
+                    .accessibilityFocused($reasonAccessibilityFocused)
+                    .accessibilityLabel("Lifecycle decision reason, required")
+                    .accessibilityIdentifier("phase-lifecycle-reason-\(phase.id.rawValue)")
+                    .accessibilityHint(reasonHelpText)
+                Text(reasonHelpText)
+                    .font(.caption)
+                    .foregroundStyle(trimmedReason.isEmpty ? RekonTheme.warning : RekonTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("phase-lifecycle-reason-help-\(phase.id.rawValue)")
+            }
 
             if selectedAction == .complete {
                 completionEligibility
@@ -172,6 +191,14 @@ struct PhaseLifecycleControls: View {
 
     private var trimmedReason: String {
         reason.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var reasonHelpText: String {
+        let requirement = "Required for \(selectedAction.displayName)."
+        if trimmedReason.isEmpty {
+            return "\(requirement) Enter a reason for this lifecycle decision."
+        }
+        return requirement
     }
 
     private var availableActions: [PhaseLifecycleAction] {
