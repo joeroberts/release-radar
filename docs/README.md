@@ -217,6 +217,57 @@ the byte and line limits; evidence selection, content accuracy, authority, and
 the next action remain judgment. Delivery Management owns the snapshot, and
 current results belong in the owning issue rather than a new tracker.
 
+## Local release workflow
+
+`script/build_and_run.sh` is the single public entry point for the local
+release workflow. Initialize an authorized candidate from a clean checkout:
+
+```sh
+bash script/build_and_run.sh release-init \
+  --version X.Y.Z \
+  --build N \
+  --required-suite release-radar-tests-v1
+```
+
+Initialization updates and commits only the Xcode version/build metadata, then
+records the resulting HEAD in
+`$HOME/Downloads/ReleaseRadar-X.Y.Z.release.json`. Continue that same candidate
+one stage at a time:
+
+```sh
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage preflight
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage checks
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage stage
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage package
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage install
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage tag
+bash script/build_and_run.sh release-delivery --version X.Y.Z --stage push_tag
+```
+
+The workflow requires the configured Apple signing identity, the pinned
+libgit2 source used by `script/build_libgit2.sh`, Xcode's macOS test/build
+toolchain, and separate authority for every live delivery endpoint. It creates
+`dist/ReleaseRadar.app`, verifies the signed bundle and the copy mounted from
+`dist/ReleaseRadar-X.Y.Z.dmg`, retains the matching installer in Downloads,
+and verifies the installed bundle independently before allowing the exact
+annotated tag to be published.
+
+Retry the failed stage with the same version. The receipt revalidates HEAD,
+required check evidence, canonical paths, bundle identities, DMG checksum, and
+tag identity before reusing any completed result. A conflicting receipt,
+installer, artifact, installed candidate, or tag stops instead of being
+overwritten. The receipt records a public-safe failure code and message; native
+tool diagnostics remain terminal output and are not copied into it.
+
+The paired `--fixture-root ROOT --operations-adapter ROOT/adapter` flags are
+only for QA-owned tests of these same transitions. They contain all fixture
+destinations beneath `ROOT` and never establish a signed, packaged, installed,
+running, or published native release. CI migration remains owned by #119;
+signing, DMG inspection, installation, runtime smoke verification, and exact
+tag delivery remain local until a separately approved CI capability proves an
+equivalent boundary. A configured workflow, passing fixture, built artifact,
+installed app, running process, and verified target are separate states.
+
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: docs
