@@ -2248,7 +2248,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             let identity = "token=\(sessionID)\nstage=\(externalInspectionStage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
             XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
             print("TASK 7A \(externalInspectionStage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
-            let attempts = max(1, Int((min(seconds, 60) * 5).rounded(.up)))
+            let inspectionLimit: Double = externalInspectionStage == "light-begin-complete" ? 120 : 60
+            let attempts = max(1, Int((min(seconds, inspectionLimit) * 5).rounded(.up)))
             for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
                 try await Task.sleep(for: .milliseconds(200))
             }
