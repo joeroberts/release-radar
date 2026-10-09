@@ -8,6 +8,23 @@ import XCTest
 @MainActor
 final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
     func testPhaseBoardUsesFullLaneAnchorsAndSingleFlightPendingState() async throws {
+        let nativeSession: (id: String, pauseSeconds: Double)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_TICKET_ORDERING_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The ticket ordering native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            guard let pauseSeconds = ProcessInfo.processInfo.environment["RR_TICKET_ORDERING_INSPECT_SECONDS"]
+                .flatMap(Double.init), pauseSeconds > 0 else {
+                XCTFail("The ticket ordering native session requires a positive RR_TICKET_ORDERING_INSPECT_SECONDS value.")
+                return
+            }
+            nativeSession = (sessionID, min(pauseSeconds, 60))
+        } else {
+            nativeSession = nil
+        }
+
         let fixture = try await makeFixture()
         let selection = SelectionBox(fixture.target)
         let committedContext = TicketOrderingContext(
@@ -31,13 +48,44 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 reorderTicket: { await probe.reorder($0, lane: $1, anchor: $2, context: $3) },
                 reloadTicketOrdering: { await probe.reload() }
             ),
-            title: "Ticket ordering phase pending"
+            title: nativeSession.map { "Ticket ordering phase pending — native session \($0.id)" }
+                ?? "Ticket ordering phase pending"
         )
         defer { host.close() }
 
-        if let inspectionSeconds = externalInspectionSeconds {
-            print("TICKET ORDERING EXTERNAL INSPECTION READY: initial and pending states; window=\(host.title); pid=\(ProcessInfo.processInfo.processIdentifier)")
-            try await Task.sleep(for: .seconds(inspectionSeconds))
+        if let nativeSession {
+            func waitForStage(_ stage: String) async throws {
+                let fileManager = FileManager.default
+                let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+                let configurationPresent = configurationPath != nil
+                guard configurationPresent else {
+                    XCTFail("The external ticket ordering journey requires the XCTest configuration environment key.")
+                    throw NSError(domain: "TicketOrderingNativeSession", code: 1)
+                }
+                let configurationNonempty = configurationPath?.isEmpty == false
+                let configurationExists = configurationPath.map {
+                    !$0.isEmpty && fileManager.fileExists(atPath: $0)
+                } ?? false
+                let controlDirectory = fileManager.temporaryDirectory
+                    .appendingPathComponent("release-radar-ticket-ordering", isDirectory: true)
+                    .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
+                try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+                let ready = controlDirectory.appendingPathComponent("\(stage)-ready")
+                let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
+                XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+                XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(host.title)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
+                XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+                print("TICKET ORDERING \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+                let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))
+                for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+                let completion = try String(contentsOf: complete, encoding: .utf8)
+                XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), nativeSession.id)
+            }
+
+            try await waitForStage("initial-pending")
             try await waitUntil { await probe.invocationCount == 1 }
             let invocations = await probe.invocations
             let invocation = try XCTUnwrap(invocations.first)
@@ -52,8 +100,7 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
 
             await probe.resolve(successResult(context: committedContext))
             try await waitUntil { await probe.reloadCount == 1 }
-            print("TICKET ORDERING EXTERNAL INSPECTION READY: committed focus state; window=\(host.title); pid=\(ProcessInfo.processInfo.processIdentifier)")
-            try await Task.sleep(for: .seconds(inspectionSeconds))
+            try await waitForStage("committed-focus")
             XCTAssertEqual(selection.value, fixture.target)
             let invocationCount = await probe.invocationCount
             XCTAssertEqual(invocationCount, 1)
@@ -557,12 +604,6 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
             title: title,
             previousPolicy: previousPolicy
         )
-    }
-
-    private var externalInspectionSeconds: Double? {
-        guard let seconds = ProcessInfo.processInfo.environment["RR_TICKET_ORDERING_INSPECT_SECONDS"]
-            .flatMap(Double.init), seconds > 0 else { return nil }
-        return min(seconds, 60)
     }
 
     private func requiredAccessibilityWindow(title: String) throws -> AXUIElement {
