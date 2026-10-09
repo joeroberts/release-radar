@@ -2,9 +2,9 @@ name: Development documentation
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, codex/qa-166-actions-base]
   push:
-    branches: [main]
+    branches: [main, codex/qa-166-actions-evidence]
 
 permissions:
   contents: read
