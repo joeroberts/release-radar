@@ -135,6 +135,11 @@ struct TicketOrderingMoveControls: View {
                     .controlSize(.small)
                     .disabled(isDisabled)
                     .focusable()
+                    .onKeyPress(keys: [.space, .return], phases: .down) { _ in
+                        guard !isDisabled else { return .handled }
+                        moveEarlier()
+                        return .handled
+                    }
                     .accessibilityLabel("Move earlier")
                     .accessibilityIdentifier("move-ticket-earlier-\(ticketID.rawValue)")
                 }
@@ -146,6 +151,11 @@ struct TicketOrderingMoveControls: View {
                     .controlSize(.small)
                     .disabled(isDisabled)
                     .focusable()
+                    .onKeyPress(keys: [.space, .return], phases: .down) { _ in
+                        guard !isDisabled else { return .handled }
+                        moveLater()
+                        return .handled
+                    }
                     .accessibilityLabel("Move later")
                     .accessibilityIdentifier("move-ticket-later-\(ticketID.rawValue)")
                 }
