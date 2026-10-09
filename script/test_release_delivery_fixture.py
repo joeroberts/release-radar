@@ -35,6 +35,8 @@ fail = lambda name: (root / "operations" / ("fail-" + name)).exists()
 if operation == "head":
     print((root / "head").read_text().strip())
 elif operation == "source-state":
+    if fail("source-state-unavailable"):
+        sys.exit(1)
     print(json.dumps({"clean": not fail("source-state")}, separators=(",", ":")))
 elif operation == "tag-state":
     if fail("tag-collision"):
@@ -181,6 +183,14 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.initialize()
         self.stage("preflight")
         (self.root / "operations" / "fail-source-state").touch()
+        self.stage("checks", expected=1)
+        self.assertNotIn("prepare-libgit2", self.operations())
+        self.assertNotIn("run-suite", self.operations())
+
+    def test_unavailable_source_state_blocks_checks_before_suite_execution(self) -> None:
+        self.initialize()
+        self.stage("preflight")
+        (self.root / "operations" / "fail-source-state-unavailable").touch()
         self.stage("checks", expected=1)
         self.assertNotIn("prepare-libgit2", self.operations())
         self.assertNotIn("run-suite", self.operations())
