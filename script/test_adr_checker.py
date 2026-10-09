@@ -1313,5 +1313,3 @@ class ADRCheckerContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-# Temporary #166 live-routing evidence probe. This branch will not be merged.
