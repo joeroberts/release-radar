@@ -1068,6 +1068,8 @@ enum PlanChangeProposalPolicy {
                     lane.map(SQLiteValue.text) ?? .null, .text(auditEventID.rawValue), .text(timestamp()),
                 ]
             )
+            try TicketLaneOrderingPolicy.removeTicket(
+                projectID: projectID, ticketID: ticketID, connection: connection)
             let relation = disposition == .replaced ? "replacement" : disposition.rawValue
             for (index, successorTicketID) in successorTicketIDs.enumerated() {
                 try connection.execute(

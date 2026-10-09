@@ -97,6 +97,8 @@ public enum DeliveryPlanningPolicy {
             throw invalid("Only unassigned tickets may receive their first placement.")
         }
         try connection.execute("UPDATE tickets SET phase_id=?, lane='backlog' WHERE project_id=? AND id=?", bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text(ticketID.rawValue)])
+        try TicketLaneOrderingPolicy.maintainPlacedTicket(
+            projectID: projectID, ticketID: ticketID, lane: .backlog, connection: connection)
         try advanceTicketPlan(projectID, phaseID, connection)
         return try currentPlan(projectID, phaseID, connection)
     }
@@ -154,6 +156,8 @@ public enum DeliveryPlanningPolicy {
             guard lane == .backlog else { throw invalid("Create new tickets in Backlog, then finalize their phase plan before starting.") }
             try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,?,?,?,'backlog')",
                                    bindings: [.text(ticketID.rawValue)] + identity(projectID, phaseID) + [.text(outcome)])
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: projectID, ticketID: ticketID, lane: .backlog, connection: connection)
             try advanceTicketPlan(projectID, phaseID, connection)
             return
         }
@@ -230,6 +234,10 @@ public enum DeliveryPlanningPolicy {
         }
         try connection.execute("UPDATE tickets SET lane=? WHERE project_id=? AND id=?",
                                bindings: [.text(lane.rawValue), .text(projectID.rawValue), .text(ticketID.rawValue)])
+        if from != lane.rawValue {
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: projectID, ticketID: ticketID, lane: lane, connection: connection)
+        }
     }
 
     public static func assertCanRecordReviewOrCompletion(

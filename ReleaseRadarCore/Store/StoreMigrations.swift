@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 26
+    static let currentVersion: Int64 = 27
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -115,6 +115,10 @@ enum StoreMigrations {
             if version < 26 {
                 try connection.executeScript(schemaVersion26)
             }
+            if version < 27 {
+                try connection.executeScript(schemaVersion27)
+                try seedTicketLaneOrder(connection)
+            }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
                     "Database schema version \(version) has invalid references after the placement migration"
@@ -130,6 +134,73 @@ enum StoreMigrations {
         } catch {
             try? connection.execute("ROLLBACK")
             throw error
+        }
+    }
+
+    private static func seedTicketLaneOrder(_ connection: SQLiteConnection) throws {
+        let laneGroups = try connection.rows(
+            """
+            SELECT tickets.project_id AS project_id, tickets.lane AS lane, COUNT(*) AS member_count
+            FROM tickets
+            JOIN phases
+              ON phases.project_id = tickets.project_id
+             AND phases.id = tickets.phase_id
+            WHERE tickets.phase_id IS NOT NULL
+              AND tickets.lane IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM ticket_retirements
+                WHERE ticket_retirements.project_id = tickets.project_id
+                  AND ticket_retirements.ticket_id = tickets.id
+              )
+            GROUP BY tickets.project_id, tickets.lane
+            ORDER BY tickets.project_id COLLATE BINARY, tickets.lane COLLATE BINARY
+            """
+        )
+        for group in laneGroups {
+            guard case let .text(projectID)? = group["project_id"],
+                  case let .text(lane)? = group["lane"],
+                  case let .integer(count)? = group["member_count"],
+                  count > 0,
+                  let memberCount = Int(exactly: count)
+            else {
+                throw StoreError.unavailable("Ticket ordering migration found an invalid lane group")
+            }
+            let width = max(1, String(memberCount - 1, radix: 2).count)
+            let members = try connection.rows(
+                """
+                SELECT tickets.id AS ticket_id
+                FROM tickets
+                JOIN phases
+                  ON phases.project_id = tickets.project_id
+                 AND phases.id = tickets.phase_id
+                WHERE tickets.project_id = ?
+                  AND tickets.lane = ?
+                  AND NOT EXISTS (
+                    SELECT 1 FROM ticket_retirements
+                    WHERE ticket_retirements.project_id = tickets.project_id
+                      AND ticket_retirements.ticket_id = tickets.id
+                  )
+                ORDER BY phases.name COLLATE NOCASE,
+                         phases.id COLLATE BINARY,
+                         tickets.rowid
+                """,
+                bindings: [.text(projectID), .text(lane)],
+                maximum: memberCount
+            )
+            guard members.count == memberCount else {
+                throw StoreError.unavailable("Ticket ordering migration could not read a complete lane")
+            }
+            for (index, member) in members.enumerated() {
+                guard case let .text(ticketID)? = member["ticket_id"] else {
+                    throw StoreError.unavailable("Ticket ordering migration found an invalid ticket identity")
+                }
+                let ordinal = String(index, radix: 2)
+                let key = String(repeating: "0", count: width - ordinal.count) + ordinal + "1"
+                try connection.execute(
+                    "INSERT INTO ticket_lane_order (project_id,ticket_id,lane,order_key) VALUES (?,?,?,?)",
+                    bindings: [.text(projectID), .text(ticketID), .text(lane), .text(key)]
+                )
+            }
         }
     }
 
@@ -749,6 +820,9 @@ enum StoreMigrations {
         ]),
         (26, "workspace_saved_queries", [
             "id", "name", "payload_version", "payload_data", "created_at", "updated_at",
+        ]),
+        (27, "ticket_lane_order", [
+            "project_id", "ticket_id", "lane", "order_key",
         ]),
     ]
 
@@ -1564,6 +1638,7 @@ enum StoreMigrations {
         (25, "ticket_delivery_evidence_observations", "project_id,ticket_id,target_version", "ticket_delivery_evidence_targets", "project_id,ticket_id,version", "NO ACTION"),
         (25, "retained_ticket_delivery_evidence_targets", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
         (25, "retained_ticket_delivery_evidence_observations", "removal_id,historical_project_id,ticket_id,target_version", "retained_ticket_delivery_evidence_targets", "removal_id,historical_project_id,ticket_id,version", "NO ACTION"),
+        (27, "ticket_lane_order", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -3116,6 +3191,26 @@ enum StoreMigrations {
         payload_data BLOB NOT NULL CHECK (length(payload_data) > 0),
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+    );
+    """
+
+    private static let schemaVersion27 = """
+    CREATE TABLE ticket_lane_order (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        lane TEXT NOT NULL CHECK (lane IN ('backlog','in_progress','needs_review','blocked','accepted')),
+        order_key TEXT COLLATE BINARY NOT NULL
+            CHECK (
+                typeof(order_key) = 'text'
+                AND length(CAST(order_key AS BLOB)) > 0
+                AND length(CAST(order_key AS BLOB)) = length(order_key)
+                AND order_key NOT GLOB '*[^01]*'
+                AND substr(order_key, -1, 1) = '1'
+            ),
+        PRIMARY KEY(project_id, ticket_id),
+        UNIQUE(project_id, lane, order_key),
+        FOREIGN KEY(project_id, ticket_id)
+            REFERENCES tickets(project_id, id) ON DELETE CASCADE
     );
     """
 }

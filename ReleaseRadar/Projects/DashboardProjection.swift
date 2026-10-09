@@ -23,6 +23,7 @@ struct DashboardProjection: Equatable, Sendable {
     let boards: [PhaseBoardKey: PhaseBoardProjection]
     let projectPlans: [ProjectID: ProjectPlanProjection]
     let allPhaseBoards: [ProjectID: AllPhaseBoardProjection]
+    let ticketOrderingContexts: [ProjectID: TicketOrderingContext]
     let workspaceGoals: WorkspaceGoalsProjection
 
     init(
@@ -32,6 +33,7 @@ struct DashboardProjection: Equatable, Sendable {
         boards: [PhaseBoardKey: PhaseBoardProjection],
         projectPlans: [ProjectID: ProjectPlanProjection] = [:],
         allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:],
+        ticketOrderingContexts: [ProjectID: TicketOrderingContext] = [:],
         workspaceGoals: WorkspaceGoalsProjection = .empty
     ) {
         self.projects = projects
@@ -40,6 +42,7 @@ struct DashboardProjection: Equatable, Sendable {
         self.boards = boards
         self.projectPlans = projectPlans
         self.allPhaseBoards = allPhaseBoards
+        self.ticketOrderingContexts = ticketOrderingContexts
         self.workspaceGoals = workspaceGoals
     }
 
@@ -96,6 +99,7 @@ struct DashboardProjection: Equatable, Sendable {
             var boards: [PhaseBoardKey: PhaseBoardProjection] = [:]
             var projectPlans: [ProjectID: ProjectPlanProjection] = [:]
             var allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:]
+            var ticketOrderingContexts: [ProjectID: TicketOrderingContext] = [:]
             let archivedProjects = try connection.dashboardRows(
                 """
                 SELECT projects.id, projects.name, project_registrations.registration_id,
@@ -153,6 +157,11 @@ struct DashboardProjection: Equatable, Sendable {
             for projectRow in projectRows {
                 let projectID = ProjectID(rawValue: try projectRow.text("id"))
                 let projectName = try projectRow.text("name")
+                let ticketOrdering = try TicketLaneOrderingPolicy.snapshot(
+                    projectID: projectID,
+                    connection: connection
+                )
+                ticketOrderingContexts[projectID] = ticketOrdering.context
                 let registration = try projectRow.nullableText("registration_id").map {
                     ProjectRegistration(
                         projectID: projectID,
@@ -191,7 +200,21 @@ struct DashboardProjection: Equatable, Sendable {
                 for phase in phases {
                     let phaseID = phase.id
                     let ticketRows = try connection.dashboardRows(
-                        "SELECT id, outcome, lane, plan_legacy_continuation FROM tickets WHERE project_id = ? AND phase_id = ? AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY rowid",
+                        """
+                        SELECT tickets.id,tickets.outcome,tickets.lane,tickets.plan_legacy_continuation
+                        FROM tickets
+                        JOIN ticket_lane_order ordering
+                          ON ordering.project_id=tickets.project_id
+                         AND ordering.ticket_id=tickets.id
+                         AND ordering.lane=tickets.lane
+                        WHERE tickets.project_id=? AND tickets.phase_id=?
+                          AND NOT EXISTS (
+                            SELECT 1 FROM ticket_retirements
+                            WHERE ticket_retirements.project_id=tickets.project_id
+                              AND ticket_retirements.ticket_id=tickets.id
+                          )
+                        ORDER BY ordering.order_key COLLATE BINARY
+                        """,
                         bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
                     )
                     guard let plan = try DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection) else {
@@ -415,8 +438,23 @@ struct DashboardProjection: Equatable, Sendable {
                     retiredTickets: retiredTickets, retiredDetails: retiredDetails
                 )
                 let projectBoards = phases.compactMap { boards[PhaseBoardKey(projectID: projectID, phaseID: $0.id)] }
-                let allLanes = TicketLane.allCases.map { lane in
-                    DashboardLaneProjection(lane: lane, cards: projectBoards.flatMap { $0.lane(lane)?.cards ?? [] })
+                let allLanes = try TicketLane.allCases.map { lane in
+                    let cards = projectBoards.flatMap { $0.lane(lane)?.cards ?? [] }
+                    let cardsByID = Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0) })
+                    let orderedCards = try ticketOrdering.ticketIDs(in: lane).map { ticketID in
+                        guard let card = cardsByID[ticketID] else {
+                            throw TicketOrderingError.unavailable(
+                                .invalidStoredState("Ticket \(ticketID.rawValue) is absent from its board projection.")
+                            )
+                        }
+                        return card
+                    }
+                    guard orderedCards.count == cards.count else {
+                        throw TicketOrderingError.unavailable(
+                            .invalidStoredState("The board projection has unexpected lane members.")
+                        )
+                    }
+                    return DashboardLaneProjection(lane: lane, cards: orderedCards)
                 }
                 allPhaseBoards[projectID] = AllPhaseBoardProjection(
                     project: project,
@@ -444,6 +482,7 @@ struct DashboardProjection: Equatable, Sendable {
                 projects: projects, archivedProjects: archivedProjects,
                 removedProjects: removedProjects, boards: boards,
                 projectPlans: projectPlans, allPhaseBoards: allPhaseBoards,
+                ticketOrderingContexts: ticketOrderingContexts,
                 workspaceGoals: workspaceGoals
             )
         }
@@ -531,6 +570,7 @@ struct DashboardProjection: Equatable, Sendable {
             archivedProjects: archivedProjects,
             removedProjects: removedProjects,
             boards: boards, projectPlans: projectPlans, allPhaseBoards: allPhaseBoards,
+            ticketOrderingContexts: ticketOrderingContexts,
             workspaceGoals: workspaceGoals
         )
     }
