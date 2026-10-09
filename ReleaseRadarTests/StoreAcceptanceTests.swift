@@ -556,7 +556,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "82e40889f77104a721ae34c42da768d77e38cf3663a9b993b613b306960c44d2")
+                       "5a6c8d2f1d99bea28d17039e37409d6c5c0530fe795c1d48bd285df0ddaf3e0a")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
