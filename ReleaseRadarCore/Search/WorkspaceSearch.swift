@@ -354,12 +354,19 @@ public enum WorkspaceSearchQuery {
         case .project:
             return authority.projects.compactMap { project in
                 guard matches(text, in: [project.name, project.projectID.rawValue]) else { return nil }
+                let title = project.name
+                let detail = project.lifecycle == .archived ? "Archived project" : "Active project"
                 return .init(
                     domain: .project,
                     project: project,
                     identity: .project(projectID: project.projectID, registrationID: project.registrationID),
-                    title: project.name,
-                    detail: project.lifecycle == .archived ? "Archived project" : "Active project"
+                    title: title,
+                    detail: detailWithMatchExplanation(
+                        detail,
+                        query: text,
+                        visibleSearchable: [title],
+                        fields: [("project ID", project.projectID.rawValue)]
+                    )
                 )
             }
         case .deliveryGoal:
@@ -395,6 +402,10 @@ public enum WorkspaceSearchQuery {
             ]) else { return nil }
             let phaseID = PhaseID(rawValue: try requiredText(row, "phase_id"))
             let goalID = try requiredText(row, "id")
+            let title = try requiredText(row, "title")
+            let outcome = try requiredText(row, "outcome")
+            let lifecycle = try requiredText(row, "lifecycle")
+            let detail = "\(lifecycle) · \(outcome)"
             return .init(
                 domain: .deliveryGoal,
                 project: project,
@@ -404,8 +415,13 @@ public enum WorkspaceSearchQuery {
                     phaseID: phaseID,
                     goalID: goalID
                 ),
-                title: try requiredText(row, "title"),
-                detail: "\(try requiredText(row, "lifecycle")) · \(try requiredText(row, "outcome"))",
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [title, outcome],
+                    fields: [("delivery goal ID", goalID)]
+                ),
                 occurredAt: optionalText(row, "updated_at")
             )
         }
@@ -431,6 +447,9 @@ public enum WorkspaceSearchQuery {
             ]) else { return nil }
             let threadID = ObservedThreadID(rawValue: try requiredText(row, "thread_id"))
             let goalID = ObservedGoalID(rawValue: try requiredText(row, "id"))
+            let title = try requiredText(row, "text")
+            let status = try requiredText(row, "status")
+            let detail = "\(status) · thread \(threadID.rawValue)"
             return .init(
                 domain: .executionGoal,
                 project: project,
@@ -440,8 +459,13 @@ public enum WorkspaceSearchQuery {
                     threadID: threadID,
                     goalID: goalID
                 ),
-                title: try requiredText(row, "text"),
-                detail: "\(try requiredText(row, "status")) · thread \(threadID.rawValue)",
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [title, status],
+                    fields: [("execution goal ID", goalID.rawValue)]
+                ),
                 occurredAt: optionalText(row, "last_observed_at")
             )
         }
@@ -473,6 +497,8 @@ public enum WorkspaceSearchQuery {
             let phaseID = optionalText(row, "phase_id").map(PhaseID.init(rawValue:))
             let retiredAt = optionalText(row, "retired_at")
             let lane = optionalText(row, "lane") ?? "Unplaced"
+            let outcome = try requiredText(row, "outcome")
+            let detail = retiredAt == nil ? "\(ticketID.rawValue) · \(lane)" : "\(ticketID.rawValue) · Retired"
             return .init(
                 domain: .ticket,
                 project: project,
@@ -482,8 +508,13 @@ public enum WorkspaceSearchQuery {
                     ticketID: ticketID,
                     phaseID: phaseID
                 ),
-                title: try requiredText(row, "outcome"),
-                detail: retiredAt == nil ? "\(ticketID.rawValue) · \(lane)" : "\(ticketID.rawValue) · Retired",
+                title: outcome,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [outcome, ticketID.rawValue] + (retiredAt == nil ? [lane] : []),
+                    fields: [("ticket lane", lane)]
+                ),
                 occurredAt: retiredAt,
                 isRetired: retiredAt != nil
             )
@@ -526,6 +557,8 @@ public enum WorkspaceSearchQuery {
             let ticketID = TicketID(rawValue: try requiredText(row, "ticket_id"))
             let version = try requiredInt(row, "version")
             let repositoryID = try requiredText(row, "repository_id")
+            let title = sourceLocalID ?? artifactID
+            let detail = "\(ticketID.rawValue) · \(locator ?? observedPath)"
             return .init(
                 domain: .decisionReference,
                 project: project,
@@ -538,8 +571,17 @@ public enum WorkspaceSearchQuery {
                     repositoryID: repositoryID,
                     artifactID: artifactID
                 ),
-                title: sourceLocalID ?? artifactID,
-                detail: "\(ticketID.rawValue) · \(locator ?? observedPath)",
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [title, locator ?? observedPath],
+                    fields: [
+                        ("decision link", linkID),
+                        ("decision artifact", artifactID),
+                        ("decision observed path", observedPath)
+                    ]
+                ),
                 occurredAt: optionalText(row, "created_at")
             )
         }
@@ -571,6 +613,9 @@ public enum WorkspaceSearchQuery {
                     sourceID, try requiredText(row, "reason"), optionalText(row, "entity_type") ?? "",
                     optionalText(row, "entity_id") ?? ""
                   ]) else { continue }
+            let title = try requiredText(row, "reason")
+            let rawEntityType = optionalText(row, "entity_type")
+            let entityType = rawEntityType ?? "Audit event"
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -580,8 +625,16 @@ public enum WorkspaceSearchQuery {
                     source: .audit,
                     sourceID: sourceID
                 ),
-                title: try requiredText(row, "reason"),
-                detail: optionalText(row, "entity_type") ?? "Audit event",
+                title: title,
+                detail: detailWithMatchExplanation(
+                    entityType,
+                    query: text,
+                    visibleSearchable: [title] + (rawEntityType.map { [$0] } ?? []),
+                    fields: [
+                        ("audit event ID", sourceID),
+                        ("audit entity", optionalText(row, "entity_id") ?? "")
+                    ]
+                ),
                 occurredAt: optionalText(row, "created_at")
             ))
         }
@@ -600,6 +653,9 @@ public enum WorkspaceSearchQuery {
             guard let project = authority.project(projectID), matches(text, in: [
                 threadID, goalID, try requiredText(row, "status"), try requiredText(row, "text")
             ]) else { continue }
+            let status = try requiredText(row, "status")
+            let title = status
+            let detail = try requiredText(row, "text")
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -609,8 +665,16 @@ public enum WorkspaceSearchQuery {
                     source: .observation,
                     sourceID: "\(threadID)|\(goalID)"
                 ),
-                title: try requiredText(row, "status"),
-                detail: try requiredText(row, "text"),
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [title, detail],
+                    fields: [
+                        ("observation thread", threadID),
+                        ("observation goal", goalID)
+                    ]
+                ),
                 occurredAt: optionalText(row, "last_observed_at")
             ))
         }
@@ -624,6 +688,9 @@ public enum WorkspaceSearchQuery {
             guard let project = authority.project(projectID), matches(text, in: [
                 sourceID, try requiredText(row, "status"), try requiredText(row, "summary")
             ]) else { continue }
+            let status = try requiredText(row, "status")
+            let title = "Review \(status)"
+            let detail = try requiredText(row, "summary")
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -633,8 +700,13 @@ public enum WorkspaceSearchQuery {
                     source: .review,
                     sourceID: sourceID
                 ),
-                title: "Review \(try requiredText(row, "status"))",
-                detail: try requiredText(row, "summary")
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [status, detail],
+                    fields: [("review ID", sourceID)]
+                )
             ))
         }
         let completionRows = try connection.rows(
@@ -647,6 +719,8 @@ public enum WorkspaceSearchQuery {
             guard let project = authority.project(projectID), matches(text, in: [
                 sourceID, try requiredText(row, "summary")
             ]) else { continue }
+            let title = "Completed"
+            let detail = try requiredText(row, "summary")
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -656,15 +730,20 @@ public enum WorkspaceSearchQuery {
                     source: .completion,
                     sourceID: sourceID
                 ),
-                title: "Completed",
-                detail: try requiredText(row, "summary"),
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [detail],
+                    fields: [("completion ID", sourceID)]
+                ),
                 occurredAt: optionalText(row, "created_at")
             ))
         }
         let notificationRows = try connection.rows(
             """
             SELECT COALESCE(notification_events.project_id, tickets.project_id) AS project_id,
-                   notification_events.id, notification_events.state, notification_events.title,
+                   notification_events.id, notification_events.fingerprint, notification_events.state, notification_events.title,
                    notification_events.message, notification_events.created_at
             FROM notification_events
             LEFT JOIN tickets ON tickets.id = notification_events.ticket_id
@@ -676,10 +755,15 @@ public enum WorkspaceSearchQuery {
         for row in notificationRows {
             let projectID = try requiredText(row, "project_id")
             let sourceID = try requiredText(row, "id")
+            let fingerprint = try requiredText(row, "fingerprint")
+            let state = try requiredText(row, "state")
+            let rawTitle = optionalText(row, "title") ?? ""
+            let rawMessage = optionalText(row, "message") ?? ""
             guard let project = authority.project(projectID), matches(text, in: [
-                sourceID, try requiredText(row, "state"), try requiredText(row, "title"),
-                try requiredText(row, "message")
+                sourceID, state, rawTitle, rawMessage
             ]) else { continue }
+            let title = rawTitle.isEmpty ? fingerprint : rawTitle
+            let detail = rawMessage.isEmpty ? "Persisted notification delivery event." : rawMessage
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -689,8 +773,16 @@ public enum WorkspaceSearchQuery {
                     source: .notification,
                     sourceID: sourceID
                 ),
-                title: try requiredText(row, "title"),
-                detail: try requiredText(row, "message"),
+                title: title,
+                detail: detailWithMatchExplanation(
+                    detail,
+                    query: text,
+                    visibleSearchable: [rawTitle, rawMessage],
+                    fields: [
+                        ("notification ID", sourceID),
+                        ("notification state", state)
+                    ]
+                ),
                 occurredAt: optionalText(row, "created_at")
             ))
         }
@@ -723,6 +815,19 @@ public enum WorkspaceSearchQuery {
 
     private static func matches(_ query: String, in values: [String]) -> Bool {
         values.contains { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    private static func detailWithMatchExplanation(
+        _ detail: String,
+        query: String,
+        visibleSearchable: [String],
+        fields: [(label: String, value: String)]
+    ) -> String {
+        guard !matches(query, in: visibleSearchable),
+              let matched = fields.first(where: { matches(query, in: [$0.value]) }) else {
+            return detail
+        }
+        return "\(detail) · Matched \(matched.label): \(matched.value)"
     }
 
     private static func requiredText(_ row: [String: SQLiteValue]?, _ column: String) throws -> String {

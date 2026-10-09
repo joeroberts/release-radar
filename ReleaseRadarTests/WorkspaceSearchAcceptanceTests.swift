@@ -4,6 +4,123 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkspaceSearchAcceptanceTests: XCTestCase {
+    @MainActor
+    func testChangingRecordTypeRefreshesCurrentQueryAndRestoringAllReturnsMixedMatches() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RecordTypeFilter-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "record-type-filter-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed a matching Search project") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Needle project')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'record-type-filter-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed a matching ticket beside the matching project") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('record-type-filter-phase', ?, 'Needle phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('record-type-filter-ticket', ?, 'record-type-filter-phase', 'Needle ticket', 'backlog')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("Needle")
+        await model.runWorkspaceSearch()
+        XCTAssertEqual(Set(model.workspaceSearchProjection?.results.map(\.domain) ?? []), [.project, .ticket])
+
+        await model.updateWorkspaceSearchDomain(.ticket, enabled: false)
+        let projectOnly = await Self.searchProjection(
+            from: model,
+            domains: Set(WorkspaceSearchDomain.allCases).subtracting([.ticket]),
+            description: "removing Tickets refreshes the current query"
+        )
+        XCTAssertEqual(Set(projectOnly?.results.map(\.domain) ?? []), [.project])
+        XCTAssertEqual(model.workspaceSearchDraft, "Needle")
+
+        await model.updateWorkspaceSearchDomain(.ticket, enabled: true)
+        let restored = await Self.searchProjection(
+            from: model,
+            domains: Set(WorkspaceSearchDomain.allCases),
+            description: "restoring Tickets refreshes the current query"
+        )
+        XCTAssertEqual(Set(restored?.results.map(\.domain) ?? []), [.project, .ticket])
+        XCTAssertEqual(model.workspaceSearchDraft, "Needle")
+    }
+
+    @MainActor
+    func testHiddenTicketLaneMatchExplainsTheLastSubmittedQueryAfterDraftChanges() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let projectID = ProjectID(rawValue: "hidden-ticket-lane-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed hidden ticket lane Search project") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Hidden field project')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'hidden-ticket-lane-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Seed hidden ticket lane Search match",
+            auditEventID: .init(rawValue: "hidden-ticket-lane-retirement"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "hidden-ticket-lane")
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('hidden-ticket-lane-phase', ?, 'Hidden field phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('hidden-ticket-lane', ?, 'hidden-ticket-lane-phase', 'Visible ticket outcome', 'accepted')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_retirements (project_id, ticket_id, disposition, reason, last_phase_id, last_lane, audit_event_id, retired_at) VALUES (?, 'hidden-ticket-lane', 'replaced', 'Completed elsewhere', 'hidden-ticket-lane-phase', 'accepted', 'hidden-ticket-lane-retirement', '2026-10-08T23:00:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("accepted")
+        for domain in WorkspaceSearchDomain.allCases where domain != .ticket {
+            model.setWorkspaceSearchDomain(domain, enabled: false)
+        }
+        await model.runWorkspaceSearch()
+
+        let submitted = try XCTUnwrap(model.workspaceSearchProjection)
+        XCTAssertEqual(submitted.definition.text, "accepted")
+        let ticket = try XCTUnwrap(submitted.results.first)
+        XCTAssertEqual(ticket.identity, .ticket(
+            projectID: projectID,
+            registrationID: "hidden-ticket-lane-registration",
+            ticketID: .init(rawValue: "hidden-ticket-lane"),
+            phaseID: .init(rawValue: "hidden-ticket-lane-phase")
+        ))
+        XCTAssertTrue(ticket.detail.hasPrefix("hidden-ticket-lane · Retired"))
+        XCTAssertTrue(ticket.detail.contains("Matched ticket lane: accepted"))
+
+        model.setWorkspaceSearchText("unsent replacement")
+        XCTAssertEqual(model.workspaceSearchDraft, "unsent replacement")
+        XCTAssertEqual(model.workspaceSearchProjection?.definition.text, "accepted")
+        XCTAssertTrue(model.workspaceSearchProjection?.results.first?.detail.contains("Matched ticket lane: accepted") == true)
+    }
+
     func testSearchReturnsEveryAuthorizedRecordDomainWithoutMutatingTheStore() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-WorkspaceSearch-\(UUID().uuidString)", isDirectory: true)
@@ -63,6 +180,145 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         }), Set(WorkspaceSearchHistorySource.allCases))
         let afterAuditCount = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
         XCTAssertEqual(afterAuditCount, beforeAuditCount)
+    }
+
+    func testDeliveryGoalIDMatchExplainsItselfWhenLifecycleCoincidentallyMatches() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "delivery-goal-id-explanation")
+        try await seedProject(store, projectID: projectID, registrationID: "delivery-goal-id-registration")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed delivery goal ID-only Search match") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('delivery-goal-id-phase', ?, 'Delivery goal phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, 'delivery-goal-id-phase', 'draft-goal', 'Visible goal title', 'Visible goal outcome', 'draft', 0, '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let projection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "draft", domains: [.deliveryGoal])
+        )
+
+        let goal = try XCTUnwrap(projection.results.first)
+        XCTAssertEqual(goal.title, "Visible goal title")
+        XCTAssertTrue(goal.detail.hasPrefix("draft · Visible goal outcome"))
+        XCTAssertTrue(goal.detail.contains("Matched delivery goal ID: draft-goal"))
+    }
+
+    func testHistorySourceIDMatchesAreExplainedDespiteComposedLabels() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "history-source-id-explanation")
+        let registrationID = "history-source-id-registration"
+        try await seedProject(store, projectID: projectID, registrationID: registrationID)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed hidden history source ID Search matches") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('history-source-id-phase', ?, 'History phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('history-source-id-ticket', ?, 'history-source-id-phase', 'History ticket', 'backlog')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('review-1', ?, 'history-source-id-ticket', 'completion', 'Completed evidence', 'resolved')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Recorded evidence",
+            auditEventID: .init(rawValue: "audit-1"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "history-source-id-ticket")
+        ) { _ in }
+        await store.close()
+        let legacy = try SQLiteConnection(url: store.databaseURL)
+        try legacy.execute("UPDATE audit_events SET entity_type = NULL WHERE id = 'audit-1'")
+        legacy.close()
+        let searchableStore = DeliveryStore(databaseURL: store.databaseURL)
+
+        let reviewProjection = try await WorkspaceSearchQuery.search(
+            store: searchableStore,
+            definition: .init(text: "review", domains: [.history])
+        )
+        XCTAssertTrue(try XCTUnwrap(reviewProjection.results.first { result in
+            guard case .history(_, _, .review, "review-1") = result.identity else { return false }
+            return true
+        }).detail.contains("Matched review ID: review-1"))
+
+        let auditProjection = try await WorkspaceSearchQuery.search(
+            store: searchableStore,
+            definition: .init(text: "audit", domains: [.history])
+        )
+        XCTAssertTrue(try XCTUnwrap(auditProjection.results.first { result in
+            guard case .history(_, _, .audit, "audit-1") = result.identity else { return false }
+            return true
+        }).detail.contains("Matched audit event ID: audit-1"))
+    }
+
+    func testLegacyNotificationWithoutPresentationFieldsKeepsHistorySearchAvailable() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "legacy-null-notification-project")
+        let registrationID = "legacy-null-notification-registration"
+        try await seedProject(store, projectID: projectID, registrationID: registrationID)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed legacy notification") { connection in
+            try connection.execute(
+                "INSERT INTO notification_events (id, fingerprint, state, project_id) VALUES ('legacy-null-notification', 'legacy-null-notification-fingerprint', 'delivered', ?)",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let identityProjection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "legacy-null-notification", domains: [.history])
+        )
+        XCTAssertTrue(identityProjection.isComplete)
+        XCTAssertTrue(identityProjection.omissions.isEmpty)
+        let identityResult = try XCTUnwrap(identityProjection.results.first { result in
+            result.identity == .history(
+                projectID: projectID,
+                registrationID: registrationID,
+                source: .notification,
+                sourceID: "legacy-null-notification"
+            )
+        })
+        XCTAssertEqual(identityResult.title, "legacy-null-notification-fingerprint")
+        XCTAssertEqual(
+            identityResult.detail,
+            "Persisted notification delivery event. · Matched notification ID: legacy-null-notification"
+        )
+        XCTAssertNil(identityResult.occurredAt)
+
+        let stateProjection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "delivered", domains: [.history])
+        )
+        XCTAssertTrue(stateProjection.isComplete)
+        XCTAssertTrue(stateProjection.omissions.isEmpty)
+        let stateResult = try XCTUnwrap(stateProjection.results.first { result in
+            result.identity == identityResult.identity
+        })
+        XCTAssertEqual(stateResult.title, "legacy-null-notification-fingerprint")
+        XCTAssertEqual(
+            stateResult.detail,
+            "Persisted notification delivery event. · Matched notification state: delivered"
+        )
+        XCTAssertNil(stateResult.occurredAt)
+
+        for generatedText in ["Persisted notification delivery event", "fingerprint"] {
+            let generatedProjection = try await WorkspaceSearchQuery.search(
+                store: store,
+                definition: .init(text: generatedText, domains: [.history])
+            )
+            XCTAssertTrue(generatedProjection.isComplete)
+            XCTAssertTrue(generatedProjection.omissions.isEmpty)
+            XCTAssertFalse(generatedProjection.results.contains { result in
+                result.identity == identityResult.identity
+            })
+        }
     }
 
     func testSavedQueriesRelaunchWithEveryFilterAndUnsupportedPayloadStaysRecoverable() async throws {
@@ -253,7 +509,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(projection.results.count, 1)
         XCTAssertTrue(projection.isComplete)
         XCTAssertEqual(result.title, "recorded-artifact-identity")
-        XCTAssertEqual(result.detail, "ticket-selected · docs/recorded-fallback.md")
+        XCTAssertEqual(result.detail, "ticket-selected · docs/recorded-fallback.md · Matched decision link: exact-link-identity")
         XCTAssertEqual(
             result.identity,
             .decisionReference(
@@ -376,6 +632,22 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         return directory.appendingPathComponent("store.sqlite")
+    }
+
+    @MainActor
+    private static func searchProjection(
+        from model: AppModel,
+        domains: Set<WorkspaceSearchDomain>,
+        description: String
+    ) async -> WorkspaceSearchProjection? {
+        for _ in 0..<100 {
+            if let projection = model.workspaceSearchProjection, projection.definition.domains == domains {
+                return projection
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Timed out while \(description)")
+        return nil
     }
 
     private func seedProject(

@@ -407,6 +407,51 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testRapidRecordTypeChangesPublishAndPersistOnlyTheLatestDefinition() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RapidRecordTypeSearch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed matching project and ticket") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('rapid-filter-project', 'Needle project')")
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('rapid-filter-project', 'rapid-filter-registration', 1, 'complete')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('rapid-filter-phase', 'rapid-filter-project', 'Needle phase')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('rapid-filter-ticket', 'rapid-filter-project', 'rapid-filter-phase', 'Needle ticket', 'backlog')")
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("Needle")
+        await model.runWorkspaceSearch()
+        XCTAssertEqual(Set(model.workspaceSearchProjection?.results.map(\.domain) ?? []), [.project, .ticket])
+
+        let gate = BlockingStoreReadGate()
+        let blocker = Task {
+            try await store.read { _ in
+                gate.entered.signal()
+                gate.release.wait()
+            }
+        }
+        await gate.waitUntilEntered()
+        let first = Task { await model.updateWorkspaceSearchDomain(.ticket, enabled: false) }
+        while !model.workspaceSearchIsLoading { await Task.yield() }
+        let latest = Task { await model.updateWorkspaceSearchDomain(.ticket, enabled: true) }
+        gate.release.signal()
+        try await blocker.value
+        await first.value
+        await latest.value
+
+        XCTAssertEqual(model.workspaceSearchDefinition.domains, Set(WorkspaceSearchDomain.allCases))
+        XCTAssertEqual(Set(model.workspaceSearchProjection?.results.map(\.domain) ?? []), [.project, .ticket])
+        XCTAssertFalse(model.workspaceSearchIsLoading)
+        guard case let .supported(persisted) = try await WorkspaceSearchPreferencesRepository(store: store).loadWorkingDefinition() else {
+            return XCTFail("Expected the latest record-type definition to persist")
+        }
+        XCTAssertEqual(persisted.domains, Set(WorkspaceSearchDomain.allCases))
+    }
+
+    @MainActor
     func testAdoptingRecoveryInvalidatesPendingSearchBeforeClearingEphemeralState() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-PendingRecoverySearch-\(UUID().uuidString)", isDirectory: true)
