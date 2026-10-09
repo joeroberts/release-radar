@@ -107,17 +107,17 @@ public enum TicketOrderingError: Error, LocalizedError, Codable, Equatable, Send
     public var errorDescription: String? {
         switch self {
         case .ownerAuthorityRequired:
-            "Only the owner application can reorder tickets."
+            return "Only the owner application can reorder tickets."
         case .staleContext:
-            "Ticket order or its dependency context changed. Refresh before trying again."
+            return "Ticket order or its dependency context changed. Refresh before trying again."
         case .unavailable:
-            "Ticket ordering is unavailable because its complete stored context could not be validated."
+            return "Ticket ordering is unavailable because its complete stored context could not be validated."
         case let .targetIneligible(reason):
             switch reason {
-            case .unplaced: "Place the ticket in a phase before reordering it."
-            case .retired: "Retired tickets are read-only and cannot be reordered."
-            case .accepted: "Accepted tickets are read-only and cannot be reordered."
-            case .completedPhase: "Reopen the completed phase before reordering its tickets."
+            case .unplaced: return "Place the ticket in a phase before reordering it."
+            case .retired: return "Retired tickets are read-only and cannot be reordered."
+            case .accepted: return "Accepted tickets are read-only and cannot be reordered."
+            case .completedPhase: return "Reopen the completed phase before reordering its tickets."
             }
         case let .invalidAnchor(ticketID):
             "Ticket \(ticketID.rawValue) is not an available anchor in the complete lane order."
@@ -125,7 +125,7 @@ public enum TicketOrderingError: Error, LocalizedError, Codable, Equatable, Send
             let chain = conflict.witnessChain.map(\.rawValue).joined(separator: " → ")
             return "Keep prerequisite \(conflict.prerequisiteTicketID.rawValue) before dependent \(conflict.dependentTicketID.rawValue) in \(conflict.lane.rawValue). Dependency path: \(chain)."
         case .resourceLimit:
-            "The requested order key exceeds the current SQLite storage limit. The existing order was preserved."
+            return "The requested order key exceeds the current SQLite storage limit. The existing order was preserved."
         }
     }
 }
