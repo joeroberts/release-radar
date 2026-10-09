@@ -663,13 +663,14 @@ release_native_operation() {
         dmg-sha256) shasum -a 256 "$1" | awk '{ print $1 }' ;;
         stop-running) stop_running_release_radar_processes ;;
         copy-bundle)
-            local copy_directory copy_candidate source_identity
+            local copy_directory copy_candidate source_identity source_identity_digest
             copy_directory="$(mktemp -d "$(dirname "$2")/.${APP_NAME}.install.XXXXXX")"
             copy_candidate="$copy_directory/$APP_NAME.app"
             ditto "$1" "$copy_candidate"
-            source_identity="$(bundle_identity "$1" | shasum -a 256 | awk '{ print $1 }')"
-            [[ "$source_identity" == "$5" ]] || { report_error "staged bundle identity changed before install"; return 1; }
-            promote_verified_bundle "$copy_candidate" "$2" "$5" "$3" "$4"
+            source_identity="$(bundle_identity "$1")"
+            source_identity_digest="$(printf '%s\n' "$source_identity" | shasum -a 256 | awk '{ print $1 }')"
+            [[ "$source_identity_digest" == "$5" ]] || { report_error "staged bundle identity changed before install"; return 1; }
+            promote_verified_bundle "$copy_candidate" "$2" "$source_identity" "$3" "$4"
             rmdir "$copy_directory"
             ;;
         create-tag) git -C "$ROOT_DIR" tag -a "$1" "$2" -m "Release $1" ;;
