@@ -273,6 +273,11 @@ struct WorkspaceSearchView: View {
         .accessibilityLabel("\(result.domain.singularTitle): \(result.title), \(projectLabel(result.project))")
         .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
         .onMoveCommand { moveSelection($0, from: result.id) }
+        .onKeyPress(.tab) { press in
+            guard isSelected, !press.modifiers.contains(.shift) else { return .ignored }
+            focusDetailAction()
+            return .handled
+        }
     }
 
     @ViewBuilder private var selectedDetail: some View {
@@ -323,6 +328,11 @@ struct WorkspaceSearchView: View {
                 .accessibilityFocused($accessibilityDetailActionFocused)
                 .accessibilityLabel("\(actionTitle(for: selected)): \(selected.title)")
                 .accessibilityIdentifier("workspace-search-open-result")
+                .onKeyPress(.tab) { press in
+                    guard press.modifiers.contains(.shift) else { return .ignored }
+                    returnFocusToSelectedResult(selected.id)
+                    return .handled
+                }
         }
         .padding(inline ? 14 : 18)
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -372,6 +382,11 @@ struct WorkspaceSearchView: View {
         accessibilityResultID = id
         detailActionFocused = false
         accessibilityDetailActionFocused = false
+    }
+
+    private func focusDetailAction() {
+        detailActionFocused = true
+        accessibilityDetailActionFocused = true
     }
 
     private func actionTitle(for result: WorkspaceSearchResult) -> String {
