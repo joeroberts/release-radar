@@ -237,20 +237,38 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         try await DashboardSampleData.seedIfNeeded(in: store)
         let projectID = DashboardSampleData.projectID
-        try await store.transact(actor: .init(id: "search-native-test"), reason: "Register isolated Search fixture") { connection in
+        try await store.transact(
+            actor: .init(id: "search-native-test"),
+            reason: "Seed native-detail mixed-domain Search fixture",
+            auditEventID: .init(rawValue: "native-detail-audit"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "native-detail-ticket")
+        ) { connection in
             try connection.execute(
                 "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'search-native-registration', 1, 'complete')",
                 bindings: [.text(projectID.rawValue)]
             )
+            try connection.execute("UPDATE projects SET name = 'Native-detail project with a deliberately long factual identity' WHERE id = ?", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('native-detail-phase', ?, 'Native detail phase')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('native-detail-ticket', ?, 'native-detail-phase', 'Retired result with long context for normal and compact presentation', 'accepted')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_retirements (project_id, ticket_id, disposition, reason, last_phase_id, last_lane, audit_event_id, retired_at) VALUES (?, 'native-detail-ticket', 'replaced', 'Native detail retirement', 'native-detail-phase', 'accepted', 'native-detail-audit', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, 'native-detail-phase', 'native-detail-delivery', 'Delivery result', 'Long delivery outcome for native detail inspection', 'draft', 0, '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('native-detail-thread', ?, 'completed', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('native-detail-execution', ?, 'native-detail-thread', 'Completed', 'Long execution context for native detail inspection', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('native-detail-review', ?, 'native-detail-ticket', 'completion', 'Long review history context for native detail inspection', 'resolved')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES ('native-detail-completion', ?, 'native-detail-ticket', 'Long completion context for native detail inspection', '2026-10-09T00:01:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO notification_events (id, fingerprint, state, ticket_id, project_id, title, message, created_at) VALUES ('native-detail-notification', 'native-detail-notification-fingerprint', 'delivered', 'native-detail-ticket', ?, 'Native detail notification', 'Long notification context for native detail inspection', '2026-10-09T00:02:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_reference_link_sets (project_id, ticket_id, revision, created_at, updated_at) VALUES (?, 'native-detail-ticket', 1, '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_reference_links (project_id, ticket_id, id, kind, repository_id, artifact_id, current_version, relationship, created_at, updated_at) VALUES (?, 'native-detail-ticket', 'native-detail-decision-link', 'decision', '11111111-1111-4111-8111-111111111111', 'native-detail-artifact', 1, 'current', '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_reference_versions (project_id, ticket_id, link_id, version, content_digest, source_local_id, locator, catalog_version, catalog_digest, observed_path, observed_lifecycle, observed_authority, created_at) VALUES (?, 'native-detail-ticket', 'native-detail-decision-link', 1, ?, 'NATIVE-DETAIL-DECISION', 'Native detail decision heading', 1, ?, 'docs/native-detail-decision.md', 'active', 'controlling', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue), .text(String(repeating: "a", count: 64)), .text(String(repeating: "b", count: 64))])
         }
         let repository = WorkspaceSearchPreferencesRepository(store: store)
         let savedDefinition = WorkspaceSearchDefinition(
-            text: "VD2-08",
+            text: "native-detail",
             scope: .allAuthorized,
-            domains: [.ticket],
-            sort: .title
+            domains: Set(WorkspaceSearchDomain.allCases),
+            sort: .domainThenTitle
         )
-        _ = try await repository.saveQuery(id: "native-ticket", name: "Ticket review", definition: savedDefinition)
+        _ = try await repository.saveQuery(id: "native-ticket", name: "Mixed record review", definition: savedDefinition)
         _ = try await repository.saveQuery(id: "native-newer", name: "Future filters", definition: savedDefinition)
         try await store.transact(actor: .init(id: "search-native-test"), reason: "Seed recoverable newer-version Search state") { connection in
             try connection.execute(
@@ -263,14 +281,16 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.loadDashboard()
         await model.navigate(to: .search)
         model.setWorkspaceSearchText(savedDefinition.text)
-        for domain in WorkspaceSearchDomain.allCases where domain != .ticket {
-            model.setWorkspaceSearchDomain(domain, enabled: false)
-        }
-        model.setWorkspaceSearchSort(.title)
+        model.setWorkspaceSearchSort(.domainThenTitle)
         await model.runWorkspaceSearch()
         await model.loadWorkspaceSearchPreferences(runSearch: false)
         await model.navigate(to: .projects)
-        let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
+        let results = try XCTUnwrap(model.workspaceSearchProjection?.results)
+        XCTAssertEqual(Set(results.map(\.domain)), Set(WorkspaceSearchDomain.allCases))
+        let result = try XCTUnwrap(results.first {
+            guard case let .ticket(_, _, ticketID, _) = $0.identity else { return false }
+            return ticketID.rawValue == "native-detail-ticket"
+        })
         model.selectWorkspaceSearchResult(result.id)
         model.setWorkspaceSearchViewportOffset(42)
         try await store.transact(actor: .init(id: "search-native-test"), reason: "Seed recoverable newer-version working Search state") { connection in
@@ -307,7 +327,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         try await settle(hosting)
 
         if let token {
-            print("PHASE6E SEARCH BASELINE READY: inspect the isolated Ticket/Project Search result at wide and compact widths; record visible detail, filters, focus order, and exact-record action before marking the session complete")
+            print("PHASE6E SEARCH BASELINE READY: inspect all six result domains and the selected retired middle Ticket at wide and compact widths; record long factual detail, compact row-detail-row order, selected AX state, Tab/Shift-Tab/Escape focus, exact-record Open/Back restoration, and truthful actions before marking the session complete")
             try await waitForExternalNativeJourney(token: token, window: window)
         }
 
