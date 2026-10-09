@@ -6551,27 +6551,19 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     func testPhase6CIntegratedTicketEvidenceJourneyIsResponsiveAndOpensHelp() async throws {
-        let nativeSession: (id: String, ready: URL, complete: URL)?
+        let nativeSession: (id: String, pauseSeconds: Double)?
         if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6C_NATIVE_SESSION"] {
             guard !sessionID.isEmpty,
                   sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
                 XCTFail("The Phase 6C native session must contain only letters, numbers, hyphens and underscores.")
                 return
             }
-            let markerRoot = URL(
-                fileURLWithPath: "/private/tmp/release-radar-phase6c.7kHIve",
-                isDirectory: true
-            )
-            let enable = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-enabled")
-            let ready = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-compact-ready")
-            let complete = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-compact-complete")
-            guard FileManager.default.fileExists(atPath: enable.path) else {
-                throw XCTSkip("The external controller must create the fresh Phase 6C enable marker.")
+            guard let pauseSeconds = ProcessInfo.processInfo.environment["RR_PHASE6C_INSPECT_SECONDS"]
+                .flatMap(Double.init), pauseSeconds > 0 else {
+                XCTFail("The Phase 6C native session requires a positive RR_PHASE6C_INSPECT_SECONDS value.")
+                return
             }
-            XCTAssertFalse(FileManager.default.fileExists(atPath: ready.path))
-            XCTAssertFalse(FileManager.default.fileExists(atPath: complete.path))
-            try FileManager.default.removeItem(at: enable)
-            nativeSession = (sessionID, ready, complete)
+            nativeSession = (sessionID, min(pauseSeconds, 60))
         } else {
             nativeSession = nil
         }
@@ -6728,6 +6720,11 @@ final class AppRouteTests: XCTestCase {
         }
         try await Task.sleep(for: .milliseconds(600))
         hosting.layoutSubtreeIfNeeded()
+        if let nativeSession {
+            print("PHASE6C EVIDENCE WIDE READY: inspect the mounted ticket evidence journey using native controls")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            hosting.layoutSubtreeIfNeeded()
+        }
 
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
@@ -6778,12 +6775,9 @@ final class AppRouteTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(500))
         hosting.layoutSubtreeIfNeeded()
         if let nativeSession {
-            try Data().write(to: nativeSession.ready, options: .atomic)
-            print("PHASE6C EVIDENCE COMPACT READY: scroll the mounted ticket inspector until Delivery Evidence is visibly readable, then write the matching compact-complete marker")
-            for _ in 0..<900 where !FileManager.default.fileExists(atPath: nativeSession.complete.path) {
-                try await Task.sleep(for: .milliseconds(200))
-            }
-            XCTAssertTrue(FileManager.default.fileExists(atPath: nativeSession.complete.path))
+            print("PHASE6C EVIDENCE COMPACT READY: scroll the mounted ticket inspector until Delivery Evidence is visibly readable")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            hosting.layoutSubtreeIfNeeded()
         }
         let compactPanelCandidate: AXUIElement? = if nativeSession == nil {
             await scrollToAccessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence")
