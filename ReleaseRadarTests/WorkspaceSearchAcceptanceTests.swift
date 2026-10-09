@@ -43,7 +43,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         await model.updateWorkspaceSearchDomain(.ticket, enabled: false)
         let projectOnly = await Self.searchProjection(
             from: model,
-            domains: [.project],
+            domains: Set(WorkspaceSearchDomain.allCases).subtracting([.ticket]),
             description: "removing Tickets refreshes the current query"
         )
         XCTAssertEqual(Set(projectOnly?.results.map(\.domain) ?? []), [.project])
@@ -52,7 +52,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         await model.updateWorkspaceSearchDomain(.ticket, enabled: true)
         let restored = await Self.searchProjection(
             from: model,
-            domains: [.project, .ticket],
+            domains: Set(WorkspaceSearchDomain.allCases),
             description: "restoring Tickets refreshes the current query"
         )
         XCTAssertEqual(Set(restored?.results.map(\.domain) ?? []), [.project, .ticket])
