@@ -685,7 +685,7 @@ private final class RekonImportFixture {
     }
 
     init(testCase: XCTestCase) throws {
-        root = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+        root = FileManager.default.temporaryDirectory
             .appendingPathComponent("RekonImportTests-\(UUID().uuidString)", isDirectory: true)
         databaseURL = root.appendingPathComponent("release-radar.sqlite")
         artifactURL = root.appendingPathComponent("docs/delivery/dashboard-status.json")

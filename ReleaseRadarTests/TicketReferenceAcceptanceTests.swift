@@ -719,7 +719,7 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
     }
 
     private func makeReferenceFixture() async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
-        let directory = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("release-radar-reference-fixture-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let root = directory.appendingPathComponent("repository")

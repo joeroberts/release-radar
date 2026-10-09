@@ -325,7 +325,7 @@ final class TaskAdoptionAcceptanceTests: XCTestCase {
     private func makeAuthorizedAdoptionFixture(
         atomicOutcome: String = "Atomic change"
     ) async throws -> AdoptionFixture {
-        let directory = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("release-radar-task-adoption-\(UUID().uuidString)", isDirectory: true)
         let root = directory.appendingPathComponent("repository", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
