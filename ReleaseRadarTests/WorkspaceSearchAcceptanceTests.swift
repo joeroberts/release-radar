@@ -259,6 +259,56 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         }).detail.contains("Matched audit event ID: audit-1"))
     }
 
+    func testLegacyNotificationWithoutPresentationFieldsKeepsHistorySearchAvailable() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "legacy-null-notification-project")
+        let registrationID = "legacy-null-notification-registration"
+        try await seedProject(store, projectID: projectID, registrationID: registrationID)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed legacy notification") { connection in
+            try connection.execute(
+                "INSERT INTO notification_events (id, fingerprint, state, project_id) VALUES ('legacy-null-notification', 'legacy-null-notification-fingerprint', 'delivered', ?)",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let identityProjection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "legacy-null-notification", domains: [.history])
+        )
+        XCTAssertTrue(identityProjection.isComplete)
+        XCTAssertTrue(identityProjection.omissions.isEmpty)
+        let identityResult = try XCTUnwrap(identityProjection.results.first { result in
+            result.identity == .history(
+                projectID: projectID,
+                registrationID: registrationID,
+                source: .notification,
+                sourceID: "legacy-null-notification"
+            )
+        })
+        XCTAssertEqual(identityResult.title, "legacy-null-notification-fingerprint")
+        XCTAssertEqual(
+            identityResult.detail,
+            "Persisted notification delivery event. · Matched notification ID: legacy-null-notification"
+        )
+        XCTAssertNil(identityResult.occurredAt)
+
+        let stateProjection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "delivered", domains: [.history])
+        )
+        XCTAssertTrue(stateProjection.isComplete)
+        XCTAssertTrue(stateProjection.omissions.isEmpty)
+        let stateResult = try XCTUnwrap(stateProjection.results.first { result in
+            result.identity == identityResult.identity
+        })
+        XCTAssertEqual(stateResult.title, "legacy-null-notification-fingerprint")
+        XCTAssertEqual(
+            stateResult.detail,
+            "Persisted notification delivery event. · Matched notification state: delivered"
+        )
+        XCTAssertNil(stateResult.occurredAt)
+    }
+
     func testSavedQueriesRelaunchWithEveryFilterAndUnsupportedPayloadStaysRecoverable() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
