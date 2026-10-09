@@ -51,7 +51,8 @@ elif operation == "package-dmg":
     target = pathlib.Path(operands[1]); target.parent.mkdir(parents=True, exist_ok=True); target.write_text("dmg\n")
     sys.exit(1 if fail("package") else 0)
 elif operation == "dmg-sha256":
-    print("d" * 64)
+    path = pathlib.Path(operands[0])
+    print("e" * 64 if fail("installer-digest") and "Downloads" in path.parts else "d" * 64)
 elif operation == "copy-bundle":
     target = pathlib.Path(operands[1]); target.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(operands[0], target)
     pathlib.Path(operands[0]).with_suffix(pathlib.Path(operands[0]).suffix + ".identity").replace(target.with_suffix(target.suffix + ".identity"))
@@ -110,13 +111,14 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
     def test_init_derives_receipt_sha_and_all_destinations_from_version(self) -> None:
         self.initialize()
         receipt = self.receipt_json()
+        fixture_root = self.root.resolve()
         self.assertEqual(1, receipt["schema_version"])
         self.assertEqual(SHA, receipt["candidate"]["source_revision"])
         self.assertEqual([SUITE], receipt["candidate"]["required_suite_ids"])
-        self.assertEqual(str(self.root / "dist" / "ReleaseRadar.app"), receipt["destinations"]["staged_bundle"])
-        self.assertEqual(str(self.root / "dist" / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["dmg"])
-        self.assertEqual(str(self.root / "Downloads" / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["installer"])
-        self.assertEqual(str(self.root / "Applications" / "ReleaseRadar.app"), receipt["destinations"]["installed_bundle"])
+        self.assertEqual(str(fixture_root / "dist" / "ReleaseRadar.app"), receipt["destinations"]["staged_bundle"])
+        self.assertEqual(str(fixture_root / "dist" / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["dmg"])
+        self.assertEqual(str(fixture_root / "Downloads" / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["installer"])
+        self.assertEqual(str(fixture_root / "Applications" / "ReleaseRadar.app"), receipt["destinations"]["installed_bundle"])
         self.assertEqual(
             {stage: "pending" for stage in ("preflight", "checks", "stage", "package", "install", "tag", "push_tag")},
             receipt["stages"],
@@ -142,7 +144,7 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         receipt = self.receipt_json()
         self.assertEqual("preflight", receipt["failure"]["stage"])
         self.assertIn("code", receipt["failure"])
-        self.assertIn("message", receipt["failure"])
+        self.assertIn("safe_message", receipt["failure"])
         self.assertNotIn("run-suite", self.operations())
         self.assertNotIn("build-stage", self.operations())
 
@@ -182,6 +184,18 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
             self.stage(name)
         (self.root / "operations" / "fail-package").touch()
         self.stage("package", expected=1)
+        self.assertNotIn("stop-running", self.operations())
+        self.assertNotIn("copy-bundle", self.operations())
+        self.assertNotIn("create-tag", self.operations())
+
+    def test_retained_installer_digest_mismatch_blocks_delivery(self) -> None:
+        self.initialize()
+        for name in ("preflight", "checks", "stage"):
+            self.stage(name)
+        (self.root / "operations" / "fail-installer-digest").touch()
+        self.stage("package", expected=1)
+        receipt = self.receipt_json()
+        self.assertEqual("installer_mismatch", receipt["failure"]["code"])
         self.assertNotIn("stop-running", self.operations())
         self.assertNotIn("copy-bundle", self.operations())
         self.assertNotIn("create-tag", self.operations())
