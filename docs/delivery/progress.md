@@ -17,7 +17,7 @@ The owner's fourteen-ticket portfolio is tracked by [#120](https://github.com/jo
 
 Branch pushes, PR publication/merge, Wiki publication, issue closure/Done, release/tag/DMG/install mutations, owner-data changes, and permissions/credentials remain held pending portfolio endpoint authority. #223 remains open pending #125 and #224 native acceptance. The prior [#160 record](https://github.com/joeroberts/release-radar/issues/160) and retained artifacts remain historical context.
 
-The [#120 fixture incident](https://github.com/joeroberts/release-radar/issues/120#issuecomment-6074875460) launched an ordinary test-built app that attempted default-store read/write/create before termination; owner-state impact is unknown, with no owner inspection or remediation performed. New native runs are held; read-only source/compile/review/docs work may continue.
+The [#120 fixture incident](https://github.com/joeroberts/release-radar/issues/120#issuecomment-6074875460) launched an ordinary test-built app that attempted default-store read/write/create before termination; owner-state impact is unknown, and read-only inspection awaits owner permission. Existing isolated QA may resume only under exact live XCTest PID, positive fixture-ready/pause proof, one CUA binding, and terminal no-rebind-on-expiry; Planning is the sole runtime issuer. No owner-data inspection/remediation or delivery authority is granted.
 
 ## Next action
 
