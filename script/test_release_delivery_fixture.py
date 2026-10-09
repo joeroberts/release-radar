@@ -228,9 +228,9 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         manifest = fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
         project = fixture / "ReleaseRadar.xcodeproj/project.pbxproj"
         capability = fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift"
-        manifest.write_text(manifest.read_text().replace(
-            '  "version": "0.1.33",', '  "version": "0.1.33",\n  "version": "0.1.33",',
-        ))
+        version = json.loads(manifest.read_text())["version"]
+        version_line = f'  "version": "{version}",'
+        manifest.write_text(manifest.read_text().replace(version_line, f"{version_line}\n{version_line}"))
         originals = {path: path.read_bytes() for path in (project, manifest, capability)}
         with self.assertRaises(ValueError):
             self.release_delivery_module().prepare_release_metadata(
