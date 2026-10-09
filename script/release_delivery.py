@@ -335,7 +335,11 @@ class Receipt:
 
     def require_head(self, context: Context, stage: str) -> None:
         try:
-            source_state = context.observe_object("source-state", (), {"clean"})
+            source_state = context.observe_object(
+                "source-state",
+                (str(context.staged_bundle), str(context.dmg)),
+                {"clean"},
+            )
             current = context.observe_sha("head")
         except RuntimeError:
             self.fail(ReleaseError(stage, "source_revision_unavailable", "release source revision is unavailable"))

@@ -616,7 +616,17 @@ release_native_operation() {
             ;;
         source-state)
             local clean=true
-            if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all -- . ':(exclude)dist/**')" ]]; then
+            local staged_bundle="$1" dmg="$2" staged_relative dmg_relative
+            local source_status
+            [[ "$staged_bundle" == "$ROOT_DIR/"* && "$dmg" == "$ROOT_DIR/"* ]] || { report_error "release outputs are outside the repository"; return 1; }
+            staged_relative="${staged_bundle#"$ROOT_DIR/"}"
+            dmg_relative="${dmg#"$ROOT_DIR/"}"
+            if ! source_status="$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all -- . \
+                ":(exclude)$staged_relative" ":(exclude)$staged_relative/**" ":(exclude)$dmg_relative")"; then
+                report_error "could not inspect release source checkout"
+                return 1
+            fi
+            if [[ -n "$source_status" ]]; then
                 clean=false
             fi
             printf '{"clean":%s}\n' "$clean"
