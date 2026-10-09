@@ -183,6 +183,72 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(receivedReasons, ["Record owner decision"])
     }
 
+    func testPhaseLifecycleReasonFeedbackSupportsBeginDeliveryInLightAppearance() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PhaseLifecycleReason-Light-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let basePhase = try XCTUnwrap(dashboard.plan(for: DashboardSampleData.projectID)?.phases.first)
+        let phase = ProjectPlanPhaseProjection(
+            id: basePhase.id,
+            name: basePhase.name,
+            readiness: basePhase.readiness,
+            lifecycle: .init(
+                projectID: basePhase.lifecycle.projectID,
+                phaseID: basePhase.lifecycle.phaseID,
+                lifecycle: .upcoming,
+                revision: basePhase.lifecycle.revision,
+                completionBaselineDigest: basePhase.lifecycle.completionBaselineDigest,
+                createdAt: basePhase.lifecycle.createdAt,
+                updatedAt: basePhase.lifecycle.updatedAt,
+                completedAt: nil
+            ),
+            completionAssessment: .init(
+                phaseID: basePhase.id,
+                planningBaselineDigest: "light-appearance-completion-gate",
+                blockers: [.init(
+                    kind: .goalNotAccepted,
+                    entityID: "light-appearance-goal",
+                    message: "Accept the delivery goal before completing the phase."
+                )]
+            ),
+            deliveryGoals: basePhase.deliveryGoals,
+            ticketCount: basePhase.ticketCount
+        )
+        let reasonID = "phase-lifecycle-reason-\(phase.id.rawValue)"
+        let actionID = "commit-phase-lifecycle-\(phase.id.rawValue)"
+
+        try await render(
+            PhaseLifecycleControls(
+                phase: phase,
+                transition: { _, _, _ in .init(entityIDs: [], auditEventID: nil, error: nil) },
+                reload: {}
+            ),
+            name: "phase-lifecycle-reason-begin-complete-light",
+            width: 760,
+            expected: nil,
+            expectedText: [
+                "Current: Upcoming · Intended: In delivery",
+                "Lifecycle decision reason",
+                "Required",
+                "Required for Begin delivery. Enter a reason for this lifecycle decision.",
+            ],
+            presentIdentifiers: [
+                reasonID,
+                "phase-lifecycle-reason-required-\(phase.id.rawValue)",
+                "phase-lifecycle-reason-help-\(phase.id.rawValue)",
+                actionID,
+            ],
+            disabledIdentifiers: [actionID],
+            colorScheme: .light,
+            appearanceName: .aqua
+        )
+    }
+
     func testManageProjectOpensImmediatelyWithSelectedRegistrationAndIndependentSections() async throws {
         let projectID = ProjectID(rawValue: "manage-project-immediate")
         let registration = ProjectRegistration(
@@ -2148,14 +2214,16 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
         sheetAttachmentName: String? = nil,
+        colorScheme: ColorScheme = .dark,
+        appearanceName: NSAppearance.Name = .darkAqua,
         verifyAccessibility: @escaping (AXUIElement) throws -> Void = { _ in }
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
-        let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
-        hosting.appearance = NSAppearance(named: .darkAqua)
+        let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, colorScheme))
+        hosting.appearance = NSAppearance(named: appearanceName)
         hosting.frame = NSRect(origin: .zero, size: frame.size)
         let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.appearance = NSAppearance(named: .darkAqua)
+        window.appearance = NSAppearance(named: appearanceName)
         window.title = name
         let priorActivationPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
