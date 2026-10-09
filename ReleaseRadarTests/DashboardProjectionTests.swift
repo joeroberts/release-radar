@@ -418,7 +418,12 @@ final class DashboardProjectionTests: XCTestCase {
             try c.execute("UPDATE tickets SET lane='accepted' WHERE project_id='rekon-pursuit'")
             let ticketIDs = try c.rows(
                 "SELECT id FROM tickets WHERE project_id='rekon-pursuit' AND phase_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY id COLLATE BINARY"
-            ).map { try $0.text("id") }
+            ).map { row in
+                guard case let .text(ticketID)? = row["id"] else {
+                    throw DashboardProjectionTestError.missingSnapshotText
+                }
+                return ticketID
+            }
             for ticketID in ticketIDs {
                 try TicketLaneOrderingPolicy.maintainPlacedTicket(
                     projectID: project, ticketID: .init(rawValue: ticketID),
