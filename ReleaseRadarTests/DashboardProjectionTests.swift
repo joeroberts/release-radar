@@ -63,6 +63,7 @@ final class DashboardProjectionTests: XCTestCase {
         let healthyContext = try XCTUnwrap(dashboard.ticketOrderingContext(for: healthyProjectID))
         XCTAssertEqual(Data(healthyContext.projectID.rawValue.utf8), Data(healthyProjectID.rawValue.utf8))
         XCTAssertFalse(healthyContext.digest.isEmpty)
+        XCTAssertNil(dashboard.ticketOrderingFailure(for: healthyProjectID))
 
         let brokenProject = try XCTUnwrap(dashboard.projects.first {
             Data($0.id.rawValue.utf8) == Data(brokenProjectID.rawValue.utf8)
@@ -70,6 +71,10 @@ final class DashboardProjectionTests: XCTestCase {
         let brokenActivePhaseID = try XCTUnwrap(brokenProject.activePhaseID)
         XCTAssertEqual(Data(brokenActivePhaseID.rawValue.utf8), Data(brokenPhaseID.rawValue.utf8))
         XCTAssertEqual(brokenProject.currentWorkCount, 1)
+        XCTAssertEqual(
+            dashboard.ticketOrderingFailure(for: brokenProjectID),
+            .unavailable(.missingOrderRow(brokenTicketID))
+        )
         XCTAssertNil(dashboard.ticketOrderingContext(for: brokenProjectID))
         XCTAssertFalse(dashboard.boards.keys.contains {
             Data($0.projectID.rawValue.utf8) == Data(brokenProjectID.rawValue.utf8)
