@@ -17,6 +17,8 @@ The owner's fourteen-ticket portfolio is tracked by [#120](https://github.com/jo
 
 Branch pushes, PR publication/merge, Wiki publication, issue closure/Done, release/tag/DMG/install mutations, owner-data changes, and permissions/credentials remain held pending portfolio endpoint authority. #223 remains open pending #125 and #224 native acceptance. The prior [#160 record](https://github.com/joeroberts/release-radar/issues/160) and retained artifacts remain historical context.
 
+The [#120 fixture incident](https://github.com/joeroberts/release-radar/issues/120#issuecomment-6074875460) launched an ordinary test-built app that attempted default-store read/write/create before termination; owner-state impact is unknown, with no owner inspection or remediation performed. New native runs are held; read-only source/compile/review/docs work may continue.
+
 ## Next action
 
 Run scheduled Search targeted QA/native acceptance, then the Planning #120 runtime slot and remaining #124/#104 QA; obtain owner endpoint and #119 answers. No completion claim is made from local readiness alone.
