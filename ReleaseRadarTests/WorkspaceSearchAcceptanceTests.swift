@@ -203,6 +203,49 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertTrue(goal.detail.contains("Matched delivery goal ID: draft-goal"))
     }
 
+    func testHistorySourceIDMatchesAreExplainedDespiteComposedLabels() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "history-source-id-explanation")
+        let registrationID = "history-source-id-registration"
+        try await seedProject(store, projectID: projectID, registrationID: registrationID)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed hidden history source ID Search matches") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('history-source-id-phase', ?, 'History phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('history-source-id-ticket', ?, 'history-source-id-phase', 'History ticket', 'backlog')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('review-1', ?, 'history-source-id-ticket', 'completion', 'Completed evidence', 'resolved')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO audit_events (id, actor_id, reason, created_at, project_id, event_registration_id, entity_type, entity_id) VALUES ('audit-1', 'fixture', 'Recorded evidence', '2026-10-09T00:00:00Z', ?, ?, NULL, 'history-source-id-ticket')",
+                bindings: [.text(projectID.rawValue), .text(registrationID)]
+            )
+        }
+
+        let reviewProjection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "review", domains: [.history])
+        )
+        XCTAssertTrue(try XCTUnwrap(reviewProjection.results.first { result in
+            guard case .history(_, _, .review, "review-1") = result.identity else { return false }
+            return true
+        }).detail.contains("Matched review ID: review-1"))
+
+        let auditProjection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "audit", domains: [.history])
+        )
+        XCTAssertTrue(try XCTUnwrap(auditProjection.results.first { result in
+            guard case .history(_, _, .audit, "audit-1") = result.identity else { return false }
+            return true
+        }).detail.contains("Matched audit event ID: audit-1"))
+    }
+
     func testSavedQueriesRelaunchWithEveryFilterAndUnsupportedPayloadStaysRecoverable() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
