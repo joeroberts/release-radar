@@ -166,10 +166,11 @@ public enum TicketLaneOrderingPolicy {
         connection: SQLiteConnection
     ) throws -> TicketOrderingContext {
         let state = try validatedLoad(projectID: projectID, connection: connection)
-        guard state.snapshot.context == expectedOrderingContext else {
+        guard identity(state.snapshot.context.projectID) == identity(expectedOrderingContext.projectID),
+              state.snapshot.context.digest == expectedOrderingContext.digest else {
             throw TicketOrderingError.staleContext
         }
-        guard let target = state.tickets[ticketID.rawValue] else {
+        guard let target = state.tickets[identity(ticketID)] else {
             throw TicketOrderingError.targetIneligible(.unplaced)
         }
         if target.retired { throw TicketOrderingError.targetIneligible(.retired) }
@@ -187,8 +188,8 @@ public enum TicketLaneOrderingPolicy {
         }
 
         let anchorID = anchor.ticketID
-        guard anchorID != ticketID,
-              let anchorTicket = state.tickets[anchorID.rawValue],
+        guard identity(anchorID) != identity(ticketID),
+              let anchorTicket = state.tickets[identity(anchorID)],
               !anchorTicket.retired,
               anchorTicket.lane == expectedLane,
               anchorTicket.orderKey != nil
@@ -197,12 +198,12 @@ public enum TicketLaneOrderingPolicy {
         }
 
         let original = state.snapshot.ticketIDs(in: expectedLane)
-        guard let originalIndex = original.firstIndex(of: ticketID) else {
+        guard let originalIndex = original.firstIndex(where: { identity($0) == identity(ticketID) }) else {
             throw TicketOrderingError.unavailable(.missingOrderRow(ticketID))
         }
         var candidate = original
         candidate.remove(at: originalIndex)
-        guard let anchorIndex = candidate.firstIndex(of: anchorID) else {
+        guard let anchorIndex = candidate.firstIndex(where: { identity($0) == identity(anchorID) }) else {
             throw TicketOrderingError.invalidAnchor(anchorID)
         }
         let insertionIndex: Int
@@ -212,9 +213,9 @@ public enum TicketLaneOrderingPolicy {
         }
         candidate.insert(ticketID, at: insertionIndex)
 
-        let originalPositions = Dictionary(uniqueKeysWithValues: original.enumerated().map { ($0.element, $0.offset) })
-        let candidatePositions = Dictionary(uniqueKeysWithValues: candidate.enumerated().map { ($0.element, $0.offset) })
-        let affected = Set(candidate.filter { originalPositions[$0] != candidatePositions[$0] })
+        let originalPositions = Dictionary(uniqueKeysWithValues: original.enumerated().map { (identity($0.element), $0.offset) })
+        let candidatePositions = Dictionary(uniqueKeysWithValues: candidate.enumerated().map { (identity($0.element), $0.offset) })
+        let affected = Set(candidate.map { identity($0) }.filter { originalPositions[$0] != candidatePositions[$0] })
         if let conflict = dependencyConflict(
             affected: affected,
             candidatePositions: candidatePositions,
@@ -223,12 +224,14 @@ public enum TicketLaneOrderingPolicy {
             throw TicketOrderingError.dependencyConflict(conflict)
         }
 
-        guard candidate != original else { return state.snapshot.context }
+        guard candidate.map({ identity($0) }) != original.map({ identity($0) }) else {
+            return state.snapshot.context
+        }
         let leftKey = insertionIndex > 0
-            ? state.tickets[candidate[insertionIndex - 1].rawValue]?.orderKey
+            ? state.tickets[identity(candidate[insertionIndex - 1])]?.orderKey
             : nil
         let rightKey = insertionIndex + 1 < candidate.count
-            ? state.tickets[candidate[insertionIndex + 1].rawValue]?.orderKey
+            ? state.tickets[identity(candidate[insertionIndex + 1])]?.orderKey
             : nil
         let orderKey = try allocateOrderKey(
             after: leftKey,
@@ -425,7 +428,7 @@ public enum TicketLaneOrderingPolicy {
             """,
             bindings: [.text(projectID.rawValue)]
         )
-        var phases: [String: ContextPhase] = [:]
+        var phases: [Data: ContextPhase] = [:]
         for row in phaseRows {
             guard case let .text(id)? = row["id"],
                   case let .text(name)? = row["name"],
@@ -434,7 +437,7 @@ public enum TicketLaneOrderingPolicy {
             else {
                 throw TicketOrderingError.unavailable(.invalidStoredState("A phase lifecycle is malformed."))
             }
-            phases[id] = .init(id: id, name: name, lifecycle: lifecycle)
+            phases[identity(id)] = .init(id: id, name: name, lifecycle: lifecycle)
         }
 
         let ticketRows = try boundedRows(
@@ -455,7 +458,7 @@ public enum TicketLaneOrderingPolicy {
             """,
             bindings: [.text(projectID.rawValue)]
         )
-        var tickets: [String: LoadedTicket] = [:]
+        var tickets: [Data: LoadedTicket] = [:]
         var laneMembers = Dictionary(uniqueKeysWithValues: TicketLane.allCases.map { ($0, [(TicketID, String)]()) })
         var laneKeys = Dictionary(uniqueKeysWithValues: TicketLane.allCases.map { ($0, Set<String>()) })
         for row in ticketRows {
@@ -478,7 +481,7 @@ public enum TicketLaneOrderingPolicy {
                 }
             } else {
                 guard let phaseID, let laneText, let lane = TicketLane(rawValue: laneText),
-                      let phase = phases[phaseID]
+                      let phase = phases[identity(phaseID)]
                 else {
                     throw TicketOrderingError.unavailable(.invalidStoredState("A placed ticket has invalid phase or lane state."))
                 }
@@ -495,14 +498,14 @@ public enum TicketLaneOrderingPolicy {
                     throw TicketOrderingError.unavailable(.duplicateOrderKey(lane))
                 }
                 laneMembers[lane, default: []].append((ticketID, orderKey))
-                tickets[id] = .init(
+                tickets[identity(id)] = .init(
                     id: ticketID, phaseID: PhaseID(rawValue: phaseID), phaseName: phase.name,
                     phaseLifecycle: phase.lifecycle, lane: lane, retired: false, orderKey: orderKey
                 )
                 continue
             }
-            let phase = phaseID.flatMap { phases[$0] }
-            tickets[id] = .init(
+            let phase = phaseID.flatMap { phases[identity($0)] }
+            tickets[identity(id)] = .init(
                 id: ticketID,
                 phaseID: phaseID.map(PhaseID.init(rawValue:)),
                 phaseName: phase?.name,
@@ -522,7 +525,7 @@ public enum TicketLaneOrderingPolicy {
             guard case let .text(id)? = row["id"],
                   case let .text(ticketID)? = row["ticket_id"],
                   case let .text(prerequisiteID)? = row["depends_on_ticket_id"],
-                  tickets[ticketID] != nil, tickets[prerequisiteID] != nil
+                  tickets[identity(ticketID)] != nil, tickets[identity(prerequisiteID)] != nil
             else {
                 throw TicketOrderingError.unavailable(.invalidStoredState("A ticket dependency is malformed."))
             }
@@ -561,24 +564,26 @@ public enum TicketLaneOrderingPolicy {
     }
 
     private static func dependencyConflict(
-        affected: Set<TicketID>,
-        candidatePositions: [TicketID: Int],
+        affected: Set<Data>,
+        candidatePositions: [Data: Int],
         state: LoadedState
     ) -> TicketOrderingConflict? {
-        var dependents: [String: [String]] = [:]
-        var prerequisites: [String: [String]] = [:]
+        var dependents: [Data: [Data]] = [:]
+        var prerequisites: [Data: [Data]] = [:]
         for edge in state.dependencies {
-            guard state.tickets[edge.prerequisiteID]?.lane != .accepted else { continue }
-            dependents[edge.prerequisiteID, default: []].append(edge.ticketID)
-            prerequisites[edge.ticketID, default: []].append(edge.prerequisiteID)
+            let prerequisiteID = identity(edge.prerequisiteID)
+            let dependentID = identity(edge.ticketID)
+            guard state.tickets[prerequisiteID]?.lane != .accepted else { continue }
+            dependents[prerequisiteID, default: []].append(dependentID)
+            prerequisites[dependentID, default: []].append(prerequisiteID)
         }
-        for key in Array(dependents.keys) { dependents[key]?.sort(by: binaryLess) }
-        for key in Array(prerequisites.keys) { prerequisites[key]?.sort(by: binaryLess) }
+        for key in Array(dependents.keys) { dependents[key]?.sort(by: dataLess) }
+        for key in Array(prerequisites.keys) { prerequisites[key]?.sort(by: dataLess) }
 
-        let affectedIDs = affected.map(\.rawValue).sorted(by: binaryLess)
+        let affectedIDs = affected.sorted(by: dataLess)
         for prerequisiteID in affectedIDs {
-            var queue: [(String, [String])] = [(prerequisiteID, [prerequisiteID])]
-            var visited: Set<String> = [prerequisiteID]
+            var queue: [(Data, [Data])] = [(prerequisiteID, [prerequisiteID])]
+            var visited: Set<Data> = [prerequisiteID]
             var index = 0
             while index < queue.count {
                 let (current, path) = queue[index]
@@ -597,8 +602,8 @@ public enum TicketLaneOrderingPolicy {
             }
         }
         for dependentID in affectedIDs {
-            var queue: [(String, [String])] = [(dependentID, [dependentID])]
-            var visited: Set<String> = [dependentID]
+            var queue: [(Data, [Data])] = [(dependentID, [dependentID])]
+            var visited: Set<Data> = [dependentID]
             var index = 0
             while index < queue.count {
                 let (current, path) = queue[index]
@@ -620,10 +625,10 @@ public enum TicketLaneOrderingPolicy {
     }
 
     private static func conflict(
-        prerequisiteID: String,
-        dependentID: String,
-        witness: [String],
-        candidatePositions: [TicketID: Int],
+        prerequisiteID: Data,
+        dependentID: Data,
+        witness: [Data],
+        candidatePositions: [Data: Int],
         state: LoadedState
     ) -> TicketOrderingConflict? {
         guard prerequisiteID != dependentID,
@@ -631,18 +636,20 @@ public enum TicketLaneOrderingPolicy {
               let dependent = state.tickets[dependentID],
               !prerequisite.retired, !dependent.retired,
               let lane = prerequisite.lane, dependent.lane == lane,
-              let prerequisitePosition = candidatePositions[prerequisite.id],
-              let dependentPosition = candidatePositions[dependent.id],
+              let prerequisitePosition = candidatePositions[identity(prerequisite.id)],
+              let dependentPosition = candidatePositions[identity(dependent.id)],
               prerequisitePosition >= dependentPosition,
               let prerequisitePhaseID = prerequisite.phaseID,
               let prerequisitePhaseName = prerequisite.phaseName,
               let dependentPhaseID = dependent.phaseID,
               let dependentPhaseName = dependent.phaseName
         else { return nil }
+        let witnessChain = witness.compactMap { state.tickets[$0]?.id }
+        guard witnessChain.count == witness.count else { return nil }
         return .init(
             prerequisiteTicketID: prerequisite.id,
             dependentTicketID: dependent.id,
-            witnessChain: witness.map(TicketID.init(rawValue:)),
+            witnessChain: witnessChain,
             lane: lane,
             prerequisitePhaseID: prerequisitePhaseID,
             prerequisitePhaseName: prerequisitePhaseName,
@@ -667,6 +674,22 @@ public enum TicketLaneOrderingPolicy {
         lhs.utf8.lexicographicallyPrecedes(rhs.utf8)
     }
 
+    private static func dataLess(_ lhs: Data, _ rhs: Data) -> Bool {
+        lhs.lexicographicallyPrecedes(rhs)
+    }
+
+    private static func identity(_ value: String) -> Data {
+        Data(value.utf8)
+    }
+
+    private static func identity(_ value: TicketID) -> Data {
+        identity(value.rawValue)
+    }
+
+    private static func identity(_ value: ProjectID) -> Data {
+        identity(value.rawValue)
+    }
+
     private static func text(_ value: SQLiteValue?) -> String? {
         guard case let .text(value)? = value else { return nil }
         return value
@@ -675,7 +698,7 @@ public enum TicketLaneOrderingPolicy {
 
 private struct LoadedState {
     let snapshot: TicketOrderingSnapshot
-    let tickets: [String: LoadedTicket]
+    let tickets: [Data: LoadedTicket]
     let dependencies: [ContextDependency]
 }
 

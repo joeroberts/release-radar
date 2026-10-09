@@ -440,9 +440,9 @@ struct DashboardProjection: Equatable, Sendable {
                 let projectBoards = phases.compactMap { boards[PhaseBoardKey(projectID: projectID, phaseID: $0.id)] }
                 let allLanes = try TicketLane.allCases.map { lane in
                     let cards = projectBoards.flatMap { $0.lane(lane)?.cards ?? [] }
-                    let cardsByID = Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0) })
+                    let cardsByID = Dictionary(uniqueKeysWithValues: cards.map { (Data($0.id.rawValue.utf8), $0) })
                     let orderedCards = try ticketOrdering.ticketIDs(in: lane).map { ticketID in
-                        guard let card = cardsByID[ticketID] else {
+                        guard let card = cardsByID[Data(ticketID.rawValue.utf8)] else {
                             throw TicketOrderingError.unavailable(
                                 .invalidStoredState("Ticket \(ticketID.rawValue) is absent from its board projection.")
                             )

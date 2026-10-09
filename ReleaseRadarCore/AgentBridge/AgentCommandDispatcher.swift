@@ -523,7 +523,7 @@ public actor AgentCommandDispatcher {
             commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
                 && valid(ticketID, maximum: 256) && !ticketID.contains("\0")
                 && valid(anchorID.rawValue, maximum: 256) && !anchorID.rawValue.contains("\0")
-                && anchorID.rawValue != ticketID
+                && Data(anchorID.rawValue.utf8) != Data(ticketID.utf8)
                 && Data(expectedContext.projectID.rawValue.utf8) == Data(projectID.utf8)
                 && Self.validDigest(expectedContext.digest)
         case let .reviseTicketTaskPlan(ticketID, expectedRevision, additions, definitionRevisions, supersededTaskIDs):
