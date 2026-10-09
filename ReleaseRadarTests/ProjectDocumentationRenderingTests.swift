@@ -175,10 +175,10 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 "The current lifecycle revision is 2.",
                 "Record owner decision",
             ],
+            postActionFocusedIdentifier: reasonID,
             inputValues: [reasonID: " Record owner decision "],
             postInputEnabledIdentifiers: [actionID],
-            pressIdentifiers: [actionID],
-            postActionFocusedIdentifier: reasonID
+            pressIdentifiers: [actionID]
         )
         XCTAssertEqual(receivedReasons, ["Record owner decision"])
     }
