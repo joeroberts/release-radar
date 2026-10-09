@@ -11,7 +11,8 @@ struct TicketDetailView: View {
     var loadReferences: (() async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
     var loadDeliveryEvidence: (() async -> ReferenceLoadResult<TicketDeliveryEvidence>)? = nil
     var openReferenceSource: ((String, Int64) -> Void)? = nil
-    var referenceContextIdentity: String? = nil
+    var referenceQueryContextIdentity: String? = nil
+    var isReferenceQueryReady = false
     var reload: () async -> Void = {}
     @State private var isReloadingTasks = false
     @State private var isTaskHelpPresented = false
@@ -36,19 +37,23 @@ struct TicketDetailView: View {
                 tasksSection
 
                 if let loadDeliveryEvidence {
-                    let identity = "\(referenceContextIdentity ?? "unavailable"):\(detail.id.rawValue)"
-                    TicketDeliveryEvidenceSection(identity: identity, load: loadDeliveryEvidence)
-                        .id(identity)
+                    TicketDeliveryEvidenceSection(ticketID: detail.id, contextIdentity: referenceQueryContextIdentity,
+                                                  isContextReady: isReferenceQueryReady,
+                                                  isContextChecking: isReferenceQueryChecking,
+                                                  load: loadDeliveryEvidence)
+                        .id(detail.id)
                 }
 
                 if let loadReferences, let openReferenceSource {
-                    let identity = "\(referenceContextIdentity ?? "unavailable"):\(detail.id.rawValue)"
                     TicketReferencesSection(
-                        identity: identity,
+                        ticketID: detail.id,
+                        contextIdentity: referenceQueryContextIdentity,
+                        isContextReady: isReferenceQueryReady,
+                        isContextChecking: isReferenceQueryChecking,
                         load: loadReferences,
                         openSource: openReferenceSource
                     )
-                    .id(identity)
+                    .id(detail.id)
                 }
 
                 detailSection("Delivery Goal", systemImage: "target") {
@@ -127,6 +132,11 @@ struct TicketDetailView: View {
         .scrollIndicators(.visible)
         .accessibilityHint("Scroll to reach all ticket details and task rows. Task rows are keyboard focusable.")
         .accessibilityIdentifier("ticket-inspector")
+    }
+
+    private var isReferenceQueryChecking: Bool {
+        if case .checking = documentationStatus { return true }
+        return false
     }
 
     private var tasksSection: some View {

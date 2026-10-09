@@ -392,6 +392,14 @@ struct FailureStatePresentation: Equatable, Sendable {
             self.init(title: "Proposal state changed",
                       detail: "Refresh the proposal history before continuing. No planning state changed.",
                       systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-proposal-state")
+        case let .ticketOrdering(error):
+            self.init(
+                title: "Ticket order unchanged",
+                detail: error.localizedDescription,
+                systemImage: "arrow.clockwise",
+                tone: .warning,
+                accessibilityID: "failure-ticket-ordering"
+            )
         case let .documentation(error):
             self.init(title: "Documentation action rejected",
                       detail: "Documentation operation failed (\(error.rawValue)). Inspect the project evidence inventory and retry the exact approved operation.",

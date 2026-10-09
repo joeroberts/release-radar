@@ -69,6 +69,17 @@ public actor AgentCommandDispatcher {
            case .externalAgent = origin {
             return .init(entityIDs: [], auditEventID: nil, error: .planChangeProposalOwnerAuthorityRequired)
         }
+        if envelope.command.requiresTicketOrderingOwnerAuthority,
+           case .externalAgent = origin {
+            return .init(
+                entityIDs: [], auditEventID: nil,
+                error: .ticketOrdering(.ownerAuthorityRequired)
+            )
+        }
+        if envelope.command.requiresTicketOrderingOwnerAuthority,
+           envelope.expectedRegistration == nil {
+            return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+        }
         if envelope.command.isDeliveryEvidenceMutation {
             guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -154,12 +165,7 @@ public actor AgentCommandDispatcher {
                 .init(id: "release-radar-owner")
             }
             do {
-                return try await store.transact(
-                    actor: actor,
-                    reason: envelope.reason,
-                    auditEventID: auditEventID,
-                    auditScope: auditScope
-                ) { connection in
+                let operation: @Sendable (SQLiteConnection) throws -> AgentCommandResult = { connection in
                     if let admissionDeadline,
                        admissionDeadline <= Date().timeIntervalSince1970 {
                         throw DispatchControl.expired
@@ -196,7 +202,8 @@ public actor AgentCommandDispatcher {
                             else { throw DispatchControl.requestIDReused }
                         }
                         if envelope.command.requiresPlanChangeOwnerAuthority
-                            || envelope.command.requiresPhaseLifecycleOwnerAuthority {
+                            || envelope.command.requiresPhaseLifecycleOwnerAuthority
+                            || envelope.command.requiresTicketOrderingOwnerAuthority {
                             guard priorResult.error == nil, let priorAuditID = priorResult.auditEventID,
                                   let audit = try connection.row(
                                     "SELECT actor_id,project_id,entity_type,entity_id FROM audit_events WHERE id=?",
@@ -215,16 +222,36 @@ public actor AgentCommandDispatcher {
                         projectID: project.projectID,
                         connection: connection
                     )
-                    let revision = try Self.apply(
-                        envelope.command, project: project, origin: origin,
-                        reason: envelope.reason, auditEventID: auditEventID, connection: connection
-                    )
+                    let revision: Int64?
+                    let orderingContext: TicketOrderingContext?
+                    switch envelope.command {
+                    case let .reorderTicket(assertedProjectID, ticketID, expectedLane, anchor, expectedContext):
+                        guard Data(assertedProjectID.utf8) == Data(project.projectID.rawValue.utf8) else {
+                            throw CommandValidation.crossProject("The ticket ordering belongs to another project.")
+                        }
+                        orderingContext = try TicketLaneOrderingPolicy.reorder(
+                            projectID: project.projectID,
+                            ticketID: .init(rawValue: ticketID),
+                            expectedLane: expectedLane,
+                            anchor: anchor,
+                            expectedOrderingContext: expectedContext,
+                            connection: connection
+                        )
+                        revision = nil
+                    default:
+                        orderingContext = nil
+                        revision = try Self.apply(
+                            envelope.command, project: project, origin: origin,
+                            reason: envelope.reason, auditEventID: auditEventID, connection: connection
+                        )
+                    }
                     let lifecycle = try Self.phaseLifecycleResult(
                         for: envelope.command, projectID: project.projectID, connection: connection
                     )
                     let result = Self.resultForCommand(
                         envelope.command, auditEventID: auditEventID,
-                        revision: revision, phaseLifecycle: lifecycle
+                        revision: revision, phaseLifecycle: lifecycle,
+                        ticketOrderingContext: orderingContext
                     )
                     let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
@@ -238,6 +265,22 @@ public actor AgentCommandDispatcher {
                     )
                     return result
                 }
+                if envelope.command.requiresTicketOrderingOwnerAuthority {
+                    return try await store.transactOrdering(
+                        actor: actor,
+                        reason: envelope.reason,
+                        auditEventID: auditEventID,
+                        auditScope: auditScope,
+                        operation
+                    )
+                }
+                return try await store.transact(
+                    actor: actor,
+                    reason: envelope.reason,
+                    auditEventID: auditEventID,
+                    auditScope: auditScope,
+                    operation
+                )
             } catch let control as DispatchControl {
                 switch control {
                 case let .replay(result): return result
@@ -473,6 +516,16 @@ public actor AgentCommandDispatcher {
                 }
             }
             commandFieldsAreValid = valid(ticketID, maximum: 256)
+        case let .reorderTicket(projectID, ticketID, _, anchor, expectedContext):
+            let anchorID: TicketID = switch anchor {
+            case let .before(id), let .after(id): id
+            }
+            commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
+                && valid(ticketID, maximum: 256) && !ticketID.contains("\0")
+                && valid(anchorID.rawValue, maximum: 256) && !anchorID.rawValue.contains("\0")
+                && Data(anchorID.rawValue.utf8) != Data(ticketID.utf8)
+                && Data(expectedContext.projectID.rawValue.utf8) == Data(projectID.utf8)
+                && Self.validDigest(expectedContext.digest)
         case let .reviseTicketTaskPlan(ticketID, expectedRevision, additions, definitionRevisions, supersededTaskIDs):
             let additions = additions ?? []
             let definitions = definitionRevisions ?? []
@@ -582,7 +635,8 @@ public actor AgentCommandDispatcher {
         _ command: AgentCommand,
         auditEventID: AuditEventID,
         revision: Int64?,
-        phaseLifecycle: PhaseLifecycleRecord?
+        phaseLifecycle: PhaseLifecycleRecord?,
+        ticketOrderingContext: TicketOrderingContext?
     ) -> AgentCommandResult {
         switch command {
         case .prepareExecutionAssignment:
@@ -641,6 +695,13 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
         case let .transitionTicket(ticketID, _, _):
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
+        case let .reorderTicket(_, ticketID, _, _, _):
+            return .init(
+                entityIDs: [ticketID],
+                auditEventID: auditEventID,
+                error: nil,
+                ticketOrderingContext: ticketOrderingContext
+            )
         case let .setActivePhase(phaseID):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
         case let .setDependency(id, _, _, _),
@@ -675,7 +736,7 @@ public actor AgentCommandDispatcher {
              let .appendDeliveryEvidenceObservation(_, ticketID, _, _): (.ticket, ticketID)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
-        case let .upsertUnassignedTicket(ticketID, _), let .placeUnassignedTicket(ticketID, _, _), let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
+        case let .upsertUnassignedTicket(ticketID, _), let .placeUnassignedTicket(ticketID, _, _), let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _), let .reorderTicket(_, ticketID, _, _, _): (.ticket, ticketID)
         case let .reviseTicketTaskPlan(ticketID, _, _, _, _), let .completeTicketTask(ticketID, _, _): (.ticketTaskPlan, ticketID)
         case let .setDependency(id, kind, _, _):
             (kind == .ticket ? .ticketDependency : .phaseDependency, id)
@@ -703,6 +764,10 @@ public actor AgentCommandDispatcher {
         switch command {
         case .prepareExecutionAssignment:
             throw ProjectExecutionError.unavailable
+        case .reorderTicket:
+            throw TicketOrderingError.unavailable(
+                .invalidStoredState("Ticket ordering must use its dedicated transaction.")
+            )
         case let .transitionPhaseLifecycle(assertedProjectID, phaseID, expectedRevision, action, planningBaselineDigest):
             guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
                 throw CommandValidation.crossProject("The phase lifecycle belongs to another project.")
@@ -1246,6 +1311,9 @@ public actor AgentCommandDispatcher {
     }
 
     private static func map(_ error: Error, command: AgentCommand) -> AgentCommandError {
+        if let error = error as? TicketOrderingError {
+            return .ticketOrdering(error)
+        }
         if let error = error as? PhaseLifecyclePolicyError {
             switch error {
             case let .notFound(phaseID): return .phaseLifecycleNotFound(phaseID)

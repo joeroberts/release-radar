@@ -294,6 +294,41 @@ public actor DeliveryStore {
         auditScope: AuditScope? = nil,
         _ body: @Sendable (SQLiteConnection) throws -> T
     ) throws -> T {
+        try auditedTransaction(
+            actor: actor,
+            reason: reason,
+            auditEventID: auditEventID,
+            auditScope: auditScope,
+            reconcilesExecutionAssignments: true,
+            body
+        )
+    }
+
+    func transactOrdering<T: Sendable>(
+        actor: DeliveryActor,
+        reason: String,
+        auditEventID: AuditEventID,
+        auditScope: AuditScope,
+        _ body: @Sendable (SQLiteConnection) throws -> T
+    ) throws -> T {
+        try auditedTransaction(
+            actor: actor,
+            reason: reason,
+            auditEventID: auditEventID,
+            auditScope: auditScope,
+            reconcilesExecutionAssignments: false,
+            body
+        )
+    }
+
+    private func auditedTransaction<T: Sendable>(
+        actor: DeliveryActor,
+        reason: String,
+        auditEventID: AuditEventID,
+        auditScope: AuditScope?,
+        reconcilesExecutionAssignments: Bool,
+        _ body: @Sendable (SQLiteConnection) throws -> T
+    ) throws -> T {
         guard readOnlyFiles == nil else { throw StoreError.unavailable("Documentation preflight is read-only") }
         let connection = try availableConnection()
         try connection.execute("BEGIN IMMEDIATE TRANSACTION")
@@ -372,7 +407,9 @@ public actor DeliveryStore {
                     snapshotAfter?.phaseID.map(SQLiteValue.text) ?? .null,
                 ]
             )
-            try reconcileExecutionAssignments(connection: connection, scope: auditScope)
+            if reconcilesExecutionAssignments {
+                try reconcileExecutionAssignments(connection: connection, scope: auditScope)
+            }
             try connection.execute("COMMIT")
             return result
         } catch {

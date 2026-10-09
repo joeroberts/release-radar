@@ -42,6 +42,190 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testProjectOverviewActionsRemainReachableInsideCompactSidebarDetailViewport() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ProjectOverviewLayout-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Register compact overview fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'compact-overview-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        model.selection = .projectOverview(DashboardSampleData.projectID)
+        let project = try XCTUnwrap(model.dashboard?.projects.first { $0.id == DashboardSampleData.projectID })
+
+        for width in [1_100.0, 760.0] {
+            model.isSidebarCompact = false
+            try await render(
+                SidebarView(model: model),
+                name: "project-overview-sidebar-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Active phase", "Current work", "Owner attention",
+                    project.activePhaseName, "\(project.currentWorkCount)", "\(project.attentionCount)",
+                ],
+                presentIdentifiers: [
+                    "overview-metric-active-phase",
+                    "overview-metric-current-work",
+                    "overview-metric-owner-attention",
+                    "project-help",
+                    "project-manage",
+                    "open-project-plan",
+                    "open-phase-board",
+                ],
+                verifyAccessibility: { window in
+                    let windowFrame = try XCTUnwrap(self.accessibilityFrame(window))
+                    for identifier in ["project-help", "project-manage", "open-project-plan", "open-phase-board"] {
+                        let element = try XCTUnwrap(self.accessibilityElement(window, identifier: identifier))
+                        XCTAssertEqual(
+                            AXUIElementPerformAction(element, "AXScrollToVisible" as CFString),
+                            .success,
+                            "\(identifier) must be vertically reachable at host width \(Int(width))"
+                        )
+                        let elementFrame = try XCTUnwrap(self.accessibilityFrame(element))
+                        XCTAssertTrue(
+                            windowFrame.contains(elementFrame),
+                            "\(identifier) must remain fully contained in the host window at width \(Int(width)); window=\(windowFrame), element=\(elementFrame)"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    func testPhaseLifecycleReasonShowsRequiredFeedbackAndDisablesEmptySubmission() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PhaseLifecycleReason-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let phase = try XCTUnwrap(dashboard.plan(for: DashboardSampleData.projectID)?.phases.first)
+        let phaseID = phase.id.rawValue
+        let reasonID = "phase-lifecycle-reason-\(phaseID)"
+        let actionID = "commit-phase-lifecycle-\(phaseID)"
+        let requiredID = "phase-lifecycle-reason-required-\(phaseID)"
+        let helpID = "phase-lifecycle-reason-help-\(phaseID)"
+        let emptyHelp = "Required for Move to Upcoming. Enter a reason for this lifecycle decision."
+        var receivedReasons: [String] = []
+
+        func controls() -> PhaseLifecycleControls {
+            PhaseLifecycleControls(
+                phase: phase,
+                transition: { _, _, reason in
+                    receivedReasons.append(reason)
+                    return .init(entityIDs: [], auditEventID: nil, error: nil)
+                },
+                reload: {}
+            )
+        }
+
+        for width in [1_100.0, 760.0] {
+            try await render(
+                controls(),
+                name: "phase-lifecycle-reason-empty-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Lifecycle decision reason", "Required", emptyHelp],
+                presentIdentifiers: [reasonID, requiredID, helpID, actionID],
+                disabledIdentifiers: [actionID],
+                verifyAccessibility: { window in
+                    let reason = try XCTUnwrap(self.accessibilityElement(window, identifier: reasonID))
+                    var label: String?
+                    for attribute in [kAXTitleAttribute, kAXDescriptionAttribute] where label == nil {
+                        var value: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(reason, attribute as CFString, &value) == .success {
+                            label = value as? String
+                        }
+                    }
+                    var help: CFTypeRef?
+                    XCTAssertEqual(label, "Lifecycle decision reason, required")
+                    XCTAssertEqual(AXUIElementCopyAttributeValue(reason, kAXHelpAttribute as CFString, &help), .success)
+                    XCTAssertEqual(help as? String, emptyHelp)
+                }
+            )
+        }
+        XCTAssertTrue(receivedReasons.isEmpty, "Empty reasons must not submit lifecycle actions")
+    }
+
+    func testPhaseLifecycleReasonFeedbackSupportsBeginDeliveryInLightAppearance() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PhaseLifecycleReason-Light-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let basePhase = try XCTUnwrap(dashboard.plan(for: DashboardSampleData.projectID)?.phases.first)
+        let phase = ProjectPlanPhaseProjection(
+            id: basePhase.id,
+            name: basePhase.name,
+            readiness: basePhase.readiness,
+            lifecycle: .init(
+                projectID: basePhase.lifecycle.projectID,
+                phaseID: basePhase.lifecycle.phaseID,
+                lifecycle: .upcoming,
+                revision: basePhase.lifecycle.revision,
+                completionBaselineDigest: basePhase.lifecycle.completionBaselineDigest,
+                createdAt: basePhase.lifecycle.createdAt,
+                updatedAt: basePhase.lifecycle.updatedAt,
+                completedAt: nil
+            ),
+            completionAssessment: .init(
+                phaseID: basePhase.id,
+                planningBaselineDigest: "light-appearance-completion-gate",
+                blockers: [.init(
+                    kind: .goalNotAccepted,
+                    entityID: "light-appearance-goal",
+                    message: "Accept the delivery goal before completing the phase."
+                )]
+            ),
+            deliveryGoals: basePhase.deliveryGoals,
+            ticketCount: basePhase.ticketCount
+        )
+        let reasonID = "phase-lifecycle-reason-\(phase.id.rawValue)"
+        let actionID = "commit-phase-lifecycle-\(phase.id.rawValue)"
+
+        try await render(
+            PhaseLifecycleControls(
+                phase: phase,
+                transition: { _, _, _ in .init(entityIDs: [], auditEventID: nil, error: nil) },
+                reload: {}
+            ),
+            name: "phase-lifecycle-reason-begin-complete-light",
+            width: 760,
+            expected: nil,
+            expectedText: [
+                "Current: Upcoming · Intended: In delivery",
+                "Lifecycle decision reason",
+                "Required",
+                "Required for Begin delivery. Enter a reason for this lifecycle decision.",
+            ],
+            presentIdentifiers: [
+                reasonID,
+                "phase-lifecycle-reason-required-\(phase.id.rawValue)",
+                "phase-lifecycle-reason-help-\(phase.id.rawValue)",
+                actionID,
+            ],
+            disabledIdentifiers: [actionID],
+            externalInspectionStage: "light-begin-complete",
+            colorScheme: .light,
+            appearanceName: .aqua
+        )
+    }
+
     func testManageProjectOpensImmediatelyWithSelectedRegistrationAndIndependentSections() async throws {
         let projectID = ProjectID(rawValue: "manage-project-immediate")
         let registration = ProjectRegistration(
@@ -1996,6 +2180,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         postActionFocusedIdentifier: String? = nil,
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
+        inputValues: [String: String] = [:],
+        postInputDisabledIdentifiers: [String] = [],
+        postInputEnabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
         afterPressIdentifiers: [[String]] = [],
         afterPressFocusIdentifiers: [[String]] = [],
@@ -2004,14 +2191,17 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
         sheetAttachmentName: String? = nil,
+        externalInspectionStage: String? = nil,
+        colorScheme: ColorScheme = .dark,
+        appearanceName: NSAppearance.Name = .darkAqua,
         verifyAccessibility: @escaping (AXUIElement) throws -> Void = { _ in }
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
-        let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
-        hosting.appearance = NSAppearance(named: .darkAqua)
+        let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, colorScheme))
+        hosting.appearance = NSAppearance(named: appearanceName)
         hosting.frame = NSRect(origin: .zero, size: frame.size)
         let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.appearance = NSAppearance(named: .darkAqua)
+        window.appearance = NSAppearance(named: appearanceName)
         window.title = name
         let priorActivationPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
@@ -2024,6 +2214,49 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(200))
         hosting.layoutSubtreeIfNeeded()
         window.title = name
+        if let externalInspectionStage,
+           let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_TASK7A_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The Task 7A native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            guard let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"]
+                .flatMap(Double.init), seconds > 0 else {
+                XCTFail("The Task 7A native session requires a positive RR_TASK7A_INSPECT_SECONDS value.")
+                return
+            }
+            let fileManager = FileManager.default
+            let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+            let configurationPresent = configurationPath != nil
+            guard configurationPresent else {
+                XCTFail("The Task 7A native session requires the XCTest configuration environment key.")
+                return
+            }
+            let configurationNonempty = configurationPath?.isEmpty == false
+            let configurationExists = configurationPath.map {
+                !$0.isEmpty && fileManager.fileExists(atPath: $0)
+            } ?? false
+            let controlDirectory = fileManager.temporaryDirectory
+                .appendingPathComponent("release-radar-task7a-lifecycle", isDirectory: true)
+                .appendingPathComponent("native-\(sessionID)", isDirectory: true)
+            try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+            let ready = controlDirectory.appendingPathComponent("\(externalInspectionStage)-ready")
+            let complete = controlDirectory.appendingPathComponent("\(externalInspectionStage)-complete")
+            XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+            XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+            let identity = "token=\(sessionID)\nstage=\(externalInspectionStage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
+            XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+            print("TASK 7A \(externalInspectionStage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+            let inspectionLimit: Double = externalInspectionStage == "light-begin-complete" ? 240 : 60
+            let attempts = max(1, Int((min(seconds, inspectionLimit) * 5).rounded(.up)))
+            for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            let completion = try String(contentsOf: complete, encoding: .utf8)
+            XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), sessionID)
+            return
+        }
         if let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
             print("Task 7A external inspection: \(name), \(Int(width))×850, PID \(ProcessInfo.processInfo.processIdentifier)")
             try await Task.sleep(for: .seconds(min(seconds, 60)))
@@ -2097,6 +2330,37 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 .success
             )
             XCTAssertEqual(value as? Bool, false, "\(disabledIdentifier) must be disabled")
+        }
+        for (identifier, inputValue) in inputValues {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing input accessibility element \(identifier)"
+            )
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, inputValue as CFString),
+                .success,
+                "Could not enter text into \(identifier)"
+            )
+        }
+        if !inputValues.isEmpty {
+            try await Task.sleep(for: .milliseconds(100))
+            hosting.layoutSubtreeIfNeeded()
+        }
+        for identifier in postInputDisabledIdentifiers + postInputEnabledIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing accessibility element \(identifier)"
+            )
+            var value: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &value),
+                .success
+            )
+            XCTAssertEqual(
+                value as? Bool,
+                postInputEnabledIdentifiers.contains(identifier),
+                "Unexpected enabled state for \(identifier) after text entry"
+            )
         }
         func waitForAccessibilityElement(identifier: String) async throws -> AXUIElement? {
             let deadline = Date().addingTimeInterval(2)

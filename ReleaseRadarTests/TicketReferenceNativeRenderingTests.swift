@@ -7,6 +7,237 @@ import XCTest
 
 @MainActor
 final class TicketReferenceNativeRenderingTests: XCTestCase {
+
+    func testReadyInitialReferenceLoadShowsLoadingAndRejectsConcurrentRefresh() async throws {
+        let payload = TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "initial-reference", phaseLabel: "Initial reference loaded", sourceLocalID: "REQ-INITIAL-READY"
+        )
+        var loadCount = 0
+        var initialLoad: CheckedContinuation<ReferenceLoadResult<TicketReferenceSet>, Never>?
+        func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+            loadCount += 1
+            if loadCount == 1 {
+                return await withCheckedContinuation { initialLoad = $0 }
+            }
+            return .loaded(payload)
+        }
+        defer { initialLoad?.resume(returning: .loaded(payload)) }
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let hosting = NSHostingView(rootView: TicketReferencesSection(
+            ticketID: .init(rawValue: "initial-reference"), contextIdentity: "ready", isContextReady: true,
+            load: load, openSource: { _, _ in }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
+        let window = makeWindow(title: "Ready initial reference load", content: hosting, width: 620, height: 780)
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        let initialDeadline = Date().addingTimeInterval(2)
+        while initialLoad == nil, Date() < initialDeadline {
+            hosting.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNotNil(initialLoad, "The ready initial load must enter the suspended loader")
+        XCTAssertEqual(loadCount, 1)
+        hosting.layoutSubtreeIfNeeded()
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let pendingText = accessibilityText(nativeWindow)
+        XCTAssertTrue(pendingText.contains("Loading reference links"), "Pending initial content: \(pendingText)")
+        XCTAssertFalse(pendingText.contains("References unavailable"))
+        XCTAssertFalse(pendingText.contains("Retry"))
+        XCTAssertFalse(pendingText.contains("Refreshing references"))
+
+        let refresh = try XCTUnwrap(
+            accessibilityElement(nativeWindow, title: "Refresh"),
+            "The native Refresh control must be available to exercise the concurrency guard"
+        )
+        var enabled: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(refresh, kAXEnabledAttribute as CFString, &enabled), .success)
+        XCTAssertEqual((enabled as? NSNumber)?.boolValue, false, "Refresh must be disabled during the initial load")
+
+        let pressResult = AXUIElementPerformAction(refresh, kAXPressAction as CFString)
+        XCTAssertTrue(pressResult == .success || pressResult == .cannotComplete,
+                      "Unexpected Refresh activation result: \(pressResult.rawValue)")
+        let activationDeadline = Date().addingTimeInterval(0.2)
+        while loadCount == 1, Date() < activationDeadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(loadCount, 1, "Refresh must not start another load while the initial request is pending")
+
+        let suspendedLoad = try XCTUnwrap(initialLoad)
+        initialLoad = nil
+        suspendedLoad.resume(returning: .loaded(payload))
+        let completionDeadline = Date().addingTimeInterval(2)
+        while !accessibilityText(nativeWindow).contains("REQ-INITIAL-READY"), Date() < completionDeadline {
+            hosting.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        hosting.layoutSubtreeIfNeeded()
+        let loadedText = accessibilityText(nativeWindow)
+        XCTAssertTrue(loadedText.contains("REQ-INITIAL-READY"), "Released initial result must render")
+        XCTAssertFalse(loadedText.contains("Loading reference links"))
+        XCTAssertFalse(loadedText.contains("Refreshing references"))
+        XCTAssertFalse(loadedText.contains("References unavailable"))
+        XCTAssertFalse(loadedText.contains("Retry"))
+        let loadedRefresh = try XCTUnwrap(accessibilityElement(nativeWindow, title: "Refresh"))
+        enabled = nil
+        XCTAssertEqual(AXUIElementCopyAttributeValue(loadedRefresh, kAXEnabledAttribute as CFString, &enabled), .success)
+        XCTAssertEqual((enabled as? NSNumber)?.boolValue, true)
+        XCTAssertEqual(loadCount, 1)
+    }
+
+    func testTicketDetailKeepsDrawerSectionsStableWhenOnlyObservationGenerationChanges() async throws {
+        let nativeSession: (id: String, pauseSeconds: Double)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_DRAWER_SCROLL_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }),
+                  let seconds = ProcessInfo.processInfo.environment["RR_DRAWER_SCROLL_INSPECT_SECONDS"].flatMap(Double.init),
+                  seconds > 0 else {
+                XCTFail("The drawer scroll native session requires a safe token and positive inspection duration.")
+                return
+            }
+            nativeSession = (sessionID, min(seconds, 120))
+        } else {
+            nativeSession = nil
+        }
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let notification = Notification.Name("ticket-drawer-observer-generation-\(UUID().uuidString)")
+        let counter = TicketDrawerLoadCounter(inspectRefresh: nativeSession != nil)
+        let hosting = NSHostingView(rootView: TicketDrawerContextReloadHarness(
+            notification: notification,
+            counter: counter
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 760)
+        let window = makeWindow(
+            title: "Ticket drawer observation generation stability",
+            content: hosting,
+            width: 620,
+            height: 760
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        hosting.layoutSubtreeIfNeeded()
+
+        try await Task.sleep(for: .milliseconds(180))
+        hosting.layoutSubtreeIfNeeded()
+        let initialCounts = await counter.counts()
+        XCTAssertEqual(initialCounts.references, 1)
+        XCTAssertEqual(initialCounts.evidence, 1)
+
+        NotificationCenter.default.post(name: notification, object: nil)
+        try await Task.sleep(for: .milliseconds(180))
+
+        // #120 regression: a completed selected-ticket load must not restart when
+        // only observation generation changes inside the same structural context.
+        let observerChangedCounts = await counter.counts()
+        XCTAssertEqual(observerChangedCounts.references, 1)
+        XCTAssertEqual(observerChangedCounts.evidence, 1)
+
+        if let nativeSession {
+            defer { Task { await counter.releaseEvidenceRefresh() } }
+            func waitForStage(_ stage: String) async throws {
+                let fileManager = FileManager.default
+                let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+                guard configurationPath != nil else {
+                    XCTFail("The drawer scroll native session requires the XCTest configuration environment key.")
+                    throw NSError(domain: "DrawerScrollNativeSession", code: 1)
+                }
+                let configurationNonempty = configurationPath?.isEmpty == false
+                let configurationExists = configurationPath.map {
+                    !$0.isEmpty && fileManager.fileExists(atPath: $0)
+                } ?? false
+                let controlDirectory = fileManager.temporaryDirectory
+                    .appendingPathComponent("release-radar-drawer-scroll", isDirectory: true)
+                    .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
+                try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+                let ready = controlDirectory.appendingPathComponent("\(stage)-ready")
+                let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
+                XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+                XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=true\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
+                XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+                print("DRAWER SCROLL \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+                let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))
+                for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+                let completion = try String(contentsOf: complete, encoding: .utf8)
+                XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), nativeSession.id)
+            }
+
+            try await waitForStage("initial")
+            let refreshCounts = await counter.counts()
+            guard refreshCounts.references == 1, refreshCounts.evidence == 2 else {
+                XCTFail("Expected exactly one external Delivery Evidence Refresh in the mounted drawer.")
+                return
+            }
+            try await waitForStage("pending")
+            await counter.releaseEvidenceRefresh()
+            try await Task.sleep(for: .milliseconds(150))
+            try await waitForStage("recovered")
+            let finalCounts = await counter.counts()
+            XCTAssertEqual(finalCounts.references, 1)
+            XCTAssertEqual(finalCounts.evidence, 2)
+        }
+    }
+
+    private func makeWindow<V: View>(
+        title: String,
+        content: NSHostingView<V>,
+        width: CGFloat,
+        height: CGFloat
+    ) -> NSWindow {
+        let window = NSWindow(
+            contentRect: .init(x: 40, y: 40, width: width, height: height),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = title
+        window.isReleasedWhenClosed = false
+        window.animationBehavior = .none
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.contentView = content
+        return window
+    }
+
+    private func accessibilityWindow(title: String) -> AXUIElement? {
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        func matches(_ element: AXUIElement) -> Bool {
+            var titleValue: CFTypeRef?
+            return AXUIElementCopyAttributeValue(
+                element, kAXTitleAttribute as CFString, &titleValue
+            ) == .success && titleValue as? String == title
+        }
+        var value: CFTypeRef?
+        if AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
+           let window = (value as? [AXUIElement])?.first(where: matches) {
+            return window
+        }
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            var candidate: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                application, attribute as CFString, &candidate
+            ) == .success,
+                  let candidate,
+                  CFGetTypeID(candidate) == AXUIElementGetTypeID() else { continue }
+            let element = candidate as! AXUIElement
+            if matches(element) { return element }
+        }
+        return nil
+    }
+
     func testReferenceRoutesRetainExactIdentityAndFocusInHistory() {
         let projectID = ProjectID(rawValue: "project")
         let ticketID = TicketID(rawValue: "RR-5B")
@@ -306,6 +537,8 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
     }
 
     func testTicketReferenceSectionWithdrawsLateResultWhenTicketChangesInPlace() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("phase5b-switch-ticket-\(UUID().uuidString)")
         let gate = TicketReferenceSectionLoadGate()
         let hosting = NSHostingView(rootView: TicketReferenceSectionSwitchHarness(
@@ -313,12 +546,19 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             gate: gate
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Phase 5B reference identity switch"
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Phase 5B reference identity switch",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        hosting.layoutSubtreeIfNeeded()
         await gate.waitUntilOldLoadEntered()
 
         NotificationCenter.default.post(name: notification, object: nil)
@@ -327,7 +567,8 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
         hosting.layoutSubtreeIfNeeded()
 
-        let text = accessibilityText(AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let text = accessibilityText(nativeWindow)
         XCTAssertTrue(text.contains("Ticket B current"))
         XCTAssertTrue(text.contains("REQ-B"))
         XCTAssertFalse(text.contains("Ticket A stale"))
@@ -335,27 +576,238 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
     }
 
     func testMountedTicketReferencesReloadWhenObservationBecomesReadyInSameGeneration() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("phase5b-observation-ready-\(UUID().uuidString)")
-        let hosting = NSHostingView(rootView: TicketReferenceReadinessHarness(notification: notification))
+        let counter = TicketDrawerReadinessCounter()
+        let hosting = NSHostingView(rootView: TicketDrawerReadinessHarness(
+            notification: notification,
+            counter: counter
+        ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Phase 5B reference readiness transition"
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Phase 5B reference readiness transition",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        XCTAssertTrue(accessibilityText(application).contains("Observation still checking"))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let checkingText = accessibilityText(nativeWindow)
+        XCTAssertTrue(checkingText.localizedCaseInsensitiveContains("checking"))
+        XCTAssertFalse(checkingText.contains("Loading reference links"))
+        XCTAssertFalse(checkingText.contains("Loading delivery evidence"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
+        let initialCounts = await counter.counts()
+        XCTAssertEqual(initialCounts.references, 0)
+        XCTAssertEqual(initialCounts.evidence, 0)
+
         NotificationCenter.default.post(name: notification, object: nil)
         try await Task.sleep(for: .milliseconds(150))
         hosting.layoutSubtreeIfNeeded()
 
-        let recoveredText = accessibilityText(application)
+        let recoveredText = accessibilityText(nativeWindow)
         XCTAssertTrue(recoveredText.contains("Ticket ready"))
         XCTAssertTrue(recoveredText.contains("REQ-READY"))
-        XCTAssertFalse(recoveredText.contains("Observation still checking"))
+        XCTAssertTrue(recoveredText.contains("No revision-bound delivery evidence recorded"))
+        XCTAssertFalse(recoveredText.localizedCaseInsensitiveContains("checking"))
+        let readyCounts = await counter.counts()
+        XCTAssertEqual(readyCounts.references, 1)
+        XCTAssertEqual(readyCounts.evidence, 1)
+    }
+
+    func testReferenceUnavailableReadinessDoesNotLoadUntilExplicitRefresh() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let gate = TicketReferenceUnavailableGate()
+        let hosting = NSHostingView(rootView: TicketReferencesSection(
+            ticketID: .init(rawValue: "ticket-unavailable"),
+            contextIdentity: "project:registration:missing-root",
+            isContextReady: false,
+            load: { await gate.load() },
+            openSource: { _, _ in }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = makeWindow(
+            title: "Reference unavailable readiness",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-unavailable"))
+        let unavailableText = accessibilityText(nativeWindow)
+        XCTAssertTrue(unavailableText.localizedCaseInsensitiveContains("root"))
+        XCTAssertFalse(unavailableText.contains("Loading reference links"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+        let initialLoadCount = await gate.loadCount()
+        XCTAssertEqual(initialLoadCount, 0)
+
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-references"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilEntered()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+
+        await gate.releaseFailure()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "reference-explicit-unavailable"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+        let finalLoadCount = await gate.loadCount()
+        XCTAssertEqual(finalLoadCount, 1)
+    }
+
+    func testReferenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
+        let nativeSession: (id: String, pauseSeconds: Double)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_REFERENCE_REFRESH_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The reference refresh native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            guard let pauseSeconds = ProcessInfo.processInfo.environment["RR_REFERENCE_REFRESH_INSPECT_SECONDS"]
+                .flatMap(Double.init), pauseSeconds > 0 else {
+                XCTFail("The reference refresh native session requires a positive RR_REFERENCE_REFRESH_INSPECT_SECONDS value.")
+                return
+            }
+            nativeSession = (sessionID, min(pauseSeconds, 60))
+        } else {
+            throw XCTSkip("requires the existing external native UI fixture")
+        }
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let gate = TicketReferenceRefreshGate()
+        let hosting = NSHostingView(rootView: TicketReferencesSection(
+            ticketID: .init(rawValue: "ticket-refresh"),
+            contextIdentity: "context-a",
+            isContextReady: true,
+            load: { await gate.load() },
+            openSource: { _, _ in }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = makeWindow(
+            title: nativeSession.map { "Reference refresh retention — native session \($0.id)" }
+                ?? "Reference refresh retention",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        if let nativeSession {
+            func waitForStage(_ stage: String) async throws {
+                let fileManager = FileManager.default
+                let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+                let configurationPresent = configurationPath != nil
+                guard configurationPresent else {
+                    XCTFail("The external reference refresh journey requires the XCTest configuration environment key.")
+                    throw NSError(domain: "ReferenceRefreshNativeSession", code: 1)
+                }
+                let configurationNonempty = configurationPath?.isEmpty == false
+                let configurationExists = configurationPath.map {
+                    !$0.isEmpty && fileManager.fileExists(atPath: $0)
+                } ?? false
+                let controlDirectory = fileManager.temporaryDirectory
+                    .appendingPathComponent("release-radar-reference-refresh", isDirectory: true)
+                    .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
+                try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+                let ready = controlDirectory.appendingPathComponent("\(stage)-ready")
+                let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
+                XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+                XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
+                XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+                print("REFERENCE REFRESH \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+                let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))
+                for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+                let completion = try String(contentsOf: complete, encoding: .utf8)
+                XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), nativeSession.id)
+            }
+
+            try await waitForStage("initial")
+            let refreshLoadCount = await gate.loadCount()
+            guard refreshLoadCount == 2 else {
+                XCTFail("Expected one external reference Refresh press; observed \(refreshLoadCount - 1).")
+                return
+            }
+
+            try await waitForStage("pending")
+            await gate.releaseRefreshFailure()
+            try await Task.sleep(for: .milliseconds(120))
+
+            try await waitForStage("failure")
+            let retryLoadCount = await gate.loadCount()
+            XCTAssertEqual(retryLoadCount, 3)
+            return
+        }
+
+    }
+
+    func testReferenceContextChangeClearsContentAndRejectsLateRefresh() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let notification = Notification.Name("reference-context-change-\(UUID().uuidString)")
+        let gate = TicketReferenceContextGate()
+        let hosting = NSHostingView(rootView: TicketReferenceContextHarness(notification: notification, gate: gate))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = makeWindow(
+            title: "Reference context change",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-references"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilRefreshEntered()
+        NotificationCenter.default.post(name: notification, object: nil)
+        try await Task.sleep(for: .milliseconds(80))
+        await gate.releaseLateResult()
+        try await Task.sleep(for: .milliseconds(120))
+
+        let text = accessibilityText(nativeWindow)
+        XCTAssertTrue(text.contains("Reference context changed"))
+        XCTAssertFalse(text.contains("Late old-context references"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+        let contextLoadCount = await gate.loadCount()
+        XCTAssertEqual(contextLoadCount, 2)
     }
 
     func testLiveReferenceJourneyUsesNativeControlsAndRestoresFocus() async throws {
@@ -691,6 +1143,177 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         }
         return nil
     }
+
+    private func accessibilityElement(_ root: AXUIElement, title: String) -> AXUIElement? {
+        var pending = [root]
+        var count = 0
+        while let element = pending.popLast(), count < 1_000 {
+            count += 1
+            for attribute in [kAXTitleAttribute, kAXDescriptionAttribute] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+                   value as? String == title { return element }
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] { pending.append(contentsOf: children) }
+        }
+        return nil
+    }
+}
+
+private struct TicketDrawerContextReloadHarness: View {
+    let notification: Notification.Name
+    let counter: TicketDrawerLoadCounter
+    @State private var observationGeneration = 1
+
+    var body: some View {
+        let _ = observationGeneration
+        TicketDetailView(
+            detail: .init(
+                id: .init(rawValue: "RR-DRAWER"),
+                outcome: "Keep the selected ticket stable",
+                goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+                requires: [], unlocks: [], ownerAttention: [], evidence: [],
+                auditHistory: [], notificationHistory: []
+            ),
+            loadReferences: { await counter.loadReferences() },
+            loadDeliveryEvidence: { await counter.loadEvidence() },
+            openReferenceSource: { _, _ in },
+            referenceQueryContextIdentity: "service:registration:root:binding",
+            isReferenceQueryReady: true
+        )
+        .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
+            observationGeneration += 1
+        }
+    }
+}
+
+private actor TicketDrawerLoadCounter {
+    private let inspectRefresh: Bool
+    private var referenceLoads = 0
+    private var evidenceLoads = 0
+    private var evidenceRefreshRelease: CheckedContinuation<Void, Never>?
+
+    init(inspectRefresh: Bool = false) {
+        self.inspectRefresh = inspectRefresh
+    }
+
+    func loadReferences() -> ReferenceLoadResult<TicketReferenceSet> {
+        referenceLoads += 1
+        return .loaded(.init(
+            projectID: "project", ticketID: "RR-DRAWER", phaseID: nil,
+            phaseLabel: "Drawer phase", linkSetRevision: 1, links: []
+        ))
+    }
+
+    func loadEvidence() async -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        evidenceLoads += 1
+        if inspectRefresh {
+            if evidenceLoads == 2 {
+                await withCheckedContinuation { evidenceRefreshRelease = $0 }
+            }
+            return .loaded(DeliveryEvidenceRenderingTests.evidence(
+                ticketID: "RR-DRAWER",
+                sourceLabel: evidenceLoads == 1 ? "Initial drawer evidence" : "Refreshed drawer evidence"
+            ))
+        }
+        return .loaded(.init(
+            projectID: "project", ticketID: "RR-DRAWER", phaseID: nil,
+            phaseLabel: "Drawer phase", revision: 1, currentTargetVersion: nil,
+            targets: [], observations: [], expectations: [], ownerAcceptance: .notAccepted
+        ))
+    }
+
+    func counts() -> (references: Int, evidence: Int) {
+        (referenceLoads, evidenceLoads)
+    }
+
+    func releaseEvidenceRefresh() {
+        evidenceRefreshRelease?.resume()
+        evidenceRefreshRelease = nil
+    }
+}
+
+private actor TicketReferenceRefreshGate {
+    private var count = 0
+    private var refreshEntered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+        count += 1
+        if count == 2 {
+            refreshEntered = true
+            waiters.forEach { $0.resume() }
+            waiters.removeAll()
+            await withCheckedContinuation { release = $0 }
+            return .failed(Self.failure)
+        }
+        return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "ticket-refresh",
+            phaseLabel: count == 1 ? "Initial references" : "Retry references",
+            sourceLocalID: count == 1 ? "REQ-INITIAL" : "REQ-RETRY"
+        ))
+    }
+
+    func waitUntilRefreshEntered() async {
+        if refreshEntered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func releaseRefreshFailure() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
+
+    private static let failure = FailureStatePresentation(
+        title: "Reference refresh failed", detail: "Retry the current ticket.",
+        systemImage: "exclamationmark.triangle", tone: .warning,
+        accessibilityID: "reference-refresh-failed"
+    )
+}
+
+private struct TicketReferenceContextHarness: View {
+    let notification: Notification.Name
+    let gate: TicketReferenceContextGate
+    @State private var contextIdentity = "context-a"
+
+    var body: some View {
+        TicketReferencesSection(
+            ticketID: .init(rawValue: "ticket-context"), contextIdentity: contextIdentity,
+            isContextReady: true, load: { await gate.load() }, openSource: { _, _ in }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in contextIdentity = "context-b" }
+    }
+}
+
+private actor TicketReferenceContextGate {
+    private var count = 0
+    private var refreshEntered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+        count += 1
+        if count == 2 {
+            refreshEntered = true
+            waiters.forEach { $0.resume() }
+            waiters.removeAll()
+            await withCheckedContinuation { release = $0 }
+            return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+                ticketID: "ticket-context", phaseLabel: "Late old-context references", sourceLocalID: "REQ-LATE"
+            ))
+        }
+        return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "ticket-context", phaseLabel: "Current references", sourceLocalID: "REQ-CURRENT"
+        ))
+    }
+
+    func waitUntilRefreshEntered() async {
+        if refreshEntered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+    func releaseLateResult() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
 }
 
 private struct TicketReferenceSectionSwitchHarness: View {
@@ -701,7 +1324,7 @@ private struct TicketReferenceSectionSwitchHarness: View {
     var body: some View {
         let capturedTicketID = ticketID
         TicketReferencesSection(
-            identity: "project:registration:root:\(capturedTicketID)",
+            ticketID: .init(rawValue: capturedTicketID), contextIdentity: "project:registration:root", isContextReady: true,
             load: { await gate.load(ticketID: capturedTicketID) },
             openSource: { _, _ in }
         )
@@ -712,36 +1335,89 @@ private struct TicketReferenceSectionSwitchHarness: View {
     }
 }
 
-private struct TicketReferenceReadinessHarness: View {
+private struct TicketDrawerReadinessHarness: View {
     let notification: Notification.Name
+    let counter: TicketDrawerReadinessCounter
     @State private var isReady = false
 
     var body: some View {
         let capturedIsReady = isReady
-        TicketReferencesSection(
-            identity: "project:service-1:generation-7:\(capturedIsReady ? "observed" : "checking")",
-            load: {
-                if capturedIsReady {
-                    return .loaded(TicketReferenceSectionLoadGate.referenceSet(
-                        ticketID: "ticket-ready",
-                        phaseLabel: "Ticket ready",
-                        sourceLocalID: "REQ-READY"
-                    ))
-                }
-                return .failed(.init(
-                    title: "Observation still checking",
-                    detail: "References are not yet authoritative.",
-                    systemImage: "clock",
-                    tone: .warning,
-                    accessibilityID: "reference-observation-checking"
-                ))
-            },
-            openSource: { _, _ in }
+        TicketDetailView(
+            detail: .init(
+                id: .init(rawValue: "ticket-ready"),
+                outcome: "Keep deferred drawer loading stable",
+                goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+                requires: [], unlocks: [], ownerAttention: [], evidence: [],
+                auditHistory: [], notificationHistory: []
+            ),
+            documentationStatus: capturedIsReady ? nil : .checking(identity: nil, generation: 1),
+            loadReferences: { await counter.loadReferences() },
+            loadDeliveryEvidence: { await counter.loadEvidence() },
+            openReferenceSource: { _, _ in },
+            referenceQueryContextIdentity: "project:service-1",
+            isReferenceQueryReady: capturedIsReady
         )
         .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
             isReady = true
         }
     }
+}
+
+private actor TicketDrawerReadinessCounter {
+    private var referenceLoads = 0
+    private var evidenceLoads = 0
+
+    func loadReferences() -> ReferenceLoadResult<TicketReferenceSet> {
+        referenceLoads += 1
+        return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "ticket-ready",
+            phaseLabel: "Ticket ready",
+            sourceLocalID: "REQ-READY"
+        ))
+    }
+
+    func loadEvidence() -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        evidenceLoads += 1
+        return .loaded(.init(
+            projectID: "project", ticketID: "ticket-ready", phaseID: nil,
+            phaseLabel: "Ticket ready", revision: 1, currentTargetVersion: nil,
+            targets: [], observations: [], expectations: [], ownerAcceptance: .notAccepted
+        ))
+    }
+
+    func counts() -> (references: Int, evidence: Int) {
+        (referenceLoads, evidenceLoads)
+    }
+}
+
+private actor TicketReferenceUnavailableGate {
+    private var count = 0
+    private var entered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+        count += 1
+        entered = true
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
+        await withCheckedContinuation { release = $0 }
+        return .failed(.init(
+            title: "Reference query unavailable",
+            detail: "Restore the exact project root and retry.",
+            systemImage: "questionmark.folder",
+            tone: .warning,
+            accessibilityID: "reference-explicit-unavailable"
+        ))
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func releaseFailure() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
 }
 
 private actor TicketReferenceSectionLoadGate {

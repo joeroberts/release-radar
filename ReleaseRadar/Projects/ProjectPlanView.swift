@@ -21,7 +21,8 @@ struct ProjectPlanView: View {
     var refreshProposal: ((PlanChangeProposalID, Int64, String, [PlanChangeOperation]) async -> AgentCommandResult)? = nil
     var transitionPhaseLifecycle: ((PhaseID, Int64, PhaseLifecycleAction, String?, String) async -> AgentCommandResult)? = nil
     var reloadPhaseLifecycle: (() async -> Void)? = nil
-    var referenceContextIdentity: String? = nil
+    var referenceQueryContextIdentity: String? = nil
+    var isReferenceQueryReady = false
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
     @State private var selectedProposalID: Data?
@@ -404,7 +405,8 @@ struct ProjectPlanView: View {
                 openReferenceSource: openReferenceSource.map { opener in
                     { linkID, version in opener(detail.id, linkID, version) }
                 },
-                referenceContextIdentity: referenceContextIdentity
+                referenceQueryContextIdentity: referenceQueryContextIdentity,
+                isReferenceQueryReady: isReferenceQueryReady
             )
                 .accessibilityIdentifier("project-plan-inspector")
         } else {

@@ -1,3 +1,5 @@
+import Foundation
+import ReleaseRadarCore
 import SwiftUI
 import RekonDesignSystem
 
@@ -96,5 +98,149 @@ struct TicketCardView: View {
         .labelStyle(.titleAndIcon)
         .foregroundStyle(color)
         .fixedSize()
+    }
+}
+
+enum TicketOrderingDirection {
+    case earlier
+    case later
+}
+
+enum TicketOrderingActionState {
+    case idle
+    case saving(Data)
+    case failed(FailureStatePresentation, offersReload: Bool)
+    case savedNeedsReload(TicketOrderingContext)
+
+    var isSaving: Bool {
+        if case .saving = self { return true }
+        return false
+    }
+}
+
+struct TicketOrderingMoveControls: View {
+    var moveEarlier: (() -> Void)?
+    var moveLater: (() -> Void)?
+    let isDisabled: Bool
+    let ticketID: TicketID
+
+    var body: some View {
+        if moveEarlier != nil || moveLater != nil {
+            HStack(spacing: 6) {
+                if let moveEarlier {
+                    Button(action: moveEarlier) {
+                        Image(systemName: "arrow.up")
+                    }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .controlSize(.small)
+                    .disabled(isDisabled)
+                    .focusable()
+                    .onKeyPress(keys: [.space, .return], phases: .down) { _ in
+                        guard !isDisabled else { return .handled }
+                        moveEarlier()
+                        return .handled
+                    }
+                    .accessibilityLabel("Move earlier")
+                    .accessibilityIdentifier("move-ticket-earlier-\(ticketID.rawValue)")
+                }
+                if let moveLater {
+                    Button(action: moveLater) {
+                        Image(systemName: "arrow.down")
+                    }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .controlSize(.small)
+                    .disabled(isDisabled)
+                    .focusable()
+                    .onKeyPress(keys: [.space, .return], phases: .down) { _ in
+                        guard !isDisabled else { return .handled }
+                        moveLater()
+                        return .handled
+                    }
+                    .accessibilityLabel("Move later")
+                    .accessibilityIdentifier("move-ticket-later-\(ticketID.rawValue)")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+}
+
+struct TicketOrderingStatusView: View {
+    let state: TicketOrderingActionState
+    let isReloading: Bool
+    let reload: () -> Void
+
+    var body: some View {
+        switch state {
+        case .idle:
+            EmptyView()
+        case .saving:
+            ProgressView("Saving ticket order…")
+                .controlSize(.small)
+                .accessibilityIdentifier("ticket-ordering-progress")
+        case let .failed(presentation, offersReload):
+            if offersReload {
+                FailureStateView(
+                    presentation: presentation,
+                    style: .compact,
+                    actionTitle: "Reload ordering",
+                    action: reload
+                )
+                .disabled(isReloading)
+            } else {
+                FailureStateView(presentation: presentation, style: .compact)
+            }
+        case .savedNeedsReload:
+            FailureStateView(
+                presentation: .init(
+                    title: "Ticket order saved",
+                    detail: "Ticket order saved. Reload to show the committed sequence.",
+                    systemImage: "arrow.clockwise",
+                    tone: .warning,
+                    accessibilityID: "ticket-ordering-saved-needs-reload"
+                ),
+                style: .compact,
+                actionTitle: "Reload ordering",
+                action: reload
+            )
+            .disabled(isReloading)
+        }
+    }
+}
+
+func ticketOrderingAnchor(
+    for ticketID: TicketID,
+    direction: TicketOrderingDirection,
+    lane: TicketLane,
+    snapshots: [TicketLaneOrderSnapshot]
+) -> TicketOrderAnchor? {
+    guard let ticketIDs = snapshots.first(where: { $0.lane == lane })?.ticketIDs else { return nil }
+    let identity = Data(ticketID.rawValue.utf8)
+    guard let index = ticketIDs.firstIndex(where: {
+        Data($0.rawValue.utf8) == identity
+    }) else { return nil }
+    switch direction {
+    case .earlier:
+        guard index > ticketIDs.startIndex else { return nil }
+        return .before(ticketIDs[ticketIDs.index(before: index)])
+    case .later:
+        let next = ticketIDs.index(after: index)
+        guard next < ticketIDs.endIndex else { return nil }
+        return .after(ticketIDs[next])
+    }
+}
+
+func ticketOrderingContextsMatch(
+    _ lhs: TicketOrderingContext,
+    _ rhs: TicketOrderingContext
+) -> Bool {
+    Data(lhs.projectID.rawValue.utf8) == Data(rhs.projectID.rawValue.utf8)
+        && lhs.digest == rhs.digest
+}
+
+func ticketOrderingFailureOffersReload(_ error: AgentCommandError) -> Bool {
+    switch error {
+    case .ticketOrdering(.staleContext), .ticketOrdering(.unavailable(_)): true
+    default: false
     }
 }

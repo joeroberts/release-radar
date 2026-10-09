@@ -82,6 +82,13 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case placeUnassignedTicket(ticketID: String, phaseID: String, expectedPlanRevision: Int64)
     case upsertTicket(ticketID: String, phaseID: String, outcome: String, lane: TicketLane)
     case transitionTicket(ticketID: String, lane: TicketLane, ticketTaskPlanRevision: Int64? = nil)
+    case reorderTicket(
+        projectID: String,
+        ticketID: String,
+        expectedLane: TicketLane,
+        anchor: TicketOrderAnchor,
+        expectedOrderingContext: TicketOrderingContext
+    )
     case reviseTicketTaskPlan(ticketID: String, expectedRevision: Int64? = nil, additions: [TicketTaskDraft]? = nil, definitionRevisions: [TicketTaskDefinitionRevision]? = nil, supersededTaskIDs: [TicketTaskID]? = nil)
     case completeTicketTask(ticketID: String, taskID: String, expectedRevision: Int64)
     case setActivePhase(phaseID: String)
@@ -161,6 +168,7 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case planChangeProposalDecisionMismatch
     case planChangeProposalAlreadyApplied
     case planChangeProposalStale([PlanChangeBaselineCategory])
+    case ticketOrdering(TicketOrderingError)
     case outcomeUnknown
     case internalFailure(String)
 }
@@ -189,8 +197,9 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let phaseLifecycles: [PhaseLifecycleRecord]?
     public let phaseLifecycleEvents: [PhaseLifecycleEventRecord]?
     public let phaseCompletionAssessments: [PhaseCompletionAssessment]?
+    public let ticketOrderingContext: TicketOrderingContext?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, preparationDiagnostic: ProjectExecutionPreparationDiagnostic? = nil, inventory: EvidenceInventory? = nil, deliveryInventory: DeliveryInventory? = nil, documentationCatalogTransition: DocumentationCatalogTransitionDiagnostic? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, preparationDiagnostic: ProjectExecutionPreparationDiagnostic? = nil, inventory: EvidenceInventory? = nil, deliveryInventory: DeliveryInventory? = nil, documentationCatalogTransition: DocumentationCatalogTransitionDiagnostic? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil, ticketOrderingContext: TicketOrderingContext? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
@@ -213,6 +222,7 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
         self.phaseLifecycles = phaseLifecycles
         self.phaseLifecycleEvents = phaseLifecycleEvents
         self.phaseCompletionAssessments = phaseCompletionAssessments
+        self.ticketOrderingContext = ticketOrderingContext
     }
 }
 
@@ -342,5 +352,10 @@ extension AgentCommand {
         default:
             false
         }
+    }
+
+    var requiresTicketOrderingOwnerAuthority: Bool {
+        if case .reorderTicket = self { return true }
+        return false
     }
 }

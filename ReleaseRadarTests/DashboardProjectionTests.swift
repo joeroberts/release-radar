@@ -3,6 +3,93 @@ import XCTest
 @testable import ReleaseRadar
 
 final class DashboardProjectionTests: XCTestCase {
+    func testTicketOrderingFailureIsIsolatedToAffectedProject() async throws {
+        let healthyProjectID = ProjectID(rawValue: "ordering-healthy")
+        let brokenProjectID = ProjectID(rawValue: "ordering-broken")
+        let healthyPhaseID = PhaseID(rawValue: "healthy-phase")
+        let brokenPhaseID = PhaseID(rawValue: "broken-phase")
+        let healthyFirstID = TicketID(rawValue: "healthy-first")
+        let healthySecondID = TicketID(rawValue: "healthy-second")
+        let brokenTicketID = TicketID(rawValue: "broken-ticket")
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(
+            actor: .init(id: "ordering-isolation-fixture"),
+            reason: "Seed project-scoped ordering failure"
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO projects (id,name,first_dashboard_opened) VALUES ('ordering-healthy','A healthy project',1),('ordering-broken','B broken project',1)"
+            )
+            try connection.execute(
+                "INSERT INTO phases (id,project_id,name) VALUES ('healthy-phase','ordering-healthy','Healthy phase'),('broken-phase','ordering-broken','Broken phase')"
+            )
+            try connection.execute(
+                "INSERT INTO project_active_phases (project_id,phase_id) VALUES ('ordering-healthy','healthy-phase'),('ordering-broken','broken-phase')"
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('healthy-second','ordering-healthy','healthy-phase','Healthy second','backlog'),('healthy-first','ordering-healthy','healthy-phase','Healthy first','backlog'),('broken-ticket','ordering-broken','broken-phase','Broken ticket','backlog')"
+            )
+            try connection.execute(
+                """
+                INSERT INTO ticket_lane_order (project_id,ticket_id,lane,order_key) VALUES
+                ('ordering-healthy','healthy-first','backlog','01'),
+                ('ordering-healthy','healthy-second','backlog','011'),
+                ('ordering-broken','broken-ticket','backlog','01')
+                """
+            )
+            try connection.execute(
+                "DELETE FROM ticket_lane_order WHERE project_id='ordering-broken' AND ticket_id='broken-ticket'"
+            )
+        }
+
+        let dashboard = try await DashboardProjection.load(from: store)
+
+        XCTAssertEqual(dashboard.projects.map { Data($0.id.rawValue.utf8) }, [
+            Data(healthyProjectID.rawValue.utf8), Data(brokenProjectID.rawValue.utf8),
+        ])
+        let healthyBoard = try XCTUnwrap(
+            dashboard.board(for: healthyProjectID, phaseID: healthyPhaseID)
+        )
+        XCTAssertEqual(healthyBoard.lane(.backlog)?.cards.map { Data($0.id.rawValue.utf8) }, [
+            Data(healthyFirstID.rawValue.utf8), Data(healthySecondID.rawValue.utf8),
+        ])
+        XCTAssertEqual(dashboard.board(for: healthyProjectID), healthyBoard)
+        let healthyAllPhases = try XCTUnwrap(dashboard.allPhaseBoard(for: healthyProjectID))
+        XCTAssertEqual(healthyAllPhases.lane(.backlog)?.cards.map { Data($0.id.rawValue.utf8) }, [
+            Data(healthyFirstID.rawValue.utf8), Data(healthySecondID.rawValue.utf8),
+        ])
+        let healthyPlan = try XCTUnwrap(dashboard.plan(for: healthyProjectID))
+        XCTAssertEqual(healthyPlan.phases.map(\.id), [healthyPhaseID])
+        XCTAssertEqual(healthyPlan.recordedTicketCount, 2)
+        let healthyContext = try XCTUnwrap(dashboard.ticketOrderingContext(for: healthyProjectID))
+        XCTAssertEqual(Data(healthyContext.projectID.rawValue.utf8), Data(healthyProjectID.rawValue.utf8))
+        XCTAssertFalse(healthyContext.digest.isEmpty)
+        XCTAssertNil(dashboard.ticketOrderingFailure(for: healthyProjectID))
+
+        let brokenProject = try XCTUnwrap(dashboard.projects.first {
+            Data($0.id.rawValue.utf8) == Data(brokenProjectID.rawValue.utf8)
+        })
+        let brokenActivePhaseID = try XCTUnwrap(brokenProject.activePhaseID)
+        XCTAssertEqual(Data(brokenActivePhaseID.rawValue.utf8), Data(brokenPhaseID.rawValue.utf8))
+        XCTAssertEqual(brokenProject.currentWorkCount, 1)
+        XCTAssertEqual(
+            dashboard.ticketOrderingFailure(for: brokenProjectID),
+            .unavailable(.missingOrderRow(brokenTicketID))
+        )
+        XCTAssertNil(dashboard.ticketOrderingContext(for: brokenProjectID))
+        XCTAssertFalse(dashboard.boards.keys.contains {
+            Data($0.projectID.rawValue.utf8) == Data(brokenProjectID.rawValue.utf8)
+        })
+        XCTAssertNil(dashboard.board(for: brokenProjectID))
+        XCTAssertNil(dashboard.board(for: brokenProjectID, phaseID: brokenPhaseID))
+        XCTAssertNil(dashboard.plan(for: brokenProjectID))
+        XCTAssertNil(dashboard.allPhaseBoard(for: brokenProjectID))
+        XCTAssertTrue(dashboard.ticketOrderingLanes(for: brokenProjectID).isEmpty)
+        XCTAssertTrue(dashboard.reorderEligibleTicketIdentities(for: brokenProjectID).isEmpty)
+        XCTAssertFalse(dashboard.boards.values.flatMap(\.lanes).flatMap(\.cards).contains {
+            Data($0.id.rawValue.utf8) == Data(brokenTicketID.rawValue.utf8)
+        })
+    }
+
     func testRetiredOriginalLeavesActiveBoardsAndRemainsVisibleWithCoverageInPlan() async throws {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await store.transact(

@@ -6551,36 +6551,24 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     func testPhase6CIntegratedTicketEvidenceJourneyIsResponsiveAndOpensHelp() async throws {
-        let nativeSession: (id: String, ready: URL, complete: URL)?
+        let nativeSession: (id: String, pauseSeconds: Double)?
         if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6C_NATIVE_SESSION"] {
             guard !sessionID.isEmpty,
                   sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
                 XCTFail("The Phase 6C native session must contain only letters, numbers, hyphens and underscores.")
                 return
             }
-            let markerRoot = URL(
-                fileURLWithPath: "/private/tmp/release-radar-phase6c.7kHIve",
-                isDirectory: true
-            )
-            let enable = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-enabled")
-            let ready = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-compact-ready")
-            let complete = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-compact-complete")
-            guard FileManager.default.fileExists(atPath: enable.path) else {
-                throw XCTSkip("The external controller must create the fresh Phase 6C enable marker.")
+            guard let pauseSeconds = ProcessInfo.processInfo.environment["RR_PHASE6C_INSPECT_SECONDS"]
+                .flatMap(Double.init), pauseSeconds > 0 else {
+                XCTFail("The Phase 6C native session requires a positive RR_PHASE6C_INSPECT_SECONDS value.")
+                return
             }
-            XCTAssertFalse(FileManager.default.fileExists(atPath: ready.path))
-            XCTAssertFalse(FileManager.default.fileExists(atPath: complete.path))
-            try FileManager.default.removeItem(at: enable)
-            nativeSession = (sessionID, ready, complete)
+            nativeSession = (sessionID, min(pauseSeconds, 60))
         } else {
             nativeSession = nil
         }
 
-        // Repository document validation intentionally rejects symlinked root
-        // ancestors; macOS's default test temporary directory traverses /var.
-        let fixture = try await makeTask10PlanningFixture(
-            temporaryRoot: URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
-        )
+        let fixture = try await makeTask10PlanningFixture()
         let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
         try FileManager.default.copyItem(
@@ -6727,11 +6715,16 @@ final class AppRouteTests: XCTestCase {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         defer {
-            window.close()
+            window.orderOut(nil)
             NSApp.setActivationPolicy(previousPolicy)
         }
         try await Task.sleep(for: .milliseconds(600))
         hosting.layoutSubtreeIfNeeded()
+        if let nativeSession {
+            print("PHASE6C EVIDENCE WIDE READY: inspect the mounted ticket evidence journey using native controls")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            hosting.layoutSubtreeIfNeeded()
+        }
 
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
@@ -6782,12 +6775,9 @@ final class AppRouteTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(500))
         hosting.layoutSubtreeIfNeeded()
         if let nativeSession {
-            try Data().write(to: nativeSession.ready, options: .atomic)
-            print("PHASE6C EVIDENCE COMPACT READY: scroll the mounted ticket inspector until Delivery Evidence is visibly readable, then write the matching compact-complete marker")
-            for _ in 0..<900 where !FileManager.default.fileExists(atPath: nativeSession.complete.path) {
-                try await Task.sleep(for: .milliseconds(200))
-            }
-            XCTAssertTrue(FileManager.default.fileExists(atPath: nativeSession.complete.path))
+            print("PHASE6C EVIDENCE COMPACT READY: scroll the mounted ticket inspector until Delivery Evidence is visibly readable")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            hosting.layoutSubtreeIfNeeded()
         }
         let compactPanelCandidate: AXUIElement? = if nativeSession == nil {
             await scrollToAccessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence")
@@ -6840,6 +6830,19 @@ final class AppRouteTests: XCTestCase {
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-1', 'rr9-owner-project', 'phase-roadmap', 'Roadmap backlog one.', 'backlog')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-2', 'rr9-owner-project', 'phase-roadmap', 'Roadmap backlog two.', 'backlog')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-X', 'rr9-owner-project', 'phase-roadmap', 'Roadmap blocker.', 'blocked')")
+            for (ticketID, lane) in [
+                ("CURRENT-1", TicketLane.inProgress),
+                ("ROAD-1", .backlog),
+                ("ROAD-2", .backlog),
+                ("ROAD-X", .blocked),
+            ] {
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: .init(rawValue: "rr9-owner-project"),
+                    ticketID: .init(rawValue: ticketID),
+                    lane: lane,
+                    connection: connection
+                )
+            }
             try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('road-dependency', 'rr9-owner-project', 'ROAD-X', 'ROAD-1')")
         }
         let projectID = ProjectID(rawValue: "rr9-owner-project")

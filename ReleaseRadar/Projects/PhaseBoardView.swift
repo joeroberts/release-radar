@@ -63,18 +63,26 @@ struct PhaseBoardView: View {
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
     var loadTicketDeliveryEvidence: ((TicketID) async -> ReferenceLoadResult<TicketDeliveryEvidence>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
-    var referenceContextIdentity: String? = nil
+    var referenceQueryContextIdentity: String? = nil
+    var isReferenceQueryReady = false
     var viewPhase: (PhaseID) -> Void = { _ in }
     var viewAllPhases: () -> Void = {}
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
+    var ticketOrderingContext: TicketOrderingContext? = nil
+    var ticketOrderingLanes: [TicketLaneOrderSnapshot] = []
+    var reorderEligibleTicketIdentities: [Data] = []
+    var reorderTicket: ((TicketID, TicketLane, TicketOrderAnchor, TicketOrderingContext) async -> AgentCommandResult)? = nil
+    var reloadTicketOrdering: (() async -> TicketOrderingContext?)? = nil
     @State private var density: BoardDensity = .fullOutcomes
     @State private var selectionOutsideFilter = false
     @FocusState private var filterSummaryFocused: Bool
     @AccessibilityFocusState private var filterSummaryAccessibilityFocused: Bool
-    @FocusState private var focusedTicketID: TicketID?
-    @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
+    @FocusState private var focusedTicketIdentity: Data?
+    @AccessibilityFocusState private var accessibilityFocusedTicketIdentity: Data?
     @State private var documentationRecoveryMessage: String?
+    @State private var ticketOrderingState: TicketOrderingActionState = .idle
+    @State private var isReloadingTicketOrdering = false
 
     private var filteredBoard: PhaseBoardProjection { board.filtered(by: filter) }
 
@@ -128,6 +136,11 @@ struct PhaseBoardView: View {
                     Spacer()
                     densityPicker(laneWidth: laneWidth)
                 }
+                TicketOrderingStatusView(
+                    state: ticketOrderingState,
+                    isReloading: isReloadingTicketOrdering,
+                    reload: reloadTicketOrderingState
+                )
 
                 if showsSideInspector {
                     HStack(alignment: .top, spacing: 16) {
@@ -292,7 +305,7 @@ struct PhaseBoardView: View {
                     ScrollView(.vertical) {
                         LazyVStack(spacing: 7) {
                             ForEach(lane.cards) { card in
-                                cardView(card, presentation: presentation)
+                                cardView(card, lane: lane.lane, presentation: presentation)
                             }
                         }
                     }
@@ -321,32 +334,159 @@ struct PhaseBoardView: View {
 
     private func cardView(
         _ card: TicketCardProjection,
+        lane: TicketLane,
         presentation: DashboardCardPresentation
     ) -> some View {
-        TicketCardView(
-            card: card,
-            presentation: presentation,
-            isSelected: selectedTicketID == card.id
-        ) {
-            selectedTicketID = card.id
-            focusChanged(.ticket(card.id))
+        let identity = Data(card.id.rawValue.utf8)
+        return VStack(spacing: 5) {
+            TicketCardView(
+                card: card,
+                presentation: presentation,
+                isSelected: hasSameUTF8Identity(selectedTicketID.rawValue, card.id.rawValue)
+            ) {
+                selectedTicketID = card.id
+                focusChanged(.ticket(card.id))
+            }
+            .focusable()
+            .focused($focusedTicketIdentity, equals: identity)
+            .accessibilityFocused($accessibilityFocusedTicketIdentity, equals: identity)
+
+            TicketOrderingMoveControls(
+                moveEarlier: ticketMoveAction(for: card, lane: lane, direction: .earlier),
+                moveLater: ticketMoveAction(for: card, lane: lane, direction: .later),
+                isDisabled: ticketOrderingState.isSaving || isReloadingTicketOrdering,
+                ticketID: card.id
+            )
         }
-        .focusable()
-        .focused($focusedTicketID, equals: card.id)
-        .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
     }
 
     private func applyRequestedFocus() {
         switch requestedFocus {
         case let .ticket(ticketID) where filteredBoard.detail(for: ticketID) != nil:
-            focusedTicketID = ticketID
-            accessibilityFocusedTicketID = ticketID
+            let identity = Data(ticketID.rawValue.utf8)
+            focusedTicketIdentity = identity
+            accessibilityFocusedTicketIdentity = identity
         case .filterSummary, .recovery:
             filterSummaryFocused = true
             filterSummaryAccessibilityFocused = true
         default:
             break
         }
+    }
+
+    private func ticketMoveAction(
+        for card: TicketCardProjection,
+        lane: TicketLane,
+        direction: TicketOrderingDirection
+    ) -> (() -> Void)? {
+        let identity = Data(card.id.rawValue.utf8)
+        guard reorderEligibleTicketIdentities.contains(identity),
+              ticketOrderingContext != nil,
+              reorderTicket != nil,
+              reloadTicketOrdering != nil,
+              ticketOrderingAnchor(
+                  for: card.id,
+                  direction: direction,
+                  lane: lane,
+                  snapshots: ticketOrderingLanes
+              ) != nil else { return nil }
+        return { performTicketMove(card.id, lane: lane, direction: direction) }
+    }
+
+    private func performTicketMove(
+        _ ticketID: TicketID,
+        lane: TicketLane,
+        direction: TicketOrderingDirection
+    ) {
+        guard !ticketOrderingState.isSaving,
+              !isReloadingTicketOrdering,
+              let submittedContext = ticketOrderingContext,
+              let reorderTicket,
+              let reloadTicketOrdering,
+              let anchor = ticketOrderingAnchor(
+                  for: ticketID,
+                  direction: direction,
+                  lane: lane,
+                  snapshots: ticketOrderingLanes
+              ) else { return }
+        let identity = Data(ticketID.rawValue.utf8)
+        ticketOrderingState = .saving(identity)
+        restoreTicketFocus(ticketID)
+        Task { @MainActor in
+            let result = await reorderTicket(ticketID, lane, anchor, submittedContext)
+            guard case let .saving(activeIdentity) = ticketOrderingState,
+                  activeIdentity == identity else { return }
+            if let error = result.error {
+                let presentation = FailureStatePresentation(agentError: error) ?? .init(
+                    title: "Ticket order unchanged",
+                    detail: "The ticket could not be reordered. Reload the board before continuing.",
+                    systemImage: "arrow.clockwise",
+                    tone: .warning,
+                    accessibilityID: "failure-ticket-ordering"
+                )
+                ticketOrderingState = .failed(
+                    presentation,
+                    offersReload: ticketOrderingFailureOffersReload(error)
+                )
+                restoreTicketFocus(ticketID)
+                return
+            }
+            guard let committedContext = result.ticketOrderingContext else {
+                ticketOrderingState = .failed(
+                    FailureStatePresentation(agentError: .outcomeUnknown) ?? .init(
+                        title: "Ticket order outcome unknown",
+                        detail: "Reload persisted state before continuing.",
+                        systemImage: "questionmark.diamond",
+                        tone: .warning,
+                        accessibilityID: "failure-agent-outcome-unknown"
+                    ),
+                    offersReload: false
+                )
+                restoreTicketFocus(ticketID)
+                return
+            }
+            let refreshedContext = await reloadTicketOrdering()
+            if let refreshedContext,
+               ticketOrderingContextsMatch(refreshedContext, committedContext) {
+                ticketOrderingState = .idle
+            } else {
+                ticketOrderingState = .savedNeedsReload(committedContext)
+            }
+            restoreTicketFocus(ticketID)
+        }
+    }
+
+    private func reloadTicketOrderingState() {
+        guard !isReloadingTicketOrdering,
+              let reloadTicketOrdering else { return }
+        let expectedContext: TicketOrderingContext?
+        switch ticketOrderingState {
+        case let .savedNeedsReload(context): expectedContext = context
+        case let .failed(_, offersReload) where offersReload: expectedContext = nil
+        case .idle, .saving, .failed(_, _): return
+        }
+        isReloadingTicketOrdering = true
+        Task { @MainActor in
+            let refreshedContext = await reloadTicketOrdering()
+            if let expectedContext {
+                if let refreshedContext,
+                   ticketOrderingContextsMatch(refreshedContext, expectedContext) {
+                    ticketOrderingState = .idle
+                }
+            } else if refreshedContext != nil {
+                ticketOrderingState = .idle
+            }
+            isReloadingTicketOrdering = false
+            restoreTicketFocus(selectedTicketID)
+        }
+    }
+
+    private func restoreTicketFocus(_ ticketID: TicketID) {
+        let identity = Data(ticketID.rawValue.utf8)
+        selectedTicketID = ticketID
+        focusedTicketIdentity = identity
+        accessibilityFocusedTicketIdentity = identity
+        focusChanged(.ticket(ticketID))
     }
 
     private func laneCount(_ count: Int) -> some View {
@@ -378,7 +518,8 @@ struct PhaseBoardView: View {
                 openReferenceSource: openReferenceSource.map { opener in
                     { linkID, version in opener(selected.id, linkID, version) }
                 },
-                referenceContextIdentity: referenceContextIdentity,
+                referenceQueryContextIdentity: referenceQueryContextIdentity,
+                isReferenceQueryReady: isReferenceQueryReady,
                 reload: reloadActivePhase
             )
         } else {

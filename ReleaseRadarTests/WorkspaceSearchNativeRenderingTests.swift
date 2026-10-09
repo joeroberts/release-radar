@@ -114,7 +114,12 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         try await settle(hosting)
         await model.navigate(to: .search)
         try await settle(hosting)
+        if let token {
+            print("PHASE6E SEARCH RECOVERY READY: inspect the isolated unsupported search warning and recovery controls before marking the session complete")
+            try await waitForExternalNativeJourney(token: token, window: window)
+        }
         var nativeWindow = try requiredAccessibilityWindow(title: window.title)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Saved working search needs a newer Release Radar"))
         let runButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
         let saveButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save"))
         XCTAssertEqual(accessibilityBool(runButton, kAXEnabledAttribute), false)
@@ -141,6 +146,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         try await settle(hosting)
         nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
         XCTAssertTrue(model.workspaceSearchNeedsScopeReselection)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Search unavailable"))
         XCTAssertEqual(model.workspaceSearchDefinition.scope, saved.definition.scope)
         XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run")), kAXEnabledAttribute), false)
         XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save")), kAXEnabledAttribute), false)
@@ -173,10 +179,55 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         XCTAssertTrue(accessibilityText(nativeWindow).contains(WorkspaceHelpContent.deliveryEvidenceBoundary))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "help-action-readiness-acceptance"))
         try capture(hosting, name: "phase6e-help-recovery-guidance")
+    }
+
+    func testSearchNoMatchStateRendersNatively() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchStateNative-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed native Search state fixture") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('native-state-project', 'Native state project')")
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('native-state-project', 'native-state-registration', 1, 'complete')")
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        let token = ProcessInfo.processInfo.environment["RR_PHASE6E_NATIVE_SESSION"]
+        window.title = token.map { "Phase 6E Search no-match — isolated native acceptance — \($0)" }
+            ?? "Phase 6E Search no-match — isolated native acceptance"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.appearance = window.appearance
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        model.setWorkspaceSearchText("absent-native-state")
+        await model.runWorkspaceSearch()
+        try await settle(hosting)
         if let token {
-            print("PHASE6E HELP RECOVERY READY: use real keyboard input to verify the provenance, evidence applicability, and newer-version recovery queries and their exact actions")
+            print("PHASE6E SEARCH NO-MATCH READY: inspect the isolated committed no-match display before marking the session complete")
             try await waitForExternalNativeJourney(token: token, window: window)
         }
+        var nativeWindow = try requiredAccessibilityWindow(title: window.title)
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-empty"))
+        XCTAssertFalse(model.workspaceSearchIsLoading)
+        XCTAssertNotNil(model.workspaceSearchProjection)
+
     }
 
     func testSearchSavedViewsAndHelpRenderWideAndCompact() async throws {
@@ -186,20 +237,42 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         try await DashboardSampleData.seedIfNeeded(in: store)
         let projectID = DashboardSampleData.projectID
-        try await store.transact(actor: .init(id: "search-native-test"), reason: "Register isolated Search fixture") { connection in
+        let longTicketTitle = "Retired result with deliberately extended factual context that must remain readable across several compact lines, including the recorded retirement state and exact work identity, before reaching the late native-detail match phrase."
+        try await store.transact(
+            actor: .init(id: "search-native-test"),
+            reason: "Seed native-detail mixed-domain Search fixture",
+            auditEventID: .init(rawValue: "native-detail-audit"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "native-detail-ticket")
+        ) { connection in
             try connection.execute(
                 "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'search-native-registration', 1, 'complete')",
                 bindings: [.text(projectID.rawValue)]
             )
+            try connection.execute("UPDATE projects SET name = 'Native-detail project with a deliberately long factual identity' WHERE id = ?", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('native-detail-phase', ?, 'Native detail phase')", bindings: [.text(projectID.rawValue)])
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('native-detail-ticket', ?, 'native-detail-phase', ?, 'accepted')",
+                bindings: [.text(projectID.rawValue), .text(longTicketTitle)]
+            )
+            try connection.execute("INSERT INTO ticket_retirements (project_id, ticket_id, disposition, reason, last_phase_id, last_lane, audit_event_id, retired_at) VALUES (?, 'native-detail-ticket', 'replaced', 'Native detail retirement', 'native-detail-phase', 'accepted', 'native-detail-audit', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, 'native-detail-phase', 'native-detail-delivery', 'Delivery result', 'Long delivery outcome for native detail inspection', 'draft', 0, '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('native-detail-thread', ?, 'completed', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('native-detail-execution', ?, 'native-detail-thread', 'Completed', 'Long execution context for native detail inspection', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('native-detail-review', ?, 'native-detail-ticket', 'completion', 'Long review history context for native detail inspection', 'resolved')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES ('native-detail-completion', ?, 'native-detail-ticket', 'Long completion context for native detail inspection', '2026-10-09T00:01:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO notification_events (id, fingerprint, state, ticket_id, project_id, title, message, created_at) VALUES ('native-detail-notification', 'native-detail-notification-fingerprint', 'delivered', 'native-detail-ticket', ?, 'Native detail notification', 'Long notification context for native detail inspection', '2026-10-09T00:02:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_reference_link_sets (project_id, ticket_id, revision, created_at, updated_at) VALUES (?, 'native-detail-ticket', 1, '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_reference_links (project_id, ticket_id, id, kind, repository_id, artifact_id, current_version, relationship, created_at, updated_at) VALUES (?, 'native-detail-ticket', 'native-detail-decision-link', 'decision', '11111111-1111-4111-8111-111111111111', 'native-detail-artifact', 1, 'current', '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_reference_versions (project_id, ticket_id, link_id, version, content_digest, source_local_id, locator, catalog_version, catalog_digest, observed_path, observed_lifecycle, observed_authority, created_at) VALUES (?, 'native-detail-ticket', 'native-detail-decision-link', 1, ?, 'NATIVE-DETAIL-DECISION', 'Native detail decision heading', 1, ?, 'docs/native-detail-decision.md', 'active', 'controlling', '2026-10-09T00:00:00Z')", bindings: [.text(projectID.rawValue), .text(String(repeating: "a", count: 64)), .text(String(repeating: "b", count: 64))])
         }
         let repository = WorkspaceSearchPreferencesRepository(store: store)
         let savedDefinition = WorkspaceSearchDefinition(
-            text: "VD2-08",
+            text: "native-detail",
             scope: .allAuthorized,
-            domains: [.ticket],
-            sort: .title
+            domains: Set(WorkspaceSearchDomain.allCases),
+            sort: .domainThenTitle
         )
-        _ = try await repository.saveQuery(id: "native-ticket", name: "Ticket review", definition: savedDefinition)
+        _ = try await repository.saveQuery(id: "native-ticket", name: "Mixed record review", definition: savedDefinition)
         _ = try await repository.saveQuery(id: "native-newer", name: "Future filters", definition: savedDefinition)
         try await store.transact(actor: .init(id: "search-native-test"), reason: "Seed recoverable newer-version Search state") { connection in
             try connection.execute(
@@ -212,14 +285,17 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.loadDashboard()
         await model.navigate(to: .search)
         model.setWorkspaceSearchText(savedDefinition.text)
-        for domain in WorkspaceSearchDomain.allCases where domain != .ticket {
-            model.setWorkspaceSearchDomain(domain, enabled: false)
-        }
-        model.setWorkspaceSearchSort(.title)
+        model.setWorkspaceSearchSort(.domainThenTitle)
         await model.runWorkspaceSearch()
         await model.loadWorkspaceSearchPreferences(runSearch: false)
         await model.navigate(to: .projects)
-        let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
+        let results = try XCTUnwrap(model.workspaceSearchProjection?.results)
+        XCTAssertEqual(Set(results.map(\.domain)), Set(WorkspaceSearchDomain.allCases))
+        let result = try XCTUnwrap(results.first {
+            guard case let .ticket(_, _, ticketID, _) = $0.identity else { return false }
+            return ticketID.rawValue == "native-detail-ticket"
+        })
+        XCTAssertEqual(result.title, longTicketTitle)
         model.selectWorkspaceSearchResult(result.id)
         model.setWorkspaceSearchViewportOffset(42)
         try await store.transact(actor: .init(id: "search-native-test"), reason: "Seed recoverable newer-version working Search state") { connection in
@@ -255,6 +331,18 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.navigate(to: .search)
         try await settle(hosting)
 
+        if let token {
+            for width in [1_500.0, 760.0] {
+                window.setContentSize(NSSize(width: width, height: 900))
+                hosting.frame = window.contentView?.bounds ?? .zero
+                try await Task.sleep(for: .milliseconds(250))
+                hosting.layoutSubtreeIfNeeded()
+                let widthToken = "\(token)-\(Int(width))"
+                print("PHASE6E SEARCH \(Int(width)) READY: visually inspect the exact-width surface and screenshot for clipping; inspect all six result domains and the selected retired middle Ticket; verify the selected Ticket title wraps through the late native-detail match phrase, unique-project rows omit Registration search-native-registration, full factual detail/source-specific dates, compact row-detail-row order, selected AX state, Up/Down plus Return/Space row behavior, Tab/Shift-Tab/Escape focus, exact-record Open/Back restoration, and truthful actions before marking this exact-width session complete")
+                try await waitForExternalNativeJourney(token: widthToken, window: window)
+            }
+        }
+
         for width in [1_500.0, 760.0] {
             window.setContentSize(NSSize(width: width, height: 900))
             hosting.frame = window.contentView?.bounds ?? .zero
@@ -268,6 +356,10 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
             XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-saved-query-native-ticket"))
             XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-saved-query-native-newer"))
             XCTAssertTrue(accessibilityText(nativeWindow).contains("Newer version"))
+            if token != nil {
+                XCTAssertTrue(accessibilityText(nativeWindow).contains(longTicketTitle))
+                XCTAssertFalse(accessibilityText(nativeWindow).contains("Registration search-native-registration"))
+            }
             try capture(hosting, name: "phase6e-search-\(Int(width))")
         }
 
@@ -289,10 +381,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         hosting.frame = window.contentView?.bounds ?? .zero
         try await Task.sleep(for: .milliseconds(250))
         hosting.layoutSubtreeIfNeeded()
-
-        if let token {
-            try await waitForExternalNativeJourney(token: token, window: window)
-        }
 
         let activePhaseAfter = try await activePhase(in: store, projectID: projectID)
         XCTAssertEqual(activePhaseAfter, activePhaseBefore)
@@ -346,7 +434,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         NSApp.setActivationPolicy(.regular)
         defer { NSApp.setActivationPolicy(previousPolicy) }
         let window = NSWindow(
-            contentRect: NSRect(x: 30, y: 30, width: 760, height: 900),
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
@@ -366,18 +454,17 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.navigate(to: .search)
         try await settle(hosting)
 
-        let nativeWindow = try requiredAccessibilityWindow(title: window.title)
-        for registrationID in ["same-name-registration-a", "same-name-registration-b"] {
-            let recovery = try XCTUnwrap(accessibilityElement(
-                nativeWindow,
-                identifier: "workspace-search-scope-project-recovery-\(registrationID)"
-            ))
-            XCTAssertTrue(accessibilityText(recovery).contains(registrationID))
-        }
-        try capture(hosting, name: "phase6e-search-same-name-recovery-compact")
+        try capture(hosting, name: "phase6e-search-same-name-recovery-wide")
         if let token {
-            print("PHASE6E SAME-NAME SEARCH READY: inspect both recovery labels, choose all authorized projects, run the existing project-only query, inspect both result labels and selected detail, then inspect both same-name scope-menu choices")
-            try await waitForExternalNativeJourney(token: token, window: window)
+            for width in [1_500.0, 760.0] {
+                window.setContentSize(NSSize(width: width, height: 900))
+                hosting.frame = window.contentView?.bounds ?? .zero
+                try await Task.sleep(for: .milliseconds(250))
+                hosting.layoutSubtreeIfNeeded()
+                let widthToken = "\(token)-\(Int(width))"
+                print("PHASE6E SAME-NAME SEARCH \(Int(width)) READY: inspect both recovery labels, choose all authorized projects and run the existing project-only query if still needed; at 1500 verify otherwise-identical project rows retain distinct Registration values, at 760 verify compact rows use name/lifecycle without Registration while selected detail retains exact project/registration identity; use Up/Down and Return/Space across both rows, inspect the selected detail/action and scope-menu choices, and visually inspect this exact-width surface for clipping")
+                try await waitForExternalNativeJourney(token: widthToken, window: window)
+            }
             try await settle(hosting)
             let results = try XCTUnwrap(model.workspaceSearchProjection?.results)
             XCTAssertEqual(results.map(\.project.registrationID).sorted(), [
@@ -385,6 +472,27 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
                 "same-name-registration-b",
             ])
             XCTAssertNotNil(model.selectedWorkspaceSearchResultID)
+            let renderedWindow = try requiredAccessibilityWindow(title: window.title)
+            for result in results {
+                let row = try XCTUnwrap(accessibilityElement(
+                    renderedWindow,
+                    identifier: "workspace-search-result-\(result.id.base64EncodedString())"
+                ))
+                XCTAssertFalse(accessibilityText(row).contains("Registration"))
+            }
+            let selectedID = try XCTUnwrap(model.selectedWorkspaceSearchResultID)
+            let selected = try XCTUnwrap(results.first { $0.id == selectedID })
+            let detail = try XCTUnwrap(accessibilityElement(renderedWindow, identifier: "workspace-search-detail"))
+            XCTAssertTrue(accessibilityText(detail).contains(selected.project.registrationID))
+        } else {
+            let nativeWindow = try requiredAccessibilityWindow(title: window.title)
+            for registrationID in ["same-name-registration-a", "same-name-registration-b"] {
+                let recovery = try XCTUnwrap(accessibilityElement(
+                    nativeWindow,
+                    identifier: "workspace-search-scope-project-recovery-\(registrationID)"
+                ))
+                XCTAssertTrue(accessibilityText(recovery).contains(registrationID))
+            }
         }
         try capture(hosting, name: "phase6e-search-same-name-compact")
     }
@@ -400,16 +508,14 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
 
     private func waitForExternalNativeJourney(token: String, window: NSWindow) async throws {
         XCTAssertFalse(token.isEmpty)
-        let controlDirectory = URL(
-            fileURLWithPath: "/private/tmp/release-radar-phase6e-writer-01a08dee/native-\(token)",
-            isDirectory: true
-        )
+        let controlDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("release-radar-phase6e-native-\(token)", isDirectory: true)
         try FileManager.default.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
         let readyURL = controlDirectory.appendingPathComponent("ready")
         let completeURL = controlDirectory.appendingPathComponent("complete")
         XCTAssertFalse(FileManager.default.fileExists(atPath: readyURL.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: completeURL.path))
-        let identity = "token=\(token)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\n"
+        let identity = "token=\(token)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\ncontrol=\(controlDirectory.path)\n"
         XCTAssertTrue(FileManager.default.createFile(atPath: readyURL.path, contents: Data(identity.utf8)))
         print("PHASE6E NATIVE READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
 

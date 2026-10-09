@@ -44,6 +44,7 @@ private struct ManageProjectPresentation: Identifiable {
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
+    var availableDetailWidth: CGFloat? = nil
     let documentationState: ProjectDocumentationState
     var documentationStatus: DocumentationObservationStatus? = nil
     let projectRoot: URL?
@@ -86,15 +87,14 @@ struct ProjectOverviewView: View {
     @AccessibilityFocusState private var documentationActionErrorFocused: Bool
     @State private var isPerformingDocumentationSetup = false
     private let documentationActionErrorAnchor = "project-documentation-action-error-anchor"
+    private let horizontalContentPadding: CGFloat = 28
+    private let minimumInlineHeaderContentWidth: CGFloat = 610
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
-                    VStack(alignment: .leading, spacing: 12) { projectHeading; projectActions }
-                }
+                projectHeader
                 HStack(spacing: 14) {
                     summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag", accessibilityID: "active-phase")
                     summaryCard("Current work", value: "\(project.currentWorkCount)", systemImage: "rectangle.stack", accessibilityID: "current-work")
@@ -159,7 +159,7 @@ struct ProjectOverviewView: View {
                         .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
                 }
                 }
-                .padding(28)
+                .padding(horizontalContentPadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -228,17 +228,48 @@ struct ProjectOverviewView: View {
         }
     }
 
+    @ViewBuilder
+    private var projectHeader: some View {
+        if let availableDetailWidth,
+           availableDetailWidth - (horizontalContentPadding * 2) < minimumInlineHeaderContentWidth {
+            VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
+        } else if availableDetailWidth != nil {
+            HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
+                VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
+            }
+        }
+    }
+
     private var projectActions: some View {
         HStack {
-            if loadProjectSettings != nil, project.registration != nil {
-                Button("Manage Project", action: openSettings)
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .accessibilityIdentifier("project-manage")
-            }
-            Button("Help") { showsHelp = true }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .accessibilityIdentifier("project-help")
+            manageProjectButton
+            helpButton
         }
+    }
+
+    private var compactProjectActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            manageProjectButton
+            helpButton
+        }
+    }
+
+    @ViewBuilder
+    private var manageProjectButton: some View {
+        if loadProjectSettings != nil, project.registration != nil {
+            Button("Manage Project", action: openSettings)
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("project-manage")
+        }
+    }
+
+    private var helpButton: some View {
+        Button("Help") { showsHelp = true }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityIdentifier("project-help")
     }
 
     private var deliveryHeading: some View {
