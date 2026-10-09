@@ -246,7 +246,7 @@ struct WorkspaceSearchView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(result.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
                 Text(result.title).font(RekonTypography.compactTitle).lineLimit(inlineSelectedDetail && isSelected ? nil : 2)
-                Text(rowProjectLabel(result.project))
+                Text(rowProjectLabel(result.project, includeRegistrationDisambiguation: !inlineSelectedDetail))
                     .font(RekonTypography.secondaryBody)
                     .foregroundStyle(RekonTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -271,7 +271,7 @@ struct WorkspaceSearchView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityRemoveTraits(isSelected ? [] : .isSelected)
         .accessibilityLabel(
-            "\(result.domain.singularTitle): \(result.title), \(rowProjectLabel(result.project)), \(result.detail)"
+            "\(result.domain.singularTitle): \(result.title), \(rowProjectLabel(result.project, includeRegistrationDisambiguation: !inlineSelectedDetail)), \(result.detail)"
                 + (result.isRetired ? ", Retired record" : "")
         )
         .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
@@ -357,8 +357,11 @@ struct WorkspaceSearchView: View {
         "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active")"
     }
 
-    private func rowProjectLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
-        guard results.contains(where: {
+    private func rowProjectLabel(
+        _ project: WorkspaceSearchProjectIdentity,
+        includeRegistrationDisambiguation: Bool
+    ) -> String {
+        guard includeRegistrationDisambiguation, results.contains(where: {
             $0.project.name == project.name && $0.project.registrationID != project.registrationID
         }) else {
             return projectContextLabel(project)
