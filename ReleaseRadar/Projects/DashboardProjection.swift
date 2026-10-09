@@ -77,14 +77,14 @@ struct DashboardProjection: Equatable, Sendable {
         guard let board = allPhaseBoards.first(where: {
             Data($0.key.rawValue.utf8) == projectIdentity
         })?.value else { return [] }
-        return board.lanes.flatMap { lane in
-            guard lane.lane != .accepted else { return [] }
-            return lane.cards.compactMap { card in
+        return board.lanes.reduce(into: [Data]()) { identities, lane in
+            guard lane.lane != .accepted else { return }
+            identities.append(contentsOf: lane.cards.compactMap { card -> Data? in
                 guard let phaseID = card.phaseID,
                       let phaseBoard = boards[PhaseBoardKey(projectID: projectID, phaseID: phaseID)],
                       phaseBoard.phaseLifecycle?.lifecycle != .completed else { return nil }
                 return Data(card.id.rawValue.utf8)
-            }
+            })
         }
     }
 
