@@ -629,7 +629,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     entityType,
                     query: text,
-                    visibleSearchable: [title] + rawEntityType.map { [$0] },
+                    visibleSearchable: [title] + (rawEntityType.map { [$0] } ?? []),
                     fields: [
                         ("audit event ID", sourceID),
                         ("audit entity", optionalText(row, "entity_id") ?? "")
