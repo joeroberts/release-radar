@@ -7,6 +7,89 @@ import XCTest
 
 @MainActor
 final class DeliveryEvidenceRenderingTests: XCTestCase {
+
+    func testReadyInitialEvidenceLoadShowsLoadingAndRejectsConcurrentRefresh() async throws {
+        let payload = Self.evidence(ticketID: "initial-evidence", sourceLabel: "Initial evidence loaded")
+        var loadCount = 0
+        var initialLoad: CheckedContinuation<ReferenceLoadResult<TicketDeliveryEvidence>, Never>?
+        func load() async -> ReferenceLoadResult<TicketDeliveryEvidence> {
+            loadCount += 1
+            if loadCount == 1 {
+                return await withCheckedContinuation { initialLoad = $0 }
+            }
+            return .loaded(payload)
+        }
+        defer { initialLoad?.resume(returning: .loaded(payload)) }
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let hosting = NSHostingView(rootView: TicketDeliveryEvidenceSection(
+            ticketID: .init(rawValue: "initial-evidence"), contextIdentity: "ready", isContextReady: true,
+            load: load
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
+        let window = makeWindow(title: "Ready initial evidence load", content: hosting, width: 620, height: 780)
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        let initialDeadline = Date().addingTimeInterval(2)
+        while initialLoad == nil, Date() < initialDeadline {
+            hosting.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNotNil(initialLoad, "The ready initial load must enter the suspended loader")
+        XCTAssertEqual(loadCount, 1)
+        hosting.layoutSubtreeIfNeeded()
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let pendingText = accessibilityText(nativeWindow)
+        XCTAssertTrue(pendingText.contains("Loading delivery evidence"), "Pending initial content: \(pendingText)")
+        XCTAssertFalse(pendingText.contains("Delivery evidence unavailable"))
+        XCTAssertFalse(pendingText.contains("Retry"))
+        XCTAssertFalse(pendingText.contains("Refreshing delivery evidence"))
+
+        let refresh = try XCTUnwrap(
+            accessibilityElement(nativeWindow, title: "Refresh"),
+            "The native Refresh control must be available to exercise the concurrency guard"
+        )
+        var enabled: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(refresh, kAXEnabledAttribute as CFString, &enabled), .success)
+        XCTAssertEqual((enabled as? NSNumber)?.boolValue, false, "Refresh must be disabled during the initial load")
+
+        let pressResult = AXUIElementPerformAction(refresh, kAXPressAction as CFString)
+        XCTAssertTrue(pressResult == .success || pressResult == .cannotComplete,
+                      "Unexpected Refresh activation result: \(pressResult.rawValue)")
+        let activationDeadline = Date().addingTimeInterval(0.2)
+        while loadCount == 1, Date() < activationDeadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(loadCount, 1, "Refresh must not start another load while the initial request is pending")
+
+        let suspendedLoad = try XCTUnwrap(initialLoad)
+        initialLoad = nil
+        suspendedLoad.resume(returning: .loaded(payload))
+        let completionDeadline = Date().addingTimeInterval(2)
+        while !accessibilityText(nativeWindow).contains("Initial evidence loaded"), Date() < completionDeadline {
+            hosting.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        hosting.layoutSubtreeIfNeeded()
+        let loadedText = accessibilityText(nativeWindow)
+        XCTAssertTrue(loadedText.contains("Initial evidence loaded"), "Released initial result must render")
+        XCTAssertFalse(loadedText.contains("Loading delivery evidence"))
+        XCTAssertFalse(loadedText.contains("Refreshing delivery evidence"))
+        XCTAssertFalse(loadedText.contains("Delivery evidence unavailable"))
+        XCTAssertFalse(loadedText.contains("Retry"))
+        let loadedRefresh = try XCTUnwrap(accessibilityElement(nativeWindow, title: "Refresh"))
+        enabled = nil
+        XCTAssertEqual(AXUIElementCopyAttributeValue(loadedRefresh, kAXEnabledAttribute as CFString, &enabled), .success)
+        XCTAssertEqual((enabled as? NSNumber)?.boolValue, true)
+        XCTAssertEqual(loadCount, 1)
+    }
+
     func testPanelRendersRecordedTargetObservationsAndHelpAtWideAndCompactWidths() async throws {
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
