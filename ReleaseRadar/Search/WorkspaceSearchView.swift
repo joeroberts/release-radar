@@ -230,7 +230,7 @@ struct WorkspaceSearchView: View {
                 .font(RekonTypography.metadata)
                 .foregroundStyle(RekonTheme.secondaryText)
             ForEach(results) { result in
-                resultRow(result)
+                resultRow(result, inlineSelectedDetail: inlineSelectedDetail)
                 if inlineSelectedDetail, model.selectedWorkspaceSearchResultID == result.id {
                     selectedDetail(result, inline: true)
                 }
@@ -238,15 +238,15 @@ struct WorkspaceSearchView: View {
         }
     }
 
-    private func resultRow(_ result: WorkspaceSearchResult) -> some View {
+    private func resultRow(_ result: WorkspaceSearchResult, inlineSelectedDetail: Bool) -> some View {
         let isSelected = model.selectedWorkspaceSearchResultID == result.id
         return Button {
             selectResult(result.id)
         } label: {
             VStack(alignment: .leading, spacing: 5) {
                 Text(result.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
-                Text(result.title).font(RekonTypography.compactTitle).lineLimit(2)
-                Text(projectLabel(result.project))
+                Text(result.title).font(RekonTypography.compactTitle).lineLimit(inlineSelectedDetail && isSelected ? nil : 2)
+                Text(rowProjectLabel(result.project))
                     .font(RekonTypography.secondaryBody)
                     .foregroundStyle(RekonTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -271,7 +271,7 @@ struct WorkspaceSearchView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityRemoveTraits(isSelected ? [] : .isSelected)
         .accessibilityLabel(
-            "\(result.domain.singularTitle): \(result.title), \(projectLabel(result.project)), \(result.detail)"
+            "\(result.domain.singularTitle): \(result.title), \(rowProjectLabel(result.project)), \(result.detail)"
                 + (result.isRetired ? ", Retired record" : "")
         )
         .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
@@ -308,7 +308,7 @@ struct WorkspaceSearchView: View {
                 Text(selected.title)
                     .font(RekonTypography.compactTitle)
                     .accessibilityAddTraits(.isHeader)
-                Text("Project: \(projectLabel(selected.project))")
+                Text("Project: \(projectContextLabel(selected.project))")
                     .font(RekonTypography.metadata)
                     .foregroundStyle(RekonTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -353,8 +353,17 @@ struct WorkspaceSearchView: View {
         }
     }
 
-    private func projectLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
-        "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active") · Registration \(project.registrationID)"
+    private func projectContextLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
+        "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active")"
+    }
+
+    private func rowProjectLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
+        guard results.contains(where: {
+            $0.project.name == project.name && $0.project.registrationID != project.registrationID
+        }) else {
+            return projectContextLabel(project)
+        }
+        return "\(projectContextLabel(project)) · Registration \(project.registrationID)"
     }
 
     private func selectResult(_ id: Data) {
