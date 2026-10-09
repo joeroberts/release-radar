@@ -193,6 +193,45 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
     }
 
+    func testDeliveryEvidenceUnavailableReadinessDoesNotLoadUntilExplicitRefresh() async throws {
+        let gate = DeliveryEvidenceUnavailableGate()
+        let hosting = NSHostingView(rootView: TicketDeliveryEvidenceSection(
+            ticketID: .init(rawValue: "ticket-unavailable"),
+            contextIdentity: "project:registration:missing-root",
+            isContextReady: false,
+            load: { await gate.load() }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Delivery evidence unavailable readiness"
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-unavailable"))
+        let unavailableText = accessibilityText(application)
+        XCTAssertTrue(unavailableText.localizedCaseInsensitiveContains("root"))
+        XCTAssertFalse(unavailableText.contains("Loading delivery evidence"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        let initialLoadCount = await gate.loadCount()
+        XCTAssertEqual(initialLoadCount, 0)
+
+        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-delivery-evidence"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilEntered()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+
+        await gate.releaseFailure()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "delivery-evidence-explicit-unavailable"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        let finalLoadCount = await gate.loadCount()
+        XCTAssertEqual(finalLoadCount, 1)
+    }
+
     fileprivate static var emptyEvidence: TicketDeliveryEvidence {
         .init(
             projectID: "project", ticketID: "ticket", phaseID: "phase", phaseLabel: "Phase",
@@ -420,5 +459,35 @@ private actor DeliveryEvidenceRefreshGate {
         await withCheckedContinuation { waiters.append($0) }
     }
     func releaseRefreshFailure() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
+}
+
+private actor DeliveryEvidenceUnavailableGate {
+    private var count = 0
+    private var entered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        count += 1
+        entered = true
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
+        await withCheckedContinuation { release = $0 }
+        return .failed(.init(
+            title: "Delivery evidence unavailable",
+            detail: "Restore the exact project root and retry.",
+            systemImage: "questionmark.folder",
+            tone: .warning,
+            accessibilityID: "delivery-evidence-explicit-unavailable"
+        ))
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func releaseFailure() { release?.resume(); release = nil }
     func loadCount() -> Int { count }
 }

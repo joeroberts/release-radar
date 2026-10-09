@@ -370,7 +370,11 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
 
     func testMountedTicketReferencesReloadWhenObservationBecomesReadyInSameGeneration() async throws {
         let notification = Notification.Name("phase5b-observation-ready-\(UUID().uuidString)")
-        let hosting = NSHostingView(rootView: TicketReferenceReadinessHarness(notification: notification))
+        let counter = TicketDrawerReadinessCounter()
+        let hosting = NSHostingView(rootView: TicketDrawerReadinessHarness(
+            notification: notification,
+            counter: counter
+        ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
         let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
         window.title = "Phase 5B reference readiness transition"
@@ -381,7 +385,18 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
 
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        XCTAssertTrue(accessibilityText(application).contains("Observation still checking"))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-checking"))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-checking"))
+        let checkingText = accessibilityText(application)
+        XCTAssertTrue(checkingText.localizedCaseInsensitiveContains("checking"))
+        XCTAssertFalse(checkingText.contains("Loading reference links"))
+        XCTAssertFalse(checkingText.contains("Loading delivery evidence"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        let initialCounts = await counter.counts()
+        XCTAssertEqual(initialCounts.references, 0)
+        XCTAssertEqual(initialCounts.evidence, 0)
+
         NotificationCenter.default.post(name: notification, object: nil)
         try await Task.sleep(for: .milliseconds(150))
         hosting.layoutSubtreeIfNeeded()
@@ -389,7 +404,52 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         let recoveredText = accessibilityText(application)
         XCTAssertTrue(recoveredText.contains("Ticket ready"))
         XCTAssertTrue(recoveredText.contains("REQ-READY"))
-        XCTAssertFalse(recoveredText.contains("Observation still checking"))
+        XCTAssertTrue(recoveredText.contains("No revision-bound delivery evidence recorded"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-checking"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-checking"))
+        let readyCounts = await counter.counts()
+        XCTAssertEqual(readyCounts.references, 1)
+        XCTAssertEqual(readyCounts.evidence, 1)
+    }
+
+    func testReferenceUnavailableReadinessDoesNotLoadUntilExplicitRefresh() async throws {
+        let gate = TicketReferenceUnavailableGate()
+        let hosting = NSHostingView(rootView: TicketReferencesSection(
+            ticketID: .init(rawValue: "ticket-unavailable"),
+            contextIdentity: "project:registration:missing-root",
+            isContextReady: false,
+            load: { await gate.load() },
+            openSource: { _, _ in }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Reference unavailable readiness"
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-unavailable"))
+        let unavailableText = accessibilityText(application)
+        XCTAssertTrue(unavailableText.localizedCaseInsensitiveContains("root"))
+        XCTAssertFalse(unavailableText.contains("Loading reference links"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        let initialLoadCount = await gate.loadCount()
+        XCTAssertEqual(initialLoadCount, 0)
+
+        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-references"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilEntered()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+
+        await gate.releaseFailure()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "reference-explicit-unavailable"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        let finalLoadCount = await gate.loadCount()
+        XCTAssertEqual(finalLoadCount, 1)
     }
 
     func testReferenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
@@ -967,36 +1027,89 @@ private struct TicketReferenceSectionSwitchHarness: View {
     }
 }
 
-private struct TicketReferenceReadinessHarness: View {
+private struct TicketDrawerReadinessHarness: View {
     let notification: Notification.Name
+    let counter: TicketDrawerReadinessCounter
     @State private var isReady = false
 
     var body: some View {
         let capturedIsReady = isReady
-        TicketReferencesSection(
-            ticketID: .init(rawValue: "ticket-ready"), contextIdentity: "project:service-1", isContextReady: capturedIsReady,
-            load: {
-                if capturedIsReady {
-                    return .loaded(TicketReferenceSectionLoadGate.referenceSet(
-                        ticketID: "ticket-ready",
-                        phaseLabel: "Ticket ready",
-                        sourceLocalID: "REQ-READY"
-                    ))
-                }
-                return .failed(.init(
-                    title: "Observation still checking",
-                    detail: "References are not yet authoritative.",
-                    systemImage: "clock",
-                    tone: .warning,
-                    accessibilityID: "reference-observation-checking"
-                ))
-            },
-            openSource: { _, _ in }
+        TicketDetailView(
+            detail: .init(
+                id: .init(rawValue: "ticket-ready"),
+                outcome: "Keep deferred drawer loading stable",
+                goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+                requires: [], unlocks: [], ownerAttention: [], evidence: [],
+                auditHistory: [], notificationHistory: []
+            ),
+            documentationStatus: capturedIsReady ? nil : .checking(identity: nil, generation: 1),
+            loadReferences: { await counter.loadReferences() },
+            loadDeliveryEvidence: { await counter.loadEvidence() },
+            openReferenceSource: { _, _ in },
+            referenceQueryContextIdentity: "project:service-1",
+            isReferenceQueryReady: capturedIsReady
         )
         .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
             isReady = true
         }
     }
+}
+
+private actor TicketDrawerReadinessCounter {
+    private var referenceLoads = 0
+    private var evidenceLoads = 0
+
+    func loadReferences() -> ReferenceLoadResult<TicketReferenceSet> {
+        referenceLoads += 1
+        return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "ticket-ready",
+            phaseLabel: "Ticket ready",
+            sourceLocalID: "REQ-READY"
+        ))
+    }
+
+    func loadEvidence() -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        evidenceLoads += 1
+        return .loaded(.init(
+            projectID: "project", ticketID: "ticket-ready", phaseID: nil,
+            phaseLabel: "Ticket ready", revision: 1, currentTargetVersion: nil,
+            targets: [], observations: [], expectations: [], ownerAcceptance: .notAccepted
+        ))
+    }
+
+    func counts() -> (references: Int, evidence: Int) {
+        (referenceLoads, evidenceLoads)
+    }
+}
+
+private actor TicketReferenceUnavailableGate {
+    private var count = 0
+    private var entered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+        count += 1
+        entered = true
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
+        await withCheckedContinuation { release = $0 }
+        return .failed(.init(
+            title: "Reference query unavailable",
+            detail: "Restore the exact project root and retry.",
+            systemImage: "questionmark.folder",
+            tone: .warning,
+            accessibilityID: "reference-explicit-unavailable"
+        ))
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func releaseFailure() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
 }
 
 private actor TicketReferenceSectionLoadGate {
