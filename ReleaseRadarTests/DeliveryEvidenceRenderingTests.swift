@@ -162,6 +162,23 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
     }
 
     func testDeliveryEvidenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
+        let nativeSession: (id: String, pauseSeconds: Double)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_EVIDENCE_REFRESH_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The delivery evidence refresh native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            guard let pauseSeconds = ProcessInfo.processInfo.environment["RR_EVIDENCE_REFRESH_INSPECT_SECONDS"]
+                .flatMap(Double.init), pauseSeconds > 0 else {
+                XCTFail("The delivery evidence refresh native session requires a positive RR_EVIDENCE_REFRESH_INSPECT_SECONDS value.")
+                return
+            }
+            nativeSession = (sessionID, min(pauseSeconds, 60))
+        } else {
+            nativeSession = nil
+        }
+
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
         let gate = DeliveryEvidenceRefreshGate()
@@ -173,7 +190,8 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
         let window = makeWindow(
-            title: "Delivery evidence refresh retention",
+            title: nativeSession.map { "Delivery evidence refresh retention — native session \($0.id)" }
+                ?? "Delivery evidence refresh retention",
             content: hosting,
             width: 620,
             height: 780
@@ -186,6 +204,27 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
         hosting.layoutSubtreeIfNeeded()
+
+        if let nativeSession {
+            print("DELIVERY EVIDENCE REFRESH INITIAL READY: focus Help, press Refresh once, and preserve the initial content")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            let refreshLoadCount = await gate.loadCount()
+            guard refreshLoadCount == 2 else {
+                XCTFail("Expected one external delivery evidence Refresh press; observed \(refreshLoadCount - 1).")
+                return
+            }
+
+            print("DELIVERY EVIDENCE REFRESH PENDING READY: verify visible progress, retained initial content, and retained Help focus")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            await gate.releaseRefreshFailure()
+            try await Task.sleep(for: .milliseconds(120))
+
+            print("DELIVERY EVIDENCE REFRESH FAILURE READY: verify the typed failure and retained content/focus, then press Retry once; success remains visible for the rest of this pause")
+            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            let retryLoadCount = await gate.loadCount()
+            XCTAssertEqual(retryLoadCount, 3)
+            return
+        }
 
         let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
         let help = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "delivery-evidence-help"))
