@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from typing import Any, NoReturn
+from typing import Any, Callable, NoReturn
 
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
@@ -37,6 +37,177 @@ ACTION_OPERATIONS = {
     "create-tag",
     "push-tag",
 }
+
+PROJECT_PATH = Path("ReleaseRadar.xcodeproj/project.pbxproj")
+PLUGIN_PATH = Path("ReleaseRadar/CodexPluginMarketplace/plugins/release-radar")
+MANIFEST_PATH = PLUGIN_PATH / ".codex-plugin/plugin.json"
+CAPABILITY_PATH = Path("ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift")
+CAPABILITY_END = "\n    ]\n\n    public static func recognize"
+CAPABILITY_ENTRY = re.compile(
+    r'''        Self\(\n'''
+    r'''            manifestVersion: "([^"]+)",\n'''
+    r'''            normalizedPackageDigest: "([0-9a-f]{64})",\n'''
+    r'''            sharedExecutionStandardVersions: (\[[^\n]*\])\n'''
+    r'''        \),'''
+)
+
+
+def _native_plugin_digest(plugin_root: Path) -> str:
+    marketplace_root = plugin_root.parent.parent
+    repository = marketplace_root.parent.parent
+    digester = repository / "ReleaseRadarPluginLifecycleHelper/PluginDigester.swift"
+    if not digester.is_file():
+        raise ValueError("canonical plugin digester is unavailable")
+    driver_source = """\
+import Foundation
+
+@main
+struct ReleaseMetadataDigest {
+    static func main() throws {
+        guard CommandLine.arguments.count == 2 else { throw LifecycleError.integrityInvalid }
+        let package = try PluginDigester.marketplacePackage(
+            at: URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+        )
+        print(package.version)
+        print(package.digest)
+    }
+}
+"""
+    with tempfile.TemporaryDirectory(prefix="rr-plugin-digest-") as temporary:
+        temporary_root = Path(temporary)
+        driver = temporary_root / "main.swift"
+        executable = temporary_root / "plugin-digest"
+        driver.write_text(driver_source)
+        compiled = subprocess.run(
+            [
+                "xcrun", "swiftc", "-parse-as-library",
+                str(digester), str(driver), "-o", str(executable),
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if compiled.returncode != 0:
+            raise ValueError("canonical plugin digester could not be built")
+        observed = subprocess.run(
+            [str(executable), str(marketplace_root)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        lines = observed.stdout.splitlines()
+        if observed.returncode != 0 or len(lines) != 2:
+            raise ValueError("canonical plugin identity could not be computed")
+        version, digest = lines
+        if not VERSION_PATTERN.fullmatch(version) or not DIGEST_PATTERN.fullmatch(digest):
+            raise ValueError("canonical plugin identity is malformed")
+        manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text())
+        if not isinstance(manifest, dict) or manifest.get("version") != version:
+            raise ValueError("canonical plugin identity does not match its manifest")
+        return digest
+
+
+def prepare_release_metadata(
+    repository: Path,
+    version: str,
+    build: str,
+    *,
+    plugin_identity_provider: Callable[[Path], str] = _native_plugin_digest,
+) -> None:
+    """Advance the app and bundled plugin release identity as one source change."""
+    if not VERSION_PATTERN.fullmatch(version):
+        raise ValueError("version must use three numeric components")
+    if not BUILD_PATTERN.fullmatch(build):
+        raise ValueError("build must be numeric")
+
+    repository = Path(repository)
+    if not repository.is_dir():
+        raise ValueError("repository is unavailable")
+    project = repository / PROJECT_PATH
+    plugin = repository / PLUGIN_PATH
+    manifest = repository / MANIFEST_PATH
+    capability = repository / CAPABILITY_PATH
+    originals = {
+        project: project.read_text(),
+        manifest: manifest.read_text(),
+        capability: capability.read_text(),
+    }
+
+    marketing_versions = re.findall(r"MARKETING_VERSION = ([^;]+);", originals[project])
+    build_versions = re.findall(r"CURRENT_PROJECT_VERSION = ([^;]+);", originals[project])
+    if (
+        len(marketing_versions) != 2
+        or len(set(marketing_versions)) != 1
+        or len(build_versions) != 2
+        or len(set(build_versions)) != 1
+        or version in marketing_versions
+    ):
+        raise ValueError("application release metadata is ambiguous or already prepared")
+    updated_project = re.sub(
+        r"MARKETING_VERSION = [^;]+;",
+        f"MARKETING_VERSION = {version};",
+        originals[project],
+    )
+    updated_project = re.sub(
+        r"CURRENT_PROJECT_VERSION = [^;]+;",
+        f"CURRENT_PROJECT_VERSION = {build};",
+        updated_project,
+    )
+
+    try:
+        manifest_object = json.loads(originals[manifest])
+    except json.JSONDecodeError as error:
+        raise ValueError("bundled plugin manifest is invalid") from error
+    if not isinstance(manifest_object, dict) or manifest_object.get("name") != "release-radar":
+        raise ValueError("bundled plugin manifest is invalid")
+    previous_version = manifest_object.get("version")
+    if not isinstance(previous_version, str) or not VERSION_PATTERN.fullmatch(previous_version):
+        raise ValueError("bundled plugin manifest version is invalid")
+    if previous_version == version:
+        raise ValueError("bundled plugin metadata is already prepared")
+    updated_manifest, manifest_replacements = re.subn(
+        rf'("version"\s*:\s*"){re.escape(previous_version)}(")',
+        rf"\g<1>{version}\g<2>",
+        originals[manifest],
+    )
+    if manifest_replacements != 1:
+        raise ValueError("bundled plugin manifest version is ambiguous")
+
+    capability_source = originals[capability]
+    if capability_source.count(CAPABILITY_END) != 1:
+        raise ValueError("recognized plugin capability registry is ambiguous")
+    capability_end = capability_source.index(CAPABILITY_END)
+    capability_prefix = capability_source[:capability_end]
+    entries = list(CAPABILITY_ENTRY.finditer(capability_prefix))
+    if not entries or capability_prefix.count("        Self(") != len(entries):
+        raise ValueError("recognized plugin capability registry is malformed")
+    if entries[-1].group(1) != previous_version:
+        raise ValueError("bundled plugin manifest conflicts with the capability registry")
+    if any(entry.group(1) == version for entry in entries):
+        raise ValueError("recognized plugin capability already contains this version")
+    standards = entries[-1].group(3)
+
+    try:
+        manifest.write_text(updated_manifest)
+        digest = plugin_identity_provider(plugin)
+        if not isinstance(digest, str) or not DIGEST_PATTERN.fullmatch(digest):
+            raise ValueError("canonical plugin digest is invalid")
+        new_entry = (
+            "\n        Self(\n"
+            f'            manifestVersion: "{version}",\n'
+            f'            normalizedPackageDigest: "{digest}",\n'
+            f"            sharedExecutionStandardVersions: {standards}\n"
+            "        ),"
+        )
+        updated_capability = capability_prefix + new_entry + capability_source[capability_end:]
+        project.write_text(updated_project)
+        capability.write_text(updated_capability)
+    except BaseException:
+        for path, content in originals.items():
+            path.write_text(content)
+        raise
 
 
 class ReleaseError(Exception):
@@ -706,7 +877,7 @@ def initialize(context: Context, build: str, suites: list[str]) -> None:
 def main(argv: list[str]) -> int:
     global_parser = argparse.ArgumentParser(add_help=False)
     global_parser.add_argument("--repository", type=Path, required=True)
-    global_parser.add_argument("--entrypoint", type=Path, required=True)
+    global_parser.add_argument("--entrypoint", type=Path)
     global_args, remaining = global_parser.parse_known_args(argv)
     if not remaining:
         raise ValueError("release command is required")
@@ -714,16 +885,24 @@ def main(argv: list[str]) -> int:
 
     parser = argparse.ArgumentParser(prog=f"build_and_run.sh {command}")
     parser.add_argument("--version", type=ensure_version, required=True)
-    parser.add_argument("--fixture-root", type=Path)
-    parser.add_argument("--operations-adapter", type=Path)
+    if command == "prepare-release-metadata":
+        parser.add_argument("--build", required=True)
+    else:
+        parser.add_argument("--fixture-root", type=Path)
+        parser.add_argument("--operations-adapter", type=Path)
     if command == "release-init":
         parser.add_argument("--build", required=True)
         parser.add_argument("--required-suite", action="append", default=[])
     elif command == "release-delivery":
         parser.add_argument("--stage", choices=STAGES, required=True)
-    else:
+    elif command != "prepare-release-metadata":
         raise ValueError("unsupported release command")
     arguments = parser.parse_args(command_arguments)
+    if command == "prepare-release-metadata":
+        prepare_release_metadata(global_args.repository, arguments.version, arguments.build)
+        return 0
+    if global_args.entrypoint is None:
+        raise ValueError("release entrypoint is required")
     context = Context(
         global_args.repository,
         global_args.entrypoint,
