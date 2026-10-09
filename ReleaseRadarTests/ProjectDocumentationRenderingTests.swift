@@ -42,6 +42,66 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testProjectOverviewActionsRemainReachableInsideCompactSidebarDetailViewport() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ProjectOverviewLayout-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Register compact overview fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'compact-overview-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        model.selection = .projectOverview(DashboardSampleData.projectID)
+        let project = try XCTUnwrap(model.dashboard?.projects.first { $0.id == DashboardSampleData.projectID })
+
+        for width in [1_100.0, 760.0] {
+            model.isSidebarCompact = false
+            try await render(
+                SidebarView(model: model),
+                name: "project-overview-sidebar-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Active phase", "Current work", "Owner attention",
+                    project.activePhaseName, "\(project.currentWorkCount)", "\(project.attentionCount)",
+                ],
+                presentIdentifiers: [
+                    "overview-metric-active-phase",
+                    "overview-metric-current-work",
+                    "overview-metric-owner-attention",
+                    "project-help",
+                    "project-manage",
+                    "open-project-plan",
+                    "open-phase-board",
+                ],
+                verifyAccessibility: { window in
+                    let windowFrame = try XCTUnwrap(accessibilityFrame(window))
+                    for identifier in ["project-help", "project-manage", "open-project-plan", "open-phase-board"] {
+                        let element = try XCTUnwrap(accessibilityElement(window, identifier: identifier))
+                        XCTAssertEqual(
+                            AXUIElementPerformAction(element, "AXScrollToVisible" as CFString),
+                            .success,
+                            "\(identifier) must be vertically reachable at host width \(Int(width))"
+                        )
+                        let elementFrame = try XCTUnwrap(accessibilityFrame(element))
+                        XCTAssertTrue(
+                            windowFrame.contains(elementFrame),
+                            "\(identifier) must remain fully contained in the host window at width \(Int(width)); window=\(windowFrame), element=\(elementFrame)"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
     func testManageProjectOpensImmediatelyWithSelectedRegistrationAndIndependentSections() async throws {
         let projectID = ProjectID(rawValue: "manage-project-immediate")
         let registration = ProjectRegistration(
