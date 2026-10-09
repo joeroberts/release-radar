@@ -442,13 +442,13 @@ final class NavigationHistoryTests: XCTestCase {
         await first.value
         await latest.value
 
-        XCTAssertEqual(model.workspaceSearchDefinition.domains, [.project, .ticket])
+        XCTAssertEqual(model.workspaceSearchDefinition.domains, Set(WorkspaceSearchDomain.allCases))
         XCTAssertEqual(Set(model.workspaceSearchProjection?.results.map(\.domain) ?? []), [.project, .ticket])
         XCTAssertFalse(model.workspaceSearchIsLoading)
         guard case let .supported(persisted) = try await WorkspaceSearchPreferencesRepository(store: store).loadWorkingDefinition() else {
             return XCTFail("Expected the latest record-type definition to persist")
         }
-        XCTAssertEqual(persisted.domains, [.project, .ticket])
+        XCTAssertEqual(persisted.domains, Set(WorkspaceSearchDomain.allCases))
     }
 
     @MainActor
