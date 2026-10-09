@@ -17,6 +17,7 @@ struct TicketDeliveryEvidenceSection: View {
     @State private var showsHelp = false
     @State private var isRefreshing = false
     @State private var startedInitialLoad = false
+    @State private var refreshFailure: FailureStatePresentation?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -54,6 +55,14 @@ struct TicketDeliveryEvidenceSection: View {
             case let .loaded(evidence):
                 loadedContent(evidence)
             }
+            if let refreshFailure {
+                Text("Showing previously loaded data. Refresh failed; retry to read the current ticket.")
+                    .font(.caption).foregroundStyle(RekonTheme.warning)
+                    .accessibilityIdentifier("ticket-delivery-evidence-previously-loaded")
+                FailureStateView(presentation: refreshFailure, style: .compact, actionTitle: "Retry") {
+                    Task { await reload(explicit: true) }
+                }
+            }
             if isRefreshing {
                 ProgressView("Refreshing delivery evidence…")
                     .controlSize(.small)
@@ -75,6 +84,7 @@ struct TicketDeliveryEvidenceSection: View {
         }
         .onChange(of: contextIdentity) { _, _ in
             guard startedInitialLoad else { return }
+            refreshFailure = nil
             state = .failed(.init(title: "Delivery evidence context changed", detail: "The project registration or root changed. Refresh the current ticket to read current evidence.", systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "delivery-evidence-context-changed"))
         }
         .sheet(isPresented: $showsHelp) { DeliveryEvidenceHelpView() }
@@ -252,14 +262,21 @@ struct TicketDeliveryEvidenceSection: View {
     private func reload(explicit: Bool) async {
         guard !isRefreshing else { return }
         let expectedContext = contextIdentity
+        let preservesLoadedContent: Bool
+        if case .loaded = state { preservesLoadedContent = explicit } else { preservesLoadedContent = false }
         isRefreshing = explicit
+        refreshFailure = nil
         if !explicit { state = .idle }
         let result = await load()
-        guard !Task.isCancelled, expectedContext == contextIdentity else { return }
+        guard !Task.isCancelled, expectedContext == contextIdentity else {
+            isRefreshing = false
+            return
+        }
         isRefreshing = false
         switch result {
         case let .loaded(value): state = .loaded(value)
-        case let .failed(failure): state = .failed(failure)
+        case let .failed(failure):
+            if preservesLoadedContent { refreshFailure = failure } else { state = .failed(failure) }
         }
     }
 }

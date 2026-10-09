@@ -22,6 +22,7 @@ struct TicketReferencesSection: View {
     @State private var state: ReferenceSectionState = .idle
     @State private var isRefreshing = false
     @State private var startedInitialLoad = false
+    @State private var refreshFailure: FailureStatePresentation?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -57,6 +58,14 @@ struct TicketReferencesSection: View {
                     }
                 }
             }
+            if let refreshFailure {
+                Text("Showing previously loaded data. Refresh failed; retry to read the current ticket.")
+                    .font(.caption).foregroundStyle(RekonTheme.warning)
+                    .accessibilityIdentifier("ticket-references-previously-loaded")
+                FailureStateView(presentation: refreshFailure, style: .compact, actionTitle: "Retry") {
+                    Task { await reload(explicit: true) }
+                }
+            }
             if isRefreshing {
                 ProgressView("Refreshing references…").controlSize(.small)
                     .accessibilityIdentifier("ticket-references-refresh-progress")
@@ -75,6 +84,7 @@ struct TicketReferencesSection: View {
         .onChange(of: isContextReady) { _, ready in if ready { Task { await loadInitiallyIfReady() } } }
         .onChange(of: contextIdentity) { _, _ in
             guard startedInitialLoad else { return }
+            refreshFailure = nil
             state = .failed(.init(title: "Reference context changed", detail: "The project registration or root changed. Refresh the current ticket to read current references.", systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "reference-context-changed"))
         }
         .accessibilityIdentifier("ticket-references")
@@ -141,14 +151,21 @@ struct TicketReferencesSection: View {
     private func reload(explicit: Bool) async {
         guard !isRefreshing else { return }
         let expectedContext = contextIdentity
+        let preservesLoadedContent: Bool
+        if case .loaded = state { preservesLoadedContent = explicit } else { preservesLoadedContent = false }
         isRefreshing = explicit
+        refreshFailure = nil
         if !explicit { state = .idle }
         let result = await load()
-        guard !Task.isCancelled, expectedContext == contextIdentity else { return }
+        guard !Task.isCancelled, expectedContext == contextIdentity else {
+            isRefreshing = false
+            return
+        }
         isRefreshing = false
         switch result {
         case let .loaded(value): state = .loaded(value)
-        case let .failed(failure): state = .failed(failure)
+        case let .failed(failure):
+            if preservesLoadedContent { refreshFailure = failure } else { state = .failed(failure) }
         }
     }
 }
