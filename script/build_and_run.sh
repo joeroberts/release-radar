@@ -578,8 +578,8 @@ package_release_dmg() {
         return 1
     fi
     if ! verify_bundle "$mounted_bundle" "candidate" "$expected_version" "$expected_build" || \
-       ! mounted_identity="$(bundle_identity "$mounted_bundle")" || \
-       [[ "$(printf '%s' "$mounted_identity" | shasum -a 256 | awk '{ print $1 }')" != "$expected_identity" ]]; then
+       ! mounted_identity="$(bundle_identity "$mounted_bundle" | shasum -a 256 | awk '{ print $1 }')" || \
+       [[ "$mounted_identity" != "$expected_identity" ]]; then
         hdiutil detach "$mount_directory" >&2 || true
         rmdir "$mount_directory" || true
         /bin/rm -rf "$package_directory"
