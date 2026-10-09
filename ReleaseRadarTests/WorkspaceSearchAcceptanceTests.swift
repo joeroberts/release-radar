@@ -177,6 +177,32 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(afterAuditCount, beforeAuditCount)
     }
 
+    func testDeliveryGoalIDMatchExplainsItselfWhenLifecycleCoincidentallyMatches() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "delivery-goal-id-explanation")
+        try await seedProject(store, projectID: projectID, registrationID: "delivery-goal-id-registration")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed delivery goal ID-only Search match") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('delivery-goal-id-phase', ?, 'Delivery goal phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, 'delivery-goal-id-phase', 'draft-goal', 'Visible goal title', 'Visible goal outcome', 'draft', 0, '2026-10-09T00:00:00Z', '2026-10-09T00:00:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let projection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "draft", domains: [.deliveryGoal])
+        )
+
+        let goal = try XCTUnwrap(projection.results.first)
+        XCTAssertEqual(goal.title, "Visible goal title")
+        XCTAssertTrue(goal.detail.hasPrefix("draft · Visible goal outcome"))
+        XCTAssertTrue(goal.detail.contains("Matched delivery goal ID: draft-goal"))
+    }
+
     func testSavedQueriesRelaunchWithEveryFilterAndUnsupportedPayloadStaysRecoverable() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
