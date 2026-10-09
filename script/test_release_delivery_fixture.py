@@ -131,8 +131,9 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.assertEqual(1, receipt["schema_version"])
         self.assertEqual(SHA, receipt["candidate"]["source_revision"])
         self.assertEqual([SUITE], receipt["candidate"]["required_suite_ids"])
-        self.assertEqual(str(fixture_root / "dist" / "ReleaseRadar.app"), receipt["destinations"]["staged_bundle"])
-        self.assertEqual(str(fixture_root / "dist" / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["dmg"])
+        release_directory = fixture_root / ".build" / "releases" / VERSION
+        self.assertEqual(str(release_directory / "ReleaseRadar.app"), receipt["destinations"]["staged_bundle"])
+        self.assertEqual(str(release_directory / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["dmg"])
         self.assertEqual(str(fixture_root / "Downloads" / f"ReleaseRadar-{VERSION}.dmg"), receipt["destinations"]["installer"])
         self.assertEqual(str(fixture_root / "Applications" / "ReleaseRadar.app"), receipt["destinations"]["installed_bundle"])
         self.assertEqual(
@@ -252,7 +253,7 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         self.initialize()
         self.stage("preflight")
         self.stage("checks")
-        staged = self.root / "dist" / "ReleaseRadar.app"
+        staged = self.root / ".build" / "releases" / VERSION / "ReleaseRadar.app"
         staged.parent.mkdir(parents=True, exist_ok=True)
         staged.write_text("old staged app\n")
         staged.with_suffix(staged.suffix + ".identity").write_text("old identity\n")
