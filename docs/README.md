@@ -36,8 +36,8 @@ helpers to select documentation-owned checks from the complete diff.
 | Application, build, dependency, runtime-resource, or marketplace input | No documentation check solely for that input; app/build CI remains pending [#119](https://github.com/joeroberts/release-radar/issues/119) |
 
 The classifier treats unknown, malformed, empty, or unavailable diff input as
-a visible fail-closed fallback and runs all documentation-owned checks. It
-uses `--no-renames`, so deleted paths and both sides of a rename are classified.
+a visible fail-closed fallback and runs all documentation-owned checks. The
+collector uses `--no-renames`, so deleted paths and both sides of a rename are classified.
 For an unexpected run or skip, first inspect the workflow's **Classify changed
 paths** JSON output: a non-null `fallback_reason` means broad validation was
 intentional; otherwise compare the reported categories with the table. The
