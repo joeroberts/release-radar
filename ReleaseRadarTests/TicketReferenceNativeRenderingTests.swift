@@ -8,10 +8,23 @@ import XCTest
 @MainActor
 final class TicketReferenceNativeRenderingTests: XCTestCase {
     func testTicketDetailKeepsDrawerSectionsStableWhenOnlyObservationGenerationChanges() async throws {
+        let nativeSession: (id: String, pauseSeconds: Double)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_DRAWER_SCROLL_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }),
+                  let seconds = ProcessInfo.processInfo.environment["RR_DRAWER_SCROLL_INSPECT_SECONDS"].flatMap(Double.init),
+                  seconds > 0 else {
+                XCTFail("The drawer scroll native session requires a safe token and positive inspection duration.")
+                return
+            }
+            nativeSession = (sessionID, min(seconds, 120))
+        } else {
+            nativeSession = nil
+        }
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("ticket-drawer-observer-generation-\(UUID().uuidString)")
-        let counter = TicketDrawerLoadCounter()
+        let counter = TicketDrawerLoadCounter(inspectRefresh: nativeSession != nil)
         let hosting = NSHostingView(rootView: TicketDrawerContextReloadHarness(
             notification: notification,
             counter: counter
@@ -45,6 +58,53 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         let observerChangedCounts = await counter.counts()
         XCTAssertEqual(observerChangedCounts.references, 1)
         XCTAssertEqual(observerChangedCounts.evidence, 1)
+
+        if let nativeSession {
+            defer { Task { await counter.releaseEvidenceRefresh() } }
+            func waitForStage(_ stage: String) async throws {
+                let fileManager = FileManager.default
+                let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+                guard configurationPath != nil else {
+                    XCTFail("The drawer scroll native session requires the XCTest configuration environment key.")
+                    throw NSError(domain: "DrawerScrollNativeSession", code: 1)
+                }
+                let configurationNonempty = configurationPath?.isEmpty == false
+                let configurationExists = configurationPath.map {
+                    !$0.isEmpty && fileManager.fileExists(atPath: $0)
+                } ?? false
+                let controlDirectory = fileManager.temporaryDirectory
+                    .appendingPathComponent("release-radar-drawer-scroll", isDirectory: true)
+                    .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
+                try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+                let ready = controlDirectory.appendingPathComponent("\(stage)-ready")
+                let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
+                XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+                XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=true\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
+                XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+                print("DRAWER SCROLL \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+                let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))
+                for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+                let completion = try String(contentsOf: complete, encoding: .utf8)
+                XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), nativeSession.id)
+            }
+
+            try await waitForStage("initial")
+            let refreshCounts = await counter.counts()
+            guard refreshCounts.references == 1, refreshCounts.evidence == 2 else {
+                XCTFail("Expected exactly one external Delivery Evidence Refresh in the mounted drawer.")
+                return
+            }
+            try await waitForStage("pending")
+            await counter.releaseEvidenceRefresh()
+            try await Task.sleep(for: .milliseconds(150))
+            try await waitForStage("recovered")
+            let finalCounts = await counter.counts()
+            XCTAssertEqual(finalCounts.references, 1)
+            XCTAssertEqual(finalCounts.evidence, 2)
+        }
     }
 
     private func makeWindow<V: View>(
@@ -1045,8 +1105,14 @@ private struct TicketDrawerContextReloadHarness: View {
 }
 
 private actor TicketDrawerLoadCounter {
+    private let inspectRefresh: Bool
     private var referenceLoads = 0
     private var evidenceLoads = 0
+    private var evidenceRefreshRelease: CheckedContinuation<Void, Never>?
+
+    init(inspectRefresh: Bool = false) {
+        self.inspectRefresh = inspectRefresh
+    }
 
     func loadReferences() -> ReferenceLoadResult<TicketReferenceSet> {
         referenceLoads += 1
@@ -1056,8 +1122,17 @@ private actor TicketDrawerLoadCounter {
         ))
     }
 
-    func loadEvidence() -> ReferenceLoadResult<TicketDeliveryEvidence> {
+    func loadEvidence() async -> ReferenceLoadResult<TicketDeliveryEvidence> {
         evidenceLoads += 1
+        if inspectRefresh {
+            if evidenceLoads == 2 {
+                await withCheckedContinuation { evidenceRefreshRelease = $0 }
+            }
+            return .loaded(DeliveryEvidenceRenderingTests.evidence(
+                ticketID: "RR-DRAWER",
+                sourceLabel: evidenceLoads == 1 ? "Initial drawer evidence" : "Refreshed drawer evidence"
+            ))
+        }
         return .loaded(.init(
             projectID: "project", ticketID: "RR-DRAWER", phaseID: nil,
             phaseLabel: "Drawer phase", revision: 1, currentTargetVersion: nil,
@@ -1067,6 +1142,11 @@ private actor TicketDrawerLoadCounter {
 
     func counts() -> (references: Int, evidence: Int) {
         (referenceLoads, evidenceLoads)
+    }
+
+    func releaseEvidenceRefresh() {
+        evidenceRefreshRelease?.resume()
+        evidenceRefreshRelease = nil
     }
 }
 

@@ -313,7 +313,7 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         )
     }
 
-    nonisolated fileprivate static func evidence(ticketID: String, sourceLabel: String) -> TicketDeliveryEvidence {
+    nonisolated static func evidence(ticketID: String, sourceLabel: String) -> TicketDeliveryEvidence {
         let repositoryID = "11111111-1111-1111-1111-111111111111"
         let revision = DeliveryEvidenceRevision(
             commitSHA: String(repeating: "a", count: 40),
