@@ -141,7 +141,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 presentIdentifiers: [reasonID, requiredID, helpID, actionID],
                 disabledIdentifiers: [actionID],
                 verifyAccessibility: { window in
-                    let reason = try XCTUnwrap(accessibilityElement(window, identifier: reasonID))
+                    let reason = try XCTUnwrap(self.accessibilityElement(window, identifier: reasonID))
                     var label: CFTypeRef?
                     var help: CFTypeRef?
                     XCTAssertEqual(AXUIElementCopyAttributeValue(reason, kAXTitleAttribute as CFString, &label), .success)
