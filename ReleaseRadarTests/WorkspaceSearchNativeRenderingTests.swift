@@ -114,6 +114,10 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         try await settle(hosting)
         await model.navigate(to: .search)
         try await settle(hosting)
+        if let token {
+            print("PHASE6E SEARCH RECOVERY READY: inspect the isolated unsupported search warning and recovery controls before marking the session complete")
+            try await waitForExternalNativeJourney(token: token, window: window)
+        }
         var nativeWindow = try requiredAccessibilityWindow(title: window.title)
         XCTAssertTrue(accessibilityText(nativeWindow).contains("Saved working search needs a newer Release Radar"))
         let runButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
@@ -175,10 +179,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         XCTAssertTrue(accessibilityText(nativeWindow).contains(WorkspaceHelpContent.deliveryEvidenceBoundary))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "help-action-readiness-acceptance"))
         try capture(hosting, name: "phase6e-help-recovery-guidance")
-        if let token {
-            print("PHASE6E HELP RECOVERY READY: use real keyboard input to verify the provenance, evidence applicability, and newer-version recovery queries and their exact actions")
-            try await waitForExternalNativeJourney(token: token, window: window)
-        }
     }
 
     func testSearchNoMatchStateRendersNatively() async throws {
@@ -206,7 +206,9 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         )
         window.isReleasedWhenClosed = false
         window.appearance = NSAppearance(named: .darkAqua)
-        window.title = "Search states — isolated native acceptance"
+        let token = ProcessInfo.processInfo.environment["RR_PHASE6E_NATIVE_SESSION"]
+        window.title = token.map { "Phase 6E Search no-match — isolated native acceptance — \($0)" }
+            ?? "Phase 6E Search no-match — isolated native acceptance"
         defer { window.close() }
         let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
         hosting.appearance = window.appearance
@@ -217,6 +219,10 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         model.setWorkspaceSearchText("absent-native-state")
         await model.runWorkspaceSearch()
         try await settle(hosting)
+        if let token {
+            print("PHASE6E SEARCH NO-MATCH READY: inspect the isolated committed no-match display before marking the session complete")
+            try await waitForExternalNativeJourney(token: token, window: window)
+        }
         var nativeWindow = try requiredAccessibilityWindow(title: window.title)
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-empty"))
         XCTAssertFalse(model.workspaceSearchIsLoading)
