@@ -58,7 +58,7 @@ struct SidebarView: View {
                         .padding(.vertical, 10)
                     }
 
-                    detail
+                    detail(availableDetailWidth: detailWidth)
                         .frame(maxWidth: .infinity)
                         .frame(maxHeight: .infinity)
                 }
@@ -220,7 +220,7 @@ struct SidebarView: View {
     }
 
     @ViewBuilder
-    private var detail: some View {
+    private func detail(availableDetailWidth: CGFloat) -> some View {
         if model.selection == .settings {
             SettingsView(model: model)
         } else if model.selection == .search {
@@ -326,7 +326,7 @@ struct SidebarView: View {
                     ProjectOverviewView(
                         project: project,
                         board: dashboard.board(for: projectID),
-                        availableDetailWidth: detailWidth,
+                        availableDetailWidth: availableDetailWidth,
                         documentationState: model.projectDocumentationState(for: projectID),
                         documentationStatus: model.documentationObservationStatus(for: projectID),
                         projectRoot: model.projectRoot(for: projectID),
