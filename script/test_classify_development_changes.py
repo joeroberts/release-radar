@@ -156,6 +156,23 @@ class DevelopmentChangeClassifierTests(unittest.TestCase):
             run_routing_tests=False,
         )
 
+    def test_release_delivery_scripts_are_application_changes_without_documentation_runs(self) -> None:
+        for path in ["script/release_delivery.py", "script/test_release_delivery_fixture.py"]:
+            with self.subTest(path=path):
+                self.assert_route(
+                    [path],
+                    docs=False,
+                    swift_docs_checker=False,
+                    adr_checker=False,
+                    app=True,
+                    workflow=False,
+                    unknown=False,
+                    run_docs_validation=False,
+                    run_swift_docs_checker_tests=False,
+                    run_adr_checker_tests=False,
+                    run_routing_tests=False,
+                )
+
     def test_workflow_and_classifier_changes_select_routing_tests(self) -> None:
         self.assert_route(
             [".github/workflows/development-documentation.yml", "script/classify_development_changes.py"],
@@ -208,6 +225,7 @@ class DevelopmentChangeClassifierTests(unittest.TestCase):
             b"docs/README.md\0\0",
             b"/absolute/path\0",
             b"docs/../escape.md\0",
+            b".githooks/pre-commit\0",
             b"unknown/input.ext\0",
             b"bad-utf8-\xff\0",
         ]:
