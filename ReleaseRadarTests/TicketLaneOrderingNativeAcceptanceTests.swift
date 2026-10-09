@@ -441,7 +441,10 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
             XCTAssertEqual(visibleCardOrder(window, candidates: [fixture.target, fixture.phasePeer]), [
                 Data(fixture.target.rawValue.utf8), Data(fixture.phasePeer.rawValue.utf8),
             ])
-            try press(try XCTUnwrap(accessibilityButton(window, title: "Reload ordering")))
+            try press(try XCTUnwrap(accessibilityElement(
+                window,
+                exactIdentifier: "ticket-ordering-saved-needs-reload-action"
+            )))
             try await waitUntil {
                 let reloadCount = await probe.reloadCount
                 let savedFailureHidden = self.accessibilityElement(
