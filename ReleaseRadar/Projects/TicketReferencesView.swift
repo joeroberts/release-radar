@@ -21,6 +21,7 @@ struct TicketReferencesSection: View {
     let load: () async -> ReferenceLoadResult<TicketReferenceSet>
     let openSource: (String, Int64) -> Void
     @State private var state: ReferenceSectionState = .idle
+    @State private var isLoading = false
     @State private var isRefreshing = false
     @State private var startedInitialLoad = false
     @State private var refreshFailure: FailureStatePresentation?
@@ -32,7 +33,7 @@ struct TicketReferencesSection: View {
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(.uppercase)
                 Spacer()
                 Button("Refresh", systemImage: "arrow.clockwise") { Task { await reload(explicit: true) } }
-                    .buttonStyle(.plain).font(.caption).disabled(isRefreshing)
+                    .buttonStyle(.plain).font(.caption).disabled(isLoading)
                     .accessibilityIdentifier("refresh-ticket-references")
             }
             switch state {
@@ -90,13 +91,20 @@ struct TicketReferencesSection: View {
         .accessibilityIdentifier("ticket-references")
     }
 
+    @ViewBuilder
     private var readinessRecovery: some View {
-        FailureStateView(
-            presentation: readinessPresentation,
-            style: .compact,
-            actionTitle: "Retry",
-            action: { Task { await reload(explicit: true) } }
-        )
+        if isLoading && !isRefreshing && isContextReady {
+            ProgressView("Loading reference links…")
+                .controlSize(.small)
+                .accessibilityIdentifier("ticket-references-initial-load-progress")
+        } else {
+            FailureStateView(
+                presentation: readinessPresentation,
+                style: .compact,
+                actionTitle: "Retry",
+                action: { Task { await reload(explicit: true) } }
+            )
+        }
     }
 
     private var readinessPresentation: FailureStatePresentation {
@@ -177,18 +185,21 @@ struct TicketReferencesSection: View {
     }
 
     private func reload(explicit: Bool) async {
-        guard !isRefreshing else { return }
+        guard !isLoading else { return }
         let expectedContext = contextIdentity
         let preservesLoadedContent: Bool
         if case .loaded = state { preservesLoadedContent = explicit } else { preservesLoadedContent = false }
+        isLoading = true
         isRefreshing = explicit
         refreshFailure = nil
         if !explicit { state = .idle }
         let result = await load()
         guard !Task.isCancelled, expectedContext == contextIdentity else {
+            isLoading = false
             isRefreshing = false
             return
         }
+        isLoading = false
         isRefreshing = false
         switch result {
         case let .loaded(value): state = .loaded(value)
