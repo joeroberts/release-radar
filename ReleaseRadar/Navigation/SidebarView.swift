@@ -494,7 +494,19 @@ struct SidebarView: View {
                 let ticketOrderingContext = dashboard.ticketOrderingContext(for: projectID)
                 let ticketOrderingLanes = dashboard.ticketOrderingLanes(for: projectID)
                 let reorderEligibleTicketIdentities = dashboard.reorderEligibleTicketIdentities(for: projectID)
-                if let board = model.viewedAllPhaseBoard(for: projectID) {
+                if let ticketOrderingFailure = dashboard.ticketOrderingFailure(for: projectID),
+                   let presentation = FailureStatePresentation(
+                       agentError: .ticketOrdering(ticketOrderingFailure)
+                   ) {
+                    FailureStateView(
+                        presentation: presentation,
+                        style: .full,
+                        actionTitle: "Reload ordering",
+                        action: {
+                            Task { await model.reloadTicketOrdering(projectID: projectID) }
+                        }
+                    )
+                } else if let board = model.viewedAllPhaseBoard(for: projectID) {
                     AllPhaseBoardView(
                         board: board,
                         selectedTicketID: Binding(
