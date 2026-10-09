@@ -353,6 +353,10 @@ struct WorkspaceSearchView: View {
         }
     }
 
+    private func projectLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
+        "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active") · Registration \(project.registrationID)"
+    }
+
     private func projectContextLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
         "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active")"
     }
