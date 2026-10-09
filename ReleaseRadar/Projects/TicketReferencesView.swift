@@ -92,26 +92,29 @@ struct TicketReferencesSection: View {
 
     private var readinessRecovery: some View {
         FailureStateView(
-            presentation: if isContextChecking {
-                .init(
-                    title: "Checking reference access",
-                    detail: "Release Radar is checking the authorized project root. Refresh to try reading the current ticket now.",
-                    systemImage: "hourglass",
-                    tone: .warning,
-                    accessibilityID: "ticket-references-checking"
-                )
-            } else {
-                .init(
-                    title: "References unavailable",
-                    detail: "The authorized project root is unavailable. Refresh to retry reading the current ticket.",
-                    systemImage: "arrow.clockwise",
-                    tone: .warning,
-                    accessibilityID: "ticket-references-unavailable"
-                )
-            },
+            presentation: readinessPresentation,
             style: .compact,
             actionTitle: "Retry",
             action: { Task { await reload(explicit: true) } }
+        )
+    }
+
+    private var readinessPresentation: FailureStatePresentation {
+        if isContextChecking {
+            return .init(
+                title: "Checking reference access",
+                detail: "Release Radar is checking the authorized project root. Refresh to try reading the current ticket now.",
+                systemImage: "hourglass",
+                tone: .warning,
+                accessibilityID: "ticket-references-checking"
+            )
+        }
+        return .init(
+            title: "References unavailable",
+            detail: "The authorized project root is unavailable. Refresh to retry reading the current ticket.",
+            systemImage: "arrow.clockwise",
+            tone: .warning,
+            accessibilityID: "ticket-references-unavailable"
         )
     }
 
