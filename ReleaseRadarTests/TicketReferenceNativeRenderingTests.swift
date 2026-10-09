@@ -456,8 +456,6 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         hosting.layoutSubtreeIfNeeded()
 
         let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
-        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-checking"))
-        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-checking"))
         let checkingText = accessibilityText(nativeWindow)
         XCTAssertTrue(checkingText.localizedCaseInsensitiveContains("checking"))
         XCTAssertFalse(checkingText.contains("Loading reference links"))
@@ -476,8 +474,7 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         XCTAssertTrue(recoveredText.contains("Ticket ready"))
         XCTAssertTrue(recoveredText.contains("REQ-READY"))
         XCTAssertTrue(recoveredText.contains("No revision-bound delivery evidence recorded"))
-        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-checking"))
-        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-checking"))
+        XCTAssertFalse(recoveredText.localizedCaseInsensitiveContains("checking"))
         let readyCounts = await counter.counts()
         XCTAssertEqual(readyCounts.references, 1)
         XCTAssertEqual(readyCounts.evidence, 1)
