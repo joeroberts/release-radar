@@ -208,13 +208,20 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         module = self.release_delivery_module()
         conflict = self.metadata_fixture(self.root / "conflict")
         manifest = conflict / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
-        manifest.write_text(manifest.read_text().replace('"version": "0.1.33"', '"version": "9.9.9"'))
+        current_version = json.loads(manifest.read_text())["version"]
+        manifest.write_text(manifest.read_text().replace(
+            f'"version": "{current_version}"', '"version": "9.9.9"',
+        ))
         with self.assertRaises(ValueError):
             module.prepare_release_metadata(conflict, VERSION, BUILD, plugin_identity_provider=lambda _: "d" * 64)
 
         existing = self.metadata_fixture(self.root / "existing")
+        existing_manifest = existing / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
         with self.assertRaises(ValueError):
-            module.prepare_release_metadata(existing, "0.1.33", BUILD, plugin_identity_provider=lambda _: "d" * 64)
+            module.prepare_release_metadata(
+                existing, json.loads(existing_manifest.read_text())["version"], BUILD,
+                plugin_identity_provider=lambda _: "d" * 64,
+            )
 
     def test_prepare_release_metadata_rejects_duplicate_manifest_version_before_mutation(self) -> None:
         fixture = self.metadata_fixture(self.root)
@@ -237,19 +244,19 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         manifest = fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
         capability = fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift"
         originals = {path: path.read_bytes() for path in (project, manifest, capability)}
-        original_write = Path.write_text
+        original_write = Path.write_bytes
         failed = {"capability_update": False, "project_restore": False}
 
-        def write_with_failures(path: Path, content: str, *args, **kwargs):
-            if path == capability and not failed["capability_update"] and content != originals[capability].decode():
+        def write_with_failures(path: Path, content: bytes, *args, **kwargs):
+            if path == capability and not failed["capability_update"] and content != originals[capability]:
                 failed["capability_update"] = True
                 raise OSError("simulated capability write failure")
-            if path == project and failed["capability_update"] and not failed["project_restore"] and content == originals[project].decode():
+            if path == project and failed["capability_update"] and not failed["project_restore"] and content == originals[project]:
                 failed["project_restore"] = True
                 raise OSError("simulated project restoration failure")
             return original_write(path, content, *args, **kwargs)
 
-        with mock.patch.object(Path, "write_text", new=write_with_failures):
+        with mock.patch.object(Path, "write_bytes", new=write_with_failures):
             with self.assertRaises(OSError):
                 self.release_delivery_module().prepare_release_metadata(
                     fixture, VERSION, BUILD, plugin_identity_provider=lambda _: "d" * 64
