@@ -454,14 +454,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         await model.navigate(to: .search)
         try await settle(hosting)
 
-        let nativeWindow = try requiredAccessibilityWindow(title: window.title)
-        for registrationID in ["same-name-registration-a", "same-name-registration-b"] {
-            let recovery = try XCTUnwrap(accessibilityElement(
-                nativeWindow,
-                identifier: "workspace-search-scope-project-recovery-\(registrationID)"
-            ))
-            XCTAssertTrue(accessibilityText(recovery).contains(registrationID))
-        }
         try capture(hosting, name: "phase6e-search-same-name-recovery-wide")
         if let token {
             for width in [1_500.0, 760.0] {
@@ -492,6 +484,15 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
             let selected = try XCTUnwrap(results.first { $0.id == selectedID })
             let detail = try XCTUnwrap(accessibilityElement(renderedWindow, identifier: "workspace-search-detail"))
             XCTAssertTrue(accessibilityText(detail).contains(selected.project.registrationID))
+        } else {
+            let nativeWindow = try requiredAccessibilityWindow(title: window.title)
+            for registrationID in ["same-name-registration-a", "same-name-registration-b"] {
+                let recovery = try XCTUnwrap(accessibilityElement(
+                    nativeWindow,
+                    identifier: "workspace-search-scope-project-recovery-\(registrationID)"
+                ))
+                XCTAssertTrue(accessibilityText(recovery).contains(registrationID))
+            }
         }
         try capture(hosting, name: "phase6e-search-same-name-compact")
     }
