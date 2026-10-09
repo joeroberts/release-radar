@@ -14,7 +14,64 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify changed paths
+        id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_paths="$(mktemp)"
+          fallback=false
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # The collector uses git merge-base and --no-renames so both sides
+            # of renamed paths and deleted preimages reach the classifier.
+            if ! bash script/collect_development_changed_paths.sh --pull-request "origin/${{ github.base_ref }}" HEAD > "$changed_paths"; then
+              fallback=true
+            fi
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            before="${{ github.event.before }}"
+            if ! bash script/collect_development_changed_paths.sh --push "$before" "$GITHUB_SHA" > "$changed_paths"; then
+              fallback=true
+            fi
+          else
+            fallback=true
+          fi
+          if [[ "$fallback" == true ]]; then
+            : > "$changed_paths"
+            echo "Routing fallback: complete diff could not be collected; all documentation checks will run."
+          fi
+          route="$(python3 script/classify_development_changes.py --changed-paths-stdin < "$changed_paths")"
+          echo "$route"
+          ROUTE="$route" python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+
+          route = json.loads(os.environ["ROUTE"])
+          for key in (
+              "run_docs_validation",
+              "run_swift_docs_checker_tests",
+              "run_adr_checker_tests",
+              "run_routing_tests",
+          ):
+              print(f"{key}={str(route[key]).lower()}")
+          PY
       - name: Validate development documentation
+        if: steps.route.outputs.run_docs_validation == 'true'
         run: swift script/check_development_docs.swift --root "$GITHUB_WORKSPACE"
+      - name: Test documentation checker
+        if: steps.route.outputs.run_swift_docs_checker_tests == 'true'
+        run: bash script/test_check_development_docs.sh
       - name: Test ADR checker
+        if: steps.route.outputs.run_adr_checker_tests == 'true'
         run: python3 -m unittest -v script.test_adr_checker
+      - name: Test routing contract
+        if: steps.route.outputs.run_routing_tests == 'true'
+        run: python3 -m unittest -v script.test_classify_development_changes
+      - name: Record skipped documentation checks
+        if: >-
+          steps.route.outputs.run_docs_validation != 'true' &&
+          steps.route.outputs.run_swift_docs_checker_tests != 'true' &&
+          steps.route.outputs.run_adr_checker_tests != 'true' &&
+          steps.route.outputs.run_routing_tests != 'true'
+        run: echo "No documentation-owned checks apply; application/build checks are owned by the future build workflow."
