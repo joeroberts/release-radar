@@ -1030,9 +1030,11 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         var count = 0
         while let element = pending.popLast(), count < 1_000 {
             count += 1
-            var value: CFTypeRef?
-            if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &value) == .success,
-               value as? String == title { return element }
+            for attribute in [kAXTitleAttribute, kAXDescriptionAttribute] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+                   value as? String == title { return element }
+            }
             var children: CFTypeRef?
             if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
                let children = children as? [AXUIElement] { pending.append(contentsOf: children) }
