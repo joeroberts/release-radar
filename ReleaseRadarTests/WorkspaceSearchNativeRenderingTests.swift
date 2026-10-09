@@ -34,6 +34,30 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         XCTAssertFalse(helpSource.contains(".textFieldStyle(.roundedBorder)"))
     }
 
+    func testSearchResultPresentationReservesResponsiveAccessibilityAndKeyboardSeams() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: repositoryRoot.appending(path: "ReleaseRadar/Search/WorkspaceSearchView.swift"),
+            encoding: .utf8
+        )
+
+        let compactLayout = try XCTUnwrap(source.range(of: "if width < 900 {"))
+        let wideLayout = try XCTUnwrap(source.range(of: "} else {", range: compactLayout.lowerBound..<source.endIndex))
+        let compactSource = String(source[compactLayout.lowerBound..<wideLayout.lowerBound])
+        XCTAssertTrue(compactSource.contains("resultList; selectedDetail"))
+
+        let detail = try XCTUnwrap(source.range(of: "@ViewBuilder private var selectedDetail"))
+        let detailSource = String(source[detail.lowerBound..<source.endIndex])
+        XCTAssertFalse(detailSource.contains("minHeight: 250"))
+        XCTAssertTrue(source.contains("workspace-search-open-result"))
+        XCTAssertTrue(source.contains("workspace-search-result-\\(result.id.base64EncodedString())"))
+        XCTAssertTrue(source.contains(".accessibilityAddTraits(.isSelected)"))
+        XCTAssertTrue(source.contains(".onMoveCommand"))
+        XCTAssertTrue(source.contains(".onExitCommand"))
+    }
+
     func testSearchAndHelpTextFieldsRenderWithPinnedRDSTreatmentInInertHost() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SearchRDSRender-\(UUID().uuidString)", isDirectory: true)
