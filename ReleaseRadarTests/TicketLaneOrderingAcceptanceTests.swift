@@ -87,6 +87,9 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
         let migrated = DeliveryStore(databaseURL: databaseURL)
         let migratedAvailability = await migrated.availability
         XCTAssertEqual(migratedAvailability, .available)
+        let migratedVersionConnection = try SQLiteConnection(url: databaseURL, createIfMissing: false)
+        let migratedVersion = try migratedVersionConnection.scalarInt("PRAGMA user_version")
+        migratedVersionConnection.close()
         let facts = try await migrated.read { connection in
             let backlogRows = try connection.rows(
                 "SELECT ticket_id,order_key FROM ticket_lane_order WHERE project_id='ordering-project' AND lane='backlog' ORDER BY order_key COLLATE BINARY"
@@ -95,7 +98,6 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
                 "SELECT ticket_id,order_key FROM ticket_lane_order WHERE project_id='ordering-project' AND lane='needs_review' ORDER BY order_key COLLATE BINARY"
             )
             return (
-                version: try connection.scalarInt("PRAGMA user_version"),
                 backlogRows: backlogRows,
                 reviewRows: reviewRows,
                 tickets: try connection.rows(
@@ -112,7 +114,7 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(facts.version, 27)
+        XCTAssertEqual(migratedVersion, 27)
         XCTAssertEqual(facts.backlogRows.compactMap { orderingText($0["ticket_id"]) }, [
             "ticket-a1", "ticket-a2", "ticket-b1", "ticket-c1",
         ])
