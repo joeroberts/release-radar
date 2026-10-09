@@ -8,3 +8,4 @@ xcuserdata/
 *.xcscmblueprint
 .superpowers/sdd/
 default.profraw
+/script/__pycache__/
