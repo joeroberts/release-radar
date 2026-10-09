@@ -1,35 +1,20 @@
 # Release Radar progress
-Updated: October 5, 2026.
+Updated: October 8, 2026.
+
 ## Current outcome
 
-Epic #160 has delivered the authorized reusable-skill outcome. All 23 child
-issues are closed, including final integration #228. Final integration was
-delivered at `3f613a469916d196b898344aa63c59dc332bc893`; canonical Wiki master is
-`0fe31d7610442ae185eba7f4ef8f9f406eb1aaae`.
-## Active links
+The owner's current Ready portfolio contains fourteen open tickets: [#120](https://github.com/joeroberts/release-radar/issues/120), [#224](https://github.com/joeroberts/release-radar/issues/224), [#223](https://github.com/joeroberts/release-radar/issues/223), [#125](https://github.com/joeroberts/release-radar/issues/125), [#116](https://github.com/joeroberts/release-radar/issues/116), [#218](https://github.com/joeroberts/release-radar/issues/218), [#55](https://github.com/joeroberts/release-radar/issues/55), [#124](https://github.com/joeroberts/release-radar/issues/124), [#104](https://github.com/joeroberts/release-radar/issues/104), [#166](https://github.com/joeroberts/release-radar/issues/166), [#132](https://github.com/joeroberts/release-radar/issues/132), [#119](https://github.com/joeroberts/release-radar/issues/119), [#114](https://github.com/joeroberts/release-radar/issues/114), and [#71](https://github.com/joeroberts/release-radar/issues/71).
 
-- [Epic #160](https://github.com/joeroberts/release-radar/issues/160) owns the
-  delivered outcome and its retained-evidence record.
-- [#228](https://github.com/joeroberts/release-radar/issues/228) is closed with
-  its [final criterion record](https://github.com/joeroberts/release-radar/issues/228#issuecomment-6005066876).
-  [PR #250](https://github.com/joeroberts/release-radar/pull/250) delivered
-  final routing at `3f613a46`; the published Wiki revision is `0fe31d76`.
-- The original eight method/guidance inputs and eleven role skills are now
-  routed through canonical repository/Wiki documentation. Source, installation,
-  catalog, and actual-use evidence are recorded on the owning child issues.
-- [Temporary-artifact inventory](https://github.com/joeroberts/release-radar/issues/160#issuecomment-6004577519)
-  lists retained noncanonical fixtures, provider evidence, and the withdrawn
-  #236 draft. They are not deliverables and require separate authority to alter.
+## Active state and ownership
+
+- Project status is In Progress for #223/#125/#224 (Search coordinator `01a11e96-c855-7092-a5b6-abbf2b0c4624`), #55/#166/#119 (Build/CI coordinator `01a11e97-64c1-7b82-9006-4b7404c6948f`), #71/#218 (knowledge-discovery coordinator `01a11e9a-bac7-7a52-9737-ded0e2fb76b6`), and #116 (planning-UI coordinator `01a11e9b-80d5-74f1-bb4c-4b828d957b29`).
+- Project status remains Ready for #120/#124/#104 (planning UI) and #132/#114 (build/CI work not yet substantively started); these five await coordinator confirmation before transition.
+- [#119](https://github.com/joeroberts/release-radar/issues/119) records the known private `joeroberts/RekonDesignSystem` Actions-access and Apple-signing feasibility dependency; the least-privilege access/signing split remains a proposal pending review.
+
 ## Current constraints
 
-Accepted limitations remain accurately scoped: browser and pinned FastAPI runtime
-behavior was not claimed where unavailable, and the initial managed-app #228
-evaluator had no usable task. Final normal-policy CLI evidence verified the
-corrected full project instruction load. These are not blockers to delivered
-skill routing.
+Local scoped discovery, implementation, tests, commits, and progress records are authorized. Branch pushes, PR publication/merge, Wiki publication, issue closure/Done, release/tag/DMG/install mutations, owner-data changes, and permissions/credentials remain held pending the portfolio coordinator's forwarded delivery authority. The prior [#160 delivered-skill record](https://github.com/joeroberts/release-radar/issues/160) and its retained artifacts remain historical context; they are not reopened.
+
 ## Next action
 
-#228 cleanup readbacks are complete and its two CLI sessions are archived.
-Preserve the listed temporary artifacts and retained session logs pending an
-owner retention/disposal decision. Await the next owner-authorized ticket; no
-epic implementation work remains.
+Search coordinator continues #125 QA/source handoff and #224 design review; Build/CI coordinator refines #55/#166/#119 and confirms whether #132/#114 have started; knowledge coordinator continues #71/#218 discovery; planning-UI coordinator advances #116 and reports substantive starts for #104/#120/#124. Delivery Management records only meaningful state changes and awaits the coordinator's endpoint decision before any completion or publication claim.
