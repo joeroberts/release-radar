@@ -59,6 +59,58 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(model.workspaceSearchDraft, "Needle")
     }
 
+    @MainActor
+    func testHiddenTicketLaneMatchExplainsTheLastSubmittedQueryAfterDraftChanges() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let projectID = ProjectID(rawValue: "hidden-ticket-lane-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed hidden ticket lane Search project") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Hidden field project')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'hidden-ticket-lane-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed hidden ticket lane Search match") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('hidden-ticket-lane-phase', ?, 'Hidden field phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('hidden-ticket-lane', ?, 'hidden-ticket-lane-phase', 'Visible ticket outcome', 'accepted')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("accepted")
+        for domain in WorkspaceSearchDomain.allCases where domain != .ticket {
+            model.setWorkspaceSearchDomain(domain, enabled: false)
+        }
+        await model.runWorkspaceSearch()
+
+        let submitted = try XCTUnwrap(model.workspaceSearchProjection)
+        XCTAssertEqual(submitted.definition.text, "accepted")
+        let ticket = try XCTUnwrap(submitted.results.first)
+        XCTAssertEqual(ticket.identity, .ticket(
+            projectID: projectID,
+            registrationID: "hidden-ticket-lane-registration",
+            ticketID: .init(rawValue: "hidden-ticket-lane"),
+            phaseID: .init(rawValue: "hidden-ticket-lane-phase")
+        ))
+        XCTAssertTrue(ticket.detail.contains("Matched ticket lane: accepted"))
+
+        model.setWorkspaceSearchText("unsent replacement")
+        XCTAssertEqual(model.workspaceSearchDraft, "unsent replacement")
+        XCTAssertEqual(model.workspaceSearchProjection?.definition.text, "accepted")
+        XCTAssertTrue(model.workspaceSearchProjection?.results.first?.detail.contains("Matched ticket lane: accepted") == true)
+    }
+
     func testSearchReturnsEveryAuthorizedRecordDomainWithoutMutatingTheStore() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-WorkspaceSearch-\(UUID().uuidString)", isDirectory: true)
