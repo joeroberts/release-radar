@@ -20,7 +20,7 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 XCTFail("The ticket ordering native session requires a positive RR_TICKET_ORDERING_INSPECT_SECONDS value.")
                 return
             }
-            nativeSession = (sessionID, min(pauseSeconds, 60))
+            nativeSession = (sessionID, min(pauseSeconds, 120))
         } else {
             nativeSession = nil
         }
