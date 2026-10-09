@@ -538,7 +538,7 @@ final class DeliveryEvidenceAcceptanceTests: XCTestCase {
     }
 
     func testAppOwnsRecordingTimeAndAppendOrderWhileExactReplayPreservesBoth() async throws {
-        let fixture = try await makeFixture()
+        let fixture = try await makeFixture(in: FileManager.default.temporaryDirectory)
         let target = try documentationTarget(fixture.root)
         let bound = await fixture.dispatcher.dispatch(envelope(fixture.root, .bindDocumentationRepository(target: target)))
         XCTAssertNil(bound.error)
@@ -679,8 +679,10 @@ final class DeliveryEvidenceAcceptanceTests: XCTestCase {
         XCTAssertTrue(changed.deliveryEvidence?.observations.first?.applicability.reasons.contains(.documentContentChanged) == true)
     }
 
-    private func makeFixture() async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
-        let directory = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+    private func makeFixture(
+        in baseDirectory: URL = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+    ) async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
+        let directory = baseDirectory
             .appendingPathComponent("release-radar-delivery-evidence-fixture-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let root = directory.appendingPathComponent("repository")

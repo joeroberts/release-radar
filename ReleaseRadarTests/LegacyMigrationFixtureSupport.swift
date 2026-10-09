@@ -61,6 +61,7 @@ func removeVersionTwentyFiveDeliveryEvidenceSchema(_ connection: SQLiteConnectio
 
 func removeVersionTwentyFourHistorySchema(_ connection: SQLiteConnection) throws {
     try removeVersionTwentyFiveDeliveryEvidenceSchema(connection)
+    try connection.execute("DROP TABLE ticket_lane_order")
     for column in [
         "event_current_phase_id",
         "event_previous_phase_id",

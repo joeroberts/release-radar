@@ -601,6 +601,7 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
         WHEN EXISTS (SELECT 1 FROM ticket_task_plans WHERE project_id = OLD.id)
         BEGIN SELECT RAISE(ABORT, 'project owns task history'); END
         """)
+        try legacy.execute("DROP TABLE ticket_lane_order")
         try legacy.execute("PRAGMA user_version = 16")
     }
 
