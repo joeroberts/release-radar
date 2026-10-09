@@ -44,11 +44,11 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
 
         try await waitUntil {
             let invocationCount = await probe.invocationCount
-            return invocationCount == 1
-                && self.accessibilityElement(
-                    try self.requiredAccessibilityWindow(title: host.title),
-                    exactIdentifier: "ticket-ordering-progress"
-                ) != nil
+            let progressVisible = self.accessibilityElement(
+                try self.requiredAccessibilityWindow(title: host.title),
+                exactIdentifier: "ticket-ordering-progress"
+            ) != nil
+            return invocationCount == 1 && progressVisible
         }
         window = try requiredAccessibilityWindow(title: host.title)
         XCTAssertEqual(accessibilityBool(
@@ -78,11 +78,11 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
         await probe.resolve(successResult(context: committedContext))
         try await waitUntil {
             let reloadCount = await probe.reloadCount
-            return reloadCount == 1
-                && self.accessibilityElement(
-                    try self.requiredAccessibilityWindow(title: host.title),
-                    exactIdentifier: "ticket-ordering-progress"
-                ) == nil
+            let progressHidden = self.accessibilityElement(
+                try self.requiredAccessibilityWindow(title: host.title),
+                exactIdentifier: "ticket-ordering-progress"
+            ) == nil
+            return reloadCount == 1 && progressHidden
         }
 
         window = try requiredAccessibilityWindow(title: host.title)
@@ -303,11 +303,11 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
             try press(try XCTUnwrap(accessibilityButton(window, title: "Reload ordering")))
             try await waitUntil {
                 let reloadCount = await probe.reloadCount
-                return reloadCount == 2
-                    && self.accessibilityElement(
-                        try self.requiredAccessibilityWindow(title: host.title),
-                        exactIdentifier: "ticket-ordering-saved-needs-reload"
-                    ) == nil
+                let savedFailureHidden = self.accessibilityElement(
+                    try self.requiredAccessibilityWindow(title: host.title),
+                    exactIdentifier: "ticket-ordering-saved-needs-reload"
+                ) == nil
+                return reloadCount == 2 && savedFailureHidden
             }
             let invocationCount = await probe.invocationCount
             XCTAssertEqual(invocationCount, 1)
