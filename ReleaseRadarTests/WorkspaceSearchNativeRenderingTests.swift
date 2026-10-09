@@ -327,8 +327,15 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         try await settle(hosting)
 
         if let token {
-            print("PHASE6E SEARCH BASELINE READY: inspect all six result domains and the selected retired middle Ticket at wide and compact widths; record long factual detail, compact row-detail-row order, selected AX state, Tab/Shift-Tab/Escape focus, exact-record Open/Back restoration, and truthful actions before marking the session complete")
-            try await waitForExternalNativeJourney(token: token, window: window)
+            for width in [1_500.0, 760.0] {
+                window.setContentSize(NSSize(width: width, height: 900))
+                hosting.frame = window.contentView?.bounds ?? .zero
+                try await Task.sleep(for: .milliseconds(250))
+                hosting.layoutSubtreeIfNeeded()
+                let widthToken = "\(token)-\(Int(width))"
+                print("PHASE6E SEARCH \(Int(width)) READY: inspect all six result domains and the selected retired middle Ticket; record full factual detail and source-specific dates, compact row-detail-row order, selected AX state, Tab/Shift-Tab/Escape focus, exact-record Open/Back restoration, and truthful actions before marking this exact-width session complete")
+                try await waitForExternalNativeJourney(token: widthToken, window: window)
+            }
         }
 
         for width in [1_500.0, 760.0] {

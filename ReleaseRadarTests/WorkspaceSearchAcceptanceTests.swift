@@ -307,6 +307,18 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
             "Persisted notification delivery event. · Matched notification state: delivered"
         )
         XCTAssertNil(stateResult.occurredAt)
+
+        for generatedText in ["Persisted notification delivery event", "fingerprint"] {
+            let generatedProjection = try await WorkspaceSearchQuery.search(
+                store: store,
+                definition: .init(text: generatedText, domains: [.history])
+            )
+            XCTAssertTrue(generatedProjection.isComplete)
+            XCTAssertTrue(generatedProjection.omissions.isEmpty)
+            XCTAssertFalse(generatedProjection.results.contains { result in
+                result.identity == identityResult.identity
+            })
+        }
     }
 
     func testSavedQueriesRelaunchWithEveryFilterAndUnsupportedPayloadStaysRecoverable() async throws {
