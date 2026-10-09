@@ -672,6 +672,16 @@ release_native_operation() {
         run-suite)
             local outcome="passed"
             case "$1" in
+                release-radar-package-integrity-v1)
+                    xcodebuild test \
+                        -project "$ROOT_DIR/ReleaseRadar.xcodeproj" \
+                        -scheme ReleaseRadar \
+                        -destination 'platform=macOS' \
+                        -only-testing:ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests/testBundledPackageMatchesAppVersionAndCanonicalDigest \
+                        -only-testing:ReleaseRadarTests/RecognizedPluginCapabilityTests/testRegistryRecognizesOnlyExactVersionAndDigestPairs \
+                        -only-testing:ReleaseRadarTests/RecognizedPluginCapabilityTests/testBundledPackageUsesTheCurrentFrozenInventoryAndCapability \
+                        >&2 || outcome="failed"
+                    ;;
                 release-radar-tests-v1) xcodebuild test -project "$ROOT_DIR/ReleaseRadar.xcodeproj" -scheme ReleaseRadar -destination 'platform=macOS' >&2 || outcome="failed" ;;
                 *) outcome="unavailable" ;;
             esac
