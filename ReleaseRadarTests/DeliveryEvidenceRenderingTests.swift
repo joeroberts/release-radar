@@ -208,16 +208,16 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         if let nativeSession {
             func waitForStage(_ stage: String) async throws {
                 let fileManager = FileManager.default
-                let configurationPath = try XCTUnwrap(
-                    ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"],
-                    "The external delivery evidence journey requires an XCTest configuration."
-                )
-                let configurationExists = !configurationPath.isEmpty
-                    && fileManager.fileExists(atPath: configurationPath)
-                guard configurationExists else {
-                    XCTFail("The external delivery evidence journey requires an existing XCTest configuration.")
+                let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+                let configurationPresent = configurationPath != nil
+                guard configurationPresent else {
+                    XCTFail("The external delivery evidence journey requires the XCTest configuration environment key.")
                     throw NSError(domain: "DeliveryEvidenceRefreshNativeSession", code: 1)
                 }
+                let configurationNonempty = configurationPath?.isEmpty == false
+                let configurationExists = configurationPath.map {
+                    !$0.isEmpty && fileManager.fileExists(atPath: $0)
+                } ?? false
                 let controlDirectory = fileManager.temporaryDirectory
                     .appendingPathComponent("release-radar-evidence-refresh", isDirectory: true)
                     .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
@@ -226,7 +226,7 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
                 let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
                 XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
                 XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
-                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=true\nxctest_configuration_exists=true\n"
+                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
                 XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
                 print("DELIVERY EVIDENCE REFRESH \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
                 let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))

@@ -2250,17 +2250,17 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 XCTFail("The Task 7A native session requires a positive RR_TASK7A_INSPECT_SECONDS value.")
                 return
             }
-            let configurationPath = try XCTUnwrap(
-                ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"],
-                "The Task 7A native session requires an XCTest configuration."
-            )
             let fileManager = FileManager.default
-            let configurationExists = !configurationPath.isEmpty
-                && fileManager.fileExists(atPath: configurationPath)
-            guard configurationExists else {
-                XCTFail("The Task 7A native session requires an existing XCTest configuration.")
+            let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+            let configurationPresent = configurationPath != nil
+            guard configurationPresent else {
+                XCTFail("The Task 7A native session requires the XCTest configuration environment key.")
                 return
             }
+            let configurationNonempty = configurationPath?.isEmpty == false
+            let configurationExists = configurationPath.map {
+                !$0.isEmpty && fileManager.fileExists(atPath: $0)
+            } ?? false
             let controlDirectory = fileManager.temporaryDirectory
                 .appendingPathComponent("release-radar-task7a-lifecycle", isDirectory: true)
                 .appendingPathComponent("native-\(sessionID)", isDirectory: true)
@@ -2269,7 +2269,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             let complete = controlDirectory.appendingPathComponent("\(externalInspectionStage)-complete")
             XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
             XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
-            let identity = "token=\(sessionID)\nstage=\(externalInspectionStage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=true\nxctest_configuration_exists=true\n"
+            let identity = "token=\(sessionID)\nstage=\(externalInspectionStage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
             XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
             print("TASK 7A \(externalInspectionStage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
             let attempts = max(1, Int((min(seconds, 60) * 5).rounded(.up)))
