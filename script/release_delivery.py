@@ -472,7 +472,15 @@ def run_stage(context: Context, receipt: Receipt) -> None:
     receipt.require_head(context, "stage")
     receipt.require_checks("stage")
     recorded = receipt.data["artifacts"]["staged_bundle_identity"]
-    if context.staged_bundle.exists() and recorded:
+    if context.staged_bundle.exists() and not recorded:
+        receipt.fail(
+            ReleaseError(
+                "stage",
+                "staged_unknown_provenance",
+                "existing staged bundle is not bound to this release receipt",
+            )
+        )
+    if context.staged_bundle.exists():
         identity = verify_bundle(context, receipt, "stage", context.staged_bundle)
         if identity != recorded:
             receipt.fail(ReleaseError("stage", "staged_collision", "staged release conflicts with the receipt"))

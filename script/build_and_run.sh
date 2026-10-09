@@ -662,18 +662,11 @@ release_native_operation() {
             ;;
         build-stage)
             local staged_bundle="$1" expected_version="$2" expected_build="$3"
-            local stage_directory stage_candidate build_identity
+            [[ ! -e "$staged_bundle" ]] || { report_error "staged bundle already exists at $staged_bundle"; return 1; }
             xcodebuild -project "$ROOT_DIR/ReleaseRadar.xcodeproj" -scheme ReleaseRadar -configuration Release CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO -derivedDataPath "$DERIVED_DATA" build >&2
             verify_bundle "$BUILD_BUNDLE" candidate "$expected_version" "$expected_build"
             mkdir -p "$(dirname "$staged_bundle")"
-            stage_directory="$(mktemp -d "$(dirname "$staged_bundle")/.${APP_NAME}.stage.XXXXXX")"
-            stage_candidate="$stage_directory/$APP_NAME.app"
-            ditto "$BUILD_BUNDLE" "$stage_candidate"
-            verify_bundle "$stage_candidate" candidate "$expected_version" "$expected_build"
-            build_identity="$(bundle_identity "$BUILD_BUNDLE")"
-            require_matching_bundle_identity "$BUILD_BUNDLE" "$stage_candidate"
-            promote_verified_bundle "$stage_candidate" "$staged_bundle" "$build_identity" "$expected_version" "$expected_build"
-            rmdir "$stage_directory"
+            ditto "$BUILD_BUNDLE" "$staged_bundle"
             ;;
         verify-bundle)
             if [[ "${4:-}" == "prior-destination" ]]; then
