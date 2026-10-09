@@ -123,7 +123,7 @@ public enum TicketOrderingError: Error, LocalizedError, Codable, Equatable, Send
             return "Ticket \(ticketID.rawValue) is not an available anchor in the complete lane order."
         case let .dependencyConflict(conflict):
             let chain = conflict.witnessChain.map(\.rawValue).joined(separator: " → ")
-            return "Keep prerequisite \(conflict.prerequisiteTicketID.rawValue) before dependent \(conflict.dependentTicketID.rawValue) in \(conflict.lane.rawValue). Dependency path: \(chain)."
+            return "Keep prerequisite \(conflict.prerequisiteTicketID.rawValue) before dependent \(conflict.dependentTicketID.rawValue) in \(conflict.lane.rawValue). Required phase: \(conflict.prerequisitePhaseName) (\(conflict.prerequisitePhaseID.rawValue)). Dependent phase: \(conflict.dependentPhaseName) (\(conflict.dependentPhaseID.rawValue)). Dependency path: \(chain)."
         case .resourceLimit:
             return "The requested order key exceeds the current SQLite storage limit. The existing order was preserved."
         }
