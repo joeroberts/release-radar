@@ -78,6 +78,19 @@ class Context:
         self.staged_bundle = root / "dist" / "ReleaseRadar.app"
         self.dmg = root / "dist" / f"ReleaseRadar-{version}.dmg"
         self.installer = downloads / f"ReleaseRadar-{version}.dmg"
+        if self.fixture_root:
+            for destination in (
+                self.receipt_path,
+                self.staged_bundle,
+                self.dmg,
+                self.installer,
+                self.installed_bundle,
+            ):
+                existing = destination
+                while not existing.exists() and not existing.is_symlink():
+                    existing = existing.parent
+                if not existing.resolve().is_relative_to(self.fixture_root):
+                    raise ValueError("fixture destination escapes fixture root")
 
     @property
     def destinations(self) -> dict[str, str]:
