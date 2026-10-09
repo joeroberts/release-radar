@@ -364,7 +364,7 @@ public enum WorkspaceSearchQuery {
                     detail: detailWithMatchExplanation(
                         detail,
                         query: text,
-                        displayed: [title, detail],
+                        visibleSearchable: [title],
                         fields: [("project ID", project.projectID.rawValue)]
                     )
                 )
@@ -419,7 +419,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [title, outcome],
                     fields: [("delivery goal ID", goalID)]
                 ),
                 occurredAt: optionalText(row, "updated_at")
@@ -463,7 +463,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [title, status],
                     fields: [("execution goal ID", goalID.rawValue)]
                 ),
                 occurredAt: optionalText(row, "last_observed_at")
@@ -512,7 +512,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [outcome, detail],
+                    visibleSearchable: [outcome, ticketID.rawValue] + (retiredAt == nil ? [lane] : []),
                     fields: [("ticket lane", lane)]
                 ),
                 occurredAt: retiredAt,
@@ -575,7 +575,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [title, locator ?? observedPath],
                     fields: [
                         ("decision link", linkID),
                         ("decision artifact", artifactID),
@@ -628,7 +628,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     entityType,
                     query: text,
-                    displayed: [title, entityType],
+                    visibleSearchable: [title, entityType],
                     fields: [
                         ("audit event ID", sourceID),
                         ("audit entity", optionalText(row, "entity_id") ?? "")
@@ -668,7 +668,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [title, detail],
                     fields: [
                         ("observation thread", threadID),
                         ("observation goal", goalID)
@@ -703,7 +703,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [title, detail],
                     fields: [("review ID", sourceID)]
                 )
             ))
@@ -733,7 +733,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [detail],
                     fields: [("completion ID", sourceID)]
                 ),
                 occurredAt: optionalText(row, "created_at")
@@ -773,7 +773,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    displayed: [title, detail],
+                    visibleSearchable: [title, detail],
                     fields: [
                         ("notification ID", sourceID),
                         ("notification state", try requiredText(row, "state"))
@@ -816,10 +816,10 @@ public enum WorkspaceSearchQuery {
     private static func detailWithMatchExplanation(
         _ detail: String,
         query: String,
-        displayed: [String],
+        visibleSearchable: [String],
         fields: [(label: String, value: String)]
     ) -> String {
-        guard !matches(query, in: displayed),
+        guard !matches(query, in: visibleSearchable),
               let matched = fields.first(where: { matches(query, in: [$0.value]) }) else {
             return detail
         }
