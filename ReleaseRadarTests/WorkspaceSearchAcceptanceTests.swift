@@ -83,6 +83,10 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
                 "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('hidden-ticket-lane', ?, 'hidden-ticket-lane-phase', 'Visible ticket outcome', 'accepted')",
                 bindings: [.text(projectID.rawValue)]
             )
+            try connection.execute(
+                "INSERT INTO ticket_retirements (project_id, ticket_id, disposition, reason, last_phase_id, last_lane, audit_event_id, retired_at) VALUES (?, 'hidden-ticket-lane', 'replaced', 'Completed elsewhere', 'hidden-ticket-lane-phase', 'accepted', 'hidden-ticket-lane-retirement', '2026-10-08T23:00:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
         }
 
         let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
@@ -103,6 +107,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
             ticketID: .init(rawValue: "hidden-ticket-lane"),
             phaseID: .init(rawValue: "hidden-ticket-lane-phase")
         ))
+        XCTAssertTrue(ticket.detail.hasPrefix("hidden-ticket-lane · Retired"))
         XCTAssertTrue(ticket.detail.contains("Matched ticket lane: accepted"))
 
         model.setWorkspaceSearchText("unsent replacement")
