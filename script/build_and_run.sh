@@ -264,6 +264,8 @@ bundle_resource_manifest_sha256() {
 verify_bundle() {
     local bundle="$1"
     local role="${2:-candidate}"
+    local expected_candidate_version="${3:-0.1.35}"
+    local expected_candidate_build="${4:-}"
     local version
     local requires_coordinator=true
     local bridge_agent="$bundle/Contents/Resources/ReleaseRadarBridgeAgent"
@@ -301,20 +303,26 @@ verify_bundle() {
     if ! version="$(bundle_version "$bundle")" || [[ -z "$version" ]]; then report_error "missing bundle version"; return 1; fi
     case "$role" in
         candidate)
-            if ! require_value "$version" "0.1.35" "candidate version"; then return 1; fi
+            if ! require_value "$version" "$expected_candidate_version" "candidate version"; then return 1; fi
             ;;
         prior-destination)
             case "$version" in
                 0.1.7|0.1.8|0.1.9|0.1.10|0.1.11|0.1.12|0.1.13|0.1.14|0.1.15|0.1.16|0.1.17|0.1.18)
                     requires_coordinator=false
                     ;;
-                0.1.19|0.1.20|0.1.21|0.1.22|0.1.23|0.1.24|0.1.25|0.1.26|0.1.27|0.1.28|0.1.29|0.1.30|0.1.31|0.1.32|0.1.33|0.1.34) ;;
-                *) report_error "unsupported prior destination version $version"; return 1 ;;
+                *)
+                    if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                        report_error "unsupported prior destination version $version"
+                        return 1
+                    fi
+                    ;;
             esac
             ;;
         *) report_error "unsupported bundle verification role $role"; return 1 ;;
     esac
-    if [[ -z "$(bundle_build "$bundle")" ]]; then report_error "missing bundle build"; return 1; fi
+    local actual_build
+    if ! actual_build="$(bundle_build "$bundle")" || [[ -z "$actual_build" ]]; then report_error "missing bundle build"; return 1; fi
+    if [[ "$role" == "candidate" && -n "$expected_candidate_build" ]] && ! require_value "$actual_build" "$expected_candidate_build" "candidate build"; then return 1; fi
     if [[ -z "$(bundle_cdhash "$bundle")" ]]; then report_error "missing CodeDirectory hash"; return 1; fi
 
     if ! verify_signed_code "$bundle"; then return 1; fi
@@ -419,6 +427,8 @@ promote_verified_bundle() {
     local candidate="$1"
     local final_bundle="$2"
     local expected_identity="${3:-}"
+    local expected_version="${4:-0.1.35}"
+    local expected_build="${5:-}"
     local final_parent
     local backup_bundle
     local failed_bundle
@@ -432,7 +442,7 @@ promote_verified_bundle() {
         report_error "candidate bundle missing at $candidate"
         return 1
     fi
-    if ! verify_bundle "$candidate"; then
+    if ! verify_bundle "$candidate" "candidate" "$expected_version" "$expected_build"; then
         report_error "candidate bundle failed verification at $candidate"
         return 1
     fi
@@ -463,7 +473,7 @@ promote_verified_bundle() {
         return 1
     fi
 
-    if ! verify_bundle "$final_bundle"; then
+    if ! verify_bundle "$final_bundle" "candidate" "$expected_version" "$expected_build"; then
         report_error "promoted candidate failed verification at $final_bundle"
         recover_failed_promotion "$final_bundle" "$backup_bundle" "$had_backup" "$failed_bundle" || true
         return 1
@@ -523,7 +533,6 @@ install_staged_release_no_launch() {
 
     local source_identity
 
-    stop_running_release_radar_processes
     if ! verify_bundle "$STAGED_BUNDLE"; then return 1; fi
     if ! temporary_directory="$(mktemp -d "/Applications/.${APP_NAME}.install.XXXXXX")"; then report_error "could not create install temporary directory"; return 1; fi
     candidate_bundle="$temporary_directory/$APP_NAME.app"
@@ -531,6 +540,7 @@ install_staged_release_no_launch() {
     if ! verify_bundle "$candidate_bundle"; then return 1; fi
     if ! source_identity="$(bundle_identity "$STAGED_BUNDLE")"; then report_error "could not determine staged bundle identity"; return 1; fi
     if ! require_matching_bundle_identity "$STAGED_BUNDLE" "$candidate_bundle"; then return 1; fi
+    stop_running_release_radar_processes
     if ! promote_verified_bundle "$candidate_bundle" "$INSTALLED_BUNDLE" "$source_identity"; then return 1; fi
     if ! rmdir "$temporary_directory"; then report_error "could not remove empty install temporary directory $temporary_directory"; return 1; fi
     echo "installed verified staged Release bundle at $INSTALLED_BUNDLE"
@@ -545,7 +555,170 @@ open_app_for_explicit_launch() {
     /usr/bin/open -n "$BUILD_BUNDLE"
 }
 
+package_release_dmg() {
+    local source_bundle="$1"
+    local dmg="$2"
+    local installer="$3"
+    local expected_version="$4"
+    local expected_build="$5"
+    local expected_identity="$6"
+    local release_directory
+    local package_directory
+    local mount_directory
+    local mounted_bundle
+    local mounted_identity
+
+    [[ ! -e "$dmg" && ! -e "$installer" ]] || { report_error "release package destination already exists"; return 1; }
+    release_directory="$(dirname "$dmg")"
+    mkdir -p "$release_directory" "$(dirname "$installer")"
+    package_directory="$(mktemp -d "$release_directory/.${APP_NAME}.package.XXXXXX")"
+    mount_directory="$(mktemp -d "$release_directory/.${APP_NAME}.mount.XXXXXX")"
+    mounted_bundle="$mount_directory/$APP_NAME.app"
+    if ! ditto "$source_bundle" "$package_directory/$APP_NAME.app" || \
+       ! hdiutil create -volname "$APP_NAME" -srcfolder "$package_directory" -format UDZO "$dmg" >&2 || \
+       ! hdiutil attach -nobrowse -readonly -mountpoint "$mount_directory" "$dmg" >&2; then
+        hdiutil detach "$mount_directory" >&2 || true
+        rmdir "$mount_directory" || true
+        /bin/rm -rf "$package_directory"
+        report_error "could not create or mount release DMG"
+        return 1
+    fi
+    if ! verify_bundle "$mounted_bundle" "candidate" "$expected_version" "$expected_build" || \
+       ! mounted_identity="$(bundle_identity "$mounted_bundle" | shasum -a 256 | awk '{ print $1 }')" || \
+       [[ "$mounted_identity" != "$expected_identity" ]]; then
+        hdiutil detach "$mount_directory" >&2 || true
+        rmdir "$mount_directory" || true
+        /bin/rm -rf "$package_directory"
+        report_error "mounted release bundle identity mismatch"
+        return 1
+    fi
+    hdiutil detach "$mount_directory" >&2
+    rmdir "$mount_directory"
+    /bin/rm -rf "$package_directory"
+    cp -p "$dmg" "$installer"
+}
+
+release_native_operation() {
+    local receipt=""
+    local operation=""
+
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --receipt) receipt="$2"; shift 2 ;;
+            --operation) operation="$2"; shift 2; break ;;
+            *) report_error "unexpected native release-operation argument $1"; return 2 ;;
+        esac
+    done
+    [[ -n "$receipt" && -n "$operation" ]] || { report_error "native release operation requires receipt and operation"; return 2; }
+
+    case "$operation" in
+        head)
+            git -C "$ROOT_DIR" rev-parse HEAD
+            ;;
+        source-state)
+            local clean=true
+            local staged_bundle="$1" dmg="$2" staged_relative dmg_relative
+            local source_status
+            [[ "$staged_bundle" == "$ROOT_DIR/"* && "$dmg" == "$ROOT_DIR/"* ]] || { report_error "release outputs are outside the repository"; return 1; }
+            staged_relative="${staged_bundle#"$ROOT_DIR/"}"
+            dmg_relative="${dmg#"$ROOT_DIR/"}"
+            if ! source_status="$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all -- . \
+                ":(exclude)$staged_relative" ":(exclude)$staged_relative/**" ":(exclude)$dmg_relative")"; then
+                report_error "could not inspect release source checkout"
+                return 1
+            fi
+            if [[ -n "$source_status" ]]; then
+                clean=false
+            fi
+            printf '{"clean":%s}\n' "$clean"
+            ;;
+        tag-state)
+            local tag="$1" source_revision="$2" peeled object_type
+            if ! git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+                printf '%s\n' '{"state":"absent"}'; return
+            fi
+            object_type="$(git -C "$ROOT_DIR" cat-file -t "refs/tags/$tag")"
+            peeled="$(git -C "$ROOT_DIR" rev-parse "$tag^{}")"
+            if [[ "$object_type" == "tag" && "$peeled" == "$source_revision" ]]; then
+                printf '{"state":"matching-annotated","peeled_sha":"%s"}\n' "$peeled"
+            else
+                printf '{"state":"mismatch","peeled_sha":"%s"}\n' "$peeled"
+            fi
+            ;;
+        signing-status)
+            local available=false team_matches=false
+            security find-identity -v -p codesigning 2>/dev/null | grep -Fq "$SIGNING_AUTHORITY" && available=true
+            grep -Eq "DEVELOPMENT_TEAM = $TEAM_ID;" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj" && team_matches=true
+            printf '{"available":%s,"team_matches":%s,"authority_matches":%s}\n' "$available" "$team_matches" "$available"
+            ;;
+        prepare-version)
+            local version="$1" build="$2"
+            perl -0pi -e "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $version;/g; s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $build;/g" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj"
+            grep -Eq "MARKETING_VERSION = $version;" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj"
+            grep -Eq "CURRENT_PROJECT_VERSION = $build;" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj"
+            ;;
+        commit-release-metadata)
+            git -C "$ROOT_DIR" diff --quiet -- ReleaseRadar.xcodeproj/project.pbxproj || \
+                git -C "$ROOT_DIR" commit -m "release: prepare v$1" -- ReleaseRadar.xcodeproj/project.pbxproj >&2
+            [[ -z "$(git -C "$ROOT_DIR" status --porcelain)" ]] || { report_error "release metadata commit left an unexpected dirty checkout"; return 1; }
+            ;;
+        prepare-libgit2) bash "$ROOT_DIR/script/build_libgit2.sh" "$(uname -m)" >&2 ;;
+        run-suite)
+            local outcome="passed"
+            case "$1" in
+                release-radar-tests-v1) xcodebuild test -project "$ROOT_DIR/ReleaseRadar.xcodeproj" -scheme ReleaseRadar -destination 'platform=macOS' >&2 || outcome="failed" ;;
+                *) outcome="unavailable" ;;
+            esac
+            printf '{"outcome":"%s"}\n' "$outcome"
+            ;;
+        build-stage)
+            local staged_bundle="$1" expected_version="$2" expected_build="$3"
+            [[ ! -e "$staged_bundle" ]] || { report_error "staged bundle already exists at $staged_bundle"; return 1; }
+            xcodebuild -project "$ROOT_DIR/ReleaseRadar.xcodeproj" -scheme ReleaseRadar -configuration Release CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO -derivedDataPath "$DERIVED_DATA" build >&2
+            verify_bundle "$BUILD_BUNDLE" candidate "$expected_version" "$expected_build"
+            mkdir -p "$(dirname "$staged_bundle")"
+            ditto "$BUILD_BUNDLE" "$staged_bundle"
+            ;;
+        verify-bundle)
+            if [[ "${4:-}" == "prior-destination" ]]; then
+                verify_bundle "$1" prior-destination
+            else
+                verify_bundle "$1" candidate "$2" "$3"
+            fi
+            ;;
+        bundle-identity) bundle_identity "$1" | shasum -a 256 | awk '{ print $1 }' ;;
+        package-dmg)
+            package_release_dmg "$1" "$2" "$3" "$4" "$5" "$6"
+            ;;
+        dmg-sha256) shasum -a 256 "$1" | awk '{ print $1 }' ;;
+        stop-running) stop_running_release_radar_processes ;;
+        copy-bundle)
+            local copy_directory copy_candidate source_identity source_identity_digest
+            copy_directory="$(mktemp -d "$(dirname "$2")/.${APP_NAME}.install.XXXXXX")"
+            copy_candidate="$copy_directory/$APP_NAME.app"
+            ditto "$1" "$copy_candidate"
+            source_identity="$(bundle_identity "$1")"
+            source_identity_digest="$(printf '%s\n' "$source_identity" | shasum -a 256 | awk '{ print $1 }')"
+            [[ "$source_identity_digest" == "$5" ]] || { report_error "staged bundle identity changed before install"; return 1; }
+            promote_verified_bundle "$copy_candidate" "$2" "$source_identity" "$3" "$4"
+            rmdir "$copy_directory"
+            ;;
+        create-tag) git -C "$ROOT_DIR" tag -a "$1" "$2" -m "Release $1" ;;
+        push-tag) git -C "$ROOT_DIR" push origin "refs/tags/$1" ;;
+        remote-peeled-sha) git -C "$ROOT_DIR" ls-remote origin "refs/tags/$1^{}" | awk 'NR == 1 { print $1 }' ;;
+        *) report_error "unsupported native release operation $operation"; return 2 ;;
+    esac
+}
+
+
 case "$MODE" in
+    release-init|release-delivery)
+        exec python3 "$ROOT_DIR/script/release_delivery.py" --repository "$ROOT_DIR" --entrypoint "$0" "$@"
+        ;;
+    release-native-operation)
+        release_native_operation "$@"
+        ;;
     stage-release-no-launch|--stage-release-no-launch)
         stage_release_no_launch
         ;;
@@ -578,7 +751,7 @@ case "$MODE" in
         pgrep -x "$APP_NAME" >/dev/null
         ;;
     *)
-        echo "usage: $0 [stage-release-no-launch|--stage-release-no-launch|install-staged-release-no-launch|--install-staged-release-no-launch|run|--debug|--logs|--telemetry|--verify]" >&2
+        echo "usage: $0 [release-init|release-delivery|stage-release-no-launch|--stage-release-no-launch|install-staged-release-no-launch|--install-staged-release-no-launch|run|--debug|--logs|--telemetry|--verify]" >&2
         exit 2
         ;;
 esac
