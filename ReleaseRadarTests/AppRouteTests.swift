@@ -6830,6 +6830,19 @@ final class AppRouteTests: XCTestCase {
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-1', 'rr9-owner-project', 'phase-roadmap', 'Roadmap backlog one.', 'backlog')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-2', 'rr9-owner-project', 'phase-roadmap', 'Roadmap backlog two.', 'backlog')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-X', 'rr9-owner-project', 'phase-roadmap', 'Roadmap blocker.', 'blocked')")
+            for (ticketID, lane) in [
+                ("CURRENT-1", TicketLane.inProgress),
+                ("ROAD-1", .backlog),
+                ("ROAD-2", .backlog),
+                ("ROAD-X", .blocked),
+            ] {
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: .init(rawValue: "rr9-owner-project"),
+                    ticketID: .init(rawValue: ticketID),
+                    lane: lane,
+                    connection: connection
+                )
+            }
             try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('road-dependency', 'rr9-owner-project', 'ROAD-X', 'ROAD-1')")
         }
         let projectID = ProjectID(rawValue: "rr9-owner-project")
