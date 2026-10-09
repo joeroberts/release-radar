@@ -7,7 +7,7 @@ import XCTest
 
 @MainActor
 final class TicketReferenceNativeRenderingTests: XCTestCase {
-    func testTicketDetailReloadsDrawerSectionsWhenOnlyReferenceContextIdentityChanges() async throws {
+    func testTicketDetailKeepsDrawerSectionsStableWhenOnlyObservationGenerationChanges() async throws {
         let notification = Notification.Name("ticket-drawer-observer-generation-\(UUID().uuidString)")
         let counter = TicketDrawerLoadCounter()
         let hosting = NSHostingView(rootView: TicketDrawerContextReloadHarness(
@@ -34,11 +34,11 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         NotificationCenter.default.post(name: notification, object: nil)
         try await Task.sleep(for: .milliseconds(180))
 
-        // Baseline discriminator for #120: the selected ticket is unchanged, but the
-        // current TicketDetailView identity path recreates both drawer sections.
+        // #120 regression: a completed selected-ticket load must not restart when
+        // only observation generation changes inside the same structural context.
         let observerChangedCounts = await counter.counts()
-        XCTAssertEqual(observerChangedCounts.references, 2)
-        XCTAssertEqual(observerChangedCounts.evidence, 2)
+        XCTAssertEqual(observerChangedCounts.references, 1)
+        XCTAssertEqual(observerChangedCounts.evidence, 1)
     }
 
     func testReferenceRoutesRetainExactIdentityAndFocusInHistory() {
@@ -730,9 +730,10 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
 private struct TicketDrawerContextReloadHarness: View {
     let notification: Notification.Name
     let counter: TicketDrawerLoadCounter
-    @State private var referenceContextIdentity = "service:observed:generation-1"
+    @State private var observationGeneration = 1
 
     var body: some View {
+        let _ = observationGeneration
         TicketDetailView(
             detail: .init(
                 id: .init(rawValue: "RR-DRAWER"),
@@ -744,10 +745,11 @@ private struct TicketDrawerContextReloadHarness: View {
             loadReferences: { await counter.loadReferences() },
             loadDeliveryEvidence: { await counter.loadEvidence() },
             openReferenceSource: { _, _ in },
-            referenceContextIdentity: referenceContextIdentity
+            referenceQueryContextIdentity: "service:registration:root:binding",
+            isReferenceQueryReady: true
         )
         .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
-            referenceContextIdentity = "service:observed:generation-2"
+            observationGeneration += 1
         }
     }
 }
