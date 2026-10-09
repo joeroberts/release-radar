@@ -72,7 +72,13 @@ struct PhaseLifecycleControls: View {
                         .foregroundStyle(RekonTheme.warning)
                         .accessibilityIdentifier("phase-lifecycle-reason-required-\(phase.id.rawValue)")
                 }
-                TextField("Enter a reason for this lifecycle decision", text: $reason)
+                TextField(
+                    "Lifecycle decision reason",
+                    text: $reason,
+                    prompt: Text("Enter a reason for this lifecycle decision")
+                        .foregroundStyle(RekonTheme.secondaryText)
+                )
+                    .foregroundStyle(RekonTheme.primaryText)
                     .textFieldStyle(RekonQuietTextFieldStyle(
                         boundaryStatus: trimmedReason.isEmpty ? .warning : .standard
                     ))
