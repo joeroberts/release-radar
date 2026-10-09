@@ -174,7 +174,7 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
                 XCTFail("The delivery evidence refresh native session requires a positive RR_EVIDENCE_REFRESH_INSPECT_SECONDS value.")
                 return
             }
-            nativeSession = (sessionID, min(pauseSeconds, 60))
+            nativeSession = (sessionID, min(pauseSeconds, 120))
         } else {
             nativeSession = nil
         }
