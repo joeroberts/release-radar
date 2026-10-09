@@ -333,8 +333,12 @@ struct WorkspaceSearchView: View {
                 .accessibilityIdentifier("workspace-search-open-result")
                 .onKeyPress(phases: .down) { press in
                     let isBacktab = press.key == .tab || press.characters == "\u{19}"
-                    guard isBacktab, press.modifiers.contains(.shift) else { return .ignored }
-                    returnFocusToSelectedResult(selected.id)
+                    if isBacktab, press.modifiers.contains(.shift) {
+                        returnFocusToSelectedResult(selected.id)
+                        return .handled
+                    }
+                    guard press.key == .return || press.key == .space else { return .ignored }
+                    Task { await model.openWorkspaceSearchResult(selected) }
                     return .handled
                 }
         }
