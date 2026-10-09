@@ -7,8 +7,10 @@ struct WorkspaceSearchView: View {
     @Bindable var model: AppModel
     @FocusState private var filtersFocused: Bool
     @FocusState private var focusedResultID: Data?
+    @FocusState private var detailActionFocused: Bool
     @AccessibilityFocusState private var accessibilityFiltersFocused: Bool
     @AccessibilityFocusState private var accessibilityResultID: Data?
+    @AccessibilityFocusState private var accessibilityDetailActionFocused: Bool
 
     private var results: [WorkspaceSearchResult] { model.workspaceSearchProjection?.results ?? [] }
 
@@ -210,10 +212,11 @@ struct WorkspaceSearchView: View {
                 .accessibilityIdentifier("workspace-search-empty")
         } else if !results.isEmpty {
             if width < 900 {
-                VStack(alignment: .leading, spacing: 18) { resultList; selectedDetail }
+                resultList(inlineSelectedDetail: true)
             } else {
                 HStack(alignment: .top, spacing: 18) {
-                    resultList.frame(minWidth: 300, idealWidth: 380, maxWidth: 460)
+                    resultList(inlineSelectedDetail: false)
+                        .frame(minWidth: 300, idealWidth: 380, maxWidth: 460)
                     RekonSeparator(.vertical)
                     selectedDetail.frame(maxWidth: .infinity, alignment: .topLeading)
                 }
@@ -221,68 +224,112 @@ struct WorkspaceSearchView: View {
         }
     }
 
-    private var resultList: some View {
+    private func resultList(inlineSelectedDetail: Bool) -> some View {
         LazyVStack(alignment: .leading, spacing: 8) {
             Text("\(results.count) result\(results.count == 1 ? "" : "s")")
                 .font(RekonTypography.metadata)
                 .foregroundStyle(RekonTheme.secondaryText)
             ForEach(results) { result in
-                Button {
-                    model.selectWorkspaceSearchResult(result.id)
-                } label: {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(result.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
-                        Text(result.title).font(RekonTypography.compactTitle).lineLimit(2)
-                        Text(projectLabel(result.project))
-                            .font(RekonTypography.secondaryBody)
-                            .foregroundStyle(RekonTheme.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(result.detail)
-                            .font(RekonTypography.secondaryBody)
-                            .foregroundStyle(RekonTheme.secondaryText)
-                            .lineLimit(2)
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 10))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(model.selectedWorkspaceSearchResultID == result.id ? RekonTheme.accent : RekonTheme.border,
-                                    lineWidth: model.selectedWorkspaceSearchResultID == result.id ? 2 : RekonBorder.hairline)
-                    }
+                resultRow(result)
+                if inlineSelectedDetail, model.selectedWorkspaceSearchResultID == result.id {
+                    selectedDetail(result, inline: true)
                 }
-                .buttonStyle(.plain)
-                .focusable()
-                .focused($focusedResultID, equals: result.id)
-                .accessibilityFocused($accessibilityResultID, equals: result.id)
-                .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
             }
         }
     }
 
+    private func resultRow(_ result: WorkspaceSearchResult) -> some View {
+        let isSelected = model.selectedWorkspaceSearchResultID == result.id
+        return Button {
+            selectResult(result.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(result.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
+                Text(result.title).font(RekonTypography.compactTitle).lineLimit(2)
+                Text(projectLabel(result.project))
+                    .font(RekonTypography.secondaryBody)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(result.detail)
+                    .font(RekonTypography.secondaryBody)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .lineLimit(2)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? RekonTheme.accent : RekonTheme.border,
+                            lineWidth: isSelected ? 2 : RekonBorder.hairline)
+            }
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .focused($focusedResultID, equals: result.id)
+        .accessibilityFocused($accessibilityResultID, equals: result.id)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityRemoveTraits(isSelected ? [] : .isSelected)
+        .accessibilityLabel("\(result.domain.singularTitle): \(result.title), \(projectLabel(result.project))")
+        .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
+        .onMoveCommand { moveSelection($0, from: result.id) }
+    }
+
     @ViewBuilder private var selectedDetail: some View {
         if let selected = results.first(where: { $0.id == model.selectedWorkspaceSearchResultID }) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(selected.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
-                Text(selected.title).font(RekonTypography.screenTitle)
-                Text(selected.detail).font(RekonTypography.body)
+            selectedDetail(selected, inline: false)
+        } else {
+            ContentUnavailableView("Select a result", systemImage: "cursorarrow.click")
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("workspace-search-detail")
+        }
+    }
+
+    private func selectedDetail(_ selected: WorkspaceSearchResult, inline: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if inline {
+                Text("Result detail")
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.accent)
+                    .accessibilityAddTraits(.isHeader)
+            } else {
+                Text(selected.domain.singularTitle.uppercased())
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.accent)
+                    .accessibilityAddTraits(.isHeader)
+                Text(selected.title)
+                    .font(RekonTypography.compactTitle)
+                    .accessibilityAddTraits(.isHeader)
                 Text("Project: \(projectLabel(selected.project))")
                     .font(RekonTypography.metadata)
                     .foregroundStyle(RekonTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
-                if selected.isRetired { Text("Retired record").foregroundStyle(RekonTheme.warning) }
-                Button("Open exact record") { Task { await model.openWorkspaceSearchResult(selected) } }
-                    .buttonStyle(RekonPrimaryButtonStyle())
-                    .accessibilityIdentifier("workspace-search-open-result")
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, minHeight: 250, alignment: .topLeading)
-            .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 12))
-            .accessibilityIdentifier("workspace-search-detail")
-        } else {
-            ContentUnavailableView("Select a result", systemImage: "cursorarrow.click")
-                .frame(maxWidth: .infinity, minHeight: 250)
+            Text(selected.detail).font(RekonTypography.body)
+            Text(detailIdentity(selected))
+                .font(RekonTypography.metadata)
+                .foregroundStyle(RekonTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            if let occurredAt = selected.occurredAt {
+                Text("\(occurredAtLabel(for: selected)): \(occurredAt)")
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
+            }
+            if selected.isRetired { Text("Retired record").foregroundStyle(RekonTheme.warning) }
+            Button(actionTitle(for: selected)) { Task { await model.openWorkspaceSearchResult(selected) } }
+                .buttonStyle(RekonPrimaryButtonStyle())
+                .focusable()
+                .focused($detailActionFocused)
+                .accessibilityFocused($accessibilityDetailActionFocused)
+                .accessibilityLabel("\(actionTitle(for: selected)): \(selected.title)")
+                .accessibilityIdentifier("workspace-search-open-result")
         }
+        .padding(inline ? 14 : 18)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("workspace-search-detail")
+        .onExitCommand { returnFocusToSelectedResult(selected.id) }
     }
 
     private var scopeTitle: String {
@@ -294,6 +341,88 @@ struct WorkspaceSearchView: View {
 
     private func projectLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
         "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active") · Registration \(project.registrationID)"
+    }
+
+    private func selectResult(_ id: Data) {
+        model.selectWorkspaceSearchResult(id)
+        focusedResultID = id
+        accessibilityResultID = id
+        detailActionFocused = false
+        accessibilityDetailActionFocused = false
+    }
+
+    private func moveSelection(_ direction: MoveCommandDirection, from id: Data) {
+        guard let index = results.firstIndex(where: { $0.id == id }) else { return }
+        let destination: Int
+        switch direction {
+        case .up:
+            destination = max(results.startIndex, index - 1)
+        case .down:
+            destination = min(results.index(before: results.endIndex), index + 1)
+        default:
+            return
+        }
+        guard destination != index else { return }
+        selectResult(results[destination].id)
+    }
+
+    private func returnFocusToSelectedResult(_ id: Data) {
+        guard model.selectedWorkspaceSearchResultID == id else { return }
+        focusedResultID = id
+        accessibilityResultID = id
+        detailActionFocused = false
+        accessibilityDetailActionFocused = false
+    }
+
+    private func actionTitle(for result: WorkspaceSearchResult) -> String {
+        switch result.identity {
+        case .project:
+            return result.project.lifecycle == .archived ? "View archived project" : "Open project"
+        case .deliveryGoal:
+            return "View associated work"
+        case .executionGoal:
+            return "Open execution goal"
+        case .ticket:
+            return "Open ticket"
+        case .decisionReference:
+            return "Open decision source"
+        case .history:
+            return "Open history event"
+        }
+    }
+
+    private func detailIdentity(_ result: WorkspaceSearchResult) -> String {
+        switch result.identity {
+        case let .project(projectID, registrationID):
+            return "Project ID: \(projectID.rawValue) · Registration: \(registrationID)"
+        case let .deliveryGoal(_, _, phaseID, goalID):
+            return "Goal ID: \(goalID) · Phase ID: \(phaseID.rawValue)"
+        case let .executionGoal(_, _, threadID, goalID):
+            return "Thread: \(threadID.rawValue) · Goal ID: \(goalID.rawValue)"
+        case let .ticket(_, _, ticketID, phaseID):
+            return "Ticket ID: \(ticketID.rawValue)\(phaseID.map { " · Phase ID: \($0.rawValue)" } ?? "")"
+        case let .decisionReference(_, _, ticketID, linkID, version, _, artifactID):
+            return "Ticket ID: \(ticketID.rawValue) · Reference: \(linkID) · Version: \(version) · Artifact: \(artifactID)"
+        case let .history(_, _, source, sourceID):
+            return "\(source.rawValue.capitalized) source ID: \(sourceID)"
+        }
+    }
+
+    private func occurredAtLabel(for result: WorkspaceSearchResult) -> String {
+        switch result.identity {
+        case .deliveryGoal:
+            return "Recorded update"
+        case .executionGoal:
+            return "Last observed"
+        case .ticket:
+            return "Retired on"
+        case .decisionReference:
+            return "Reference version created"
+        case let .history(_, _, source, _):
+            return source == .observation ? "Last observed" : "Source created"
+        case .project:
+            return "Recorded at"
+        }
     }
 
     private func applyRequestedFocus() {
@@ -315,6 +444,19 @@ private extension WorkspaceSearchSort {
         case .domainThenTitle: "Record type, then title"
         case .title: "Title"
         case .newest: "Newest first"
+        }
+    }
+}
+
+private extension WorkspaceSearchDomain {
+    var singularTitle: String {
+        switch self {
+        case .project: "Project"
+        case .deliveryGoal: "Delivery Goal"
+        case .executionGoal: "Execution Goal"
+        case .ticket: "Ticket"
+        case .decisionReference: "Decision reference"
+        case .history: "History event"
         }
     }
 }
