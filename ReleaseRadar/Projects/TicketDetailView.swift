@@ -38,7 +38,9 @@ struct TicketDetailView: View {
 
                 if let loadDeliveryEvidence {
                     TicketDeliveryEvidenceSection(ticketID: detail.id, contextIdentity: referenceQueryContextIdentity,
-                                                  isContextReady: isReferenceQueryReady, load: loadDeliveryEvidence)
+                                                  isContextReady: isReferenceQueryReady,
+                                                  isContextChecking: isReferenceQueryChecking,
+                                                  load: loadDeliveryEvidence)
                         .id(detail.id)
                 }
 
@@ -47,6 +49,7 @@ struct TicketDetailView: View {
                         ticketID: detail.id,
                         contextIdentity: referenceQueryContextIdentity,
                         isContextReady: isReferenceQueryReady,
+                        isContextChecking: isReferenceQueryChecking,
                         load: loadReferences,
                         openSource: openReferenceSource
                     )
@@ -129,6 +132,11 @@ struct TicketDetailView: View {
         .scrollIndicators(.visible)
         .accessibilityHint("Scroll to reach all ticket details and task rows. Task rows are keyboard focusable.")
         .accessibilityIdentifier("ticket-inspector")
+    }
+
+    private var isReferenceQueryChecking: Bool {
+        if case .checking = documentationStatus { return true }
+        return false
     }
 
     private var tasksSection: some View {

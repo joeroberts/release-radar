@@ -12,6 +12,7 @@ struct TicketDeliveryEvidenceSection: View {
     let ticketID: TicketID
     let contextIdentity: String?
     let isContextReady: Bool
+    var isContextChecking = false
     let load: () async -> ReferenceLoadResult<TicketDeliveryEvidence>
     @State private var state: DeliveryEvidenceSectionState = .idle
     @State private var showsHelp = false
@@ -43,8 +44,7 @@ struct TicketDeliveryEvidenceSection: View {
 
             switch state {
             case .idle:
-                ProgressView("Loading delivery evidence…")
-                    .controlSize(.small)
+                readinessRecovery
             case let .failed(failure):
                 FailureStateView(
                     presentation: failure,
@@ -89,6 +89,31 @@ struct TicketDeliveryEvidenceSection: View {
         }
         .sheet(isPresented: $showsHelp) { DeliveryEvidenceHelpView() }
         .accessibilityIdentifier("ticket-delivery-evidence")
+    }
+
+    private var readinessRecovery: some View {
+        FailureStateView(
+            presentation: if isContextChecking {
+                .init(
+                    title: "Checking delivery evidence access",
+                    detail: "Release Radar is checking the authorized project root. Refresh to try reading the current ticket now.",
+                    systemImage: "hourglass",
+                    tone: .warning,
+                    accessibilityID: "ticket-delivery-evidence-checking"
+                )
+            } else {
+                .init(
+                    title: "Delivery evidence unavailable",
+                    detail: "The authorized project root is unavailable. Refresh to retry reading the current ticket.",
+                    systemImage: "arrow.clockwise",
+                    tone: .warning,
+                    accessibilityID: "ticket-delivery-evidence-unavailable"
+                )
+            },
+            style: .compact,
+            actionTitle: "Retry",
+            action: { Task { await reload(explicit: true) } }
+        )
     }
 
     @ViewBuilder

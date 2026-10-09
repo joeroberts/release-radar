@@ -17,6 +17,7 @@ struct TicketReferencesSection: View {
     let ticketID: TicketID
     let contextIdentity: String?
     let isContextReady: Bool
+    var isContextChecking = false
     let load: () async -> ReferenceLoadResult<TicketReferenceSet>
     let openSource: (String, Int64) -> Void
     @State private var state: ReferenceSectionState = .idle
@@ -36,8 +37,7 @@ struct TicketReferencesSection: View {
             }
             switch state {
             case .idle:
-                ProgressView("Loading reference links…")
-                    .controlSize(.small)
+                readinessRecovery
             case let .failed(failure):
                 FailureStateView(
                     presentation: failure,
@@ -88,6 +88,31 @@ struct TicketReferencesSection: View {
             state = .failed(.init(title: "Reference context changed", detail: "The project registration or root changed. Refresh the current ticket to read current references.", systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "reference-context-changed"))
         }
         .accessibilityIdentifier("ticket-references")
+    }
+
+    private var readinessRecovery: some View {
+        FailureStateView(
+            presentation: if isContextChecking {
+                .init(
+                    title: "Checking reference access",
+                    detail: "Release Radar is checking the authorized project root. Refresh to try reading the current ticket now.",
+                    systemImage: "hourglass",
+                    tone: .warning,
+                    accessibilityID: "ticket-references-checking"
+                )
+            } else {
+                .init(
+                    title: "References unavailable",
+                    detail: "The authorized project root is unavailable. Refresh to retry reading the current ticket.",
+                    systemImage: "arrow.clockwise",
+                    tone: .warning,
+                    accessibilityID: "ticket-references-unavailable"
+                )
+            },
+            style: .compact,
+            actionTitle: "Retry",
+            action: { Task { await reload(explicit: true) } }
+        )
     }
 
     private func referenceCard(_ link: TicketReference) -> some View {
