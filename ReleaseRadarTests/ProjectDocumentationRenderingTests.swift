@@ -102,6 +102,87 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testPhaseLifecycleReasonShowsRequiredFeedbackAndPreservesRecoverableFailureInput() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PhaseLifecycleReason-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let phase = try XCTUnwrap(dashboard.plan(for: DashboardSampleData.projectID)?.phases.first)
+        let phaseID = phase.id.rawValue
+        let reasonID = "phase-lifecycle-reason-\(phaseID)"
+        let actionID = "commit-phase-lifecycle-\(phaseID)"
+        let requiredID = "phase-lifecycle-reason-required-\(phaseID)"
+        let helpID = "phase-lifecycle-reason-help-\(phaseID)"
+        let emptyHelp = "Required for Move to Upcoming. Enter a reason for this lifecycle decision."
+        var receivedReasons: [String] = []
+
+        func controls(error: AgentCommandError? = nil) -> PhaseLifecycleControls {
+            PhaseLifecycleControls(
+                phase: phase,
+                transition: { action, _, reason in
+                    receivedReasons.append(reason)
+                    return .init(entityIDs: [], auditEventID: nil, error: error)
+                },
+                reload: {}
+            )
+        }
+
+        for width in [1_100.0, 760.0] {
+            try await render(
+                controls(),
+                name: "phase-lifecycle-reason-empty-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Lifecycle decision reason", "Required", emptyHelp],
+                presentIdentifiers: [reasonID, requiredID, helpID, actionID],
+                disabledIdentifiers: [actionID],
+                verifyAccessibility: { window in
+                    let reason = try XCTUnwrap(accessibilityElement(window, identifier: reasonID))
+                    var label: CFTypeRef?
+                    var help: CFTypeRef?
+                    XCTAssertEqual(AXUIElementCopyAttributeValue(reason, kAXTitleAttribute as CFString, &label), .success)
+                    XCTAssertEqual(label as? String, "Lifecycle decision reason, required")
+                    XCTAssertEqual(AXUIElementCopyAttributeValue(reason, kAXHelpAttribute as CFString, &help), .success)
+                    XCTAssertEqual(help as? String, emptyHelp)
+                }
+            )
+        }
+        XCTAssertTrue(receivedReasons.isEmpty, "Empty reasons must not submit lifecycle actions")
+
+        try await render(
+            controls(),
+            name: "phase-lifecycle-reason-whitespace",
+            width: 760,
+            expected: nil,
+            expectedText: [emptyHelp],
+            inputValues: [reasonID: " \n\t "],
+            postInputDisabledIdentifiers: [actionID]
+        )
+        XCTAssertTrue(receivedReasons.isEmpty, "Whitespace-only reasons must not submit lifecycle actions")
+
+        try await render(
+            controls(error: .phaseLifecycleRevisionConflict(expected: 0, current: 2)),
+            name: "phase-lifecycle-reason-recoverable-failure",
+            width: 760,
+            expected: nil,
+            expectedText: [
+                "Required for Move to Upcoming.",
+                "Phase lifecycle changed",
+                "The current lifecycle revision is 2.",
+                "Record owner decision",
+            ],
+            inputValues: [reasonID: " Record owner decision "],
+            postInputEnabledIdentifiers: [actionID],
+            pressIdentifiers: [actionID],
+            postActionFocusedIdentifier: reasonID
+        )
+        XCTAssertEqual(receivedReasons, ["Record owner decision"])
+    }
+
     func testManageProjectOpensImmediatelyWithSelectedRegistrationAndIndependentSections() async throws {
         let projectID = ProjectID(rawValue: "manage-project-immediate")
         let registration = ProjectRegistration(
@@ -2056,6 +2137,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         postActionFocusedIdentifier: String? = nil,
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
+        inputValues: [String: String] = [:],
+        postInputDisabledIdentifiers: [String] = [],
+        postInputEnabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
         afterPressIdentifiers: [[String]] = [],
         afterPressFocusIdentifiers: [[String]] = [],
@@ -2157,6 +2241,37 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 .success
             )
             XCTAssertEqual(value as? Bool, false, "\(disabledIdentifier) must be disabled")
+        }
+        for (identifier, inputValue) in inputValues {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing input accessibility element \(identifier)"
+            )
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, inputValue as CFString),
+                .success,
+                "Could not enter text into \(identifier)"
+            )
+        }
+        if !inputValues.isEmpty {
+            try await Task.sleep(for: .milliseconds(100))
+            hosting.layoutSubtreeIfNeeded()
+        }
+        for identifier in postInputDisabledIdentifiers + postInputEnabledIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing accessibility element \(identifier)"
+            )
+            var value: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &value),
+                .success
+            )
+            XCTAssertEqual(
+                value as? Bool,
+                postInputEnabledIdentifiers.contains(identifier),
+                "Unexpected enabled state for \(identifier) after text entry"
+            )
         }
         func waitForAccessibilityElement(identifier: String) async throws -> AXUIElement? {
             let deadline = Date().addingTimeInterval(2)
