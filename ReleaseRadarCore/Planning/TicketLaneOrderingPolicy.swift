@@ -120,7 +120,7 @@ public enum TicketOrderingError: Error, LocalizedError, Codable, Equatable, Send
             case .completedPhase: return "Reopen the completed phase before reordering its tickets."
             }
         case let .invalidAnchor(ticketID):
-            "Ticket \(ticketID.rawValue) is not an available anchor in the complete lane order."
+            return "Ticket \(ticketID.rawValue) is not an available anchor in the complete lane order."
         case let .dependencyConflict(conflict):
             let chain = conflict.witnessChain.map(\.rawValue).joined(separator: " → ")
             return "Keep prerequisite \(conflict.prerequisiteTicketID.rawValue) before dependent \(conflict.dependentTicketID.rawValue) in \(conflict.lane.rawValue). Dependency path: \(chain)."
