@@ -757,11 +757,13 @@ public enum WorkspaceSearchQuery {
             let sourceID = try requiredText(row, "id")
             let fingerprint = try requiredText(row, "fingerprint")
             let state = try requiredText(row, "state")
-            let title = optionalText(row, "title") ?? fingerprint
-            let detail = optionalText(row, "message") ?? "Persisted notification delivery event."
+            let rawTitle = optionalText(row, "title") ?? ""
+            let rawMessage = optionalText(row, "message") ?? ""
             guard let project = authority.project(projectID), matches(text, in: [
-                sourceID, state, title, detail
+                sourceID, state, rawTitle, rawMessage
             ]) else { continue }
+            let title = rawTitle.isEmpty ? fingerprint : rawTitle
+            let detail = rawMessage.isEmpty ? "Persisted notification delivery event." : rawMessage
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -775,7 +777,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    visibleSearchable: [title, detail],
+                    visibleSearchable: [rawTitle, rawMessage],
                     fields: [
                         ("notification ID", sourceID),
                         ("notification state", state)
