@@ -270,7 +270,10 @@ struct WorkspaceSearchView: View {
         .accessibilityFocused($accessibilityResultID, equals: result.id)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityRemoveTraits(isSelected ? [] : .isSelected)
-        .accessibilityLabel("\(result.domain.singularTitle): \(result.title), \(projectLabel(result.project))")
+        .accessibilityLabel(
+            "\(result.domain.singularTitle): \(result.title), \(projectLabel(result.project)), \(result.detail)"
+                + (result.isRetired ? ", Retired record" : "")
+        )
         .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
         .onMoveCommand { moveSelection($0, from: result.id) }
         .onKeyPress(.tab) { press in
