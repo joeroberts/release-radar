@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
+@testable import ReleaseRadar
 
 final class TicketLaneOrderingAcceptanceTests: XCTestCase {
     func testVersionTwentySevenMigrationSeedsCanonicalOrderAndPreservesExistingState() async throws {
@@ -633,6 +634,146 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
         let orderAfterFailure = try await orderRows(store)
         XCTAssertEqual(orderAfterFailure, beforeFailure)
         try await assertNoCommandCommit(store, requestID: failedRequest, reason: "Fail after validated order write")
+    }
+
+    func testOrderingPreservesByteDistinctCanonicalEquivalentTicketAndPhaseIDs() async throws {
+        let root = try makeFixtureRoot()
+        let store = DeliveryStore(databaseURL: root.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "ordering-project")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "registration-1",
+            requestGeneration: 1
+        )
+        let protectedPhase = "phase-\u{e9}"
+        let openPhase = "phase-e\u{301}"
+        let protectedTicket = "ticket-\u{e9}"
+        let movableTicket = "ticket-e\u{301}"
+        XCTAssertNotEqual(Data(protectedPhase.utf8), Data(openPhase.utf8))
+        XCTAssertNotEqual(Data(protectedTicket.utf8), Data(movableTicket.utf8))
+
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed byte-exact identity fixture") { connection in
+            try connection.execute("INSERT INTO projects (id,name,first_dashboard_opened) VALUES ('ordering-project','Ordering',1)")
+            try connection.execute(
+                "INSERT INTO project_roots (id,project_id,path) VALUES ('root-1','ordering-project',?)",
+                bindings: [.text(root.path)]
+            )
+            try connection.execute("INSERT INTO project_registrations (project_id,registration_id,request_generation,setup_state) VALUES ('ordering-project','registration-1',1,'complete')")
+            try connection.execute(
+                "INSERT INTO phases (id,project_id,name) VALUES (?,'ordering-project','Protected'),(?,'ordering-project','Open')",
+                bindings: [.text(protectedPhase), .text(openPhase)]
+            )
+            try connection.execute(
+                "INSERT INTO project_active_phases (project_id,phase_id) VALUES ('ordering-project',?)",
+                bindings: [.text(openPhase)]
+            )
+            try connection.execute(
+                """
+                INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES
+                (?,'ordering-project',?,'Protected ticket','backlog'),
+                (?,'ordering-project',?,'Movable ticket','backlog'),
+                ('anchor','ordering-project',?,'Dependent anchor','backlog')
+                """,
+                bindings: [
+                    .text(protectedTicket), .text(protectedPhase),
+                    .text(movableTicket), .text(openPhase),
+                    .text(openPhase),
+                ]
+            )
+            try connection.execute(
+                "UPDATE phase_lifecycles SET lifecycle='completed',revision=1,completion_baseline_digest=?,completed_at='2026-10-09T00:00:00Z',updated_at='2026-10-09T00:00:00Z' WHERE project_id='ordering-project' AND phase_id=?",
+                bindings: [.text(String(repeating: "c", count: 64)), .text(protectedPhase)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_dependencies (id,project_id,ticket_id,depends_on_ticket_id) VALUES ('byte-exact-dependency','ordering-project','anchor',?)",
+                bindings: [.text(movableTicket)]
+            )
+            try connection.execute("DELETE FROM ticket_lane_order WHERE project_id='ordering-project'")
+            try connection.execute(
+                """
+                INSERT INTO ticket_lane_order (project_id,ticket_id,lane,order_key) VALUES
+                ('ordering-project',?,'backlog','001'),
+                ('ordering-project',?,'backlog','01'),
+                ('ordering-project','anchor','backlog','011')
+                """,
+                bindings: [.text(protectedTicket), .text(movableTicket)]
+            )
+        }
+
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(registration: registration, canonicalRoot: root, authorizedRoots: [root]),
+            ])
+        )
+        let initial = try await store.read {
+            try TicketLaneOrderingPolicy.snapshot(projectID: projectID, connection: $0)
+        }
+        XCTAssertEqual(initial.ticketIDs(in: .backlog).map { Data($0.rawValue.utf8) }, [
+            Data(protectedTicket.utf8), Data(movableTicket.utf8), Data("anchor".utf8),
+        ])
+
+        let dependencyResult = await dispatcher.dispatch(orderEnvelope(
+            root: root,
+            registration: registration,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000140")!,
+            reason: "Bind the decomposed prerequisite exactly",
+            ticketID: "anchor",
+            anchor: .before(.init(rawValue: movableTicket)),
+            context: initial.context
+        ), origin: .ownerApp)
+        guard case let .ticketOrdering(.dependencyConflict(conflict))? = dependencyResult.error else {
+            return XCTFail("Expected the byte-exact dependency conflict")
+        }
+        XCTAssertEqual(Data(conflict.prerequisiteTicketID.rawValue.utf8), Data(movableTicket.utf8))
+        XCTAssertEqual(Data(conflict.dependentTicketID.rawValue.utf8), Data("anchor".utf8))
+
+        let moveResult = await dispatcher.dispatch(orderEnvelope(
+            root: root,
+            registration: registration,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000141")!,
+            reason: "Move only the decomposed ticket",
+            ticketID: movableTicket,
+            anchor: .before(.init(rawValue: protectedTicket)),
+            context: initial.context
+        ), origin: .ownerApp)
+        XCTAssertNil(moveResult.error)
+        let moved = try await store.read {
+            try TicketLaneOrderingPolicy.snapshot(projectID: projectID, connection: $0)
+        }
+        XCTAssertEqual(moved.ticketIDs(in: .backlog).map { Data($0.rawValue.utf8) }, [
+            Data(movableTicket.utf8), Data(protectedTicket.utf8), Data("anchor".utf8),
+        ])
+
+        let protectedOrder = try await orderRows(store)
+        let protectedResult = await dispatcher.dispatch(orderEnvelope(
+            root: root,
+            registration: registration,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000142")!,
+            reason: "Reject only the completed-phase composed ticket",
+            ticketID: protectedTicket,
+            anchor: .after(.init(rawValue: "anchor")),
+            context: moved.context
+        ), origin: .ownerApp)
+        XCTAssertEqual(protectedResult.error, .ticketOrdering(.targetIneligible(.completedPhase)))
+        let afterProtectedRejection = try await orderRows(store)
+        XCTAssertEqual(afterProtectedRejection, protectedOrder)
+
+        let dashboard = try await DashboardProjection.load(from: store)
+        let allPhases = try XCTUnwrap(dashboard.allPhaseBoard(for: projectID))
+        XCTAssertEqual(allPhases.lane(.backlog)?.cards.map { Data($0.id.rawValue.utf8) }, [
+            Data(movableTicket.utf8), Data(protectedTicket.utf8), Data("anchor".utf8),
+        ])
+        XCTAssertEqual(
+            dashboard.board(for: projectID, phaseID: .init(rawValue: protectedPhase))?
+                .lane(.backlog)?.cards.map { Data($0.id.rawValue.utf8) },
+            [Data(protectedTicket.utf8)]
+        )
+        XCTAssertEqual(
+            dashboard.board(for: projectID, phaseID: .init(rawValue: openPhase))?
+                .lane(.backlog)?.cards.map { Data($0.id.rawValue.utf8) },
+            [Data(movableTicket.utf8), Data("anchor".utf8)]
+        )
     }
 
     private struct OrderingState: Sendable {
