@@ -2028,6 +2028,28 @@ final class AppModel {
         ].joined(separator: ":")
     }
 
+    func referenceQueryContextIdentity(projectID: ProjectID) -> String {
+        let identity = documentationObserver.status(for: projectID)?.identity
+        let registration = identity?.registration
+        let binding = identity?.binding
+        return [projectID.rawValue, String(documentationServiceGeneration),
+                registration?.registrationID ?? "no-registration",
+                registration.map { String($0.requestGeneration) } ?? "no-request-generation",
+                identity?.rootID?.rawValue ?? "no-root",
+                identity?.rootPath ?? projectRoots[projectID]?.path ?? "no-root-path",
+                binding?.repositoryID ?? "no-repository",
+                binding.map { String($0.acceptedCatalogVersion) } ?? "no-catalog-version",
+                binding?.acceptedCatalogDigest ?? "no-catalog-digest"].joined(separator: ":")
+    }
+
+    func isReferenceQueryReady(projectID: ProjectID) -> Bool {
+        guard let root = projectRoots[projectID],
+              case let .observed(observation) = documentationObserver.status(for: projectID),
+              observation.identity.rootID != nil,
+              observation.identity.rootPath == root.path else { return false }
+        return true
+    }
+
     func loadRecordedImpacts(
         projectID: ProjectID,
         repositoryID: String,

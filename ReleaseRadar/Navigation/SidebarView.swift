@@ -462,7 +462,8 @@ struct SidebarView: View {
                         reloadPhaseLifecycle: {
                             await model.reloadPhaseLifecycle()
                         },
-                        referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
+                        referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
+                        isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -522,7 +523,8 @@ struct SidebarView: View {
                                 )
                             }
                         },
-                        referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
+                        referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
+                        isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -576,7 +578,8 @@ struct SidebarView: View {
                                 )
                             }
                         },
-                        referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
+                        referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
+                        isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
                         viewAllPhases: { model.viewAllPhases(projectID: projectID) },
                         requestedFocus: model.navigationFocus,

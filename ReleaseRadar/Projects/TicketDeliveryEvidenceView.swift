@@ -9,10 +9,14 @@ private enum DeliveryEvidenceSectionState {
 }
 
 struct TicketDeliveryEvidenceSection: View {
-    let identity: String
+    let ticketID: TicketID
+    let contextIdentity: String?
+    let isContextReady: Bool
     let load: () async -> ReferenceLoadResult<TicketDeliveryEvidence>
     @State private var state: DeliveryEvidenceSectionState = .idle
     @State private var showsHelp = false
+    @State private var isRefreshing = false
+    @State private var startedInitialLoad = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -22,6 +26,9 @@ struct TicketDeliveryEvidenceSection: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                 Spacer(minLength: 8)
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await reload(explicit: true) } }
+                    .buttonStyle(.plain).font(.caption).disabled(isRefreshing)
+                    .accessibilityIdentifier("refresh-ticket-delivery-evidence")
                 Button("Help", systemImage: "questionmark.circle") {
                     var transaction = Transaction(animation: nil)
                     transaction.disablesAnimations = true
@@ -42,10 +49,15 @@ struct TicketDeliveryEvidenceSection: View {
                     presentation: failure,
                     style: .compact,
                     actionTitle: "Retry",
-                    action: { Task { await reload() } }
+                    action: { Task { await reload(explicit: true) } }
                 )
             case let .loaded(evidence):
                 loadedContent(evidence)
+            }
+            if isRefreshing {
+                ProgressView("Refreshing delivery evidence…")
+                    .controlSize(.small)
+                    .accessibilityIdentifier("ticket-delivery-evidence-refresh-progress")
             }
         }
         .font(.subheadline)
@@ -57,7 +69,14 @@ struct TicketDeliveryEvidenceSection: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
         }
-        .task(id: identity) { await reload() }
+        .task(id: ticketID) { await loadInitiallyIfReady() }
+        .onChange(of: isContextReady) { _, ready in
+            if ready { Task { await loadInitiallyIfReady() } }
+        }
+        .onChange(of: contextIdentity) { _, _ in
+            guard startedInitialLoad else { return }
+            state = .failed(.init(title: "Delivery evidence context changed", detail: "The project registration or root changed. Refresh the current ticket to read current evidence.", systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "delivery-evidence-context-changed"))
+        }
         .sheet(isPresented: $showsHelp) { DeliveryEvidenceHelpView() }
         .accessibilityIdentifier("ticket-delivery-evidence")
     }
@@ -224,10 +243,20 @@ struct TicketDeliveryEvidenceSection: View {
     }
 
     @MainActor
-    private func reload() async {
-        state = .idle
+    private func loadInitiallyIfReady() async {
+        guard isContextReady, !startedInitialLoad else { return }
+        startedInitialLoad = true
+        await reload(explicit: false)
+    }
+
+    private func reload(explicit: Bool) async {
+        guard !isRefreshing else { return }
+        let expectedContext = contextIdentity
+        isRefreshing = explicit
+        if !explicit { state = .idle }
         let result = await load()
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, expectedContext == contextIdentity else { return }
+        isRefreshing = false
         switch result {
         case let .loaded(value): state = .loaded(value)
         case let .failed(failure): state = .failed(failure)

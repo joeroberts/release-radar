@@ -14,17 +14,25 @@ private enum ReferenceSectionState {
 }
 
 struct TicketReferencesSection: View {
-    let identity: String
+    let ticketID: TicketID
+    let contextIdentity: String?
+    let isContextReady: Bool
     let load: () async -> ReferenceLoadResult<TicketReferenceSet>
     let openSource: (String, Int64) -> Void
     @State private var state: ReferenceSectionState = .idle
+    @State private var isRefreshing = false
+    @State private var startedInitialLoad = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("References", systemImage: "doc.text.magnifyingglass")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
+            HStack {
+                Label("References", systemImage: "doc.text.magnifyingglass")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(.uppercase)
+                Spacer()
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await reload(explicit: true) } }
+                    .buttonStyle(.plain).font(.caption).disabled(isRefreshing)
+                    .accessibilityIdentifier("refresh-ticket-references")
+            }
             switch state {
             case .idle:
                 ProgressView("Loading reference links…")
@@ -34,7 +42,7 @@ struct TicketReferencesSection: View {
                     presentation: failure,
                     style: .compact,
                     actionTitle: "Retry",
-                    action: { Task { await reload() } }
+                    action: { Task { await reload(explicit: true) } }
                 )
             case let .loaded(referenceSet):
                 if referenceSet.links.isEmpty {
@@ -49,6 +57,10 @@ struct TicketReferencesSection: View {
                     }
                 }
             }
+            if isRefreshing {
+                ProgressView("Refreshing references…").controlSize(.small)
+                    .accessibilityIdentifier("ticket-references-refresh-progress")
+            }
         }
         .font(.subheadline)
         .padding(12)
@@ -59,7 +71,12 @@ struct TicketReferencesSection: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
         }
-        .task(id: identity) { await reload() }
+        .task(id: ticketID) { await loadInitiallyIfReady() }
+        .onChange(of: isContextReady) { _, ready in if ready { Task { await loadInitiallyIfReady() } } }
+        .onChange(of: contextIdentity) { _, _ in
+            guard startedInitialLoad else { return }
+            state = .failed(.init(title: "Reference context changed", detail: "The project registration or root changed. Refresh the current ticket to read current references.", systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "reference-context-changed"))
+        }
         .accessibilityIdentifier("ticket-references")
     }
 
@@ -115,10 +132,20 @@ struct TicketReferencesSection: View {
     }
 
     @MainActor
-    private func reload() async {
-        state = .idle
+    private func loadInitiallyIfReady() async {
+        guard isContextReady, !startedInitialLoad else { return }
+        startedInitialLoad = true
+        await reload(explicit: false)
+    }
+
+    private func reload(explicit: Bool) async {
+        guard !isRefreshing else { return }
+        let expectedContext = contextIdentity
+        isRefreshing = explicit
+        if !explicit { state = .idle }
         let result = await load()
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, expectedContext == contextIdentity else { return }
+        isRefreshing = false
         switch result {
         case let .loaded(value): state = .loaded(value)
         case let .failed(failure): state = .failed(failure)
