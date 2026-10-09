@@ -273,14 +273,16 @@ struct DashboardProjection: Equatable, Sendable {
                         )
                     }
                     let goalsByID = Dictionary(uniqueKeysWithValues: goals.map { ($0.id, $0) })
-                    let goalsByTicket = Dictionary(uniqueKeysWithValues: assignments.compactMap { assignment -> (TicketID, TicketDeliveryGoalProjection)? in
+                    let goalsByTicket = Dictionary(uniqueKeysWithValues: assignments.compactMap { assignment -> (Data, TicketDeliveryGoalProjection)? in
                         guard let goal = goalsByID[Data(assignment.goalID.rawValue.utf8)], goal.lifecycle != .superseded else { return nil }
-                        return (assignment.ticketID, TicketDeliveryGoalProjection(goalID: goal.goalID, title: goal.title, outcome: goal.outcome,
+                        return (Data(assignment.ticketID.rawValue.utf8), TicketDeliveryGoalProjection(goalID: goal.goalID, title: goal.title, outcome: goal.outcome,
                             lifecycle: goal.lifecycle, doneCriteria: goal.doneCriteria))
                     })
                     let upcomingIDs = try ticketRows.filter { try $0.text("lane") != TicketLane.accepted.rawValue }
                         .map { TicketID(rawValue: try $0.text("id")) }
-                    let coveredCount = upcomingIDs.filter { goalsByTicket[$0] != nil }.count
+                    let coveredCount = upcomingIDs.filter {
+                        goalsByTicket[Data($0.rawValue.utf8)] != nil
+                    }.count
                     let phasePlan = PhasePlanProjection(state: plan.state, revision: plan.revision, readyRevision: plan.readyRevision,
                         upcomingCount: upcomingIDs.count, coveredUpcomingCount: coveredCount,
                         unassignedUpcomingCount: upcomingIDs.count - coveredCount)
@@ -312,7 +314,7 @@ struct DashboardProjection: Equatable, Sendable {
                             dependencyCount: dependencyCount,
                             blockerCount: blockerCount,
                             taskPlan: taskPlans[ticketID] ?? .unavailable(recovery: .init()),
-                            deliveryGoal: goalsByTicket[ticketID],
+                            deliveryGoal: goalsByTicket[Data(ticketID.rawValue.utf8)],
                             phaseID: phaseID,
                             phaseName: phase.name
                         )
