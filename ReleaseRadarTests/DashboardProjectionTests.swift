@@ -108,6 +108,10 @@ final class DashboardProjectionTests: XCTestCase {
             try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('p','original','replaced','Replace scope','phase','backlog','phase5d-projection-audit','2026-09-10T00:00:00Z')")
             try connection.execute("INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES ('p','original','successor','replacement',0,'phase5d-projection-audit','2026-09-10T00:00:00Z')")
             try connection.execute("INSERT INTO delivery_goal_obligation_lineage (project_id,source_phase_id,source_goal_id,source_ticket_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id,reason,audit_event_id,created_at) VALUES ('p','phase','goal','original','phase','goal','successor','Carry scope','phase5d-projection-audit','2026-09-10T00:00:00Z')")
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: .init(rawValue: "p"), ticketID: .init(rawValue: "successor"),
+                lane: .backlog, connection: connection
+            )
         }
 
         let dashboard = try await DashboardProjection.load(from: store)
@@ -129,6 +133,13 @@ final class DashboardProjectionTests: XCTestCase {
             try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('alpha','plan-project','Alpha'),('beta','plan-project','Beta')")
             try connection.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('plan-project','alpha')")
             try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('alpha-ticket','plan-project','alpha','Alpha outcome','backlog'),('beta-ticket','plan-project','beta','Beta outcome','blocked'),('unassigned-ticket','plan-project',NULL,'Recorded without placement',NULL)")
+            let placedTickets: [(String, TicketLane)] = [("alpha-ticket", .backlog), ("beta-ticket", .blocked)]
+            for (ticketID, lane) in placedTickets {
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: .init(rawValue: "plan-project"), ticketID: .init(rawValue: ticketID),
+                    lane: lane, connection: connection
+                )
+            }
             try connection.execute("INSERT INTO ticket_dependencies (id,project_id,ticket_id,depends_on_ticket_id) VALUES ('unassigned-dependency','plan-project','unassigned-ticket','alpha-ticket')")
             try connection.execute("INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('unassigned-evidence','plan-project','unassigned-ticket','/synthetic/plan.md',0)")
             _ = try TicketTaskPlanningPolicy.revisePlan(
@@ -176,6 +187,10 @@ final class DashboardProjectionTests: XCTestCase {
                 try c.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('p','phase',?,?,?,'draft',0,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z')",
                               bindings: [.text(id.rawValue), .text(ticket), .text(ticket)])
                 try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,'p','phase',?,'backlog')", bindings: [.text(ticket), .text(ticket)])
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: .init(rawValue: "p"), ticketID: .init(rawValue: ticket),
+                    lane: .backlog, connection: c
+                )
                 try c.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('p','phase',?,?)", bindings: [.text(id.rawValue), .text(ticket)])
             }
         }
@@ -231,6 +246,10 @@ final class DashboardProjectionTests: XCTestCase {
             try c.execute("INSERT INTO phases (id,project_id,name) VALUES ('active-phase','evidence-project','Active'), ('other-phase','evidence-project','Other')")
             try c.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('evidence-project','active-phase')")
             try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('evidence-ticket','evidence-project','other-phase','Preserve evidence','backlog')")
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: .init(rawValue: "evidence-project"), ticketID: .init(rawValue: "evidence-ticket"),
+                lane: .backlog, connection: c
+            )
             try c.execute("INSERT INTO project_roots (id,project_id,path) VALUES ('root','evidence-project',?)", bindings: [.text(root.path)])
             try c.execute("INSERT INTO project_bookmarks (project_id,path,bookmark_data) VALUES ('evidence-project',?,?)", bindings: [.text(root.path), .blob(Data(root.path.utf8))])
             try c.execute("INSERT INTO project_documentation_bindings VALUES ('evidence-project','root',?,1,?,?)",
@@ -298,6 +317,20 @@ final class DashboardProjectionTests: XCTestCase {
                 """
             for statement in statements.split(separator: ";") where !statement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 try c.execute(String(statement))
+            }
+            let placedTickets: [(String, String, TicketLane)] = [
+                ("rekon-pursuit", "r1", .backlog),
+                ("rekon-pursuit", "r2", .blocked),
+                ("rekon-pursuit", "r3", .backlog),
+                ("rekon-pursuit", "r4", .accepted),
+                ("no-active", "legacy-work", .inProgress),
+                ("no-active", "legacy-done", .accepted),
+            ]
+            for (projectID, ticketID, lane) in placedTickets {
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: .init(rawValue: projectID), ticketID: .init(rawValue: ticketID),
+                    lane: lane, connection: c
+                )
             }
             _ = try TicketTaskPlanningPolicy.revisePlan(projectID: project, ticketID: .init(rawValue: "r1"),
                 expectedRevision: nil, additions: [.init(id: .init(rawValue: "task"), label: "Task 1", title: "Verify first outcome", sortOrder: 0)],
@@ -383,6 +416,20 @@ final class DashboardProjectionTests: XCTestCase {
         XCTAssertEqual(before.detail(for: ticket)?.codexExecutionGoal.status, "Blocked")
         try await store.transact(actor: .init(id: "fixture"), reason: "Completed projection snapshot") { c in
             try c.execute("UPDATE tickets SET lane='accepted' WHERE project_id='rekon-pursuit'")
+            let ticketIDs = try c.rows(
+                "SELECT id FROM tickets WHERE project_id='rekon-pursuit' AND phase_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY id COLLATE BINARY"
+            ).map { row in
+                guard case let .text(ticketID)? = row["id"] else {
+                    throw DashboardProjectionTestError.missingSnapshotText
+                }
+                return ticketID
+            }
+            for ticketID in ticketIDs {
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: project, ticketID: .init(rawValue: ticketID),
+                    lane: .accepted, connection: c
+                )
+            }
         }
         let completedProjection = try await DashboardProjection.load(from: store)
         let completed = try XCTUnwrap(completedProjection.board(for: project))
@@ -692,6 +739,10 @@ final class DashboardProjectionTests: XCTestCase {
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-active', 'project-explicit', 'Current delivery')")
             try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-explicit', 'phase-active')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ACTIVE-1', 'project-explicit', 'phase-active', 'Current work', 'in_progress')")
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: .init(rawValue: "project-explicit"), ticketID: .init(rawValue: "ACTIVE-1"),
+                lane: .inProgress, connection: connection
+            )
         }
 
         let projection = try await DashboardProjection.load(from: store)
@@ -741,6 +792,28 @@ final class DashboardProjectionTests: XCTestCase {
                 )
             }
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('HISTORY-A', 'phase-selection-project', 'phase-history', 'Historical accepted outcome.', 'accepted')")
+            let placedTickets: [(String, TicketLane)] = [
+                ("CURRENT-A", .backlog),
+                ("CURRENT-B", .inProgress),
+                ("ROAD-B1", .backlog),
+                ("ROAD-B2", .backlog),
+                ("ROAD-B3", .backlog),
+                ("ROAD-B4", .backlog),
+                ("ROAD-B5", .backlog),
+                ("ROAD-B6", .backlog),
+                ("ROAD-B7", .backlog),
+                ("ROAD-B8", .backlog),
+                ("ROAD-X1", .blocked),
+                ("ROAD-X2", .blocked),
+                ("ROAD-X3", .blocked),
+                ("HISTORY-A", .accepted),
+            ]
+            for (ticketID, lane) in placedTickets {
+                try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                    projectID: projectID, ticketID: .init(rawValue: ticketID),
+                    lane: lane, connection: connection
+                )
+            }
             try connection.execute("INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('phase-dep-roadmap', 'phase-selection-project', 'phase-roadmap', 'phase-current')")
             try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('dep-cross', 'phase-selection-project', 'CURRENT-A', 'ROAD-B1')")
             try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('dep-current', 'phase-selection-project', 'CURRENT-B', 'CURRENT-A')")

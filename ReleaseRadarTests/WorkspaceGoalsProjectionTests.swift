@@ -217,6 +217,10 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
                 "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('SECOND-1', ?, ?, 'Second phase work', 'backlog')",
                 bindings: [.text(secondProject.rawValue), .text(secondPhase.rawValue)]
             )
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: secondProject, ticketID: .init(rawValue: "SECOND-1"),
+                lane: .backlog, connection: connection
+            )
             try connection.execute(
                 "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, ?, ?, 'Post-MVP refinement', 'Second phase outcome', 'draft', 0, '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
                 bindings: [.text(secondProject.rawValue), .text(secondPhase.rawValue), .text(sharedGoal.rawValue)]
