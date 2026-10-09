@@ -446,16 +446,14 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
 
     private func waitForExternalNativeJourney(token: String, window: NSWindow) async throws {
         XCTAssertFalse(token.isEmpty)
-        let controlDirectory = URL(
-            fileURLWithPath: "/private/tmp/release-radar-phase6e-writer-01a08dee/native-\(token)",
-            isDirectory: true
-        )
+        let controlDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("release-radar-phase6e-native-\(token)", isDirectory: true)
         try FileManager.default.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
         let readyURL = controlDirectory.appendingPathComponent("ready")
         let completeURL = controlDirectory.appendingPathComponent("complete")
         XCTAssertFalse(FileManager.default.fileExists(atPath: readyURL.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: completeURL.path))
-        let identity = "token=\(token)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\n"
+        let identity = "token=\(token)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\ncontrol=\(controlDirectory.path)\n"
         XCTAssertTrue(FileManager.default.createFile(atPath: readyURL.path, contents: Data(identity.utf8)))
         print("PHASE6E NATIVE READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
 
