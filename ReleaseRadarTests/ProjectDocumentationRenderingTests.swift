@@ -83,15 +83,15 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     "open-phase-board",
                 ],
                 verifyAccessibility: { window in
-                    let windowFrame = try XCTUnwrap(accessibilityFrame(window))
+                    let windowFrame = try XCTUnwrap(self.accessibilityFrame(window))
                     for identifier in ["project-help", "project-manage", "open-project-plan", "open-phase-board"] {
-                        let element = try XCTUnwrap(accessibilityElement(window, identifier: identifier))
+                        let element = try XCTUnwrap(self.accessibilityElement(window, identifier: identifier))
                         XCTAssertEqual(
                             AXUIElementPerformAction(element, "AXScrollToVisible" as CFString),
                             .success,
                             "\(identifier) must be vertically reachable at host width \(Int(width))"
                         )
-                        let elementFrame = try XCTUnwrap(accessibilityFrame(element))
+                        let elementFrame = try XCTUnwrap(self.accessibilityFrame(element))
                         XCTAssertTrue(
                             windowFrame.contains(elementFrame),
                             "\(identifier) must remain fully contained in the host window at width \(Int(width)); window=\(windowFrame), element=\(elementFrame)"
