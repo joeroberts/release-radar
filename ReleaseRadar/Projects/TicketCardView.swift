@@ -134,6 +134,7 @@ struct TicketOrderingMoveControls: View {
                     .buttonStyle(RekonSecondaryButtonStyle())
                     .controlSize(.small)
                     .disabled(isDisabled)
+                    .focusable()
                     .accessibilityLabel("Move earlier")
                     .accessibilityIdentifier("move-ticket-earlier-\(ticketID.rawValue)")
                 }
@@ -144,6 +145,7 @@ struct TicketOrderingMoveControls: View {
                     .buttonStyle(RekonSecondaryButtonStyle())
                     .controlSize(.small)
                     .disabled(isDisabled)
+                    .focusable()
                     .accessibilityLabel("Move later")
                     .accessibilityIdentifier("move-ticket-later-\(ticketID.rawValue)")
                 }
