@@ -331,8 +331,9 @@ struct WorkspaceSearchView: View {
                 .accessibilityFocused($accessibilityDetailActionFocused)
                 .accessibilityLabel("\(actionTitle(for: selected)): \(selected.title)")
                 .accessibilityIdentifier("workspace-search-open-result")
-                .onKeyPress { press in
-                    guard press.key == .tab, press.modifiers.contains(.shift) else { return .ignored }
+                .onKeyPress(phases: .down) { press in
+                    let isBacktab = press.key == .tab || press.characters == "\u{19}"
+                    guard isBacktab, press.modifiers.contains(.shift) else { return .ignored }
                     returnFocusToSelectedResult(selected.id)
                     return .handled
                 }
