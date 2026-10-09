@@ -4,14 +4,18 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 from pathlib import Path
+import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 SCRIPT = REPOSITORY / "script/build_and_run.sh"
+RELEASE_DELIVERY = REPOSITORY / "script/release_delivery.py"
 VERSION = "1.2.3"
 BUILD = "42"
 TAG = f"v{VERSION}"
@@ -123,6 +127,86 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
     def operations(self) -> list[str]:
         log = self.root / "operations.log"
         return log.read_text().splitlines() if log.exists() else []
+
+    def release_delivery_module(self):
+        spec = importlib.util.spec_from_file_location("release_delivery", RELEASE_DELIVERY)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module
+
+    def metadata_fixture(self, directory: Path) -> Path:
+        repository = directory / "repository"
+        marketplace = "ReleaseRadar/CodexPluginMarketplace"
+        for relative in (
+            "ReleaseRadar.xcodeproj/project.pbxproj",
+            "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift",
+        ):
+            destination = repository / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(REPOSITORY / relative, destination)
+        shutil.copytree(REPOSITORY / marketplace, repository / marketplace)
+        return repository
+
+    def test_prepare_release_metadata_updates_only_release_identity_and_appends_capability(self) -> None:
+        fixture = self.metadata_fixture(self.root)
+        project = fixture / "ReleaseRadar.xcodeproj/project.pbxproj"
+        manifest = fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
+        capability = fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift"
+        plugin = manifest.parent.parent
+        preserved = {
+            relative: (plugin / relative).read_bytes()
+            for relative in (".mcp.json", "skills/release-radar/SKILL.md", "skills/shared-execution/SKILL.md")
+        }
+        before_project = project.read_text()
+        before_manifest = manifest.read_text()
+        before_capability = capability.read_text()
+        marker = "\n    ]\n\n    public static func recognize"
+        historical_prefix = before_capability[:before_capability.index(marker)]
+        observed_roots: list[Path] = []
+
+        def identity_provider(root: Path) -> str:
+            observed_roots.append(root)
+            return "d" * 64
+
+        self.release_delivery_module().prepare_release_metadata(
+            fixture, VERSION, BUILD, plugin_identity_provider=identity_provider
+        )
+
+        self.assertEqual([plugin], observed_roots)
+        self.assertEqual(
+            before_project
+            .replace("MARKETING_VERSION = 0.1.35;", f"MARKETING_VERSION = {VERSION};")
+            .replace("CURRENT_PROJECT_VERSION = 1;", f"CURRENT_PROJECT_VERSION = {BUILD};"),
+            project.read_text(),
+        )
+        self.assertEqual(
+            before_manifest.replace('"version": "0.1.33"', f'"version": "{VERSION}"'),
+            manifest.read_text(),
+        )
+        self.assertEqual(
+            preserved,
+            {relative: (plugin / relative).read_bytes() for relative in preserved},
+        )
+        expected_capability = (
+            historical_prefix
+            + f'''\n        Self(\n            manifestVersion: "{VERSION}",\n            normalizedPackageDigest: "{'d' * 64}",\n            sharedExecutionStandardVersions: [1]\n        ),\n    ]\n\n    public static func recognize'''
+            + before_capability[before_capability.index(marker) + len(marker):]
+        )
+        self.assertEqual(expected_capability, capability.read_text())
+
+    def test_prepare_release_metadata_rejects_conflicting_or_existing_plugin_metadata(self) -> None:
+        module = self.release_delivery_module()
+        conflict = self.metadata_fixture(self.root / "conflict")
+        manifest = conflict / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
+        manifest.write_text(manifest.read_text().replace('"version": "0.1.33"', '"version": "9.9.9"'))
+        with self.assertRaises(ValueError):
+            module.prepare_release_metadata(conflict, VERSION, BUILD, plugin_identity_provider=lambda _: "d" * 64)
+
+        existing = self.metadata_fixture(self.root / "existing")
+        with self.assertRaises(ValueError):
+            module.prepare_release_metadata(existing, "0.1.33", BUILD, plugin_identity_provider=lambda _: "d" * 64)
 
     def test_init_derives_receipt_sha_and_all_destinations_from_version(self) -> None:
         self.initialize()

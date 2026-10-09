@@ -40,7 +40,10 @@ final class SharedExecutionSkillContractTests: XCTestCase {
         let manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: manifestData) as? [String: Any])
         let skill = try String(contentsOf: skillURL, encoding: .utf8)
 
-        XCTAssertEqual(manifest["version"] as? String, "0.1.33")
+        let package = try CodexPluginPackage(
+            rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
+        )
+        XCTAssertEqual(manifest["version"] as? String, package.version)
         XCTAssertNil(manifest["hooks"])
         XCTAssertFalse(skill.contains("command-schema"))
         XCTAssertFalse(skill.contains("attestation-schema"))
