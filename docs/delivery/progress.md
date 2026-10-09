@@ -18,7 +18,7 @@ The owner's fourteen-ticket portfolio is tracked by [#120](https://github.com/jo
 
 The owner now authorizes scoped pushes, reviewed PR creation/merge, approved Wiki publication, finished-ticket closure, and one verified local patch release/DMG/install/exact new-tag push. Search owns the combined-app PR; Build owns #166 and #132/#114 PRs and the future release; root remains the sole merge-grant issuer. #119 access/app/environment and binary choices remain unresolved; retain the quota-only Copilot exception and all evidence qualifications. The prior [#160 record](https://github.com/joeroberts/release-radar/issues/160) and retained artifacts remain historical context.
 
-The [#120 fixture incident](https://github.com/joeroberts/release-radar/issues/120#issuecomment-6074875460) launched an ordinary test-built app that attempted default-store read/write/create before termination; owner-state impact remains unknown. The owner authorized narrow read-only schema/recovery/startup-log inspection, not remediation. Native QA remains subject to Planning's named isolation/handle/deadline grants.
+The [#120 fixture incident](https://github.com/joeroberts/release-radar/issues/120#issuecomment-6074875460) read-only inspection found default-store schema `26→27`: the pre-migration snapshot at 01:15:01 EDT matches the accidental PID 94579 launch, with strong timing/source attribution. Project rows/data integrity remain unverified because they were not inspected; owner PID 6006 holds the DB open. No repair, rollback, data copy, app launch, or owner-process change is authorized. Native QA remains subject to Planning's named isolation/handle/deadline grants.
 
 ## Next action
 
