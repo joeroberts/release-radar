@@ -358,14 +358,28 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
 
     private func accessibilityWindow(title: String) -> AXUIElement? {
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
-              let windows = value as? [AXUIElement] else { return nil }
-        return windows.first { window in
+        func matches(_ element: AXUIElement) -> Bool {
             var titleValue: CFTypeRef?
-            return AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleValue) == .success
-                && titleValue as? String == title
+            return AXUIElementCopyAttributeValue(
+                element, kAXTitleAttribute as CFString, &titleValue
+            ) == .success && titleValue as? String == title
         }
+        var value: CFTypeRef?
+        if AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
+           let window = (value as? [AXUIElement])?.first(where: matches) {
+            return window
+        }
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            var candidate: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                application, attribute as CFString, &candidate
+            ) == .success,
+                  let candidate,
+                  CFGetTypeID(candidate) == AXUIElementGetTypeID() else { continue }
+            let element = candidate as! AXUIElement
+            if matches(element) { return element }
+        }
+        return nil
     }
 
     private func accessibilityText(_ root: AXUIElement) -> String {
