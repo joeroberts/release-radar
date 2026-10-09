@@ -22,6 +22,7 @@ VERSION = "1.2.3"
 BUILD = "42"
 TAG = f"v{VERSION}"
 SUITE = "release-radar-tests-v1"
+PACKAGE_INTEGRITY_SUITE = "release-radar-package-integrity-v1"
 SHA = "a" * 40
 
 ADAPTER = r'''#!/usr/bin/env python3
@@ -58,6 +59,7 @@ elif operation == "tag-state":
 elif operation == "signing-status":
     print('{"available":true,"team_matches":true,"authority_matches":true}')
 elif operation == "run-suite":
+    (root / "suite-invocations.log").open("a").write(json.dumps(operands, separators=(",", ":")) + "\n")
     print(json.dumps({"outcome": "failed" if fail("suite") else "passed"}, separators=(",", ":")))
 elif operation == "build-stage":
     target = pathlib.Path(operands[0]); target.parent.mkdir(parents=True, exist_ok=True); target.write_text("staged\n")
@@ -129,6 +131,10 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
     def operations(self) -> list[str]:
         log = self.root / "operations.log"
         return log.read_text().splitlines() if log.exists() else []
+
+    def suite_invocations(self) -> list[list[str]]:
+        log = self.root / "suite-invocations.log"
+        return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
 
     def release_delivery_module(self):
         spec = importlib.util.spec_from_file_location("release_delivery", RELEASE_DELIVERY)
@@ -316,6 +322,47 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         text = self.receipt.read_text().lower()
         for forbidden in ("token", "private_key", "entitlement", "stderr", "stdout"):
             self.assertNotIn(forbidden, text)
+
+    def test_package_integrity_suite_is_accepted_invoked_and_recorded(self) -> None:
+        result = self.command(
+            "release-init", "--version", VERSION, "--build", BUILD,
+            "--required-suite", PACKAGE_INTEGRITY_SUITE, *self.flags(),
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            [PACKAGE_INTEGRITY_SUITE],
+            self.receipt_json()["candidate"]["required_suite_ids"],
+        )
+
+        self.stage("preflight")
+        self.stage("checks")
+
+        self.assertEqual([[PACKAGE_INTEGRITY_SUITE, SHA]], self.suite_invocations())
+        self.assertEqual(
+            [{"suite_id": PACKAGE_INTEGRITY_SUITE, "candidate_sha": SHA, "outcome": "passed"}],
+            self.receipt_json()["checks"],
+        )
+
+    def test_nonpassing_package_integrity_suite_blocks_downstream_stage(self) -> None:
+        result = self.command(
+            "release-init", "--version", VERSION, "--build", BUILD,
+            "--required-suite", PACKAGE_INTEGRITY_SUITE, *self.flags(),
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.stage("preflight")
+        (self.root / "operations" / "fail-suite").touch()
+
+        self.stage("checks", expected=1)
+
+        receipt = self.receipt_json()
+        self.assertEqual(
+            [{"suite_id": PACKAGE_INTEGRITY_SUITE, "candidate_sha": SHA, "outcome": "failed"}],
+            receipt["checks"],
+        )
+        self.assertEqual("checks", receipt["failure"]["stage"])
+        self.assertEqual("required_suite_not_passed", receipt["failure"]["code"])
+        self.stage("stage", expected=1)
+        self.assertNotIn("build-stage", self.operations())
 
     def test_fixture_flags_must_be_paired_and_cannot_escape_root(self) -> None:
         one_flag = self.command("release-init", "--version", VERSION, "--build", BUILD, "--required-suite", SUITE,
