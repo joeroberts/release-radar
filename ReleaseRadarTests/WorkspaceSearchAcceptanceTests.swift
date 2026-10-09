@@ -4,6 +4,61 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkspaceSearchAcceptanceTests: XCTestCase {
+    @MainActor
+    func testChangingRecordTypeRefreshesCurrentQueryAndRestoringAllReturnsMixedMatches() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RecordTypeFilter-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "record-type-filter-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed a matching Search project") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Needle project')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'record-type-filter-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed a matching ticket beside the matching project") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('record-type-filter-phase', ?, 'Needle phase')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('record-type-filter-ticket', ?, 'record-type-filter-phase', 'Needle ticket', 'backlog')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("Needle")
+        await model.runWorkspaceSearch()
+        XCTAssertEqual(Set(model.workspaceSearchProjection?.results.map(\.domain) ?? []), [.project, .ticket])
+
+        model.setWorkspaceSearchDomain(.ticket, enabled: false)
+        let projectOnly = await Self.searchProjection(
+            from: model,
+            domains: [.project],
+            description: "removing Tickets refreshes the current query"
+        )
+        XCTAssertEqual(Set(projectOnly?.results.map(\.domain) ?? []), [.project])
+        XCTAssertEqual(model.workspaceSearchDraft, "Needle")
+
+        model.setWorkspaceSearchDomain(.ticket, enabled: true)
+        let restored = await Self.searchProjection(
+            from: model,
+            domains: [.project, .ticket],
+            description: "restoring Tickets refreshes the current query"
+        )
+        XCTAssertEqual(Set(restored?.results.map(\.domain) ?? []), [.project, .ticket])
+        XCTAssertEqual(model.workspaceSearchDraft, "Needle")
+    }
+
     func testSearchReturnsEveryAuthorizedRecordDomainWithoutMutatingTheStore() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-WorkspaceSearch-\(UUID().uuidString)", isDirectory: true)
@@ -376,6 +431,22 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         return directory.appendingPathComponent("store.sqlite")
+    }
+
+    @MainActor
+    private static func searchProjection(
+        from model: AppModel,
+        domains: Set<WorkspaceSearchDomain>,
+        description: String
+    ) async -> WorkspaceSearchProjection? {
+        for _ in 0..<100 {
+            if let projection = model.workspaceSearchProjection, projection.definition.domains == domains {
+                return projection
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Timed out while \(description)")
+        return nil
     }
 
     private func seedProject(
