@@ -614,7 +614,8 @@ public enum WorkspaceSearchQuery {
                     optionalText(row, "entity_id") ?? ""
                   ]) else { continue }
             let title = try requiredText(row, "reason")
-            let entityType = optionalText(row, "entity_type") ?? "Audit event"
+            let rawEntityType = optionalText(row, "entity_type")
+            let entityType = rawEntityType ?? "Audit event"
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -628,7 +629,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     entityType,
                     query: text,
-                    visibleSearchable: [title, entityType],
+                    visibleSearchable: [title] + rawEntityType.map { [$0] },
                     fields: [
                         ("audit event ID", sourceID),
                         ("audit entity", optionalText(row, "entity_id") ?? "")
@@ -703,7 +704,7 @@ public enum WorkspaceSearchQuery {
                 detail: detailWithMatchExplanation(
                     detail,
                     query: text,
-                    visibleSearchable: [title, detail],
+                    visibleSearchable: [status, detail],
                     fields: [("review ID", sourceID)]
                 )
             ))
