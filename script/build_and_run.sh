@@ -654,13 +654,18 @@ release_native_operation() {
             ;;
         prepare-version)
             local version="$1" build="$2"
-            perl -0pi -e "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $version;/g; s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $build;/g" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj"
-            grep -Eq "MARKETING_VERSION = $version;" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj"
-            grep -Eq "CURRENT_PROJECT_VERSION = $build;" "$ROOT_DIR/ReleaseRadar.xcodeproj/project.pbxproj"
+            python3 "$ROOT_DIR/script/release_delivery.py" \
+                --repository "$ROOT_DIR" prepare-release-metadata \
+                --version "$version" --build "$build"
             ;;
         commit-release-metadata)
-            git -C "$ROOT_DIR" diff --quiet -- ReleaseRadar.xcodeproj/project.pbxproj || \
-                git -C "$ROOT_DIR" commit -m "release: prepare v$1" -- ReleaseRadar.xcodeproj/project.pbxproj >&2
+            local metadata_paths=(
+                ReleaseRadar.xcodeproj/project.pbxproj
+                ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json
+                ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift
+            )
+            git -C "$ROOT_DIR" diff --quiet -- "${metadata_paths[@]}" || \
+                git -C "$ROOT_DIR" commit -m "release: prepare v$1" -- "${metadata_paths[@]}" >&2
             [[ -z "$(git -C "$ROOT_DIR" status --porcelain)" ]] || { report_error "release metadata commit left an unexpected dirty checkout"; return 1; }
             ;;
         prepare-libgit2) bash "$ROOT_DIR/script/build_libgit2.sh" "$(uname -m)" >&2 ;;
