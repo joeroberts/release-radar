@@ -245,6 +245,55 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
     }
 
     func testStaleAndUnavailableFailuresOfferReloadWithoutRepeatingMutation() async throws {
+        let nativeSession: (id: String, pauseSeconds: Double)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_TICKET_ORDERING_RECOVERY_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The ticket ordering recovery native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            guard let pauseSeconds = ProcessInfo.processInfo.environment["RR_TICKET_ORDERING_INSPECT_SECONDS"]
+                .flatMap(Double.init), pauseSeconds > 0 else {
+                XCTFail("The ticket ordering recovery native session requires a positive RR_TICKET_ORDERING_INSPECT_SECONDS value.")
+                return
+            }
+            nativeSession = (sessionID, min(pauseSeconds, 120))
+        } else {
+            nativeSession = nil
+        }
+
+        func waitForStage(_ stage: String, windowTitle: String) async throws {
+            guard let nativeSession else { return }
+            let fileManager = FileManager.default
+            let configurationPath = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+            let configurationPresent = configurationPath != nil
+            guard configurationPresent else {
+                XCTFail("The external ticket ordering recovery journey requires the XCTest configuration environment key.")
+                throw NSError(domain: "TicketOrderingRecoveryNativeSession", code: 1)
+            }
+            let configurationNonempty = configurationPath?.isEmpty == false
+            let configurationExists = configurationPath.map {
+                !$0.isEmpty && fileManager.fileExists(atPath: $0)
+            } ?? false
+            let controlDirectory = fileManager.temporaryDirectory
+                .appendingPathComponent("release-radar-ticket-ordering-recovery", isDirectory: true)
+                .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
+            try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+            let ready = controlDirectory.appendingPathComponent("\(stage)-ready")
+            let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
+            XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+            XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+            let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(windowTitle)\nxctest_configuration_present=\(configurationPresent)\nxctest_configuration_nonempty=\(configurationNonempty)\nxctest_configuration_exists=\(configurationExists)\n"
+            XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+            print("TICKET ORDERING RECOVERY \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+            let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))
+            for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            let completion = try String(contentsOf: complete, encoding: .utf8)
+            XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), nativeSession.id)
+        }
+
         let fixture = try await makeFixture()
         let failures: [TicketOrderingError] = [
             .staleContext,
@@ -257,7 +306,10 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
             )
             let host = try await host(
                 phaseView(fixture: fixture, probe: probe),
-                title: "Ticket ordering recoverable failure \(index)"
+                title: index == 0
+                    ? nativeSession.map { "Ticket ordering recoverable failure — native session \($0.id)" }
+                        ?? "Ticket ordering recoverable failure 0"
+                    : "Ticket ordering recoverable failure \(index)"
             )
             defer { host.close() }
 
@@ -273,11 +325,28 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 ) != nil
             }
             window = try requiredAccessibilityWindow(title: host.title)
-            try press(try XCTUnwrap(accessibilityElement(
-                window,
-                exactIdentifier: "failure-ticket-ordering-action"
-            )))
-            try await waitUntil { await probe.reloadCount == 1 }
+            if index == 0, nativeSession != nil {
+                XCTAssertNotNil(accessibilityElement(
+                    window,
+                    exactIdentifier: "failure-ticket-ordering-action"
+                ))
+                try await waitForStage("rejected", windowTitle: host.title)
+                try await waitUntil {
+                    let reloadCount = await probe.reloadCount
+                    let failureHidden = self.accessibilityElement(
+                        try self.requiredAccessibilityWindow(title: host.title),
+                        exactIdentifier: "failure-ticket-ordering"
+                    ) == nil
+                    return reloadCount == 1 && failureHidden
+                }
+                try await waitForStage("recovered", windowTitle: host.title)
+            } else {
+                try press(try XCTUnwrap(accessibilityElement(
+                    window,
+                    exactIdentifier: "failure-ticket-ordering-action"
+                )))
+                try await waitUntil { await probe.reloadCount == 1 }
+            }
             let invocationCount = await probe.invocationCount
             XCTAssertEqual(invocationCount, 1)
         }
