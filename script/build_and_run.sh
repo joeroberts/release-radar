@@ -636,6 +636,7 @@ release_native_operation() {
         commit-release-metadata)
             git -C "$ROOT_DIR" diff --quiet -- ReleaseRadar.xcodeproj/project.pbxproj || \
                 git -C "$ROOT_DIR" commit -m "release: prepare v$1" -- ReleaseRadar.xcodeproj/project.pbxproj >&2
+            [[ -z "$(git -C "$ROOT_DIR" status --porcelain)" ]] || { report_error "release metadata commit left an unexpected dirty checkout"; return 1; }
             ;;
         prepare-libgit2) bash "$ROOT_DIR/script/build_libgit2.sh" "$(uname -m)" >&2 ;;
         run-suite)

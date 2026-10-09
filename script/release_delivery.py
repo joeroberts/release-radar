@@ -462,10 +462,13 @@ def run_package(context: Context, receipt: Receipt) -> None:
     if context.dmg.exists():
         try:
             digest = context.observe_digest("dmg-sha256", str(context.dmg))
+            installer_digest = context.observe_digest(
+                "dmg-sha256", str(context.installer)
+            )
         except RuntimeError:
             receipt.fail(ReleaseError("package", "checksum_invalid", "release package checksum is invalid"))
         recorded = receipt.data["artifacts"]["dmg_sha256"]
-        if not recorded or digest != recorded:
+        if not recorded or digest != recorded or installer_digest != digest:
             receipt.fail(ReleaseError("package", "package_collision", "release package conflicts with the receipt"))
         receipt.pass_stage("package")
         return
@@ -482,8 +485,13 @@ def run_package(context: Context, receipt: Receipt) -> None:
             staged_identity,
         )
         digest = context.observe_digest("dmg-sha256", str(context.dmg))
+        installer_digest = context.observe_digest(
+            "dmg-sha256", str(context.installer)
+        )
     except RuntimeError:
         receipt.fail(ReleaseError("package", "package_failed", "release package creation or verification failed"))
+    if installer_digest != digest:
+        receipt.fail(ReleaseError("package", "installer_mismatch", "retained installer differs from the verified package"))
     receipt.data["artifacts"]["dmg_sha256"] = digest
     receipt.pass_stage("package")
 
