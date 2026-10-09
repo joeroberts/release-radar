@@ -743,7 +743,7 @@ public enum WorkspaceSearchQuery {
         let notificationRows = try connection.rows(
             """
             SELECT COALESCE(notification_events.project_id, tickets.project_id) AS project_id,
-                   notification_events.id, notification_events.state, notification_events.title,
+                   notification_events.id, notification_events.fingerprint, notification_events.state, notification_events.title,
                    notification_events.message, notification_events.created_at
             FROM notification_events
             LEFT JOIN tickets ON tickets.id = notification_events.ticket_id
@@ -755,12 +755,13 @@ public enum WorkspaceSearchQuery {
         for row in notificationRows {
             let projectID = try requiredText(row, "project_id")
             let sourceID = try requiredText(row, "id")
+            let fingerprint = try requiredText(row, "fingerprint")
+            let state = try requiredText(row, "state")
+            let title = optionalText(row, "title") ?? fingerprint
+            let detail = optionalText(row, "message") ?? "Persisted notification delivery event."
             guard let project = authority.project(projectID), matches(text, in: [
-                sourceID, try requiredText(row, "state"), try requiredText(row, "title"),
-                try requiredText(row, "message")
+                sourceID, state, title, detail
             ]) else { continue }
-            let title = try requiredText(row, "title")
-            let detail = try requiredText(row, "message")
             results.append(.init(
                 domain: .history,
                 project: project,
@@ -777,7 +778,7 @@ public enum WorkspaceSearchQuery {
                     visibleSearchable: [title, detail],
                     fields: [
                         ("notification ID", sourceID),
-                        ("notification state", try requiredText(row, "state"))
+                        ("notification state", state)
                     ]
                 ),
                 occurredAt: optionalText(row, "created_at")
