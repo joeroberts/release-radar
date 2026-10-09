@@ -491,6 +491,9 @@ struct SidebarView: View {
                     DetailUnavailableView(title: "Removed Project", image: "clock.badge.xmark")
                 }
             case let .phaseBoard(projectID):
+                let ticketOrderingContext = dashboard.ticketOrderingContext(for: projectID)
+                let ticketOrderingLanes = dashboard.ticketOrderingLanes(for: projectID)
+                let reorderEligibleTicketIdentities = dashboard.reorderEligibleTicketIdentities(for: projectID)
                 if let board = model.viewedAllPhaseBoard(for: projectID) {
                     AllPhaseBoardView(
                         board: board,
@@ -526,7 +529,22 @@ struct SidebarView: View {
                         referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
                         isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),
                         requestedFocus: model.navigationFocus,
-                        focusChanged: { model.setNavigationFocus($0) }
+                        focusChanged: { model.setNavigationFocus($0) },
+                        ticketOrderingContext: ticketOrderingContext,
+                        ticketOrderingLanes: ticketOrderingLanes,
+                        reorderEligibleTicketIdentities: reorderEligibleTicketIdentities,
+                        reorderTicket: { ticketID, lane, anchor, context in
+                            await model.reorderTicket(
+                                projectID: projectID,
+                                ticketID: ticketID,
+                                expectedLane: lane,
+                                anchor: anchor,
+                                expectedOrderingContext: context
+                            )
+                        },
+                        reloadTicketOrdering: {
+                            await model.reloadTicketOrdering(projectID: projectID)
+                        }
                     )
                 } else if let board = model.viewedBoard(for: projectID) {
                     PhaseBoardView(
@@ -583,7 +601,22 @@ struct SidebarView: View {
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
                         viewAllPhases: { model.viewAllPhases(projectID: projectID) },
                         requestedFocus: model.navigationFocus,
-                        focusChanged: { model.setNavigationFocus($0) }
+                        focusChanged: { model.setNavigationFocus($0) },
+                        ticketOrderingContext: ticketOrderingContext,
+                        ticketOrderingLanes: ticketOrderingLanes,
+                        reorderEligibleTicketIdentities: reorderEligibleTicketIdentities,
+                        reorderTicket: { ticketID, lane, anchor, context in
+                            await model.reorderTicket(
+                                projectID: projectID,
+                                ticketID: ticketID,
+                                expectedLane: lane,
+                                anchor: anchor,
+                                expectedOrderingContext: context
+                            )
+                        },
+                        reloadTicketOrdering: {
+                            await model.reloadTicketOrdering(projectID: projectID)
+                        }
                     )
                 } else if let project = dashboard.projects.first(where: { $0.id == projectID }),
                           !project.phases.isEmpty {

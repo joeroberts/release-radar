@@ -2852,6 +2852,64 @@ final class AppModel {
         }
     }
 
+    func reorderTicket(
+        projectID: ProjectID,
+        ticketID: TicketID,
+        expectedLane: TicketLane,
+        anchor: TicketOrderAnchor,
+        expectedOrderingContext: TicketOrderingContext
+    ) async -> AgentCommandResult {
+        let projectIdentity = Data(projectID.rawValue.utf8)
+        guard let expectedRegistration = dashboard?.projects.first(where: {
+            Data($0.id.rawValue.utf8) == projectIdentity
+        })?.registration else {
+            return .init(
+                entityIDs: [], auditEventID: nil,
+                error: .ticketOrdering(.unavailable(
+                    .invalidStoredState("The current project registration is unavailable.")
+                ))
+            )
+        }
+        let requestID = requestIDGenerator()
+        do {
+            let store = self.store
+            return try await projectOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                await AgentCommandDispatcher(
+                    store: store,
+                    projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                ).dispatch(
+                    AgentCommandEnvelope(
+                        version: AgentCommandDispatcher.commandEnvelopeVersion,
+                        requestID: requestID,
+                        projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
+                        reason: "Owner reordered ticket \(ticketID.rawValue) in \(expectedLane.rawValue)",
+                        command: .reorderTicket(
+                            projectID: projectID.rawValue,
+                            ticketID: ticketID.rawValue,
+                            expectedLane: expectedLane,
+                            anchor: anchor,
+                            expectedOrderingContext: expectedOrderingContext
+                        )
+                    ),
+                    origin: .ownerApp
+                )
+            }
+        } catch {
+            return .init(
+                entityIDs: [], auditEventID: nil,
+                error: .ticketOrdering(.unavailable(
+                    .invalidStoredState("The authorized project root is unavailable.")
+                ))
+            )
+        }
+    }
+
+    func reloadTicketOrdering(projectID: ProjectID) async -> TicketOrderingContext? {
+        guard await reloadProjectProjections() == .published else { return nil }
+        return dashboard?.ticketOrderingContext(for: projectID)
+    }
+
     func transitionTicket(
         projectID: ProjectID,
         ticketID: TicketID,

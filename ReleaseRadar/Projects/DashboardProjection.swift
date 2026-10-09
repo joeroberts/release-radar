@@ -23,7 +23,7 @@ struct DashboardProjection: Equatable, Sendable {
     let boards: [PhaseBoardKey: PhaseBoardProjection]
     let projectPlans: [ProjectID: ProjectPlanProjection]
     let allPhaseBoards: [ProjectID: AllPhaseBoardProjection]
-    let ticketOrderingContexts: [ProjectID: TicketOrderingContext]
+    let ticketOrderingContexts: [Data: TicketOrderingContext]
     let workspaceGoals: WorkspaceGoalsProjection
 
     init(
@@ -33,7 +33,7 @@ struct DashboardProjection: Equatable, Sendable {
         boards: [PhaseBoardKey: PhaseBoardProjection],
         projectPlans: [ProjectID: ProjectPlanProjection] = [:],
         allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:],
-        ticketOrderingContexts: [ProjectID: TicketOrderingContext] = [:],
+        ticketOrderingContexts: [Data: TicketOrderingContext] = [:],
         workspaceGoals: WorkspaceGoalsProjection = .empty
     ) {
         self.projects = projects
@@ -57,6 +57,36 @@ struct DashboardProjection: Equatable, Sendable {
 
     func plan(for projectID: ProjectID) -> ProjectPlanProjection? { projectPlans[projectID] }
     func allPhaseBoard(for projectID: ProjectID) -> AllPhaseBoardProjection? { allPhaseBoards[projectID] }
+
+    func ticketOrderingContext(for projectID: ProjectID) -> TicketOrderingContext? {
+        ticketOrderingContexts[Data(projectID.rawValue.utf8)]
+    }
+
+    func ticketOrderingLanes(for projectID: ProjectID) -> [TicketLaneOrderSnapshot] {
+        let projectIdentity = Data(projectID.rawValue.utf8)
+        guard let board = allPhaseBoards.first(where: {
+            Data($0.key.rawValue.utf8) == projectIdentity
+        })?.value else { return [] }
+        return board.lanes.map { lane in
+            TicketLaneOrderSnapshot(lane: lane.lane, ticketIDs: lane.cards.map(\.id))
+        }
+    }
+
+    func reorderEligibleTicketIdentities(for projectID: ProjectID) -> [Data] {
+        let projectIdentity = Data(projectID.rawValue.utf8)
+        guard let board = allPhaseBoards.first(where: {
+            Data($0.key.rawValue.utf8) == projectIdentity
+        })?.value else { return [] }
+        return board.lanes.flatMap { lane in
+            guard lane.lane != .accepted else { return [] }
+            return lane.cards.compactMap { card in
+                guard let phaseID = card.phaseID,
+                      let phaseBoard = boards[PhaseBoardKey(projectID: projectID, phaseID: phaseID)],
+                      phaseBoard.phaseLifecycle?.lifecycle != .completed else { return nil }
+                return Data(card.id.rawValue.utf8)
+            }
+        }
+    }
 
     static func load(
         from store: DeliveryStore,
@@ -99,7 +129,7 @@ struct DashboardProjection: Equatable, Sendable {
             var boards: [PhaseBoardKey: PhaseBoardProjection] = [:]
             var projectPlans: [ProjectID: ProjectPlanProjection] = [:]
             var allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:]
-            var ticketOrderingContexts: [ProjectID: TicketOrderingContext] = [:]
+            var ticketOrderingContexts: [Data: TicketOrderingContext] = [:]
             let archivedProjects = try connection.dashboardRows(
                 """
                 SELECT projects.id, projects.name, project_registrations.registration_id,
@@ -161,7 +191,7 @@ struct DashboardProjection: Equatable, Sendable {
                     projectID: projectID,
                     connection: connection
                 )
-                ticketOrderingContexts[projectID] = ticketOrdering.context
+                ticketOrderingContexts[Data(projectID.rawValue.utf8)] = ticketOrdering.context
                 let registration = try projectRow.nullableText("registration_id").map {
                     ProjectRegistration(
                         projectID: projectID,
