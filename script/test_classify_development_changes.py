@@ -12,11 +12,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 CLASSIFIER = REPOSITORY / "script/classify_development_changes.py"
+COLLECTOR = REPOSITORY / "script/collect_development_changed_paths.sh"
 WORKFLOW = REPOSITORY / ".github/workflows/development-documentation.yml"
 RUN_KEYS = {
     "run_docs_validation",
@@ -224,6 +226,111 @@ class DevelopmentChangeClassifierTests(unittest.TestCase):
         self.assertIn("run_adr_checker_tests", text)
         self.assertIn("run_routing_tests", text)
         self.assertIn("fallback", text.lower(), "diff failure must visibly take a safe fallback")
+
+
+class DevelopmentChangedPathCollectionTests(unittest.TestCase):
+    """Exercise the workflow-owned diff boundary with real, isolated Git history."""
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory(prefix="rr-ci-routing-qa-")
+        self.addCleanup(self.temporary.cleanup)
+        self.repository = Path(self.temporary.name) / "repository"
+        self.repository.mkdir()
+        self.git("init", "-q", "--initial-branch=main")
+        self.git("config", "user.name", "QA Fixture")
+        self.git("config", "user.email", "qa@example.invalid")
+        self.write("README.md", "baseline\n")
+        self.git("add", "README.md")
+        self.git("commit", "-qm", "baseline")
+
+    def git(self, *arguments: str) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            ["git", *arguments],
+            cwd=self.repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+    def write(self, path: str, contents: str) -> None:
+        target = self.repository / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(contents)
+
+    def revision(self, reference: str) -> str:
+        return self.git("rev-parse", reference).stdout.decode().strip()
+
+    def collect(self, *arguments: str) -> bytes:
+        self.assertTrue(COLLECTOR.is_file(), f"missing production diff collector: {COLLECTOR}")
+        result = subprocess.run(
+            ["bash", str(COLLECTOR), *arguments],
+            cwd=self.repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
+        return result.stdout
+
+    def paths(self, *arguments: str) -> list[str]:
+        output = self.collect(*arguments)
+        self.assertTrue(output.endswith(b"\0"), output)
+        return [part.decode() for part in output[:-1].split(b"\0")]
+
+    def test_pull_request_uses_merge_base_and_captures_every_commit(self) -> None:
+        self.git("switch", "-qc", "feature")
+        self.write("docs/README.md", "first feature commit\n")
+        self.git("add", "docs/README.md")
+        self.git("commit", "-qm", "docs change")
+        self.write("ReleaseRadar/App/Feature.swift", "second feature commit\n")
+        self.git("add", "ReleaseRadar/App/Feature.swift")
+        self.git("commit", "-qm", "source change")
+
+        self.assertEqual(
+            ["ReleaseRadar/App/Feature.swift", "docs/README.md"],
+            sorted(self.paths("--pull-request", "main", "feature")),
+        )
+
+    def test_push_uses_the_complete_before_after_range(self) -> None:
+        before = self.revision("HEAD")
+        self.write("docs/new-guide.md", "first push commit\n")
+        self.git("add", "docs/new-guide.md")
+        self.git("commit", "-qm", "first push commit")
+        self.write("ReleaseRadarCore/NewFeature.swift", "second push commit\n")
+        self.git("add", "ReleaseRadarCore/NewFeature.swift")
+        self.git("commit", "-qm", "second push commit")
+        after = self.revision("HEAD")
+
+        self.assertEqual(
+            ["ReleaseRadarCore/NewFeature.swift", "docs/new-guide.md"],
+            sorted(self.paths("--push", before, after)),
+        )
+
+    def test_rename_and_delete_emit_preimage_and_postimage_paths(self) -> None:
+        self.write("ReleaseRadar/CodexPluginMarketplace/old-runtime.md", "runtime input\n")
+        self.write("ReleaseRadar/obsolete.swift", "obsolete\n")
+        self.git("add", "ReleaseRadar/CodexPluginMarketplace/old-runtime.md", "ReleaseRadar/obsolete.swift")
+        self.git("commit", "-qm", "add rename and delete inputs")
+        self.git("switch", "-qc", "feature")
+        self.git("mv", "ReleaseRadar/CodexPluginMarketplace/old-runtime.md", "ReleaseRadar/CodexPluginMarketplace/new-runtime.md")
+        self.git("rm", "-q", "ReleaseRadar/obsolete.swift")
+        self.git("commit", "-qm", "rename and delete inputs")
+
+        self.assertEqual(
+            [
+                "ReleaseRadar/CodexPluginMarketplace/new-runtime.md",
+                "ReleaseRadar/CodexPluginMarketplace/old-runtime.md",
+                "ReleaseRadar/obsolete.swift",
+            ],
+            sorted(self.paths("--pull-request", "main", "feature")),
+        )
+
+    def test_invalid_refs_and_zero_before_are_empty_fail_closed_input(self) -> None:
+        self.assertEqual(b"", self.collect("--pull-request", "missing-base", "missing-head"))
+        self.assertEqual(
+            b"",
+            self.collect("--push", "0000000000000000000000000000000000000000", self.revision("HEAD")),
+        )
 
 
 if __name__ == "__main__":
