@@ -276,8 +276,8 @@ struct WorkspaceSearchView: View {
         )
         .accessibilityIdentifier("workspace-search-result-\(result.id.base64EncodedString())")
         .onMoveCommand { moveSelection($0, from: result.id) }
-        .onKeyPress(.tab, phases: .down) { press in
-            guard isSelected, !press.modifiers.contains(.shift) else { return .ignored }
+        .onKeyPress { press in
+            guard press.key == .tab, isSelected, !press.modifiers.contains(.shift) else { return .ignored }
             focusDetailAction()
             return .handled
         }
@@ -331,8 +331,8 @@ struct WorkspaceSearchView: View {
                 .accessibilityFocused($accessibilityDetailActionFocused)
                 .accessibilityLabel("\(actionTitle(for: selected)): \(selected.title)")
                 .accessibilityIdentifier("workspace-search-open-result")
-                .onKeyPress(.tab, phases: .down) { press in
-                    guard press.modifiers.contains(.shift) else { return .ignored }
+                .onKeyPress { press in
+                    guard press.key == .tab, press.modifiers.contains(.shift) else { return .ignored }
                     returnFocusToSelectedResult(selected.id)
                     return .handled
                 }
