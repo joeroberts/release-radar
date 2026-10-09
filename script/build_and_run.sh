@@ -310,8 +310,12 @@ verify_bundle() {
                 0.1.7|0.1.8|0.1.9|0.1.10|0.1.11|0.1.12|0.1.13|0.1.14|0.1.15|0.1.16|0.1.17|0.1.18)
                     requires_coordinator=false
                     ;;
-                0.1.19|0.1.20|0.1.21|0.1.22|0.1.23|0.1.24|0.1.25|0.1.26|0.1.27|0.1.28|0.1.29|0.1.30|0.1.31|0.1.32|0.1.33|0.1.34) ;;
-                *) report_error "unsupported prior destination version $version"; return 1 ;;
+                *)
+                    if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                        report_error "unsupported prior destination version $version"
+                        return 1
+                    fi
+                    ;;
             esac
             ;;
         *) report_error "unsupported bundle verification role $role"; return 1 ;;
@@ -607,7 +611,16 @@ release_native_operation() {
     [[ -n "$receipt" && -n "$operation" ]] || { report_error "native release operation requires receipt and operation"; return 2; }
 
     case "$operation" in
-        head) git -C "$ROOT_DIR" rev-parse HEAD ;;
+        head)
+            git -C "$ROOT_DIR" rev-parse HEAD
+            ;;
+        source-state)
+            local clean=true
+            if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all -- . ':(exclude)dist/**')" ]]; then
+                clean=false
+            fi
+            printf '{"clean":%s}\n' "$clean"
+            ;;
         tag-state)
             local tag="$1" source_revision="$2" peeled object_type
             if ! git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
@@ -649,13 +662,26 @@ release_native_operation() {
             ;;
         build-stage)
             local staged_bundle="$1" expected_version="$2" expected_build="$3"
-            [[ ! -e "$staged_bundle" ]] || { report_error "staged bundle already exists at $staged_bundle"; return 1; }
+            local stage_directory stage_candidate build_identity
             xcodebuild -project "$ROOT_DIR/ReleaseRadar.xcodeproj" -scheme ReleaseRadar -configuration Release CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO -derivedDataPath "$DERIVED_DATA" build >&2
             verify_bundle "$BUILD_BUNDLE" candidate "$expected_version" "$expected_build"
             mkdir -p "$(dirname "$staged_bundle")"
-            ditto "$BUILD_BUNDLE" "$staged_bundle"
+            stage_directory="$(mktemp -d "$(dirname "$staged_bundle")/.${APP_NAME}.stage.XXXXXX")"
+            stage_candidate="$stage_directory/$APP_NAME.app"
+            ditto "$BUILD_BUNDLE" "$stage_candidate"
+            verify_bundle "$stage_candidate" candidate "$expected_version" "$expected_build"
+            build_identity="$(bundle_identity "$BUILD_BUNDLE")"
+            require_matching_bundle_identity "$BUILD_BUNDLE" "$stage_candidate"
+            promote_verified_bundle "$stage_candidate" "$staged_bundle" "$build_identity" "$expected_version" "$expected_build"
+            rmdir "$stage_directory"
             ;;
-        verify-bundle) verify_bundle "$1" candidate "$2" "$3" ;;
+        verify-bundle)
+            if [[ "${4:-}" == "prior-destination" ]]; then
+                verify_bundle "$1" prior-destination
+            else
+                verify_bundle "$1" candidate "$2" "$3"
+            fi
+            ;;
         bundle-identity) bundle_identity "$1" | shasum -a 256 | awk '{ print $1 }' ;;
         package-dmg)
             package_release_dmg "$1" "$2" "$3" "$4" "$5" "$6"

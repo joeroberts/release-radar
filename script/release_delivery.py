@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 from typing import Any, NoReturn
 
 
@@ -81,6 +83,7 @@ class Context:
         if self.fixture_root:
             for destination in (
                 self.receipt_path,
+                self.receipt_path.with_suffix(".json.tmp"),
                 self.staged_bundle,
                 self.dmg,
                 self.installer,
@@ -293,9 +296,28 @@ class Receipt:
     def save(self) -> None:
         self.validate()
         self.context.receipt_path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.context.receipt_path.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps(self.data, indent=2, sort_keys=True) + "\n")
-        temporary.replace(self.context.receipt_path)
+        descriptor, temporary_name = tempfile.mkstemp(
+            dir=self.context.receipt_path.parent,
+            prefix=f".{self.context.receipt_path.name}.",
+            suffix=".tmp",
+        )
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w") as stream:
+                stream.write(json.dumps(self.data, indent=2, sort_keys=True) + "\n")
+            temporary.replace(self.context.receipt_path)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+
+    def begin_stage(self, stage: str) -> None:
+        start = STAGES.index(stage)
+        for dependent in STAGES[start:]:
+            self.data["stages"][dependent] = "pending"
+        if stage == "checks":
+            self.data["checks"] = []
+        self.data["failure"] = None
+        self.save()
 
     def fail(self, error: ReleaseError) -> NoReturn:
         self.data["failure"] = {
@@ -313,13 +335,18 @@ class Receipt:
 
     def require_head(self, context: Context, stage: str) -> None:
         try:
+            source_state = context.observe_object("source-state", (), {"clean"})
             current = context.observe_sha("head")
         except RuntimeError:
             self.fail(ReleaseError(stage, "source_revision_unavailable", "release source revision is unavailable"))
+        if type(source_state["clean"]) is not bool or not source_state["clean"]:
+            self.fail(ReleaseError(stage, "source_checkout_dirty", "release source checkout contains uncommitted changes"))
         if current != self.candidate["source_revision"]:
             self.fail(ReleaseError(stage, "source_revision_mismatch", "release source revision no longer matches HEAD"))
 
     def require_checks(self, stage: str) -> None:
+        if self.data["stages"]["checks"] != "passed":
+            self.fail(ReleaseError(stage, "required_checks_missing", "all required checks must pass for this candidate"))
         by_suite = {check["suite_id"]: check for check in self.data["checks"]}
         if any(
             suite not in by_suite or by_suite[suite]["outcome"] != "passed"
@@ -374,6 +401,8 @@ def tag_state(context: Context, receipt: Receipt, stage: str) -> str:
         and value["state"] in {"matching-annotated", "mismatch"}
         and SHA_PATTERN.fullmatch(value["peeled_sha"])
     ):
+        if value["state"] == "matching-annotated" and value["peeled_sha"] != receipt.candidate["source_revision"]:
+            return "mismatch"
         return value["state"]
     receipt.fail(ReleaseError(stage, "tag_state_invalid", "release tag state is invalid"))
 
@@ -435,6 +464,7 @@ def run_checks(context: Context, receipt: Receipt) -> None:
         receipt.save()
         if outcome != "passed":
             receipt.fail(ReleaseError("checks", "required_suite_not_passed", "a required suite did not pass"))
+    receipt.require_head(context, "checks")
     receipt.pass_stage("checks")
 
 
@@ -442,11 +472,10 @@ def run_stage(context: Context, receipt: Receipt) -> None:
     receipt.require_head(context, "stage")
     receipt.require_checks("stage")
     recorded = receipt.data["artifacts"]["staged_bundle_identity"]
-    if context.staged_bundle.exists():
+    if context.staged_bundle.exists() and recorded:
         identity = verify_bundle(context, receipt, "stage", context.staged_bundle)
-        if recorded and identity != recorded:
+        if identity != recorded:
             receipt.fail(ReleaseError("stage", "staged_collision", "staged release conflicts with the receipt"))
-        receipt.data["artifacts"]["staged_bundle_identity"] = identity
         receipt.pass_stage("stage")
         return
     try:
@@ -458,6 +487,7 @@ def run_stage(context: Context, receipt: Receipt) -> None:
         )
     except RuntimeError:
         receipt.fail(ReleaseError("stage", "build_failed", "release build and staging failed"))
+    receipt.require_head(context, "stage")
     identity = verify_bundle(context, receipt, "stage", context.staged_bundle)
     receipt.data["artifacts"]["staged_bundle_identity"] = identity
     receipt.pass_stage("stage")
@@ -541,6 +571,18 @@ def run_install(context: Context, receipt: Receipt) -> None:
             receipt.pass_stage("install")
             return
 
+    if context.installed_bundle.exists():
+        try:
+            context.invoke(
+                "verify-bundle",
+                str(context.installed_bundle),
+                receipt.candidate["version"],
+                receipt.candidate["build"],
+                "prior-destination",
+            )
+        except RuntimeError:
+            receipt.fail(ReleaseError("install", "installed_destination_invalid", "installed destination is not a compatible verified release"))
+
     try:
         context.invoke("stop-running")
         context.invoke(
@@ -579,11 +621,14 @@ def run_tag(context: Context, receipt: Receipt) -> None:
         )
     except RuntimeError:
         receipt.fail(ReleaseError("tag", "tag_create_failed", "release tag creation failed"))
+    if tag_state(context, receipt, "tag") != "matching-annotated":
+        receipt.fail(ReleaseError("tag", "tag_verification_failed", "created release tag does not identify the candidate"))
     receipt.pass_stage("tag")
 
 
 def run_push_tag(context: Context, receipt: Receipt) -> None:
     receipt.require_head(context, "push_tag")
+    receipt.require_checks("push_tag")
     if receipt.data["stages"]["tag"] != "passed":
         receipt.fail(ReleaseError("push_tag", "tag_required", "local tag must pass before publication"))
     if tag_state(context, receipt, "push_tag") != "matching-annotated":
@@ -630,6 +675,15 @@ def initialize(context: Context, build: str, suites: list[str]) -> None:
         )
         if status.returncode != 0 or status.stdout:
             raise ValueError("release-init requires a clean checkout")
+    initial_revision = context.observe_sha("head")
+    try:
+        initial_tag_state = json.loads(
+            context.invoke("tag-state", f"v{context.version}", initial_revision)
+        )
+    except (json.JSONDecodeError, RuntimeError) as error:
+        raise ValueError("release tag state is unavailable") from error
+    if initial_tag_state != {"state": "absent"}:
+        raise ValueError("release tag already exists")
     context.invoke("prepare-version", context.version, build)
     context.invoke("commit-release-metadata", context.version)
     source_revision = context.observe_sha("head")
@@ -670,6 +724,7 @@ def main(argv: list[str]) -> int:
         return 0
 
     receipt = Receipt.load(context)
+    receipt.begin_stage(arguments.stage)
     STAGE_RUNNERS[arguments.stage](context, receipt)
     return 0
 
