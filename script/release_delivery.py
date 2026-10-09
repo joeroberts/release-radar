@@ -23,7 +23,10 @@ SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 DIGEST_PATTERN = re.compile(r"[0-9a-f]{64}")
 VERSION_PATTERN = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 BUILD_PATTERN = re.compile(r"[0-9]+")
-SUITE_COMMANDS = {"release-radar-tests-v1"}
+SUITE_COMMANDS = {
+    "release-radar-package-integrity-v1",
+    "release-radar-tests-v1",
+}
 STAGES = ("preflight", "checks", "stage", "package", "install", "tag", "push_tag")
 ACTION_OPERATIONS = {
     "prepare-version",

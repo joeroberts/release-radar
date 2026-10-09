@@ -257,10 +257,10 @@ bash script/build_and_run.sh release-init \
   --required-suite release-radar-tests-v1
 ```
 
-Initialization updates and commits only the Xcode version/build metadata, then
-records the resulting HEAD in
-`$HOME/Downloads/ReleaseRadar-X.Y.Z.release.json`. Continue that same candidate
-one stage at a time:
+Initialization updates and commits the Xcode version/build metadata, bundled
+plugin manifest version, and recognized package digest, then records the
+resulting HEAD in `$HOME/Downloads/ReleaseRadar-X.Y.Z.release.json`. Continue
+that same candidate one stage at a time:
 
 ```sh
 bash script/build_and_run.sh release-delivery --version X.Y.Z --stage preflight
@@ -271,6 +271,13 @@ bash script/build_and_run.sh release-delivery --version X.Y.Z --stage install
 bash script/build_and_run.sh release-delivery --version X.Y.Z --stage tag
 bash script/build_and_run.sh release-delivery --version X.Y.Z --stage push_tag
 ```
+
+`release-radar-tests-v1` retains the existing full-scheme test behavior.
+`release-radar-package-integrity-v1` is the fixed post-initialization suite for
+the bundled plugin version, canonical digest, and recognized capability
+boundary. Select it with `--required-suite` only for that package-integrity
+gate. It does not replace the applicable behavioral acceptance required for
+the release candidate.
 
 The workflow requires the configured Apple signing identity, the pinned
 libgit2 source used by `script/build_libgit2.sh`, Xcode's macOS test/build
