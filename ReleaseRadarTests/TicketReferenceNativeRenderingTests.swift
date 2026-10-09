@@ -7,6 +7,40 @@ import XCTest
 
 @MainActor
 final class TicketReferenceNativeRenderingTests: XCTestCase {
+    func testTicketDetailReloadsDrawerSectionsWhenOnlyReferenceContextIdentityChanges() async throws {
+        let notification = Notification.Name("ticket-drawer-observer-generation-\(UUID().uuidString)")
+        let counter = TicketDrawerLoadCounter()
+        let hosting = NSHostingView(rootView: TicketDrawerContextReloadHarness(
+            notification: notification,
+            counter: counter
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 760)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+
+        try await Task.sleep(for: .milliseconds(180))
+        let initialCounts = await counter.counts()
+        XCTAssertEqual(initialCounts.references, 1)
+        XCTAssertEqual(initialCounts.evidence, 1)
+
+        NotificationCenter.default.post(name: notification, object: nil)
+        try await Task.sleep(for: .milliseconds(180))
+
+        // Baseline discriminator for #120: the selected ticket is unchanged, but the
+        // current TicketDetailView identity path recreates both drawer sections.
+        let observerChangedCounts = await counter.counts()
+        XCTAssertEqual(observerChangedCounts.references, 2)
+        XCTAssertEqual(observerChangedCounts.evidence, 2)
+    }
+
     func testReferenceRoutesRetainExactIdentityAndFocusInHistory() {
         let projectID = ProjectID(rawValue: "project")
         let ticketID = TicketID(rawValue: "RR-5B")
@@ -690,6 +724,57 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             }
         }
         return nil
+    }
+}
+
+private struct TicketDrawerContextReloadHarness: View {
+    let notification: Notification.Name
+    let counter: TicketDrawerLoadCounter
+    @State private var referenceContextIdentity = "service:observed:generation-1"
+
+    var body: some View {
+        TicketDetailView(
+            detail: .init(
+                id: .init(rawValue: "RR-DRAWER"),
+                outcome: "Keep the selected ticket stable",
+                goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+                requires: [], unlocks: [], ownerAttention: [], evidence: [],
+                auditHistory: [], notificationHistory: []
+            ),
+            loadReferences: { await counter.loadReferences() },
+            loadDeliveryEvidence: { await counter.loadEvidence() },
+            openReferenceSource: { _, _ in },
+            referenceContextIdentity: referenceContextIdentity
+        )
+        .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
+            referenceContextIdentity = "service:observed:generation-2"
+        }
+    }
+}
+
+private actor TicketDrawerLoadCounter {
+    private var referenceLoads = 0
+    private var evidenceLoads = 0
+
+    func loadReferences() -> ReferenceLoadResult<TicketReferenceSet> {
+        referenceLoads += 1
+        return .loaded(.init(
+            projectID: "project", ticketID: "RR-DRAWER", phaseID: nil,
+            phaseLabel: "Drawer phase", linkSetRevision: 1, links: []
+        ))
+    }
+
+    func loadEvidence() -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        evidenceLoads += 1
+        return .loaded(.init(
+            projectID: "project", ticketID: "RR-DRAWER", phaseID: nil,
+            phaseLabel: "Drawer phase", revision: 1, currentTargetVersion: nil,
+            targets: [], observations: [], expectations: [], ownerAcceptance: .notAccepted
+        ))
+    }
+
+    func counts() -> (references: Int, evidence: Int) {
+        (referenceLoads, evidenceLoads)
     }
 }
 
