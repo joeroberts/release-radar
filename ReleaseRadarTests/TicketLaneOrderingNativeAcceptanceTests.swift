@@ -385,6 +385,7 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
         let bookmark = try bookmarks.makeBookmark(for: projectRoot)
         let projectID = ProjectID(rawValue: "native-ordering-project")
         let openPhase = PhaseID(rawValue: "phase-open")
+        let hiddenPhase = PhaseID(rawValue: "phase-hidden")
         let completedPhase = PhaseID(rawValue: "phase-completed")
         let target = TicketID(rawValue: "phase-target")
         let phasePeer = TicketID(rawValue: "phase-peer")
@@ -413,9 +414,10 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 bindings: [.text(projectID.rawValue)]
             )
             try connection.execute(
-                "INSERT INTO phases (id,project_id,name) VALUES (?,?,?),(?,?,?)",
+                "INSERT INTO phases (id,project_id,name) VALUES (?,?,?),(?,?,?),(?,?,?)",
                 bindings: [
                     .text(openPhase.rawValue), .text(projectID.rawValue), .text("Open phase"),
+                    .text(hiddenPhase.rawValue), .text(projectID.rawValue), .text("Hidden phase"),
                     .text(completedPhase.rawValue), .text(projectID.rawValue), .text("Completed phase"),
                 ]
             )
@@ -435,7 +437,7 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 (target, openPhase, "Visible phase target"),
                 (completedRight, completedPhase, "Completed right anchor"),
                 (phasePeer, openPhase, "Visible phase peer"),
-                (composedTicket, openPhase, "Hidden composed ticket"),
+                (composedTicket, hiddenPhase, "Hidden composed ticket"),
                 (decomposedTicket, openPhase, "Visible decomposed ticket"),
                 (bytePeer, openPhase, "Visible byte peer"),
             ]
@@ -452,7 +454,7 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 "INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES (?,?,?,'Visible goal','Visible byte path','draft',0,'2026-10-09T00:00:00Z','2026-10-09T00:00:00Z'),(?,?,'goal-hidden','Hidden goal','Hidden byte path','draft',1,'2026-10-09T00:00:00Z','2026-10-09T00:00:00Z')",
                 bindings: [
                     .text(projectID.rawValue), .text(openPhase.rawValue), .text(visibleGoal.rawValue),
-                    .text(projectID.rawValue), .text(openPhase.rawValue),
+                    .text(projectID.rawValue), .text(hiddenPhase.rawValue),
                 ]
             )
             try connection.execute(
@@ -460,7 +462,7 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
                 bindings: [
                     .text(projectID.rawValue), .text(openPhase.rawValue),
                     .text(visibleGoal.rawValue), .text(decomposedTicket.rawValue),
-                    .text(projectID.rawValue), .text(openPhase.rawValue), .text(composedTicket.rawValue),
+                    .text(projectID.rawValue), .text(hiddenPhase.rawValue), .text(composedTicket.rawValue),
                     .text(projectID.rawValue), .text(openPhase.rawValue),
                     .text(visibleGoal.rawValue), .text(bytePeer.rawValue),
                 ]
