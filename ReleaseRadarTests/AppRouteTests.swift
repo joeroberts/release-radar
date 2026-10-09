@@ -6576,11 +6576,7 @@ final class AppRouteTests: XCTestCase {
             nativeSession = nil
         }
 
-        // Repository document validation intentionally rejects symlinked root
-        // ancestors; macOS's default test temporary directory traverses /var.
-        let fixture = try await makeTask10PlanningFixture(
-            temporaryRoot: URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
-        )
+        let fixture = try await makeTask10PlanningFixture()
         let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
         try FileManager.default.copyItem(
@@ -6727,7 +6723,7 @@ final class AppRouteTests: XCTestCase {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         defer {
-            window.close()
+            window.orderOut(nil)
             NSApp.setActivationPolicy(previousPolicy)
         }
         try await Task.sleep(for: .milliseconds(600))

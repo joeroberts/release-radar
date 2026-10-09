@@ -128,28 +128,42 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
     }
 
     func testPanelWithdrawsLateResultAfterTicketIdentityChanges() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("phase6c-switch-ticket-\(UUID().uuidString)")
         let gate = DeliveryEvidenceLoadGate()
         let hosting = NSHostingView(rootView: DeliveryEvidenceSwitchHarness(notification: notification, gate: gate))
         hosting.frame = .init(x: 0, y: 0, width: 500, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Phase 6C evidence identity switch"
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Phase 6C evidence identity switch",
+            content: hosting,
+            width: 500,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
+        hosting.layoutSubtreeIfNeeded()
 
         await gate.waitUntilOldLoadEntered()
         NotificationCenter.default.post(name: notification, object: nil)
         try await Task.sleep(for: .milliseconds(120))
         await gate.releaseOldLoad()
         try await Task.sleep(for: .milliseconds(160))
+        hosting.layoutSubtreeIfNeeded()
 
-        let text = accessibilityText(AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let text = accessibilityText(nativeWindow)
         XCTAssertTrue(text.contains("Ticket B current"))
         XCTAssertFalse(text.contains("Ticket A stale"))
     }
 
     func testDeliveryEvidenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let gate = DeliveryEvidenceRefreshGate()
         let hosting = NSHostingView(rootView: TicketDeliveryEvidenceSection(
             ticketID: .init(rawValue: "ticket-refresh"),
@@ -158,42 +172,52 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
             load: { await gate.load() }
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Delivery evidence refresh retention"
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Delivery evidence refresh retention",
+            content: hosting,
+            width: 620,
+            height: 780
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        let help = try XCTUnwrap(accessibilityElement(application, identifier: "delivery-evidence-help"))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let help = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "delivery-evidence-help"))
         XCTAssertEqual(AXUIElementSetAttributeValue(help, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
-        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-delivery-evidence"))
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-delivery-evidence"))
         XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
         await gate.waitUntilRefreshEntered()
         try await Task.sleep(for: .milliseconds(80))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
-        XCTAssertTrue(accessibilityText(application).contains("Initial evidence"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Initial evidence"))
 
         await gate.releaseRefreshFailure()
         try await Task.sleep(for: .milliseconds(120))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-previously-loaded"))
-        XCTAssertTrue(accessibilityText(application).contains("Initial evidence"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-previously-loaded"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Initial evidence"))
         var focused: CFTypeRef?
         XCTAssertEqual(AXUIElementCopyAttributeValue(help, kAXFocusedAttribute as CFString, &focused), .success)
         XCTAssertEqual((focused as? NSNumber)?.boolValue, true)
 
-        let retry = try XCTUnwrap(accessibilityElement(application, title: "Retry"))
+        let retry = try XCTUnwrap(accessibilityElement(nativeWindow, title: "Retry"))
         XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
         try await Task.sleep(for: .milliseconds(150))
         let retryLoadCount = await gate.loadCount()
         XCTAssertEqual(retryLoadCount, 3)
-        XCTAssertTrue(accessibilityText(application).contains("Retry evidence"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-previously-loaded"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Retry evidence"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-previously-loaded"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
     }
 
     func testDeliveryEvidenceUnavailableReadinessDoesNotLoadUntilExplicitRefresh() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let gate = DeliveryEvidenceUnavailableGate()
         let hosting = NSHostingView(rootView: TicketDeliveryEvidenceSection(
             ticketID: .init(rawValue: "ticket-unavailable"),
@@ -202,32 +226,40 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
             load: { await gate.load() }
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Delivery evidence unavailable readiness"
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Delivery evidence unavailable readiness",
+            content: hosting,
+            width: 620,
+            height: 780
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-unavailable"))
-        let unavailableText = accessibilityText(application)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-unavailable"))
+        let unavailableText = accessibilityText(nativeWindow)
         XCTAssertTrue(unavailableText.localizedCaseInsensitiveContains("root"))
         XCTAssertFalse(unavailableText.contains("Loading delivery evidence"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
         let initialLoadCount = await gate.loadCount()
         XCTAssertEqual(initialLoadCount, 0)
 
-        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-delivery-evidence"))
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-delivery-evidence"))
         XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
         await gate.waitUntilEntered()
         try await Task.sleep(for: .milliseconds(80))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
 
         await gate.releaseFailure()
         try await Task.sleep(for: .milliseconds(120))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "delivery-evidence-explicit-unavailable"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "delivery-evidence-explicit-unavailable"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
         let finalLoadCount = await gate.loadCount()
         XCTAssertEqual(finalLoadCount, 1)
     }

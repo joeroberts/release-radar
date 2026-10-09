@@ -8,6 +8,8 @@ import XCTest
 @MainActor
 final class TicketReferenceNativeRenderingTests: XCTestCase {
     func testTicketDetailKeepsDrawerSectionsStableWhenOnlyObservationGenerationChanges() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("ticket-drawer-observer-generation-\(UUID().uuidString)")
         let counter = TicketDrawerLoadCounter()
         let hosting = NSHostingView(rootView: TicketDrawerContextReloadHarness(
@@ -15,18 +17,22 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             counter: counter
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 760)
-        let window = NSWindow(
-            contentRect: hosting.frame,
-            styleMask: [.titled],
-            backing: .buffered,
-            defer: false
+        let window = makeWindow(
+            title: "Ticket drawer observation generation stability",
+            content: hosting,
+            width: 620,
+            height: 760
         )
-        window.isReleasedWhenClosed = false
-        window.contentView = hosting
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
+        hosting.layoutSubtreeIfNeeded()
 
         try await Task.sleep(for: .milliseconds(180))
+        hosting.layoutSubtreeIfNeeded()
         let initialCounts = await counter.counts()
         XCTAssertEqual(initialCounts.references, 1)
         XCTAssertEqual(initialCounts.evidence, 1)
@@ -39,6 +45,38 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         let observerChangedCounts = await counter.counts()
         XCTAssertEqual(observerChangedCounts.references, 1)
         XCTAssertEqual(observerChangedCounts.evidence, 1)
+    }
+
+    private func makeWindow<V: View>(
+        title: String,
+        content: NSHostingView<V>,
+        width: CGFloat,
+        height: CGFloat
+    ) -> NSWindow {
+        let window = NSWindow(
+            contentRect: .init(x: 40, y: 40, width: width, height: height),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = title
+        window.isReleasedWhenClosed = false
+        window.animationBehavior = .none
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.contentView = content
+        return window
+    }
+
+    private func accessibilityWindow(title: String) -> AXUIElement? {
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
+              let windows = value as? [AXUIElement] else { return nil }
+        return windows.first { window in
+            var titleValue: CFTypeRef?
+            return AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleValue) == .success
+                && titleValue as? String == title
+        }
     }
 
     func testReferenceRoutesRetainExactIdentityAndFocusInHistory() {
@@ -340,6 +378,8 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
     }
 
     func testTicketReferenceSectionWithdrawsLateResultWhenTicketChangesInPlace() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("phase5b-switch-ticket-\(UUID().uuidString)")
         let gate = TicketReferenceSectionLoadGate()
         let hosting = NSHostingView(rootView: TicketReferenceSectionSwitchHarness(
@@ -347,12 +387,19 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             gate: gate
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Phase 5B reference identity switch"
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Phase 5B reference identity switch",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        hosting.layoutSubtreeIfNeeded()
         await gate.waitUntilOldLoadEntered()
 
         NotificationCenter.default.post(name: notification, object: nil)
@@ -361,7 +408,8 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
         hosting.layoutSubtreeIfNeeded()
 
-        let text = accessibilityText(AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let text = accessibilityText(nativeWindow)
         XCTAssertTrue(text.contains("Ticket B current"))
         XCTAssertTrue(text.contains("REQ-B"))
         XCTAssertFalse(text.contains("Ticket A stale"))
@@ -369,6 +417,8 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
     }
 
     func testMountedTicketReferencesReloadWhenObservationBecomesReadyInSameGeneration() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("phase5b-observation-ready-\(UUID().uuidString)")
         let counter = TicketDrawerReadinessCounter()
         let hosting = NSHostingView(rootView: TicketDrawerReadinessHarness(
@@ -376,23 +426,30 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             counter: counter
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Phase 5B reference readiness transition"
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Phase 5B reference readiness transition",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-checking"))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-checking"))
-        let checkingText = accessibilityText(application)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-checking"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-checking"))
+        let checkingText = accessibilityText(nativeWindow)
         XCTAssertTrue(checkingText.localizedCaseInsensitiveContains("checking"))
         XCTAssertFalse(checkingText.contains("Loading reference links"))
         XCTAssertFalse(checkingText.contains("Loading delivery evidence"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-refresh-progress"))
         let initialCounts = await counter.counts()
         XCTAssertEqual(initialCounts.references, 0)
         XCTAssertEqual(initialCounts.evidence, 0)
@@ -401,18 +458,20 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
         hosting.layoutSubtreeIfNeeded()
 
-        let recoveredText = accessibilityText(application)
+        let recoveredText = accessibilityText(nativeWindow)
         XCTAssertTrue(recoveredText.contains("Ticket ready"))
         XCTAssertTrue(recoveredText.contains("REQ-READY"))
         XCTAssertTrue(recoveredText.contains("No revision-bound delivery evidence recorded"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-checking"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-checking"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-checking"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence-checking"))
         let readyCounts = await counter.counts()
         XCTAssertEqual(readyCounts.references, 1)
         XCTAssertEqual(readyCounts.evidence, 1)
     }
 
     func testReferenceUnavailableReadinessDoesNotLoadUntilExplicitRefresh() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let gate = TicketReferenceUnavailableGate()
         let hosting = NSHostingView(rootView: TicketReferencesSection(
             ticketID: .init(rawValue: "ticket-unavailable"),
@@ -422,37 +481,47 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             openSource: { _, _ in }
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = "Reference unavailable readiness"
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Reference unavailable readiness",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-unavailable"))
-        let unavailableText = accessibilityText(application)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-unavailable"))
+        let unavailableText = accessibilityText(nativeWindow)
         XCTAssertTrue(unavailableText.localizedCaseInsensitiveContains("root"))
         XCTAssertFalse(unavailableText.contains("Loading reference links"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
         let initialLoadCount = await gate.loadCount()
         XCTAssertEqual(initialLoadCount, 0)
 
-        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-references"))
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-references"))
         XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
         await gate.waitUntilEntered()
         try await Task.sleep(for: .milliseconds(80))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
 
         await gate.releaseFailure()
         try await Task.sleep(for: .milliseconds(120))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "reference-explicit-unavailable"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "reference-explicit-unavailable"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
         let finalLoadCount = await gate.loadCount()
         XCTAssertEqual(finalLoadCount, 1)
     }
 
     func testReferenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let gate = TicketReferenceRefreshGate()
         let hosting = NSHostingView(rootView: TicketReferencesSection(
             ticketID: .init(rawValue: "ticket-refresh"),
@@ -462,53 +531,73 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             openSource: { _, _ in }
         ))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Reference refresh retention",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        let source = try XCTUnwrap(accessibilityElement(application, identifier: "reference-source-link-ticket-refresh-1"))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let source = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "reference-source-link-ticket-refresh-1"))
         XCTAssertEqual(AXUIElementSetAttributeValue(source, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
-        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-references"))
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-references"))
         XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
         await gate.waitUntilRefreshEntered()
         try await Task.sleep(for: .milliseconds(80))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
-        XCTAssertTrue(accessibilityText(application).contains("Initial references"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Initial references"))
 
         await gate.releaseRefreshFailure()
         try await Task.sleep(for: .milliseconds(120))
-        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-previously-loaded"))
-        XCTAssertTrue(accessibilityText(application).contains("Initial references"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-references-previously-loaded"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Initial references"))
         var focused: CFTypeRef?
         XCTAssertEqual(AXUIElementCopyAttributeValue(source, kAXFocusedAttribute as CFString, &focused), .success)
         XCTAssertEqual((focused as? NSNumber)?.boolValue, true)
 
-        let retry = try XCTUnwrap(accessibilityElement(application, title: "Retry"))
+        let retry = try XCTUnwrap(accessibilityElement(nativeWindow, title: "Retry"))
         XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
         try await Task.sleep(for: .milliseconds(150))
         let retryLoadCount = await gate.loadCount()
         XCTAssertEqual(retryLoadCount, 3)
-        XCTAssertTrue(accessibilityText(application).contains("Retry references"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-previously-loaded"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Retry references"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-previously-loaded"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
     }
 
     func testReferenceContextChangeClearsContentAndRejectsLateRefresh() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         let notification = Notification.Name("reference-context-change-\(UUID().uuidString)")
         let gate = TicketReferenceContextGate()
         let hosting = NSHostingView(rootView: TicketReferenceContextHarness(notification: notification, gate: gate))
         hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
-        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.contentView = hosting
+        let window = makeWindow(
+            title: "Reference context change",
+            content: hosting,
+            width: 620,
+            height: 700
+        )
+        defer {
+            window.orderOut(nil)
+            NSApp.setActivationPolicy(previousPolicy)
+        }
         window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
         try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
 
-        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-references"))
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let refresh = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "refresh-ticket-references"))
         XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
         await gate.waitUntilRefreshEntered()
         NotificationCenter.default.post(name: notification, object: nil)
@@ -516,10 +605,10 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         await gate.releaseLateResult()
         try await Task.sleep(for: .milliseconds(120))
 
-        let text = accessibilityText(application)
+        let text = accessibilityText(nativeWindow)
         XCTAssertTrue(text.contains("Reference context changed"))
         XCTAssertFalse(text.contains("Late old-context references"))
-        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "ticket-references-refresh-progress"))
         let contextLoadCount = await gate.loadCount()
         XCTAssertEqual(contextLoadCount, 2)
     }
