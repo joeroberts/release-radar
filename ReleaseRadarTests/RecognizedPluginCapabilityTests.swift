@@ -12,7 +12,7 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
         let toolbarReleaseDigest = "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
         let addProjectRDSReleaseDigest = "dfaed5c37d4d91e19743b4bae8539fe837a6b31e2aa4dede54ebe63685b1cb6a"
 
-        XCTAssertEqual(Array(RecognizedPluginCapability.known.dropLast()), [
+        let historicalPrefix: [RecognizedPluginCapability] = [
             .init(manifestVersion: "0.1.7", normalizedPackageDigest: legacyDigest,
                   sharedExecutionStandardVersions: []),
             .init(manifestVersion: "0.1.8", normalizedPackageDigest: sharedExecutionDigest,
@@ -57,7 +57,11 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
                   sharedExecutionStandardVersions: [1]),
             .init(manifestVersion: "0.1.32", normalizedPackageDigest: "959f091c34d08eaca22267e08ea306db1ee11d66a4fd3948abaca162f4f93a48",
                   sharedExecutionStandardVersions: [1]),
-        ])
+        ]
+        XCTAssertEqual(
+            Array(RecognizedPluginCapability.known.prefix(historicalPrefix.count)),
+            historicalPrefix
+        )
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()

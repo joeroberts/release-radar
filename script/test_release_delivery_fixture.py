@@ -6,11 +6,13 @@ from __future__ import annotations
 import json
 import importlib.util
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -162,6 +164,10 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         before_project = project.read_text()
         before_manifest = manifest.read_text()
         before_capability = capability.read_text()
+        previous_version = json.loads(before_manifest)["version"]
+        inherited_standards = re.findall(
+            r"sharedExecutionStandardVersions: (\[[^\n]+\])", before_capability
+        )[-1]
         marker = "\n    ]\n\n    public static func recognize"
         historical_prefix = before_capability[:before_capability.index(marker)]
         observed_roots: list[Path] = []
@@ -176,13 +182,15 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
 
         self.assertEqual([plugin], observed_roots)
         self.assertEqual(
-            before_project
-            .replace("MARKETING_VERSION = 0.1.35;", f"MARKETING_VERSION = {VERSION};")
-            .replace("CURRENT_PROJECT_VERSION = 1;", f"CURRENT_PROJECT_VERSION = {BUILD};"),
+            re.sub(r"(MARKETING_VERSION = )[^;]+;", rf"\g<1>{VERSION};", before_project)
+            .replace(
+                re.search(r"CURRENT_PROJECT_VERSION = [^;]+;", before_project).group(),
+                f"CURRENT_PROJECT_VERSION = {BUILD};",
+            ),
             project.read_text(),
         )
         self.assertEqual(
-            before_manifest.replace('"version": "0.1.33"', f'"version": "{VERSION}"'),
+            before_manifest.replace(f'"version": "{previous_version}"', f'"version": "{VERSION}"'),
             manifest.read_text(),
         )
         self.assertEqual(
@@ -191,7 +199,7 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         )
         expected_capability = (
             historical_prefix
-            + f'''\n        Self(\n            manifestVersion: "{VERSION}",\n            normalizedPackageDigest: "{'d' * 64}",\n            sharedExecutionStandardVersions: [1]\n        ),\n    ]\n\n    public static func recognize'''
+            + f'''\n        Self(\n            manifestVersion: "{VERSION}",\n            normalizedPackageDigest: "{'d' * 64}",\n            sharedExecutionStandardVersions: {inherited_standards}\n        ),\n    ]\n\n    public static func recognize'''
             + before_capability[before_capability.index(marker) + len(marker):]
         )
         self.assertEqual(expected_capability, capability.read_text())
@@ -207,6 +215,79 @@ class ReleaseDeliveryFixtureTests(unittest.TestCase):
         existing = self.metadata_fixture(self.root / "existing")
         with self.assertRaises(ValueError):
             module.prepare_release_metadata(existing, "0.1.33", BUILD, plugin_identity_provider=lambda _: "d" * 64)
+
+    def test_prepare_release_metadata_rejects_duplicate_manifest_version_before_mutation(self) -> None:
+        fixture = self.metadata_fixture(self.root)
+        manifest = fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
+        project = fixture / "ReleaseRadar.xcodeproj/project.pbxproj"
+        capability = fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift"
+        manifest.write_text(manifest.read_text().replace(
+            '  "version": "0.1.33",', '  "version": "0.1.33",\n  "version": "0.1.33",',
+        ))
+        originals = {path: path.read_bytes() for path in (project, manifest, capability)}
+        with self.assertRaises(ValueError):
+            self.release_delivery_module().prepare_release_metadata(
+                fixture, VERSION, BUILD, plugin_identity_provider=lambda _: "d" * 64
+            )
+        self.assertEqual(originals, {path: path.read_bytes() for path in originals})
+
+    def test_prepare_release_metadata_continues_rollback_after_one_restore_write_fails(self) -> None:
+        fixture = self.metadata_fixture(self.root)
+        project = fixture / "ReleaseRadar.xcodeproj/project.pbxproj"
+        manifest = fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
+        capability = fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift"
+        originals = {path: path.read_bytes() for path in (project, manifest, capability)}
+        original_write = Path.write_text
+        failed = {"capability_update": False, "project_restore": False}
+
+        def write_with_failures(path: Path, content: str, *args, **kwargs):
+            if path == capability and not failed["capability_update"] and content != originals[capability].decode():
+                failed["capability_update"] = True
+                raise OSError("simulated capability write failure")
+            if path == project and failed["capability_update"] and not failed["project_restore"] and content == originals[project].decode():
+                failed["project_restore"] = True
+                raise OSError("simulated project restoration failure")
+            return original_write(path, content, *args, **kwargs)
+
+        with mock.patch.object(Path, "write_text", new=write_with_failures):
+            with self.assertRaises(OSError):
+                self.release_delivery_module().prepare_release_metadata(
+                    fixture, VERSION, BUILD, plugin_identity_provider=lambda _: "d" * 64
+                )
+        self.assertTrue(failed["capability_update"])
+        self.assertTrue(failed["project_restore"])
+        self.assertEqual(originals[manifest], manifest.read_bytes())
+        self.assertEqual(originals[capability], capability.read_bytes())
+
+    def test_prepare_release_metadata_preserves_crlf_bytes_on_success_and_failure(self) -> None:
+        fixture = self.metadata_fixture(self.root)
+        project = fixture / "ReleaseRadar.xcodeproj/project.pbxproj"
+        manifest = fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json"
+        capability = fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift"
+        for path in (project, manifest, capability):
+            path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+
+        self.release_delivery_module().prepare_release_metadata(
+            fixture, VERSION, BUILD, plugin_identity_provider=lambda _: "d" * 64
+        )
+        for path in (project, manifest, capability):
+            self.assertNotIn(b"\n", path.read_bytes().replace(b"\r\n", b""))
+
+        failure_fixture = self.metadata_fixture(self.root / "failure")
+        failure_paths = [
+            failure_fixture / "ReleaseRadar.xcodeproj/project.pbxproj",
+            failure_fixture / "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json",
+            failure_fixture / "ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift",
+        ]
+        for path in failure_paths:
+            path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+        originals = {path: path.read_bytes() for path in failure_paths}
+        with self.assertRaises(RuntimeError):
+            self.release_delivery_module().prepare_release_metadata(
+                failure_fixture, VERSION, BUILD,
+                plugin_identity_provider=lambda _: (_ for _ in ()).throw(RuntimeError("digest failure")),
+            )
+        self.assertEqual(originals, {path: path.read_bytes() for path in failure_paths})
 
     def test_init_derives_receipt_sha_and_all_destinations_from_version(self) -> None:
         self.initialize()
