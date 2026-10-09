@@ -41,17 +41,10 @@ private struct ManageProjectPresentation: Identifiable {
     var id: ProjectRegistration { registration }
 }
 
-private struct ProjectOverviewContentWidthKey: PreferenceKey {
-    static let defaultValue = CGFloat.infinity
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
+    var availableDetailWidth: CGFloat? = nil
     let documentationState: ProjectDocumentationState
     var documentationStatus: DocumentationObservationStatus? = nil
     let projectRoot: URL?
@@ -93,9 +86,9 @@ struct ProjectOverviewView: View {
     @State private var documentationActionErrorGeneration = 0
     @AccessibilityFocusState private var documentationActionErrorFocused: Bool
     @State private var isPerformingDocumentationSetup = false
-    @State private var contentWidth = CGFloat.infinity
     private let documentationActionErrorAnchor = "project-documentation-action-error-anchor"
-    private let compactHeaderWidth: CGFloat = 720
+    private let horizontalContentPadding: CGFloat = 28
+    private let minimumInlineHeaderContentWidth: CGFloat = 610
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -166,17 +159,11 @@ struct ProjectOverviewView: View {
                         .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
                 }
                 }
-                .padding(28)
+                .padding(horizontalContentPadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(key: ProjectOverviewContentWidthKey.self, value: proxy.size.width)
-                    }
-                }
             }
         }
         .background(RekonTheme.background)
-        .onPreferenceChange(ProjectOverviewContentWidthKey.self) { contentWidth = $0 }
         .task { if health == nil { refreshHealth() } }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
         .sheet(item: $manageProjectPresentation) { presentation in
@@ -243,10 +230,16 @@ struct ProjectOverviewView: View {
 
     @ViewBuilder
     private var projectHeader: some View {
-        if contentWidth < compactHeaderWidth {
+        if let availableDetailWidth,
+           availableDetailWidth - (horizontalContentPadding * 2) < minimumInlineHeaderContentWidth {
             VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
-        } else {
+        } else if availableDetailWidth != nil {
             HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
+                VStack(alignment: .leading, spacing: 12) { projectHeading; compactProjectActions }
+            }
         }
     }
 

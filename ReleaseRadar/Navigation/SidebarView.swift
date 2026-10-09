@@ -326,6 +326,7 @@ struct SidebarView: View {
                     ProjectOverviewView(
                         project: project,
                         board: dashboard.board(for: projectID),
+                        availableDetailWidth: detailWidth,
                         documentationState: model.projectDocumentationState(for: projectID),
                         documentationStatus: model.documentationObservationStatus(for: projectID),
                         projectRoot: model.projectRoot(for: projectID),
