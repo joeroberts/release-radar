@@ -7,8 +7,8 @@ The owner's current Ready portfolio contains fourteen open tickets: [#120](https
 
 ## Active state and ownership
 
-- Project status is In Progress for #223/#125/#224 (Search coordinator `01a11e96-c855-7092-a5b6-abbf2b0c4624`), #55/#166/#119 (Build/CI coordinator `01a11e97-64c1-7b82-9006-4b7404c6948f`), #71/#218 (knowledge-discovery coordinator `01a11e9a-bac7-7a52-9737-ded0e2fb76b6`), and #116 (planning-UI coordinator `01a11e9b-80d5-74f1-bb4c-4b828d957b29`).
-- Project status remains Ready for #120/#124/#104 (planning UI) and #132/#114 (build/CI work not yet substantively started); these five await coordinator confirmation before transition.
+- Project status is In Progress for #223/#125/#224 (Search coordinator `01a11e96-c855-7092-a5b6-abbf2b0c4624`), #55/#166/#119 (Build/CI coordinator `01a11e97-64c1-7b82-9006-4b7404c6948f`), #71/#218 (knowledge-discovery coordinator `01a11e9a-bac7-7a52-9737-ded0e2fb76b6`), and #116/#104/#120/#124 (planning-UI coordinator `01a11e9b-80d5-74f1-bb4c-4b828d957b29`).
+- Project status remains Ready only for #132/#114; build/CI work on those outcomes is not yet substantively started.
 - [#119](https://github.com/joeroberts/release-radar/issues/119) records the known private `joeroberts/RekonDesignSystem` Actions-access and Apple-signing feasibility dependency; the least-privilege access/signing split remains a proposal pending review.
 
 ## Current constraints
