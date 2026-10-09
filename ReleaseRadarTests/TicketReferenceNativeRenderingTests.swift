@@ -576,21 +576,49 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         hosting.layoutSubtreeIfNeeded()
 
         if let nativeSession {
-            print("REFERENCE REFRESH INITIAL READY: focus the source link, press Refresh once, and preserve the initial content")
-            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            func waitForStage(_ stage: String) async throws {
+                let fileManager = FileManager.default
+                let configurationPath = try XCTUnwrap(
+                    ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"],
+                    "The external reference refresh journey requires an XCTest configuration."
+                )
+                let configurationExists = !configurationPath.isEmpty
+                    && fileManager.fileExists(atPath: configurationPath)
+                guard configurationExists else {
+                    XCTFail("The external reference refresh journey requires an existing XCTest configuration.")
+                    throw NSError(domain: "ReferenceRefreshNativeSession", code: 1)
+                }
+                let controlDirectory = fileManager.temporaryDirectory
+                    .appendingPathComponent("release-radar-reference-refresh", isDirectory: true)
+                    .appendingPathComponent("native-\(nativeSession.id)", isDirectory: true)
+                try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+                let ready = controlDirectory.appendingPathComponent("\(stage)-ready")
+                let complete = controlDirectory.appendingPathComponent("\(stage)-complete")
+                XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+                XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+                let identity = "token=\(nativeSession.id)\nstage=\(stage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=true\nxctest_configuration_exists=true\n"
+                XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+                print("REFERENCE REFRESH \(stage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+                let attempts = max(1, Int((nativeSession.pauseSeconds * 5).rounded(.up)))
+                for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+                let completion = try String(contentsOf: complete, encoding: .utf8)
+                XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), nativeSession.id)
+            }
+
+            try await waitForStage("initial")
             let refreshLoadCount = await gate.loadCount()
             guard refreshLoadCount == 2 else {
                 XCTFail("Expected one external reference Refresh press; observed \(refreshLoadCount - 1).")
                 return
             }
 
-            print("REFERENCE REFRESH PENDING READY: verify visible progress, retained initial content, and retained source focus")
-            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            try await waitForStage("pending")
             await gate.releaseRefreshFailure()
             try await Task.sleep(for: .milliseconds(120))
 
-            print("REFERENCE REFRESH FAILURE READY: verify the typed failure and retained content/focus, then press Retry once; success remains visible for the rest of this pause")
-            try await Task.sleep(for: .seconds(nativeSession.pauseSeconds))
+            try await waitForStage("failure")
             let retryLoadCount = await gate.loadCount()
             XCTAssertEqual(retryLoadCount, 3)
             return

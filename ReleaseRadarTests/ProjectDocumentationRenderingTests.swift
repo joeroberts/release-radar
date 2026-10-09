@@ -244,6 +244,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 actionID,
             ],
             disabledIdentifiers: [actionID],
+            externalInspectionStage: "light-begin-complete",
             colorScheme: .light,
             appearanceName: .aqua
         )
@@ -2214,6 +2215,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:],
         sheetAttachmentName: String? = nil,
+        externalInspectionStage: String? = nil,
         colorScheme: ColorScheme = .dark,
         appearanceName: NSAppearance.Name = .darkAqua,
         verifyAccessibility: @escaping (AXUIElement) throws -> Void = { _ in }
@@ -2236,6 +2238,48 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(200))
         hosting.layoutSubtreeIfNeeded()
         window.title = name
+        if let externalInspectionStage,
+           let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_TASK7A_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The Task 7A native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            guard let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"]
+                .flatMap(Double.init), seconds > 0 else {
+                XCTFail("The Task 7A native session requires a positive RR_TASK7A_INSPECT_SECONDS value.")
+                return
+            }
+            let configurationPath = try XCTUnwrap(
+                ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"],
+                "The Task 7A native session requires an XCTest configuration."
+            )
+            let fileManager = FileManager.default
+            let configurationExists = !configurationPath.isEmpty
+                && fileManager.fileExists(atPath: configurationPath)
+            guard configurationExists else {
+                XCTFail("The Task 7A native session requires an existing XCTest configuration.")
+                return
+            }
+            let controlDirectory = fileManager.temporaryDirectory
+                .appendingPathComponent("release-radar-task7a-lifecycle", isDirectory: true)
+                .appendingPathComponent("native-\(sessionID)", isDirectory: true)
+            try fileManager.createDirectory(at: controlDirectory, withIntermediateDirectories: true)
+            let ready = controlDirectory.appendingPathComponent("\(externalInspectionStage)-ready")
+            let complete = controlDirectory.appendingPathComponent("\(externalInspectionStage)-complete")
+            XCTAssertFalse(fileManager.fileExists(atPath: ready.path))
+            XCTAssertFalse(fileManager.fileExists(atPath: complete.path))
+            let identity = "token=\(sessionID)\nstage=\(externalInspectionStage)\npid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\nxctest_configuration_present=true\nxctest_configuration_exists=true\n"
+            XCTAssertTrue(fileManager.createFile(atPath: ready.path, contents: Data(identity.utf8)))
+            print("TASK 7A \(externalInspectionStage.uppercased()) READY: \(identity.replacingOccurrences(of: "\n", with: " "))")
+            let attempts = max(1, Int((min(seconds, 60) * 5).rounded(.up)))
+            for _ in 0..<attempts where !fileManager.fileExists(atPath: complete.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            let completion = try String(contentsOf: complete, encoding: .utf8)
+            XCTAssertEqual(completion.trimmingCharacters(in: .whitespacesAndNewlines), sessionID)
+            return
+        }
         if let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
             print("Task 7A external inspection: \(name), \(Int(width))×850, PID \(ProcessInfo.processInfo.processIdentifier)")
             try await Task.sleep(for: .seconds(min(seconds, 60)))
