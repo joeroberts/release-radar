@@ -42,14 +42,29 @@ PROJECT_PATH = Path("ReleaseRadar.xcodeproj/project.pbxproj")
 PLUGIN_PATH = Path("ReleaseRadar/CodexPluginMarketplace/plugins/release-radar")
 MANIFEST_PATH = PLUGIN_PATH / ".codex-plugin/plugin.json"
 CAPABILITY_PATH = Path("ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift")
-CAPABILITY_END = "\n    ]\n\n    public static func recognize"
+CAPABILITY_END = re.compile(r"\r?\n    ]\r?\n\r?\n    public static func recognize")
 CAPABILITY_ENTRY = re.compile(
-    r'''        Self\(\n'''
-    r'''            manifestVersion: "([^"]+)",\n'''
-    r'''            normalizedPackageDigest: "([0-9a-f]{64})",\n'''
-    r'''            sharedExecutionStandardVersions: (\[[^\n]*\])\n'''
+    r'''        Self\(\r?\n'''
+    r'''            manifestVersion: "([^"]+)",\r?\n'''
+    r'''            normalizedPackageDigest: "([0-9a-f]{64})",\r?\n'''
+    r'''            sharedExecutionStandardVersions: (\[[^\r\n]*\])\r?\n'''
     r'''        \),'''
 )
+
+
+def _strict_json_object(data: bytes) -> dict[str, Any]:
+    def object_from_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    value = json.loads(data.decode("utf-8"), object_pairs_hook=object_from_pairs)
+    if not isinstance(value, dict):
+        raise ValueError("JSON root must be an object")
+    return value
 
 
 def _native_plugin_digest(plugin_root: Path) -> str:
@@ -103,8 +118,10 @@ struct ReleaseMetadataDigest {
         version, digest = lines
         if not VERSION_PATTERN.fullmatch(version) or not DIGEST_PATTERN.fullmatch(digest):
             raise ValueError("canonical plugin identity is malformed")
-        manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text())
-        if not isinstance(manifest, dict) or manifest.get("version") != version:
+        manifest = _strict_json_object(
+            (plugin_root / ".codex-plugin/plugin.json").read_bytes()
+        )
+        if manifest.get("version") != version:
             raise ValueError("canonical plugin identity does not match its manifest")
         return digest
 
@@ -130,13 +147,17 @@ def prepare_release_metadata(
     manifest = repository / MANIFEST_PATH
     capability = repository / CAPABILITY_PATH
     originals = {
-        project: project.read_text(),
-        manifest: manifest.read_text(),
-        capability: capability.read_text(),
+        project: project.read_bytes(),
+        manifest: manifest.read_bytes(),
+        capability: capability.read_bytes(),
     }
+    try:
+        sources = {path: content.decode("utf-8") for path, content in originals.items()}
+    except UnicodeDecodeError as error:
+        raise ValueError("release metadata must be UTF-8") from error
 
-    marketing_versions = re.findall(r"MARKETING_VERSION = ([^;]+);", originals[project])
-    build_versions = re.findall(r"CURRENT_PROJECT_VERSION = ([^;]+);", originals[project])
+    marketing_versions = re.findall(r"MARKETING_VERSION = ([^;]+);", sources[project])
+    build_versions = re.findall(r"CURRENT_PROJECT_VERSION = ([^;]+);", sources[project])
     if (
         len(marketing_versions) != 2
         or len(set(marketing_versions)) != 1
@@ -148,7 +169,7 @@ def prepare_release_metadata(
     updated_project = re.sub(
         r"MARKETING_VERSION = [^;]+;",
         f"MARKETING_VERSION = {version};",
-        originals[project],
+        sources[project],
     )
     updated_project = re.sub(
         r"CURRENT_PROJECT_VERSION = [^;]+;",
@@ -157,10 +178,10 @@ def prepare_release_metadata(
     )
 
     try:
-        manifest_object = json.loads(originals[manifest])
-    except json.JSONDecodeError as error:
+        manifest_object = _strict_json_object(originals[manifest])
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as error:
         raise ValueError("bundled plugin manifest is invalid") from error
-    if not isinstance(manifest_object, dict) or manifest_object.get("name") != "release-radar":
+    if manifest_object.get("name") != "release-radar":
         raise ValueError("bundled plugin manifest is invalid")
     previous_version = manifest_object.get("version")
     if not isinstance(previous_version, str) or not VERSION_PATTERN.fullmatch(previous_version):
@@ -170,15 +191,16 @@ def prepare_release_metadata(
     updated_manifest, manifest_replacements = re.subn(
         rf'("version"\s*:\s*"){re.escape(previous_version)}(")',
         rf"\g<1>{version}\g<2>",
-        originals[manifest],
+        sources[manifest],
     )
     if manifest_replacements != 1:
         raise ValueError("bundled plugin manifest version is ambiguous")
 
-    capability_source = originals[capability]
-    if capability_source.count(CAPABILITY_END) != 1:
+    capability_source = sources[capability]
+    capability_ends = list(CAPABILITY_END.finditer(capability_source))
+    if len(capability_ends) != 1:
         raise ValueError("recognized plugin capability registry is ambiguous")
-    capability_end = capability_source.index(CAPABILITY_END)
+    capability_end = capability_ends[0].start()
     capability_prefix = capability_source[:capability_end]
     entries = list(CAPABILITY_ENTRY.finditer(capability_prefix))
     if not entries or capability_prefix.count("        Self(") != len(entries):
@@ -188,25 +210,44 @@ def prepare_release_metadata(
     if any(entry.group(1) == version for entry in entries):
         raise ValueError("recognized plugin capability already contains this version")
     standards = entries[-1].group(3)
+    if "\r\n" in capability_source:
+        if "\n" in capability_source.replace("\r\n", ""):
+            raise ValueError("recognized plugin capability registry has mixed line endings")
+        newline = "\r\n"
+    else:
+        newline = "\n"
 
+    attempted: list[Path] = []
     try:
-        manifest.write_text(updated_manifest)
+        attempted.append(manifest)
+        manifest.write_bytes(updated_manifest.encode("utf-8"))
         digest = plugin_identity_provider(plugin)
         if not isinstance(digest, str) or not DIGEST_PATTERN.fullmatch(digest):
             raise ValueError("canonical plugin digest is invalid")
         new_entry = (
-            "\n        Self(\n"
-            f'            manifestVersion: "{version}",\n'
-            f'            normalizedPackageDigest: "{digest}",\n'
-            f"            sharedExecutionStandardVersions: {standards}\n"
+            f"{newline}        Self({newline}"
+            f'            manifestVersion: "{version}",{newline}'
+            f'            normalizedPackageDigest: "{digest}",{newline}'
+            f"            sharedExecutionStandardVersions: {standards}{newline}"
             "        ),"
         )
         updated_capability = capability_prefix + new_entry + capability_source[capability_end:]
-        project.write_text(updated_project)
-        capability.write_text(updated_capability)
-    except BaseException:
-        for path, content in originals.items():
-            path.write_text(content)
+        attempted.append(project)
+        project.write_bytes(updated_project.encode("utf-8"))
+        attempted.append(capability)
+        capability.write_bytes(updated_capability.encode("utf-8"))
+    except BaseException as error:
+        restoration_failures: list[Path] = []
+        for path in reversed(attempted):
+            try:
+                path.write_bytes(originals[path])
+            except OSError:
+                restoration_failures.append(path)
+        if restoration_failures:
+            relative_paths = ", ".join(
+                str(path.relative_to(repository)) for path in restoration_failures
+            )
+            raise OSError(f"release metadata rollback failed for {relative_paths}") from error
         raise
 
 
