@@ -40,7 +40,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         await model.runWorkspaceSearch()
         XCTAssertEqual(Set(model.workspaceSearchProjection?.results.map(\.domain) ?? []), [.project, .ticket])
 
-        model.setWorkspaceSearchDomain(.ticket, enabled: false)
+        await model.updateWorkspaceSearchDomain(.ticket, enabled: false)
         let projectOnly = await Self.searchProjection(
             from: model,
             domains: [.project],
@@ -49,7 +49,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(Set(projectOnly?.results.map(\.domain) ?? []), [.project])
         XCTAssertEqual(model.workspaceSearchDraft, "Needle")
 
-        model.setWorkspaceSearchDomain(.ticket, enabled: true)
+        await model.updateWorkspaceSearchDomain(.ticket, enabled: true)
         let restored = await Self.searchProjection(
             from: model,
             domains: [.project, .ticket],
