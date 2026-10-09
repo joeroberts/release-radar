@@ -1532,10 +1532,7 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     private func makePlanChangeProposalRenderScenario() async throws -> PlanChangeProposalRenderScenario {
-        let fixture = try await makeRR9OwnerFixture(
-            temporaryRoot: URL(fileURLWithPath: "/Users/Shared", isDirectory: true),
-            preserveDirectory: true
-        )
+        let fixture = try await makeRR9OwnerFixture(preserveDirectory: true)
         let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
         try FileManager.default.copyItem(at: documents, to: fixture.projectRoot.appendingPathComponent("docs"))

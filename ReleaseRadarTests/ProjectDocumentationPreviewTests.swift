@@ -175,7 +175,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
     }
 
     private func fixture() throws -> URL {
-        let parent = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+        let parent = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-M2C-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: parent) }
