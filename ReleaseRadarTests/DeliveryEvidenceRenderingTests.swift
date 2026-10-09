@@ -149,6 +149,50 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         XCTAssertFalse(text.contains("Ticket A stale"))
     }
 
+    func testDeliveryEvidenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
+        let gate = DeliveryEvidenceRefreshGate()
+        let hosting = NSHostingView(rootView: TicketDeliveryEvidenceSection(
+            ticketID: .init(rawValue: "ticket-refresh"),
+            contextIdentity: "context-a",
+            isContextReady: true,
+            load: { await gate.load() }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 780)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Delivery evidence refresh retention"
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let help = try XCTUnwrap(accessibilityElement(application, identifier: "delivery-evidence-help"))
+        XCTAssertEqual(AXUIElementSetAttributeValue(help, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
+        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-delivery-evidence"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilRefreshEntered()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+        XCTAssertTrue(accessibilityText(application).contains("Initial evidence"))
+
+        await gate.releaseRefreshFailure()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-previously-loaded"))
+        XCTAssertTrue(accessibilityText(application).contains("Initial evidence"))
+        var focused: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(help, kAXFocusedAttribute as CFString, &focused), .success)
+        XCTAssertEqual((focused as? NSNumber)?.boolValue, true)
+
+        let retry = try XCTUnwrap(accessibilityElement(application, title: "Retry"))
+        XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(150))
+        let retryLoadCount = await gate.loadCount()
+        XCTAssertEqual(retryLoadCount, 3)
+        XCTAssertTrue(accessibilityText(application).contains("Retry evidence"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-previously-loaded"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-delivery-evidence-refresh-progress"))
+    }
+
     fileprivate static var emptyEvidence: TicketDeliveryEvidence {
         .init(
             projectID: "project", ticketID: "ticket", phaseID: "phase", phaseLabel: "Phase",
@@ -286,6 +330,21 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         return nil
     }
 
+    private func accessibilityElement(_ root: AXUIElement, title: String) -> AXUIElement? {
+        var pending = [root]
+        var count = 0
+        while let element = pending.popLast(), count < 2_000 {
+            count += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &value) == .success,
+               value as? String == title { return element }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] { pending.append(contentsOf: children) }
+        }
+        return nil
+    }
+
 }
 
 private struct DeliveryEvidenceSwitchHarness: View {
@@ -329,4 +388,37 @@ private actor DeliveryEvidenceLoadGate {
         releaseContinuation?.resume()
         releaseContinuation = nil
     }
+}
+
+private actor DeliveryEvidenceRefreshGate {
+    private var count = 0
+    private var refreshEntered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        count += 1
+        if count == 2 {
+            refreshEntered = true
+            waiters.forEach { $0.resume() }
+            waiters.removeAll()
+            await withCheckedContinuation { release = $0 }
+            return .failed(.init(
+                title: "Delivery evidence refresh failed", detail: "Retry the current ticket.",
+                systemImage: "exclamationmark.triangle", tone: .warning,
+                accessibilityID: "delivery-evidence-refresh-failed"
+            ))
+        }
+        return .loaded(DeliveryEvidenceRenderingTests.evidence(
+            ticketID: "ticket-refresh",
+            sourceLabel: count == 1 ? "Initial evidence" : "Retry evidence"
+        ))
+    }
+
+    func waitUntilRefreshEntered() async {
+        if refreshEntered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+    func releaseRefreshFailure() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
 }

@@ -392,6 +392,78 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         XCTAssertFalse(recoveredText.contains("Observation still checking"))
     }
 
+    func testReferenceRefreshRetainsContentAndFocusThroughFailureThenRetry() async throws {
+        let gate = TicketReferenceRefreshGate()
+        let hosting = NSHostingView(rootView: TicketReferencesSection(
+            ticketID: .init(rawValue: "ticket-refresh"),
+            contextIdentity: "context-a",
+            isContextReady: true,
+            load: { await gate.load() },
+            openSource: { _, _ in }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let source = try XCTUnwrap(accessibilityElement(application, identifier: "reference-source-link-ticket-refresh-1"))
+        XCTAssertEqual(AXUIElementSetAttributeValue(source, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
+        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-references"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilRefreshEntered()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        XCTAssertTrue(accessibilityText(application).contains("Initial references"))
+
+        await gate.releaseRefreshFailure()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "ticket-references-previously-loaded"))
+        XCTAssertTrue(accessibilityText(application).contains("Initial references"))
+        var focused: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(source, kAXFocusedAttribute as CFString, &focused), .success)
+        XCTAssertEqual((focused as? NSNumber)?.boolValue, true)
+
+        let retry = try XCTUnwrap(accessibilityElement(application, title: "Retry"))
+        XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(150))
+        let retryLoadCount = await gate.loadCount()
+        XCTAssertEqual(retryLoadCount, 3)
+        XCTAssertTrue(accessibilityText(application).contains("Retry references"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-previously-loaded"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+    }
+
+    func testReferenceContextChangeClearsContentAndRejectsLateRefresh() async throws {
+        let notification = Notification.Name("reference-context-change-\(UUID().uuidString)")
+        let gate = TicketReferenceContextGate()
+        let hosting = NSHostingView(rootView: TicketReferenceContextHarness(notification: notification, gate: gate))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let refresh = try XCTUnwrap(accessibilityElement(application, identifier: "refresh-ticket-references"))
+        XCTAssertEqual(AXUIElementPerformAction(refresh, kAXPressAction as CFString), .success)
+        await gate.waitUntilRefreshEntered()
+        NotificationCenter.default.post(name: notification, object: nil)
+        try await Task.sleep(for: .milliseconds(80))
+        await gate.releaseLateResult()
+        try await Task.sleep(for: .milliseconds(120))
+
+        let text = accessibilityText(application)
+        XCTAssertTrue(text.contains("Reference context changed"))
+        XCTAssertFalse(text.contains("Late old-context references"))
+        XCTAssertNil(accessibilityElement(application, identifier: "ticket-references-refresh-progress"))
+        let contextLoadCount = await gate.loadCount()
+        XCTAssertEqual(contextLoadCount, 2)
+    }
+
     func testLiveReferenceJourneyUsesNativeControlsAndRestoresFocus() async throws {
         let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5b-live-journey-01a087a0-v5-enabled")
         guard FileManager.default.fileExists(atPath: enableMarker.path) else {
@@ -725,6 +797,21 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         }
         return nil
     }
+
+    private func accessibilityElement(_ root: AXUIElement, title: String) -> AXUIElement? {
+        var pending = [root]
+        var count = 0
+        while let element = pending.popLast(), count < 1_000 {
+            count += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &value) == .success,
+               value as? String == title { return element }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] { pending.append(contentsOf: children) }
+        }
+        return nil
+    }
 }
 
 private struct TicketDrawerContextReloadHarness: View {
@@ -778,6 +865,87 @@ private actor TicketDrawerLoadCounter {
     func counts() -> (references: Int, evidence: Int) {
         (referenceLoads, evidenceLoads)
     }
+}
+
+private actor TicketReferenceRefreshGate {
+    private var count = 0
+    private var refreshEntered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+        count += 1
+        if count == 2 {
+            refreshEntered = true
+            waiters.forEach { $0.resume() }
+            waiters.removeAll()
+            await withCheckedContinuation { release = $0 }
+            return .failed(Self.failure)
+        }
+        return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "ticket-refresh",
+            phaseLabel: count == 1 ? "Initial references" : "Retry references",
+            sourceLocalID: count == 1 ? "REQ-INITIAL" : "REQ-RETRY"
+        ))
+    }
+
+    func waitUntilRefreshEntered() async {
+        if refreshEntered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func releaseRefreshFailure() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
+
+    private static let failure = FailureStatePresentation(
+        title: "Reference refresh failed", detail: "Retry the current ticket.",
+        systemImage: "exclamationmark.triangle", tone: .warning,
+        accessibilityID: "reference-refresh-failed"
+    )
+}
+
+private struct TicketReferenceContextHarness: View {
+    let notification: Notification.Name
+    let gate: TicketReferenceContextGate
+    @State private var contextIdentity = "context-a"
+
+    var body: some View {
+        TicketReferencesSection(
+            ticketID: .init(rawValue: "ticket-context"), contextIdentity: contextIdentity,
+            isContextReady: true, load: { await gate.load() }, openSource: { _, _ in }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in contextIdentity = "context-b" }
+    }
+}
+
+private actor TicketReferenceContextGate {
+    private var count = 0
+    private var refreshEntered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var release: CheckedContinuation<Void, Never>?
+
+    func load() async -> ReferenceLoadResult<TicketReferenceSet> {
+        count += 1
+        if count == 2 {
+            refreshEntered = true
+            waiters.forEach { $0.resume() }
+            waiters.removeAll()
+            await withCheckedContinuation { release = $0 }
+            return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+                ticketID: "ticket-context", phaseLabel: "Late old-context references", sourceLocalID: "REQ-LATE"
+            ))
+        }
+        return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+            ticketID: "ticket-context", phaseLabel: "Current references", sourceLocalID: "REQ-CURRENT"
+        ))
+    }
+
+    func waitUntilRefreshEntered() async {
+        if refreshEntered { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+    func releaseLateResult() { release?.resume(); release = nil }
+    func loadCount() -> Int { count }
 }
 
 private struct TicketReferenceSectionSwitchHarness: View {
