@@ -74,7 +74,12 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
                 bindings: [.text(projectID.rawValue)]
             )
         }
-        try await store.transact(actor: .init(id: "fixture"), reason: "Seed hidden ticket lane Search match") { connection in
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Seed hidden ticket lane Search match",
+            auditEventID: .init(rawValue: "hidden-ticket-lane-retirement"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "hidden-ticket-lane")
+        ) { connection in
             try connection.execute(
                 "INSERT INTO phases (id, project_id, name) VALUES ('hidden-ticket-lane-phase', ?, 'Hidden field phase')",
                 bindings: [.text(projectID.rawValue)]
@@ -221,14 +226,22 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
                 "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('review-1', ?, 'history-source-id-ticket', 'completion', 'Completed evidence', 'resolved')",
                 bindings: [.text(projectID.rawValue)]
             )
-            try connection.execute(
-                "INSERT INTO audit_events (id, actor_id, reason, created_at, project_id, event_registration_id, entity_type, entity_id) VALUES ('audit-1', 'fixture', 'Recorded evidence', '2026-10-09T00:00:00Z', ?, ?, NULL, 'history-source-id-ticket')",
-                bindings: [.text(projectID.rawValue), .text(registrationID)]
-            )
         }
 
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Recorded evidence",
+            auditEventID: .init(rawValue: "audit-1"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "history-source-id-ticket")
+        ) { _ in }
+        await store.close()
+        let legacy = try SQLiteConnection(url: store.databaseURL)
+        try legacy.execute("UPDATE audit_events SET entity_type = NULL WHERE id = 'audit-1'")
+        legacy.close()
+        let searchableStore = DeliveryStore(databaseURL: store.databaseURL)
+
         let reviewProjection = try await WorkspaceSearchQuery.search(
-            store: store,
+            store: searchableStore,
             definition: .init(text: "review", domains: [.history])
         )
         XCTAssertTrue(try XCTUnwrap(reviewProjection.results.first { result in
@@ -237,7 +250,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         }).detail.contains("Matched review ID: review-1"))
 
         let auditProjection = try await WorkspaceSearchQuery.search(
-            store: store,
+            store: searchableStore,
             definition: .init(text: "audit", domains: [.history])
         )
         XCTAssertTrue(try XCTUnwrap(auditProjection.results.first { result in
