@@ -19,7 +19,7 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
         for width in [760.0, 330.0] {
             let hosting = NSHostingView(rootView: ScrollView {
                 TicketDeliveryEvidenceSection(
-                    identity: "project:registration:ticket",
+                    ticketID: .init(rawValue: "RR-6C"), contextIdentity: "project:registration", isContextReady: true,
                     load: { .loaded(Self.evidence(ticketID: "RR-6C", sourceLabel: "Focused XCTest run")) }
                 )
                 .padding(16)
@@ -93,7 +93,7 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
 
     func testPanelDistinguishesEmptyAndUnavailableStates() async throws {
         let empty = NSHostingView(rootView: TicketDeliveryEvidenceSection(
-            identity: "empty",
+            ticketID: .init(rawValue: "empty"), contextIdentity: "empty", isContextReady: true,
             load: { .loaded(Self.emptyEvidence) }
         ))
         empty.frame = .init(x: 0, y: 0, width: 500, height: 400)
@@ -107,7 +107,7 @@ final class DeliveryEvidenceRenderingTests: XCTestCase {
             .contains("No revision-bound delivery evidence recorded"))
 
         let unavailable = NSHostingView(rootView: TicketDeliveryEvidenceSection(
-            identity: "unavailable",
+            ticketID: .init(rawValue: "unavailable"), contextIdentity: "unavailable", isContextReady: true,
             load: { .failed(.init(
                 title: "Delivery evidence unavailable",
                 detail: "Restore this project's exact documentation root and reload.",
@@ -296,7 +296,7 @@ private struct DeliveryEvidenceSwitchHarness: View {
     var body: some View {
         let capturedTicketID = ticketID
         TicketDeliveryEvidenceSection(
-            identity: "project:registration:\(capturedTicketID)",
+            ticketID: .init(rawValue: capturedTicketID), contextIdentity: "project:registration", isContextReady: true,
             load: { await gate.load(ticketID: capturedTicketID) }
         )
         .id(capturedTicketID)

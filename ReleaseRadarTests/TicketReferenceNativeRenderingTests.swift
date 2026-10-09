@@ -788,7 +788,7 @@ private struct TicketReferenceSectionSwitchHarness: View {
     var body: some View {
         let capturedTicketID = ticketID
         TicketReferencesSection(
-            identity: "project:registration:root:\(capturedTicketID)",
+            ticketID: .init(rawValue: capturedTicketID), contextIdentity: "project:registration:root", isContextReady: true,
             load: { await gate.load(ticketID: capturedTicketID) },
             openSource: { _, _ in }
         )
@@ -806,7 +806,7 @@ private struct TicketReferenceReadinessHarness: View {
     var body: some View {
         let capturedIsReady = isReady
         TicketReferencesSection(
-            identity: "project:service-1:generation-7:\(capturedIsReady ? "observed" : "checking")",
+            ticketID: .init(rawValue: "ticket-ready"), contextIdentity: "project:service-1", isContextReady: capturedIsReady,
             load: {
                 if capturedIsReady {
                     return .loaded(TicketReferenceSectionLoadGate.referenceSet(
