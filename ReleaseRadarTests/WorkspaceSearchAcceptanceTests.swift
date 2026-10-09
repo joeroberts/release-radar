@@ -365,7 +365,7 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(projection.results.count, 1)
         XCTAssertTrue(projection.isComplete)
         XCTAssertEqual(result.title, "recorded-artifact-identity")
-        XCTAssertEqual(result.detail, "ticket-selected · docs/recorded-fallback.md")
+        XCTAssertEqual(result.detail, "ticket-selected · docs/recorded-fallback.md · Matched decision link: exact-link-identity")
         XCTAssertEqual(
             result.identity,
             .decisionReference(
