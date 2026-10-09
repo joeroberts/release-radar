@@ -35,6 +35,31 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
         )
         defer { host.close() }
 
+        if let inspectionSeconds = externalInspectionSeconds {
+            print("TICKET ORDERING EXTERNAL INSPECTION READY: initial and pending states; window=\(host.title); pid=\(ProcessInfo.processInfo.processIdentifier)")
+            try await Task.sleep(for: .seconds(inspectionSeconds))
+            try await waitUntil { await probe.invocationCount == 1 }
+            let invocations = await probe.invocations
+            let invocation = try XCTUnwrap(invocations.first)
+            assertInvocation(
+                invocation,
+                target: fixture.target,
+                lane: .backlog,
+                anchor: .before(fixture.completedLeft),
+                context: fixture.snapshot.context
+            )
+            XCTAssertEqual(invocations.count, 1)
+
+            await probe.resolve(successResult(context: committedContext))
+            try await waitUntil { await probe.reloadCount == 1 }
+            print("TICKET ORDERING EXTERNAL INSPECTION READY: committed focus state; window=\(host.title); pid=\(ProcessInfo.processInfo.processIdentifier)")
+            try await Task.sleep(for: .seconds(inspectionSeconds))
+            XCTAssertEqual(selection.value, fixture.target)
+            let invocationCount = await probe.invocationCount
+            XCTAssertEqual(invocationCount, 1)
+            return
+        }
+
         var window = try requiredAccessibilityWindow(title: host.title)
         let earlierID = "move-ticket-earlier-\(fixture.target.rawValue)"
         let laterID = "move-ticket-later-\(fixture.target.rawValue)"
@@ -532,6 +557,12 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
             title: title,
             previousPolicy: previousPolicy
         )
+    }
+
+    private var externalInspectionSeconds: Double? {
+        guard let seconds = ProcessInfo.processInfo.environment["RR_TICKET_ORDERING_INSPECT_SECONDS"]
+            .flatMap(Double.init), seconds > 0 else { return nil }
+        return min(seconds, 60)
     }
 
     private func requiredAccessibilityWindow(title: String) throws -> AXUIElement {
