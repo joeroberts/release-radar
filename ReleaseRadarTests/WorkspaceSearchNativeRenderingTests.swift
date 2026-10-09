@@ -230,7 +230,9 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
                 gate.release.wait()
             }
         }
-        gate.entered.wait()
+        await Task.detached {
+            gate.entered.wait()
+        }.value
         model.setWorkspaceSearchText("loading-native-state")
         let pending = Task { await model.runWorkspaceSearch() }
         let deadline = ContinuousClock.now + .seconds(2)
