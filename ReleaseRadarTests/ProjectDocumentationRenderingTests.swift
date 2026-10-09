@@ -102,6 +102,69 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testProjectOverviewActionsOpenTheirPanelsAndRoutes() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ProjectOverviewActions-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Register overview action fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'overview-action-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let projectID = DashboardSampleData.projectID
+
+        model.selection = .projectOverview(projectID)
+        try await render(
+            SidebarView(model: model),
+            name: "project-overview-help-action",
+            width: 760,
+            expected: nil,
+            pressIdentifiers: ["project-help"],
+            afterPressIdentifiers: [["project-lifecycle-help"]],
+            afterPressText: [["Project lifecycle help"]]
+        )
+
+        model.selection = .projectOverview(projectID)
+        try await render(
+            SidebarView(model: model),
+            name: "project-overview-manage-action",
+            width: 760,
+            expected: nil,
+            pressIdentifiers: ["project-manage"],
+            afterPressIdentifiers: [["manage-project-panel"]]
+        )
+
+        model.selection = .projectOverview(projectID)
+        try await render(
+            SidebarView(model: model),
+            name: "project-overview-plan-action",
+            width: 760,
+            expected: nil,
+            pressIdentifiers: ["open-project-plan"],
+            afterPressIdentifiers: [["project-plan"]]
+        )
+        XCTAssertEqual(model.selection, .projectPlan(projectID))
+
+        model.selection = .projectOverview(projectID)
+        try await render(
+            SidebarView(model: model),
+            name: "project-overview-board-action",
+            width: 760,
+            expected: nil,
+            pressIdentifiers: ["open-phase-board"],
+            afterPressIdentifiers: [["phase-board"]]
+        )
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+    }
+
     func testManageProjectOpensImmediatelyWithSelectedRegistrationAndIndependentSections() async throws {
         let projectID = ProjectID(rawValue: "manage-project-immediate")
         let registration = ProjectRegistration(
