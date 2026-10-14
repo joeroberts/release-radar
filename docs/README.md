@@ -56,9 +56,11 @@ unknown diff selects the build. Manual runs always select it. The workflow has
 read-only repository permission and preserves an active run when another is
 queued. No scheduled, tag, or release trigger is configured.
 
-The runner needs Xcode, CMake, and existing read access to the pinned private
+The runner needs Xcode and existing read access to the pinned private
 RekonDesignSystem dependency. [`ci_self_hosted_build.sh`](../script/ci_self_hosted_build.sh)
-checks those prerequisites, prepares the checked-in libgit2 source, resolves
+uses an installed CMake or downloads a version- and SHA-256-pinned Kitware
+archive into runner temporary storage. It checks the prerequisites, prepares
+the checked-in libgit2 source, resolves
 Swift packages, and invokes the ReleaseRadar Xcode scheme for an unsigned
 arm64 Release build. Package and compiler diagnostics stay in private logs on
 the Air; Actions reports the failed stage and the exact source revision. This
