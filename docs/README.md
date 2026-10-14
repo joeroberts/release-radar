@@ -80,6 +80,10 @@ arm64 Release build. Package and compiler diagnostics stay in private logs on
 the Air; Actions reports the failed stage and the exact source revision. This
 workflow does not run the app, GUI tests, or the QA-owned test suite. Their
 status must be recorded separately rather than inferred from compilation.
+The observed same-source rerun's checkout removed the previous `.build`
+directory before libgit2 and Xcode succeeded. Package-source and DerivedData
+paths are unique per run; machine-global package and compiler caches are not
+disabled, so these runs do not prove fresh-machine cache independence.
 
 The job has a 90-minute timeout; the observed successful service rerun took
 about three minutes on this configured Air, not a guaranteed runtime. It uses
