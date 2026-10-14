@@ -116,6 +116,17 @@ class ArtifactDeliveryTests(unittest.TestCase):
             self.deliver_on_mock_mount()
         self.assertFalse((self.mount / "build" / "ReleaseRadar").exists())
 
+    def test_nested_mount_equivalent_fails_before_copy(self) -> None:
+        parent_device = os.stat(self.mount.parent).st_dev
+        with patch.object(delivery.os, "fstat", side_effect=(
+            SimpleNamespace(st_dev=parent_device + 1),
+            SimpleNamespace(st_dev=parent_device + 2),
+        )) as devices:
+            with self.assertRaisesRegex(ValueError, "leaves the owner SMB share"):
+                delivery.deliver(self.source, ARCHIVE, self.mount)
+        self.assertEqual(2, devices.call_count)
+        self.assertFalse((self.mount / "build" / "ReleaseRadar").exists())
+
     def test_source_digest_mismatch_fails_before_copy(self) -> None:
         with (self.source / ARCHIVE).open("ab") as archive:
             archive.write(b"corrupt")
