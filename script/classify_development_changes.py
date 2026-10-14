@@ -61,6 +61,7 @@ def classify_path(path: str, result: dict[str, object]) -> bool:
         path.startswith(("ReleaseRadar/", "ReleaseRadarCore/", "ReleaseRadarTests/", "ReleaseRadarUITests/"))
         or path.startswith("ReleaseRadar.xcodeproj/")
         or path.startswith("dependencies/")
+        or path == "script/ci_self_hosted_build.sh"
         or path.startswith(("script/build", "script/release_", "script/test_release_"))
         or path in {"Package.swift", "Package.resolved"}
     ):

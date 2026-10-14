@@ -1,0 +1,61 @@
+name: Release Radar native build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-radar-native-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.repository == 'joeroberts/release-radar' &&
+      github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64, rr-build]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Route native build
+        id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            echo 'run_native=true' >> "$GITHUB_OUTPUT"
+            echo 'Manual main-branch build requested.'
+            exit 0
+          fi
+          changed_paths="$(mktemp)"
+          route_result="$(mktemp)"
+          trap 'rm -f "$changed_paths" "$route_result"' EXIT
+          bash script/collect_development_changed_paths.sh \
+            --push '${{ github.event.before }}' "$GITHUB_SHA" > "$changed_paths"
+          python3 script/classify_development_changes.py \
+            --changed-paths-stdin < "$changed_paths" > "$route_result"
+          python3 - "$route_result" "$GITHUB_OUTPUT" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as source:
+              route = json.load(source)
+          run_native = route["app"] or route["workflow"] or route["unknown"]
+          with open(sys.argv[2], "a", encoding="utf-8") as output:
+              output.write(f"run_native={str(run_native).lower()}\n")
+          print(f"Native build selected: {run_native}; routing fallback: {route['fallback_reason']}")
+          PY
+      - name: Build unsigned app on the Air
+        if: steps.route.outputs.run_native == 'true'
+        shell: bash
+        run: bash script/ci_self_hosted_build.sh
+      - name: Record routing skip
+        if: steps.route.outputs.run_native == 'false'
+        run: echo 'No application or workflow input changed; native build skipped.'

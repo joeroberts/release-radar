@@ -173,6 +173,39 @@ class DevelopmentChangeClassifierTests(unittest.TestCase):
                     run_routing_tests=False,
                 )
 
+    def test_self_hosted_build_script_selects_application_build(self) -> None:
+        self.assert_route(
+            ["script/ci_self_hosted_build.sh"],
+            docs=False,
+            swift_docs_checker=False,
+            adr_checker=False,
+            app=True,
+            workflow=False,
+            unknown=False,
+            run_docs_validation=False,
+            run_routing_tests=False,
+        )
+
+    def test_self_hosted_workflow_selects_routing_and_mixed_union(self) -> None:
+        self.assert_route(
+            [".github/workflows/self-hosted-build.yml"],
+            docs=False,
+            app=False,
+            workflow=True,
+            unknown=False,
+            run_docs_validation=False,
+            run_routing_tests=True,
+        )
+        self.assert_route(
+            ["docs/README.md", "script/ci_self_hosted_build.sh", ".github/workflows/self-hosted-build.yml"],
+            docs=True,
+            app=True,
+            workflow=True,
+            unknown=False,
+            run_docs_validation=True,
+            run_routing_tests=True,
+        )
+
     def test_workflow_and_classifier_changes_select_routing_tests(self) -> None:
         self.assert_route(
             [".github/workflows/development-documentation.yml", "script/classify_development_changes.py"],

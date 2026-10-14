@@ -33,7 +33,7 @@ helpers to select documentation-owned checks from the complete diff.
 | ADR-checker implementation, tests, or fixtures | Documentation validation and ADR-checker tests |
 | Workflow or routing-helper changes | Routing contract tests |
 | Mixed changes | Union of applicable checks |
-| Application, build, dependency, runtime-resource, or marketplace input | No documentation check solely for that input; app/build CI remains pending [#119](https://github.com/joeroberts/release-radar/issues/119) |
+| Application, build, dependency, runtime-resource, or marketplace input | No documentation check solely for that input; the native build path is tracked by [#119](https://github.com/joeroberts/release-radar/issues/119) |
 
 The classifier treats unknown, malformed, empty, or unavailable diff input as
 a visible fail-closed fallback and runs all documentation-owned checks. The
@@ -42,8 +42,39 @@ For an unexpected run or skip, first inspect the workflow's **Classify changed
 paths** JSON output: a non-null `fallback_reason` means broad validation was
 intentional; otherwise compare the reported categories with the table. The
 `validate` job itself should not be absent for supported PR/push triggers.
-An application-only change may pass `validate` while #119 lacks an app-build
-gate; that is routing behavior, not application verification.
+An application-only change may pass `validate`; that job reports documentation
+checks and does not establish application verification.
+
+## Self-hosted native build
+
+[`self-hosted-build.yml`](../.github/workflows/self-hosted-build.yml) uses the
+owner's `rr-build` macOS ARM64 runner for pushes to `main` and manual runs from
+`main`. It never runs pull-request code on that runner. For pushes, it reuses
+the complete-diff collector and classifier above: application and workflow
+inputs select the build; documentation-only changes skip it; an unavailable or
+unknown diff selects the build. Manual runs always select it. The workflow has
+read-only repository permission and preserves an active run when another is
+queued. No scheduled, tag, or release trigger is configured.
+
+The runner needs Xcode, CMake, and existing read access to the pinned private
+RekonDesignSystem dependency. [`ci_self_hosted_build.sh`](../script/ci_self_hosted_build.sh)
+checks those prerequisites, prepares the checked-in libgit2 source, resolves
+Swift packages, and invokes the ReleaseRadar Xcode scheme for an unsigned
+arm64 Release build. Package and compiler diagnostics stay in private logs on
+the Air; Actions reports the failed stage and the exact source revision. This
+workflow does not run the app, GUI tests, or the QA-owned test suite. Their
+status must be recorded separately rather than inferred from compilation.
+
+For each successful run, the Air retains an unsigned, non-installable app ZIP,
+an external SHA-256 checksum, and a provenance manifest under
+`$RUNNER_WORKSPACE/release-radar-internal-builds/<run-id>-<attempt>/` with
+owner-only filesystem permissions. The bundle and private dependency output
+are not uploaded to this public repository's Actions artifacts. Downloadable
+private artifact delivery remains open in #119 until an authorized private
+destination and retrieval path exist. The existing local release entry point
+still owns signing, DMG packaging, installation, verification, tagging, and
+publication; this CI artifact does not yet enter its receipt-bound stage
+without additional implementation and verification.
 
 ## Development skill guidance
 
