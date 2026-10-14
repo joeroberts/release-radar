@@ -56,14 +56,22 @@ unknown diff selects the build. Manual runs always select it. The workflow has
 read-only repository permission and preserves an active run when another is
 queued. No scheduled, tag, or release trigger is configured.
 
-The runner needs Xcode and existing read access to the pinned private
-RekonDesignSystem dependency. On the owner's Air, the installed user LaunchAgent
+The runner needs Xcode with its license accepted and noninteractive Git read
+access to the pinned private RekonDesignSystem dependency. The successful Air
+runs used macOS 27.0.1, arm64, Xcode 27.0, and CMake 3.31.10; these are observed
+toolchain values, not a promise that another installation is prepared. On the
+owner's Air, the installed user LaunchAgent
 `~/Library/LaunchAgents/actions.runner.joeroberts-release-radar.MacBookAir.plist`
 uses `SessionCreate=false` so its existing Keychain-backed RDS access works when
 the foreground Terminal is closed; the prior plist is retained in a local
 `.sessioncreate-true.backup` file.
-This has been verified for a logged-in GUI session, not before login or after
-logout. [`ci_self_hosted_build.sh`](../script/ci_self_hosted_build.sh)
+
+The owner must also have the private `software` SMB share mounted with a
+writable `build` directory in that logged-in session. macOS requested initial
+network-volume access during the first successful export; the owner confirmed
+the same-source service rerun needed no prompt or click. This setup has not
+been verified before login, after logout or reboot, or after a future
+permission reset. [`ci_self_hosted_build.sh`](../script/ci_self_hosted_build.sh)
 uses an installed CMake or downloads a version- and SHA-256-pinned Kitware
 archive into runner temporary storage. It checks the prerequisites, prepares
 the checked-in libgit2 source, resolves
@@ -72,6 +80,10 @@ arm64 Release build. Package and compiler diagnostics stay in private logs on
 the Air; Actions reports the failed stage and the exact source revision. This
 workflow does not run the app, GUI tests, or the QA-owned test suite. Their
 status must be recorded separately rather than inferred from compilation.
+
+The job has a 90-minute timeout; the observed successful service rerun took
+about three minutes on this configured Air, not a guaranteed runtime. It uses
+the owner's existing runner under the approved $0 additional-spend boundary.
 
 For each successful run, the Air retains an unsigned, non-installable app ZIP,
 an external SHA-256 checksum, and a provenance manifest under
@@ -89,7 +101,11 @@ output are not uploaded to this public repository's Actions artifacts. The
 existing local release entry point still owns signing, DMG packaging,
 installation, verification, tagging, and publication; this CI artifact does
 not yet enter its receipt-bound stage without additional implementation and
-verification.
+verification. Use the Actions workflow for the agreed unsigned `main` build;
+use the [local release workflow](#local-release-workflow) only with separate
+release authority. Its stage currently builds and signs independently rather
+than consuming the CI ZIP, which must not be treated as an installable app or
+installer.
 
 ## Development skill guidance
 
