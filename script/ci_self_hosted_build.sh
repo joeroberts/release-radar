@@ -163,6 +163,8 @@ manifest = {
 Path(sys.argv[1]).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 PY
 
+run_private smb-delivery python3 script/deliver_ci_artifact.py "$run_dir" "$archive"
+
 echo "Unsigned Release app built: $version ($build)."
-echo "Private archive and checksum retained in the Air's runner workspace for run $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT."
+echo "Private archive, checksum, and manifest retained on the Air and verified on the owner's SMB share for run $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT."
 echo 'No app installation, GUI test, signing, DMG packaging, tag, release, or public artifact upload occurred.'
