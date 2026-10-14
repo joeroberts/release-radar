@@ -30,6 +30,13 @@ class MountedShareTests(unittest.TestCase):
         )
         self.assertEqual(Path("/Volumes/software"), delivery.mounted_share(output))
 
+    def test_accepts_air_reported_server_spelling(self) -> None:
+        output = (
+            "//owner@10.0.0.03/software on /Volumes/software "
+            "(smbfs, nodev, nosuid, mounted by owner)\n"
+        )
+        self.assertEqual(Path("/Volumes/software"), delivery.mounted_share(output))
+
     def test_absent_wrong_or_ambiguous_mount_fails_closed(self) -> None:
         for output in (
             "",
