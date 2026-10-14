@@ -111,13 +111,16 @@ fi
 
 run_private libgit2 bash script/build_libgit2.sh arm64
 run_private packages env GIT_TERMINAL_PROMPT=0 xcodebuild \
-    -resolvePackageDependencies -project ReleaseRadar.xcodeproj \
+    -resolvePackageDependencies -disablePackageRepositoryCache \
+    -project ReleaseRadar.xcodeproj \
     -scheme ReleaseRadar -clonedSourcePackagesDirPath "$package_sources"
 run_private build env GIT_TERMINAL_PROMPT=0 xcodebuild \
+    -disablePackageRepositoryCache \
     -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
     -configuration Release -derivedDataPath "$derived_data" \
     -clonedSourcePackagesDirPath "$package_sources" \
-    ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO build
+    ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+    COMPILATION_CACHE_ENABLE_CACHING=NO build
 
 bundle="$derived_data/Build/Products/Release/ReleaseRadar.app"
 [[ -d "$bundle" && -x "$bundle/Contents/MacOS/ReleaseRadar" ]] || { echo 'Release app output is missing.' >&2; exit 1; }
