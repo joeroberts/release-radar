@@ -99,11 +99,11 @@ owner SMB share and copies those three files to
 replacing an existing run. It reads back the copied checksum,
 manifest, and archive digest before reporting delivery success. An absent or
 different mount fails the job; the script does not mount a share or configure
-credentials. A failed partial copy is retained for owner disposition, not
-silently replaced. After a successful delivery, the job removes complete CI
-archive/checksum/manifest sets from the Air and share only when all three files
-are older than 30 days. Diagnostics and incomplete runs remain; cleanup occurs
-on a later successful build, not on a separate schedule. The bundle and private
+credentials. A failed partial copy is not silently replaced. After a successful
+delivery, the job removes entire CI run-attempt directories older than 30 days
+under the Air and share build roots, including old diagnostics and partial runs.
+It leaves the current run and other locations untouched; cleanup occurs on a
+later successful build, not on a separate schedule. The bundle and private
 dependency output are not uploaded to this public repository's Actions artifacts. The
 existing local release entry point still owns signing, DMG packaging,
 installation, verification, tagging, and publication; this CI artifact does

@@ -68,56 +68,30 @@ def digest_from_directory(directory_fd: int, name: str) -> str:
         return sha256_stream(stream)
 
 
-def prune_old_runs(root_fd: int, current_run: str, cutoff: float) -> int:
-    """Remove only complete CI archive triads older than the cutoff."""
-    root_device = os.fstat(root_fd).st_dev
+def prune_old_runs(root_fd: int, root: Path, current_run: str, cutoff: float) -> int:
+    """Remove expired CI run directories from one verified build root."""
+    if not shutil.rmtree.avoids_symlink_attacks:
+        raise RuntimeError("safe directory deletion is unavailable")
+    root_stat = os.fstat(root_fd)
+    path_stat = os.stat(root, follow_symlinks=False)
+    if (path_stat.st_dev, path_stat.st_ino) != (root_stat.st_dev, root_stat.st_ino):
+        raise ValueError("CI build root changed before cleanup")
     removed = 0
     for run_name in os.listdir(root_fd):
-        match = re.fullmatch(r"([0-9]+)-([0-9]+)", run_name)
-        if run_name == current_run or match is None:
+        if run_name == current_run or re.fullmatch(r"[0-9]+-[0-9]+", run_name) is None:
             continue
-        run_stat = os.stat(run_name, dir_fd=root_fd, follow_symlinks=False)
-        if not stat.S_ISDIR(run_stat.st_mode) or run_stat.st_dev != root_device:
+        try:
+            run_stat = os.stat(run_name, dir_fd=root_fd, follow_symlinks=False)
+        except FileNotFoundError:
             continue
-        with open_directory(run_name, root_fd) as run_fd:
-            if os.fstat(run_fd).st_dev != root_device:
-                continue
-            try:
-                manifest_stat = os.stat("manifest.json", dir_fd=run_fd, follow_symlinks=False)
-            except FileNotFoundError:
-                continue
-            if (not stat.S_ISREG(manifest_stat.st_mode)
-                    or manifest_stat.st_dev != root_device or manifest_stat.st_size > 16_384):
-                continue
-            try:
-                manifest = json.loads(read_from_directory(run_fd, "manifest.json"))
-            except ValueError:
-                continue
-            if not isinstance(manifest, dict):
-                continue
-            sha = manifest.get("source_revision")
-            digest = manifest.get("archive_sha256")
-            if (not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None
-                    or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
-                    or manifest.get("run_id") != match.group(1)
-                    or manifest.get("run_attempt") != match.group(2)):
-                continue
-            archive = f"ReleaseRadar-ci-{sha}.zip"
-            if manifest.get("archive") != archive:
-                continue
-            names = (archive, f"{archive}.sha256", "manifest.json")
-            try:
-                files = [os.stat(name, dir_fd=run_fd, follow_symlinks=False) for name in names]
-            except FileNotFoundError:
-                continue
-            if (any(not stat.S_ISREG(item.st_mode) or item.st_dev != root_device for item in files)
-                    or max(item.st_mtime for item in files) >= cutoff):
-                continue
-            if read_from_directory(run_fd, names[1]) != f"{digest}  {archive}\n".encode():
-                continue
-            for name in names:
-                os.unlink(name, dir_fd=run_fd)
-            removed += 1
+        if (not stat.S_ISDIR(run_stat.st_mode) or run_stat.st_dev != root_stat.st_dev
+                or run_stat.st_mtime >= cutoff):
+            continue
+        path_stat = os.stat(root, follow_symlinks=False)
+        if (path_stat.st_dev, path_stat.st_ino) != (root_stat.st_dev, root_stat.st_ino):
+            raise ValueError("CI build root changed during cleanup")
+        shutil.rmtree(root / run_name)
+        removed += 1
     return removed
 
 
@@ -180,8 +154,9 @@ def deliver(source_dir: Path, archive: str, share_mount: Path) -> None:
                         raise ValueError("copied checksum sidecar mismatch")
                     if read_from_directory(run_fd, "manifest.json") != manifest_bytes:
                         raise ValueError("copied provenance manifest mismatch")
-                pruned = prune_old_runs(product_fd, f"{run_id}-{attempt}", time.time() - RETENTION_SECONDS)
-                print(f"Retired {pruned} old SMB archive set(s).")
+                pruned = prune_old_runs(product_fd, share_mount / "build" / "ReleaseRadar",
+                                        f"{run_id}-{attempt}", time.time() - RETENTION_SECONDS)
+                print(f"Retired {pruned} old SMB CI run(s).")
 
 
 def main() -> None:
@@ -195,8 +170,9 @@ def main() -> None:
         raise ValueError("private source is outside the CI build root")
     deliver(source_dir, sys.argv[2], mounted_share(result.stdout))
     with open_directory(source_dir.parent) as air_fd:
-        pruned = prune_old_runs(air_fd, current_run, time.time() - RETENTION_SECONDS)
-    print(f"Retired {pruned} old Air archive set(s).")
+        pruned = prune_old_runs(air_fd, source_dir.parent, current_run,
+                                time.time() - RETENTION_SECONDS)
+    print(f"Retired {pruned} old Air CI run(s).")
 
 
 if __name__ == "__main__":
