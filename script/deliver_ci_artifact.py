@@ -98,16 +98,23 @@ def deliver(source_dir: Path, archive: str, share_mount: Path) -> None:
 
     # Open each directory relative to the verified mount, refusing symlinks.
     with open_directory(share_mount) as share_fd:
-        if os.fstat(share_fd).st_dev == os.stat(share_mount.parent).st_dev:
+        share_device = os.fstat(share_fd).st_dev
+        if share_device == os.stat(share_mount.parent).st_dev:
             raise ValueError("the owner SMB mount is no longer active")
         with open_directory("build", share_fd) as build_fd:
+            if os.fstat(build_fd).st_dev != share_device:
+                raise ValueError("artifact destination leaves the owner SMB share")
             try:
                 os.mkdir("ReleaseRadar", 0o700, dir_fd=build_fd)
             except FileExistsError:
                 pass
             with open_directory("ReleaseRadar", build_fd) as product_fd:
+                if os.fstat(product_fd).st_dev != share_device:
+                    raise ValueError("artifact destination leaves the owner SMB share")
                 os.mkdir(f"{run_id}-{attempt}", 0o700, dir_fd=product_fd)
                 with open_directory(f"{run_id}-{attempt}", product_fd) as run_fd:
+                    if os.fstat(run_fd).st_dev != share_device:
+                        raise ValueError("artifact destination leaves the owner SMB share")
                     for name in (archive, f"{archive}.sha256", "manifest.json"):
                         copy_exclusive(source_dir / name, name, run_fd)
                     if digest_from_directory(run_fd, archive) != digest:
