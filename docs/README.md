@@ -82,8 +82,9 @@ workflow does not run the app, GUI tests, or the QA-owned test suite. Their
 status must be recorded separately rather than inferred from compilation.
 The observed same-source rerun's checkout removed the previous `.build`
 directory before libgit2 and Xcode succeeded. Package-source and DerivedData
-paths are unique per run; machine-global package and compiler caches are not
-disabled, so these runs do not prove fresh-machine cache independence.
+paths are unique per run. The Xcode commands also request disabled package
+repository and compilation caches. These controls do not provision Xcode,
+Keychain-backed RDS access, or the SMB mount on a fresh machine.
 
 The job has a 90-minute timeout; the observed successful service rerun took
 about three minutes on this configured Air, not a guaranteed runtime. It uses
