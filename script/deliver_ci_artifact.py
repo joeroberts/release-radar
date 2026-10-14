@@ -10,14 +10,17 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
+import time
 from typing import BinaryIO, Iterator
 
 
 # The Air reports the owner-selected 10.0.0.3 share as 10.0.0.03.
 SHARE = re.compile(r"^//(?:[^\s/]*@)?10\.0\.0\.(?:3|03)/software on (.+) \(smbfs(?:,|\))")
 DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+RETENTION_SECONDS = 30 * 24 * 60 * 60
 
 
 def mounted_share(output: str) -> Path:
@@ -63,6 +66,59 @@ def digest_from_directory(directory_fd: int, name: str) -> str:
     fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
     with os.fdopen(fd, "rb") as stream:
         return sha256_stream(stream)
+
+
+def prune_old_runs(root_fd: int, current_run: str, cutoff: float) -> int:
+    """Remove only complete CI archive triads older than the cutoff."""
+    root_device = os.fstat(root_fd).st_dev
+    removed = 0
+    for run_name in os.listdir(root_fd):
+        match = re.fullmatch(r"([0-9]+)-([0-9]+)", run_name)
+        if run_name == current_run or match is None:
+            continue
+        run_stat = os.stat(run_name, dir_fd=root_fd, follow_symlinks=False)
+        if not stat.S_ISDIR(run_stat.st_mode) or run_stat.st_dev != root_device:
+            continue
+        with open_directory(run_name, root_fd) as run_fd:
+            if os.fstat(run_fd).st_dev != root_device:
+                continue
+            try:
+                manifest_stat = os.stat("manifest.json", dir_fd=run_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if (not stat.S_ISREG(manifest_stat.st_mode)
+                    or manifest_stat.st_dev != root_device or manifest_stat.st_size > 16_384):
+                continue
+            try:
+                manifest = json.loads(read_from_directory(run_fd, "manifest.json"))
+            except ValueError:
+                continue
+            if not isinstance(manifest, dict):
+                continue
+            sha = manifest.get("source_revision")
+            digest = manifest.get("archive_sha256")
+            if (not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None
+                    or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+                    or manifest.get("run_id") != match.group(1)
+                    or manifest.get("run_attempt") != match.group(2)):
+                continue
+            archive = f"ReleaseRadar-ci-{sha}.zip"
+            if manifest.get("archive") != archive:
+                continue
+            names = (archive, f"{archive}.sha256", "manifest.json")
+            try:
+                files = [os.stat(name, dir_fd=run_fd, follow_symlinks=False) for name in names]
+            except FileNotFoundError:
+                continue
+            if (any(not stat.S_ISREG(item.st_mode) or item.st_dev != root_device for item in files)
+                    or max(item.st_mtime for item in files) >= cutoff):
+                continue
+            if read_from_directory(run_fd, names[1]) != f"{digest}  {archive}\n".encode():
+                continue
+            for name in names:
+                os.unlink(name, dir_fd=run_fd)
+            removed += 1
+    return removed
 
 
 def deliver(source_dir: Path, archive: str, share_mount: Path) -> None:
@@ -124,13 +180,23 @@ def deliver(source_dir: Path, archive: str, share_mount: Path) -> None:
                         raise ValueError("copied checksum sidecar mismatch")
                     if read_from_directory(run_fd, "manifest.json") != manifest_bytes:
                         raise ValueError("copied provenance manifest mismatch")
+                pruned = prune_old_runs(product_fd, f"{run_id}-{attempt}", time.time() - RETENTION_SECONDS)
+                print(f"Retired {pruned} old SMB archive set(s).")
 
 
 def main() -> None:
     if len(sys.argv) != 3:
         raise SystemExit("usage: deliver_ci_artifact.py SOURCE_DIR ARCHIVE")
     result = subprocess.run(["/sbin/mount", "-t", "smbfs"], check=True, capture_output=True, text=True)
-    deliver(Path(sys.argv[1]), sys.argv[2], mounted_share(result.stdout))
+    source_dir = Path(sys.argv[1])
+    current_run = f"{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
+    expected_source = Path(os.environ["RUNNER_WORKSPACE"]) / "release-radar-internal-builds" / current_run
+    if source_dir != expected_source or not source_dir.is_absolute():
+        raise ValueError("private source is outside the CI build root")
+    deliver(source_dir, sys.argv[2], mounted_share(result.stdout))
+    with open_directory(source_dir.parent) as air_fd:
+        pruned = prune_old_runs(air_fd, current_run, time.time() - RETENTION_SECONDS)
+    print(f"Retired {pruned} old Air archive set(s).")
 
 
 if __name__ == "__main__":
