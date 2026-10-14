@@ -15,7 +15,8 @@ import sys
 from typing import BinaryIO, Iterator
 
 
-SHARE = re.compile(r"^//(?:[^\s/]*@)?10\.0\.0\.3/software on (.+) \(smbfs(?:,|\))")
+# The Air reports the owner-selected 10.0.0.3 share as 10.0.0.03.
+SHARE = re.compile(r"^//(?:[^\s/]*@)?10\.0\.0\.(?:3|03)/software on (.+) \(smbfs(?:,|\))")
 DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 
 
