@@ -16,8 +16,21 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]] || { echo 'Checkout does not match the event revision.' >&2; exit 1; }
 [[ "$(uname -m)" == arm64 ]] || { echo 'The runner must be Apple silicon.' >&2; exit 1; }
-command -v cmake >/dev/null || { echo 'CMake is unavailable on the runner.' >&2; exit 1; }
 command -v xcodebuild >/dev/null || { echo 'Xcode is unavailable on the runner.' >&2; exit 1; }
+cmake_binary="${CMAKE_EXECUTABLE:-}"
+if [[ -z "$cmake_binary" ]]; then
+    cmake_binary="$(command -v cmake || true)"
+fi
+if [[ -n "$cmake_binary" && "$cmake_binary" != /* ]]; then
+    cmake_binary="$(command -v "$cmake_binary" || true)"
+fi
+if [[ -z "$cmake_binary" ]]; then
+    for candidate in /opt/homebrew/bin/cmake /usr/local/bin/cmake /Applications/CMake.app/Contents/bin/cmake; do
+        if [[ -x "$candidate" ]]; then cmake_binary="$candidate"; break; fi
+    done
+fi
+[[ -n "$cmake_binary" && -x "$cmake_binary" ]] || { echo 'CMake is unavailable on the runner (PATH and standard installation paths checked).' >&2; exit 1; }
+export CMAKE_EXECUTABLE="$cmake_binary"
 
 private_root="$RUNNER_WORKSPACE/release-radar-internal-builds"
 [[ ! -L "$private_root" ]] || { echo 'Private build root cannot be a symlink.' >&2; exit 1; }
@@ -45,7 +58,7 @@ echo "Source revision: $GITHUB_SHA"
 echo "Runner architecture: $(uname -m)"
 echo "macOS: $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
 xcodebuild -version
-echo "CMake: $(cmake --version | head -n 1)"
+echo "CMake: $("$CMAKE_EXECUTABLE" --version | head -n 1)"
 
 # The Air's existing Git credential configuration must read the private RDS
 # repository. No credential is copied into the checkout or Actions artifact.
