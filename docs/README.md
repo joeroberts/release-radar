@@ -57,7 +57,13 @@ read-only repository permission and preserves an active run when another is
 queued. No scheduled, tag, or release trigger is configured.
 
 The runner needs Xcode and existing read access to the pinned private
-RekonDesignSystem dependency. [`ci_self_hosted_build.sh`](../script/ci_self_hosted_build.sh)
+RekonDesignSystem dependency. On the owner's Air, the installed user LaunchAgent
+`~/Library/LaunchAgents/actions.runner.joeroberts-release-radar.MacBookAir.plist`
+uses `SessionCreate=false` so its existing Keychain-backed RDS access works when
+the foreground Terminal is closed; the prior plist is retained in a local
+`.sessioncreate-true.backup` file.
+This has been verified for a logged-in GUI session, not before login or after
+logout. [`ci_self_hosted_build.sh`](../script/ci_self_hosted_build.sh)
 uses an installed CMake or downloads a version- and SHA-256-pinned Kitware
 archive into runner temporary storage. It checks the prerequisites, prepares
 the checked-in libgit2 source, resolves
@@ -70,13 +76,20 @@ status must be recorded separately rather than inferred from compilation.
 For each successful run, the Air retains an unsigned, non-installable app ZIP,
 an external SHA-256 checksum, and a provenance manifest under
 `$RUNNER_WORKSPACE/release-radar-internal-builds/<run-id>-<attempt>/` with
-owner-only filesystem permissions. The bundle and private dependency output
-are not uploaded to this public repository's Actions artifacts. Downloadable
-private artifact delivery remains open in #119 until an authorized private
-destination and retrieval path exist. The existing local release entry point
-still owns signing, DMG packaging, installation, verification, tagging, and
-publication; this CI artifact does not yet enter its receipt-bound stage
-without additional implementation and verification.
+owner-only filesystem permissions. The build then verifies the exact mounted
+owner SMB share and copies those three files to
+`smb://10.0.0.3/software/build/ReleaseRadar/<run-id>-<attempt>/` without
+replacing an existing run. It reads back the copied checksum,
+manifest, and archive digest before reporting delivery success. An absent or
+different mount fails the job; the script does not mount a share or configure
+credentials. A failed partial copy is retained for owner disposition, not
+silently replaced. Builds are retained until the owner approves a cleanup
+policy; no automatic deletion is configured. The bundle and private dependency
+output are not uploaded to this public repository's Actions artifacts. The
+existing local release entry point still owns signing, DMG packaging,
+installation, verification, tagging, and publication; this CI artifact does
+not yet enter its receipt-bound stage without additional implementation and
+verification.
 
 ## Development skill guidance
 
