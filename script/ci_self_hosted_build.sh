@@ -16,8 +16,6 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]] || { echo 'Checkout does not match the event revision.' >&2; exit 1; }
 [[ "$(uname -m)" == arm64 ]] || { echo 'The runner must be Apple silicon.' >&2; exit 1; }
-command -v cmake >/dev/null || { echo 'CMake is unavailable on the runner.' >&2; exit 1; }
-command -v xcodebuild >/dev/null || { echo 'Xcode is unavailable on the runner.' >&2; exit 1; }
 
 private_root="$RUNNER_WORKSPACE/release-radar-internal-builds"
 [[ ! -L "$private_root" ]] || { echo 'Private build root cannot be a symlink.' >&2; exit 1; }
@@ -41,16 +39,76 @@ run_private() {
     echo "$stage passed."
 }
 
+prepare_cmake() {
+    local candidate archive tool_dir actual_sha
+    cmake_binary="${CMAKE_EXECUTABLE:-}"
+    if [[ -z "$cmake_binary" ]]; then cmake_binary="$(command -v cmake || true)"; fi
+    if [[ -n "$cmake_binary" && "$cmake_binary" != /* ]]; then
+        cmake_binary="$(command -v "$cmake_binary" || true)"
+    fi
+    if [[ -z "$cmake_binary" ]]; then
+        for candidate in /opt/homebrew/bin/cmake /usr/local/bin/cmake /Applications/CMake.app/Contents/bin/cmake; do
+            if [[ -x "$candidate" ]]; then cmake_binary="$candidate"; break; fi
+        done
+    fi
+    if [[ -n "$cmake_binary" && -x "$cmake_binary" ]]; then
+        export CMAKE_EXECUTABLE="$cmake_binary"
+        return 0
+    fi
+
+    # Kitware's official universal macOS asset, pinned by its release SHA-256.
+    tool_dir="$RUNNER_TEMP/rr-cmake-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+    mkdir "$tool_dir" || return 1
+    archive="$tool_dir/cmake-3.31.10-macos-universal.tar.gz"
+    if ! curl -fsSL \
+        https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-macos-universal.tar.gz \
+        -o "$archive" > "$run_dir/cmake-download.log" 2>&1; then
+        echo 'Pinned CMake download failed; inspect the private cmake-download.log on the Air.' >&2
+        return 1
+    fi
+    actual_sha="$(shasum -a 256 "$archive" | awk '{print $1}')"
+    if [[ "$actual_sha" != be9f3faeeaf7921cc2d77cea711dd5e6f72c63af2810cacd9205b3ce8d1593c9 ]]; then
+        echo 'Pinned CMake archive integrity check failed.' >&2
+        return 1
+    fi
+    if ! tar -xzf "$archive" -C "$tool_dir" > "$run_dir/cmake-extract.log" 2>&1; then
+        echo 'Pinned CMake extraction failed; inspect the private cmake-extract.log on the Air.' >&2
+        return 1
+    fi
+    cmake_binary="$(find "$tool_dir" -type f -path '*/bin/cmake' -print -quit)"
+    [[ -n "$cmake_binary" && -x "$cmake_binary" ]] || { echo 'Pinned CMake executable is missing from the verified archive.' >&2; return 1; }
+    export CMAKE_EXECUTABLE="$cmake_binary"
+}
+
 echo "Source revision: $GITHUB_SHA"
 echo "Runner architecture: $(uname -m)"
 echo "macOS: $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
-xcodebuild -version
-echo "CMake: $(cmake --version | head -n 1)"
+preflight_failed=false
+if command -v xcodebuild >/dev/null && xcodebuild -version > "$run_dir/xcode-version.log" 2>&1; then
+    cat "$run_dir/xcode-version.log"
+else
+    echo 'Xcode is unavailable or its license is not accepted; inspect the private xcode-version.log on the Air.' >&2
+    preflight_failed=true
+fi
 
 # The Air's existing Git credential configuration must read the private RDS
 # repository. No credential is copied into the checkout or Actions artifact.
-run_private rds-access env GIT_TERMINAL_PROMPT=0 git ls-remote \
-    https://github.com/joeroberts/RekonDesignSystem.git HEAD
+if env GIT_TERMINAL_PROMPT=0 git ls-remote \
+    https://github.com/joeroberts/RekonDesignSystem.git HEAD > "$run_dir/rds-access.log" 2>&1; then
+    echo 'rds-access passed.'
+else
+    echo 'rds-access failed; inspect the private rds-access.log on the Air.' >&2
+    preflight_failed=true
+fi
+
+if prepare_cmake && "$CMAKE_EXECUTABLE" --version > "$run_dir/cmake-version.log" 2>&1; then
+    echo "CMake: $(head -n 1 "$run_dir/cmake-version.log")"
+else
+    echo 'CMake is unavailable; inspect private CMake diagnostics on the Air.' >&2
+    preflight_failed=true
+fi
+[[ "$preflight_failed" == false ]] || exit 1
+
 run_private libgit2 bash script/build_libgit2.sh arm64
 run_private packages env GIT_TERMINAL_PROMPT=0 xcodebuild \
     -resolvePackageDependencies -project ReleaseRadar.xcodeproj \
