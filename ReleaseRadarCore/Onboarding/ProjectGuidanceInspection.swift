@@ -65,7 +65,7 @@ public enum ProjectGuidanceInspection {
         guard managed || legacy else { return .legacy(guidance) }
         do {
             let reader = try RepositoryDocumentReader(rootURL: rootURL, limits: .init(), afterRead: nil)
-            if managed, try RepositoryDocumentationMode.read(reader) != .managedV3 { throw DocumentationOperationError.guidanceUnavailable }
+            if managed, try RepositoryDocumentationMode.read(reader) != .managedV4 { throw DocumentationOperationError.guidanceUnavailable }
             do {
                 _ = try reader.read(RepositoryDocumentContract.catalogPath, catalog: true)
             } catch let error as RepositoryDocumentError where error.code == .missingFile && !managed {
@@ -149,6 +149,8 @@ public enum ProjectGuidanceInspection {
                observedBlock != RepositoryDocumentContract.legacyManagedGuidanceBlock { return .needsRepair }
             if installedVersion == 2,
                observedBlock != RepositoryDocumentContract.managedGuidanceV2Block { return .needsRepair }
+            if installedVersion == 3,
+               observedBlock != RepositoryDocumentContract.managedGuidanceV3Block { return .needsRepair }
             return .outdated(installed: installedVersion, current: currentVersion)
         }
         return observedBlock == managedBlock ? .current(version: currentVersion) : .needsRepair

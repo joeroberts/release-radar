@@ -276,8 +276,8 @@ public struct EvidenceInventory: Codable, Equatable, Sendable {
 /// Managed guidance requires an exact shipped block; legacy classification remains compatible.
 /// Unknown, duplicate and malformed managed declarations always fail closed.
 public enum RepositoryDocumentationMode: String, Codable, Sendable {
-    case legacy, managedV2, managedV3, unavailable
-    var isManaged: Bool { self == .managedV2 || self == .managedV3 }
+    case legacy, managedV2, managedV3, managedV4, unavailable
+    var isManaged: Bool { self == .managedV2 || self == .managedV3 || self == .managedV4 }
     public static func inspect(contents: String?) -> Self {
         guard let contents else { return .legacy }
         let lines = contents.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -294,7 +294,10 @@ public enum RepositoryDocumentationMode: String, Codable, Sendable {
             return block == RepositoryDocumentContract.managedGuidanceV2Block ? .managedV2 : .unavailable
         case "\(prefix)3\(suffix)":
             let block = lines[markers[0]...markers[1]].joined(separator: "\n")
-            return block == RepositoryDocumentContract.managedGuidanceBlock ? .managedV3 : .unavailable
+            return block == RepositoryDocumentContract.managedGuidanceV3Block ? .managedV3 : .unavailable
+        case "\(prefix)4\(suffix)":
+            let block = lines[markers[0]...markers[1]].joined(separator: "\n")
+            return block == RepositoryDocumentContract.managedGuidanceBlock ? .managedV4 : .unavailable
         default: return .unavailable
         }
     }

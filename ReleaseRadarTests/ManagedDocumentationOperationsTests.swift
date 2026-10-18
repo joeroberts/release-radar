@@ -893,7 +893,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
     }
 
     func testStagedLifecycleBindingPreservesLegacyAuthorityUntilAuditedGuidanceUpgrade() async throws {
-        let f = try await makeFixture()
+        let f = try await makeFixture(parentDirectory: FileManager.default.temporaryDirectory)
         let ownerInstructions = "# Owner instructions\n\nPreserve this content.\n\n"
         let guidance = f.root.appendingPathComponent("AGENTS.md")
         let staged = Data((ownerInstructions + RepositoryDocumentContract.legacyManagedGuidanceBlock).utf8)
@@ -951,7 +951,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let currentResult = await inventory(f.store, f.root)
         let current = try XCTUnwrap(currentResult)
         XCTAssertTrue(current.isComplete)
-        XCTAssertEqual(current.catalog.guidance, .managedV3)
+        XCTAssertEqual(current.catalog.guidance, .managedV4)
         XCTAssertEqual(current.binding, bound.binding)
         XCTAssertEqual(current.evidence.map { $0.evidence.id.rawValue }, ["release-radar-handoff:v1:staged"])
         XCTAssertEqual(try Data(contentsOf: guidance), Data((ownerInstructions + RepositoryDocumentContract.managedGuidanceBlock).utf8))
@@ -1720,8 +1720,11 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])]), bookmarkStore: bookmarks(root))
     }
 
-    private func makeFixture(rootPath: String = "repository") async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
-        let directory = FileManager.default.homeDirectoryForCurrentUser
+    private func makeFixture(
+        rootPath: String = "repository",
+        parentDirectory: URL? = nil
+    ) async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
+        let directory = (parentDirectory ?? FileManager.default.homeDirectoryForCurrentUser)
             .appendingPathComponent(".release-radar-managed-docs-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }

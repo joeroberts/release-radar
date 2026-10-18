@@ -1250,7 +1250,7 @@ public actor AgentCommandDispatcher {
             switch catalog.mode {
             case .legacy: return
             case .unavailable: throw DocumentationOperationError.guidanceUnavailable
-            case .managedV2, .managedV3:
+            case .managedV2, .managedV3, .managedV4:
                 guard let snapshot = catalog.snapshot else { throw DocumentationOperationError.catalogInvalid }
                 let relative = String(path.dropFirst(root.path.count + 1))
                 if snapshot.catalog.artifacts.contains(where: { $0.path == relative }) {
