@@ -206,6 +206,11 @@ final class AppModel {
     private let deliveryEvidenceBookmarkStore: any ProjectBookmarkStoring
     private let evidencePreviewLoader: @Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview
     private let requestIDGenerator: () -> UUID
+    private let repositoryPlanSourceLoader: @Sendable (
+        DeliveryStore,
+        FolderProjectOnboarding,
+        ProjectID
+    ) async throws -> [RepositoryPlanSourceOption]
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
@@ -220,6 +225,8 @@ final class AppModel {
     private var projectRoots: [ProjectID: URL] = [:]
     private var reviewActionStates: [ProjectID: ReviewActionState] = [:]
     private var activePhaseSelectionStatuses: [ProjectID: ActivePhaseSelectionStatus] = [:]
+    private var repositoryPlanReconstructions: [ProjectID: RepositoryPlanReconstructionPresentation] = [:]
+    private var repositoryPlanReconstructionGenerations: [ProjectID: UInt64] = [:]
     // View preferences are ephemeral, byte-exact identities, never another active pointer.
     private var viewedPhaseIDs: [Data: PhaseID] = [:]
     private var allPhaseBoardProjectIDs: Set<Data> = []
@@ -276,7 +283,19 @@ final class AppModel {
         seedSampleData: Bool = false,
         documentationObserver: DocumentationObservationCoordinator? = nil,
         deliveryEvidenceBookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
-        evidencePreviewLoader: (@Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview)? = nil
+        evidencePreviewLoader: (@Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview)? = nil,
+        repositoryPlanSourceLoader: @escaping @Sendable (
+            DeliveryStore,
+            FolderProjectOnboarding,
+            ProjectID
+        ) async throws -> [RepositoryPlanSourceOption] = { store, onboarding, projectID in
+            try await onboarding.withAuthorizedProject(projectID: projectID) { project in
+                try await RepositoryPlanSourceSelection.availableSources(
+                    from: store,
+                    project: project
+                )
+            }
+        }
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
@@ -313,6 +332,7 @@ final class AppModel {
             await store.previewEvidence(projectID: projectID, evidenceID: evidenceID)
         }
         self.requestIDGenerator = requestIDGenerator
+        self.repositoryPlanSourceLoader = repositoryPlanSourceLoader
         self.recoveryServices = recoveryServices
         self.connectorHealthLoader = connectorHealthLoader
         self.recoveryStartupError = recoveryStartupError
@@ -1312,6 +1332,8 @@ final class AppModel {
         projectRoots.removeAll()
         reviewActionStates.removeAll()
         activePhaseSelectionStatuses.removeAll()
+        repositoryPlanReconstructions.removeAll()
+        repositoryPlanReconstructionGenerations.removeAll()
         selectedReviewItemID = nil
     }
 
@@ -1336,6 +1358,59 @@ final class AppModel {
     func reloadAfterOnboarding() async {
         selection = .projects
         await loadDashboard()
+    }
+
+    func reloadAfterOnboarding(projectID: ProjectID) async {
+        await loadDashboard()
+        guard dashboard?.projects.contains(where: { $0.id == projectID }) == true else {
+            selection = .projects
+            return
+        }
+        await navigate(to: .projectPlan(projectID))
+    }
+
+    func repositoryPlanReconstruction(
+        for projectID: ProjectID
+    ) -> RepositoryPlanReconstructionPresentation? {
+        repositoryPlanReconstructions[projectID]
+    }
+
+    func openRepositoryPlanReconstruction(projectID: ProjectID) async {
+        let generation = (repositoryPlanReconstructionGenerations[projectID] ?? 0) &+ 1
+        repositoryPlanReconstructionGenerations[projectID] = generation
+        repositoryPlanReconstructions[projectID] = .loading(projectID: projectID)
+        do {
+            let sources = try await repositoryPlanSourceLoader(store, projectOnboarding, projectID)
+            guard repositoryPlanReconstructionGenerations[projectID] == generation else { return }
+            repositoryPlanReconstructions[projectID] = .selecting(
+                projectID: projectID,
+                sources: sources
+            )
+        } catch {
+            guard repositoryPlanReconstructionGenerations[projectID] == generation else { return }
+            repositoryPlanReconstructions[projectID] = .failed(
+                projectID: projectID,
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    func setRepositoryPlanSourceSelected(
+        projectID: ProjectID,
+        artifactID: String,
+        selected: Bool
+    ) {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .selectingSources,
+              presentation.sources.contains(where: { $0.artifactID == artifactID }) else {
+            return
+        }
+        if selected {
+            presentation.selectedArtifactIDs.insert(artifactID)
+        } else {
+            presentation.selectedArtifactIDs.remove(artifactID)
+        }
+        repositoryPlanReconstructions[projectID] = presentation
     }
 
     func eligibleProjectsForFolderAttachment() async throws -> [ProjectRecord] {

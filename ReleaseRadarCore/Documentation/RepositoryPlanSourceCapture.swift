@@ -1,6 +1,110 @@
 import CryptoKit
 import Foundation
 
+public struct RepositoryPlanSourceOption: Codable, Equatable, Identifiable, Sendable {
+    public let artifactID: String
+    public let path: String
+    public let contentSHA256: String
+    public let lifecycle: RepositoryDocumentArtifact.Lifecycle
+    public let authority: RepositoryDocumentArtifact.Authority
+
+    public var id: String { artifactID }
+
+    public init(
+        artifactID: String,
+        path: String,
+        contentSHA256: String,
+        lifecycle: RepositoryDocumentArtifact.Lifecycle,
+        authority: RepositoryDocumentArtifact.Authority
+    ) {
+        self.artifactID = artifactID
+        self.path = path
+        self.contentSHA256 = contentSHA256
+        self.lifecycle = lifecycle
+        self.authority = authority
+    }
+}
+
+/// Reads the accepted documentation catalog through an already-authorized
+/// project root. The persisted registration, root and accepted catalog are
+/// rechecked after filesystem access so callers never present stale choices or
+/// captured bytes as current.
+public enum RepositoryPlanSourceSelection {
+    public static func availableSources(
+        from store: DeliveryStore,
+        project: AuthorizedProject
+    ) async throws -> [RepositoryPlanSourceOption] {
+        let context = try currentContext(from: store, project: project)
+        let catalog = try DocumentationCatalogContext(root: context.root)
+        let snapshot = try catalog.managedSnapshot()
+        try context.requireAccepted(snapshot)
+
+        let sources = try snapshot.catalog.artifacts.map { artifact in
+            RepositoryPlanSourceOption(
+                artifactID: artifact.artifactID,
+                path: artifact.path,
+                contentSHA256: digest(try catalog.reader.read(artifact.path)),
+                lifecycle: artifact.lifecycle,
+                authority: artifact.authorityLevel
+            )
+        }
+        try catalog.reader.verifyStable()
+        try requireCurrent(context, in: store)
+        return sources.sorted {
+            Data($0.path.utf8).lexicographicallyPrecedes(Data($1.path.utf8))
+        }
+    }
+
+    public static func capture(
+        artifactIDs: [String],
+        from store: DeliveryStore,
+        project: AuthorizedProject
+    ) async throws -> RepositoryPlanSourceManifest {
+        let context = try currentContext(from: store, project: project)
+        let manifest = try RepositoryPlanSourceCapture.capture(
+            context: context,
+            artifactIDs: artifactIDs
+        )
+        try requireCurrent(context, in: store)
+        return manifest
+    }
+
+    private static func currentContext(
+        from store: DeliveryStore,
+        project: AuthorizedProject
+    ) throws -> DocumentationRootContext {
+        guard let registration = project.registration else {
+            throw DocumentationOperationError.staleRegistration
+        }
+        let context = try store.read { connection in
+            try DocumentationRootContext.read(
+                connection,
+                path: project.canonicalRoot.path,
+                projectID: project.projectID.rawValue,
+                schemaVersion: store.schemaVersionForDocumentation
+            )
+        }
+        guard context.registration == registration,
+              context.root.path == project.canonicalRoot.path else {
+            throw DocumentationOperationError.staleRegistration
+        }
+        return context
+    }
+
+    private static func requireCurrent(
+        _ context: DocumentationRootContext,
+        in store: DeliveryStore
+    ) throws {
+        try store.read { connection in
+            try context.verifyPersisted(connection)
+        }
+    }
+
+    private static func digest(_ bytes: Data) -> String {
+        SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
 /// Captures only owner-selected catalog artifacts from the already authorized
 /// repository root. Callers retain responsibility for keeping bookmark access
 /// alive and rechecking the persisted root context around later operations.
