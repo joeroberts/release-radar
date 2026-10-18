@@ -193,6 +193,72 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testAddProjectLandingExpandsChooserActionsAfterWindowZoomAndKeepsControlsReachable() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AddProjectLandingLayout-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        var actionWidths: [(initialize: CGFloat, attach: CGFloat)] = []
+        for (width, height, name) in [(680.0, 500.0, "minimum"), (760.0, 560.0, "normal"), (1600.0, 900.0, "zoomed")] {
+            let chooser = OnboardingView(
+                store: store,
+                onCancel: {},
+                onOpenExisting: { _ in },
+                loadAttachableProjects: { [] },
+                onFinished: { _ in }
+            )
+            let hosting = NSHostingView(rootView: chooser.rekonWindowChrome())
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: height)
+            let window = NSWindow(
+                contentRect: hosting.frame,
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.isReleasedWhenClosed = false
+            window.title = "Add Project Landing Layout \(name)"
+            window.contentView = hosting
+            defer { window.close() }
+
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(100))
+            hosting.layoutSubtreeIfNeeded()
+
+            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+            let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+            let initialize = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "onboarding-initialize-project"))
+            let attach = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "onboarding-attach-existing"))
+            let cancel = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "onboarding-cancel"))
+            let windowFrame = try accessibilityFrame(nativeWindow)
+
+            for control in [initialize, attach, cancel] {
+                XCTAssertTrue(windowFrame.contains(try accessibilityFrame(control)), "\(name) chooser control must remain fully reachable")
+            }
+            actionWidths.append((
+                initialize: try accessibilityFrame(initialize).width,
+                attach: try accessibilityFrame(attach).width
+            ))
+            try fullWindowCapture(window, name: "add-project-landing-\(name)-window")
+        }
+
+        XCTAssertGreaterThan(
+            actionWidths[2].initialize,
+            actionWidths[1].initialize,
+            "Zooming Add Project must expand the chooser actions instead of leaving them compressed at their normal-width size."
+        )
+        XCTAssertGreaterThan(
+            actionWidths[2].attach,
+            actionWidths[1].attach,
+            "Zooming Add Project must expand the chooser actions instead of leaving them compressed at their normal-width size."
+        )
+    }
+
+    @MainActor
     func testNativeNavigationHistoryControlsExposeBoundariesAndPerformBackForward() async throws {
         let databaseURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NativeHistory-\(UUID().uuidString).sqlite")

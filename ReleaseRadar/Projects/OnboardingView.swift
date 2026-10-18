@@ -381,20 +381,74 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Button(OnboardingWorkflowPresentation.initializeTitle) {
-                    workflow = .initialize
+            if onCancel != nil {
+                ViewThatFits(in: .horizontal) {
+                    chooserActions(horizontal: true)
+                    chooserActions(horizontal: false)
                 }
-                .buttonStyle(RekonPrimaryButtonStyle())
-                .accessibilityIdentifier("onboarding-initialize-project")
-
-                if loadAttachableProjects != nil {
-                    Button(OnboardingWorkflowPresentation.attachTitle) {
-                        workflow = .attach
-                        beginAttachmentWorkflow()
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    Button(OnboardingWorkflowPresentation.initializeTitle) {
+                        workflow = .initialize
                     }
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .accessibilityIdentifier("onboarding-initialize-project")
+
+                    if loadAttachableProjects != nil {
+                        Button(OnboardingWorkflowPresentation.attachTitle) {
+                            workflow = .attach
+                            beginAttachmentWorkflow()
+                        }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("onboarding-attach-existing")
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func chooserActions(horizontal: Bool) -> some View {
+        if horizontal, loadAttachableProjects != nil {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Button {
+                    workflow = .initialize
+                } label: {
+                    Text(OnboardingWorkflowPresentation.initializeTitle)
+                        .frame(minWidth: 360, maxWidth: .infinity, alignment: .leading)
+                }
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .accessibilityIdentifier("onboarding-initialize-project")
+                Button {
+                    workflow = .attach
+                    beginAttachmentWorkflow()
+                } label: {
+                    Text(OnboardingWorkflowPresentation.attachTitle)
+                        .frame(minWidth: 360, maxWidth: .infinity, alignment: .leading)
+                }
                     .buttonStyle(RekonSecondaryButtonStyle())
                     .accessibilityIdentifier("onboarding-attach-existing")
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Button {
+                    workflow = .initialize
+                } label: {
+                    Text(OnboardingWorkflowPresentation.initializeTitle)
+                        .frame(maxWidth: 440, alignment: .leading)
+                }
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .accessibilityIdentifier("onboarding-initialize-project")
+                if loadAttachableProjects != nil {
+                    Button {
+                        workflow = .attach
+                        beginAttachmentWorkflow()
+                    } label: {
+                        Text(OnboardingWorkflowPresentation.attachTitle)
+                            .frame(maxWidth: 440, alignment: .leading)
+                    }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("onboarding-attach-existing")
                 }
             }
         }
