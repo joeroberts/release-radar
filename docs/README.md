@@ -20,8 +20,10 @@ whole-product work, use the published
 ## Development documentation CI routing
 
 [`development-documentation.yml`](../.github/workflows/development-documentation.yml)
-always creates its `validate` job for pull requests to `main` and pushes to
-`main`. It uses the checked-in
+creates its `validate` job only for pushes to `main` and manual runs from
+`main`, on the owner's `rr-build` macOS ARM64 runner. It never runs
+pull-request code on that runner. The checkout uses the read-only
+`contents: read` token without persisted credentials. It uses the checked-in
 [`collect_development_changed_paths.sh`](../script/collect_development_changed_paths.sh)
 and [`classify_development_changes.py`](../script/classify_development_changes.py)
 helpers to select documentation-owned checks from the complete diff.
@@ -36,12 +38,13 @@ helpers to select documentation-owned checks from the complete diff.
 | Application, build, dependency, runtime-resource, or marketplace input | No documentation check solely for that input; the native build path is tracked by [#119](https://github.com/joeroberts/release-radar/issues/119) |
 
 The classifier treats unknown, malformed, empty, or unavailable diff input as
-a visible fail-closed fallback and runs all documentation-owned checks. The
+a visible fail-closed fallback and runs all documentation-owned checks. Manual
+runs deliberately select all documentation-owned checks. The
 collector uses `--no-renames`, so deleted paths and both sides of a rename are classified.
 For an unexpected run or skip, first inspect the workflow's **Classify changed
 paths** JSON output: a non-null `fallback_reason` means broad validation was
 intentional; otherwise compare the reported categories with the table. The
-`validate` job itself should not be absent for supported PR/push triggers.
+`validate` job itself should not be absent for supported push/manual triggers.
 An application-only change may pass `validate`; that job reports documentation
 checks and does not establish application verification.
 

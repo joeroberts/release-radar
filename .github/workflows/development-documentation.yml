@@ -1,21 +1,24 @@
 name: Development documentation
 
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   validate:
-    runs-on: macos-15
+    if: >-
+      github.repository == 'joeroberts/release-radar' &&
+      github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64, rr-build]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Classify changed paths
         id: route
         shell: bash
