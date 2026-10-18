@@ -21,6 +21,9 @@ struct ProjectPlanView: View {
     var refreshProposal: ((PlanChangeProposalID, Int64, String, [PlanChangeOperation]) async -> AgentCommandResult)? = nil
     var transitionPhaseLifecycle: ((PhaseID, Int64, PhaseLifecycleAction, String?, String) async -> AgentCommandResult)? = nil
     var reloadPhaseLifecycle: (() async -> Void)? = nil
+    var repositoryPlanReconstruction: RepositoryPlanReconstructionPresentation? = nil
+    var openRepositoryPlanReconstruction: (() -> Void)? = nil
+    var setRepositoryPlanSourceSelected: ((String, Bool) -> Void)? = nil
     var referenceQueryContextIdentity: String? = nil
     var isReferenceQueryReady = false
     var requestedFocus: NavigationFocus? = nil
@@ -34,6 +37,7 @@ struct ProjectPlanView: View {
     @AccessibilityFocusState private var accessibilityFocusedProposal: ProposalFocus?
     @FocusState private var focusedTicketID: TicketID?
     @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
+    @State private var showsRepositoryPlanReconstruction = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -72,12 +76,35 @@ struct ProjectPlanView: View {
             reconcileProposalSelection()
             applyRequestedFocus()
         }
+        .sheet(isPresented: $showsRepositoryPlanReconstruction) {
+            RepositoryPlanReconstructionView(
+                presentation: repositoryPlanReconstruction,
+                retry: { openRepositoryPlanReconstruction?() },
+                setSourceSelected: { artifactID, selected in
+                    setRepositoryPlanSourceSelected?(artifactID, selected)
+                }
+            )
+        }
     }
 
     private var header: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 18) { heading; Spacer(); allPhasesButton }
-            VStack(alignment: .leading, spacing: 12) { heading; allPhasesButton }
+            HStack(alignment: .top, spacing: 18) { heading; Spacer(); headerActions }
+            VStack(alignment: .leading, spacing: 12) { heading; headerActions }
+        }
+    }
+
+    private var headerActions: some View {
+        HStack(spacing: 10) {
+            if openRepositoryPlanReconstruction != nil {
+                Button("Prepare from repository") {
+                    showsRepositoryPlanReconstruction = true
+                    openRepositoryPlanReconstruction?()
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("prepare-repository-plan")
+            }
+            allPhasesButton
         }
     }
 

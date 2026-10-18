@@ -267,8 +267,8 @@ struct SidebarView: View {
                     openRemovedProject: { removalID in
                         Task { await model.navigate(to: .removedProject(removalID)) }
                     },
-                    onboardingFinished: {
-                        await model.reloadAfterOnboarding()
+                    onboardingFinished: { projectID in
+                        await model.reloadAfterOnboarding(projectID: projectID)
                     }
                 )
             case .goals:
@@ -467,6 +467,23 @@ struct SidebarView: View {
                         },
                         reloadPhaseLifecycle: {
                             await model.reloadPhaseLifecycle()
+                        },
+                        repositoryPlanReconstruction: model.repositoryPlanReconstruction(
+                            for: projectID
+                        ),
+                        openRepositoryPlanReconstruction: {
+                            Task {
+                                await model.openRepositoryPlanReconstruction(
+                                    projectID: projectID
+                                )
+                            }
+                        },
+                        setRepositoryPlanSourceSelected: { artifactID, selected in
+                            model.setRepositoryPlanSourceSelected(
+                                projectID: projectID,
+                                artifactID: artifactID,
+                                selected: selected
+                            )
                         },
                         referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
                         isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),

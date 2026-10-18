@@ -226,8 +226,8 @@ struct AddProjectWindowView: View {
             onReloadAfterFolderAttachment: { projectID in
                 await model.reloadAfterFolderAttachment(projectID)
             }
-        ) { _ in
-            await model.reloadAfterOnboarding()
+        ) { projectID in
+            await model.reloadAfterOnboarding(projectID: projectID)
             close()
         }
         .rekonWindowChrome()

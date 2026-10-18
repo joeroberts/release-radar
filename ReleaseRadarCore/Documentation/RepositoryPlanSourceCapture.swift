@@ -34,7 +34,7 @@ public enum RepositoryPlanSourceSelection {
         from store: DeliveryStore,
         project: AuthorizedProject
     ) async throws -> [RepositoryPlanSourceOption] {
-        let context = try currentContext(from: store, project: project)
+        let context = try await currentContext(from: store, project: project)
         let catalog = try DocumentationCatalogContext(root: context.root)
         let snapshot = try catalog.managedSnapshot()
         try context.requireAccepted(snapshot)
@@ -49,7 +49,7 @@ public enum RepositoryPlanSourceSelection {
             )
         }
         try catalog.reader.verifyStable()
-        try requireCurrent(context, in: store)
+        try await requireCurrent(context, in: store)
         return sources.sorted {
             Data($0.path.utf8).lexicographicallyPrecedes(Data($1.path.utf8))
         }
@@ -60,23 +60,23 @@ public enum RepositoryPlanSourceSelection {
         from store: DeliveryStore,
         project: AuthorizedProject
     ) async throws -> RepositoryPlanSourceManifest {
-        let context = try currentContext(from: store, project: project)
+        let context = try await currentContext(from: store, project: project)
         let manifest = try RepositoryPlanSourceCapture.capture(
             context: context,
             artifactIDs: artifactIDs
         )
-        try requireCurrent(context, in: store)
+        try await requireCurrent(context, in: store)
         return manifest
     }
 
     private static func currentContext(
         from store: DeliveryStore,
         project: AuthorizedProject
-    ) throws -> DocumentationRootContext {
+    ) async throws -> DocumentationRootContext {
         guard let registration = project.registration else {
             throw DocumentationOperationError.staleRegistration
         }
-        let context = try store.read { connection in
+        let context = try await store.read { connection in
             try DocumentationRootContext.read(
                 connection,
                 path: project.canonicalRoot.path,
@@ -94,8 +94,8 @@ public enum RepositoryPlanSourceSelection {
     private static func requireCurrent(
         _ context: DocumentationRootContext,
         in store: DeliveryStore
-    ) throws {
-        try store.read { connection in
+    ) async throws {
+        try await store.read { connection in
             try context.verifyPersisted(connection)
         }
     }

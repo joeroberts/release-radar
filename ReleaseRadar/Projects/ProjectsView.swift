@@ -11,7 +11,7 @@ struct ProjectsView: View {
     let openProject: (ProjectID) -> Void
     let openArchivedProject: (ProjectID) -> Void
     var openRemovedProject: (ProjectRemovalID) -> Void = { _ in }
-    let onboardingFinished: @MainActor () async -> Void
+    let onboardingFinished: @MainActor (ProjectID) async -> Void
     @State private var scope = ProjectListScope.active
 
     var body: some View {
@@ -21,8 +21,8 @@ struct ProjectsView: View {
                 codexTasks: codexTasks,
                 executionSetup: executionSetup,
                 onOpenExisting: openProject
-            ) { _ in
-                await onboardingFinished()
+            ) { projectID in
+                await onboardingFinished(projectID)
             }
         } else {
             ScrollView {

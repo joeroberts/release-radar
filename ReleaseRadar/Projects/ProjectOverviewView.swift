@@ -291,10 +291,10 @@ struct ProjectOverviewView: View {
                 onReload: reloadActivePhase,
                 onReauthorize: reauthorizeActivePhase
             )
+            Button("Open project plan", action: openPlan)
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("open-project-plan")
             if board != nil {
-                Button("Open project plan", action: openPlan)
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .accessibilityIdentifier("open-project-plan")
                 Button("Open phase board", action: openBoard)
                     .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("open-phase-board")
