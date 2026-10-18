@@ -1,7 +1,7 @@
 import Foundation
 
-enum RepositoryPlanReconstructionCorrections {
-    static func apply(
+public enum RepositoryPlanReconstructionCorrections {
+    public static func apply(
         _ corrections: [RepositoryPlanReconstructionCorrection],
         to original: RepositoryPlanProjection
     ) throws -> RepositoryPlanProjection {
