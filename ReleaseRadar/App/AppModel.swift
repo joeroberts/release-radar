@@ -66,6 +66,51 @@ private struct PreparedProjectProjections: Sendable {
     let selectedReviewItemID: ReviewItemID?
 }
 
+private struct DependencySessionKey: Hashable {
+    let projectID: ProjectID
+    let registration: ProjectRegistration?
+}
+
+struct DependencyGraphPresentationIdentity: Hashable {
+    let projectID: ProjectID
+    let registration: ProjectRegistration?
+    let focusTicketID: TicketID
+}
+
+struct DependencyGraphPresentationPersistence: Sendable {
+    let load: @Sendable (
+        DeliveryStore, ProjectRegistration, TicketID
+    ) async throws -> DependencyGraphPresentationRecord
+    let save: @Sendable (
+        DeliveryStore, DependencyGraphPresentationLayout, ProjectRegistration, TicketID
+    ) async throws -> Void
+    let reset: @Sendable (
+        DeliveryStore, ProjectRegistration, TicketID
+    ) async throws -> Void
+
+    static let live = DependencyGraphPresentationPersistence(
+        load: { store, registration, ticketID in
+            try await DependencyGraphPresentationRepository(store: store).load(
+                registration: registration,
+                focusTicketID: ticketID
+            )
+        },
+        save: { store, layout, registration, ticketID in
+            try await DependencyGraphPresentationRepository(store: store).save(
+                layout,
+                registration: registration,
+                focusTicketID: ticketID
+            )
+        },
+        reset: { store, registration, ticketID in
+            try await DependencyGraphPresentationRepository(store: store).reset(
+                registration: registration,
+                focusTicketID: ticketID
+            )
+        }
+    )
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -153,6 +198,8 @@ final class AppModel {
     private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore, [ProjectID: [EvidenceReadback]]) async throws -> DashboardProjection
+    private let dependencyGraphLoader: @Sendable (DeliveryStore, ProjectID) async throws -> DependencyGraphProjection
+    private let dependencyGraphPresentationPersistence: DependencyGraphPresentationPersistence
     private let permanentPurgeExecutionRoot: () throws -> URL
     private let workspaceSearchLoader: @Sendable (DeliveryStore, WorkspaceSearchDefinition) async throws -> WorkspaceSearchProjection
     private var documentationObserver: DocumentationObservationCoordinator
@@ -162,6 +209,11 @@ final class AppModel {
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
+    private var dependencyFocusIDs: [DependencySessionKey: TicketID] = [:]
+    private var dependencyPresentationOrders: [DependencyGraphPresentationIdentity: DependencyGraphRankOrder] = [:]
+    private var dependencyPresentationStatuses: [DependencyGraphPresentationIdentity: DependencyGraphArrangementStatus] = [:]
+    private var loadedDependencyPresentations: Set<DependencyGraphPresentationIdentity> = []
+    private var dependencyPresentationOperationGenerations: [DependencyGraphPresentationIdentity: UInt64] = [:]
     private var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
     private var removedActivities: [ProjectRemovalID: ProjectActivityProjection] = [:]
     private var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
@@ -211,6 +263,10 @@ final class AppModel {
             try await ReviewInboxProjection.load(from: $0, projectID: $1)
         },
         dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
+        dependencyGraphLoader: @escaping @Sendable (DeliveryStore, ProjectID) async throws -> DependencyGraphProjection = {
+            try await DependencyGraphProjection.load(from: $0, projectID: $1)
+        },
+        dependencyGraphPresentationPersistence: DependencyGraphPresentationPersistence = .live,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
         connectorHealthLoader: (() async throws -> AgentBridgeHealthSnapshot)? = nil,
@@ -244,6 +300,8 @@ final class AppModel {
                 try await DashboardProjection.load(from: store, evidenceReadbacks: evidence)
             }
         }
+        self.dependencyGraphLoader = dependencyGraphLoader
+        self.dependencyGraphPresentationPersistence = dependencyGraphPresentationPersistence
         self.documentationObserver = documentationObserver
             ?? Self.makeDocumentationObserver(
                 onboarding: resolvedOnboarding,
@@ -472,11 +530,7 @@ final class AppModel {
         }
         let workspaceGoals = route == .goals ? workspaceGoalsNavigationState : nil
         let workspaceSearch = route == .search ? workspaceSearchNavigationState : nil
-        let selectedNavigationTicketID: TicketID? = if case .activity = route {
-            nil
-        } else {
-            projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
-        }
+        let selectedNavigationTicketID: TicketID? = navigationTicketID(for: route, projectID: projectID)
         navigationHistory.updateCurrent(
             registration: registration(for: route),
             phaseID: phaseID,
@@ -513,11 +567,7 @@ final class AppModel {
         }
         let workspaceGoals = route == .goals ? workspaceGoalsNavigationState : nil
         let workspaceSearch = route == .search ? workspaceSearchNavigationState : nil
-        let selectedNavigationTicketID: TicketID? = if case .activity = route {
-            nil
-        } else {
-            projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
-        }
+        let selectedNavigationTicketID: TicketID? = navigationTicketID(for: route, projectID: projectID)
         return .init(
             route: route,
             registration: registration(for: route),
@@ -532,6 +582,14 @@ final class AppModel {
             workspaceSearch: workspaceSearch,
             focus: focus
         )
+    }
+
+    private func navigationTicketID(for route: AppRoute, projectID: ProjectID?) -> TicketID? {
+        if case .activity = route { return nil }
+        if case .dependencies = route, let key = dependencySessionKey(for: route) {
+            return dependencyFocusIDs[key]
+        }
+        return projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
     }
 
     private func registration(for route: AppRoute) -> ProjectRegistration? {
@@ -550,6 +608,14 @@ final class AppModel {
         return dashboard?.projects.first(where: { $0.id == projectID })?.registration
             ?? dashboard?.archivedProjects.first(where: { $0.id == projectID })?.registration
             ?? dashboard?.removedProjects.first(where: { $0.projectID == projectID })?.registration
+    }
+
+    private func dependencySessionKey(for route: AppRoute) -> DependencySessionKey? {
+        guard let projectID = route.projectID,
+              let project = dashboard?.projects.first(where: { $0.id == projectID }) else {
+            return nil
+        }
+        return DependencySessionKey(projectID: projectID, registration: project.registration)
     }
 
     private func resolvedRouteForNavigation(_ route: AppRoute) -> AppRoute {
@@ -694,6 +760,10 @@ final class AppModel {
         }
         let ticketIsAvailable = entry.selectedTicketID.map { ticketID in
             guard let projectID = restoredProjectID else { return false }
+            if case .dependencies = route {
+                return dependencyGraphs[projectID]?.node(id: ticketID) != nil
+                    || dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
+            }
             if case .phaseBoard = route, entry.showsAllPhases {
                 return dashboard?.allPhaseBoard(for: projectID)?.filtered(by: entry.filter ?? .all).detail(for: ticketID) != nil
             }
@@ -720,6 +790,15 @@ final class AppModel {
             }) == true
         } ?? false
         selectedTicketID = ticketIsAvailable ? entry.selectedTicketID! : TicketID(rawValue: "")
+        if case let .dependencies(projectID) = route {
+            if let key = dependencySessionKey(for: .dependencies(projectID)) {
+                if ticketIsAvailable, let ticketID = entry.selectedTicketID {
+                    dependencyFocusIDs[key] = ticketID
+                } else {
+                    dependencyFocusIDs.removeValue(forKey: key)
+                }
+            }
+        }
         if entry.selectedTicketID != nil, !ticketIsAvailable {
             recovery.append("The previously selected ticket is unavailable; no other ticket was selected.")
         }
@@ -1218,6 +1297,11 @@ final class AppModel {
         navigationRecoveryMessage = nil
         navigationFocus = .route(.projects)
         selectedTicketID = TicketID(rawValue: "")
+        dependencyFocusIDs.removeAll()
+        dependencyPresentationOrders.removeAll()
+        dependencyPresentationStatuses.removeAll()
+        loadedDependencyPresentations.removeAll()
+        dependencyPresentationOperationGenerations.removeAll()
         deliveryGoalReloadRequired.removeAll()
         repositoryRecoveries.removeAll()
         reviewInboxes.removeAll()
@@ -1287,7 +1371,191 @@ final class AppModel {
 
     func dependencyGraph(for projectID: ProjectID) -> DependencyGraphProjection? {
         guard let graph = dependencyGraphs[projectID] else { return nil }
-        return graph.selecting(selectedTicketID) ?? graph
+        guard let key = dependencySessionKey(for: .dependencies(projectID)),
+              let ticketID = dependencyFocusIDs[key] else {
+            return graph.clearingSelection()
+        }
+        return graph.selecting(ticketID)
+    }
+
+    func dependencyFocusID(for projectID: ProjectID) -> TicketID {
+        guard let key = dependencySessionKey(for: .dependencies(projectID)) else {
+            return TicketID(rawValue: "")
+        }
+        return dependencyFocusIDs[key] ?? TicketID(rawValue: "")
+    }
+
+    func selectDependencyTicket(_ ticketID: TicketID, projectID: ProjectID) {
+        guard let key = dependencySessionKey(for: .dependencies(projectID)) else { return }
+        if ticketID.rawValue.isEmpty {
+            dependencyFocusIDs.removeValue(forKey: key)
+        } else {
+            dependencyFocusIDs[key] = ticketID
+        }
+        selectedTicketID = ticketID
+        navigationFocus = ticketID.rawValue.isEmpty ? .route(.dependencies(projectID)) : .ticket(ticketID)
+        captureCurrentNavigationContext()
+    }
+
+    func reloadDependencyData() async {
+        _ = await reloadProjectProjections()
+    }
+
+    func dependencyGraphPresentationIdentity(
+        for projectID: ProjectID
+    ) -> DependencyGraphPresentationIdentity? {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID),
+              identity.registration != nil else { return nil }
+        return identity
+    }
+
+    func dependencyGraphPresentationLoadIdentity(
+        for projectID: ProjectID
+    ) -> DependencyGraphPresentationIdentity? {
+        dependencyGraphPresentationStateIdentity(for: projectID)
+    }
+
+    private func dependencyGraphPresentationStateIdentity(
+        for projectID: ProjectID
+    ) -> DependencyGraphPresentationIdentity? {
+        guard let sessionKey = dependencySessionKey(for: .dependencies(projectID)),
+              let focusTicketID = dependencyFocusIDs[sessionKey],
+              !focusTicketID.rawValue.isEmpty else { return nil }
+        return .init(
+            projectID: projectID,
+            registration: sessionKey.registration,
+            focusTicketID: focusTicketID
+        )
+    }
+
+    func dependencyGraphRankOrder(for projectID: ProjectID) -> DependencyGraphRankOrder? {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID) else { return nil }
+        return dependencyPresentationOrders[identity]
+    }
+
+    func dependencyGraphArrangementStatus(for projectID: ProjectID) -> DependencyGraphArrangementStatus {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID) else { return .automatic }
+        return dependencyPresentationStatuses[identity] ?? .automatic
+    }
+
+    func loadDependencyGraphPresentation(projectID: ProjectID, force: Bool = false) async {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID) else { return }
+        if !force, loadedDependencyPresentations.contains(identity) { return }
+        loadedDependencyPresentations.insert(identity)
+        guard let registration = identity.registration else {
+            dependencyPresentationStatuses[identity] = .sessionOnly
+            return
+        }
+        let generation = nextDependencyPresentationOperationGeneration(for: identity)
+        dependencyPresentationStatuses[identity] = .loading
+        do {
+            let record = try await dependencyGraphPresentationPersistence.load(
+                store, registration, identity.focusTicketID
+            )
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            switch record {
+            case .none:
+                dependencyPresentationOrders.removeValue(forKey: identity)
+                dependencyPresentationStatuses[identity] = .automatic
+            case let .supported(layout):
+                dependencyPresentationOrders[identity] = .init(presentation: layout)
+                dependencyPresentationStatuses[identity] = .saved
+            case let .unsupported(version, _):
+                dependencyPresentationOrders.removeValue(forKey: identity)
+                dependencyPresentationStatuses[identity] = .unsupported(version)
+            }
+        } catch {
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            dependencyPresentationStatuses[identity] = .loadFailed(error.localizedDescription)
+        }
+    }
+
+    func saveDependencyGraphPresentation(
+        _ order: DependencyGraphRankOrder,
+        projectID: ProjectID
+    ) async {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID),
+              !(dependencyPresentationStatuses[identity] ?? .automatic).blocksAdjustment else { return }
+        dependencyPresentationOrders[identity] = order
+        loadedDependencyPresentations.insert(identity)
+        guard let registration = identity.registration else {
+            dependencyPresentationStatuses[identity] = .sessionOnly
+            return
+        }
+        let generation = nextDependencyPresentationOperationGeneration(for: identity)
+        dependencyPresentationStatuses[identity] = .saving
+        do {
+            try await dependencyGraphPresentationPersistence.save(
+                store, order.presentation, registration, identity.focusTicketID
+            )
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            dependencyPresentationStatuses[identity] = .saved
+        } catch let error as DependencyGraphPresentationError {
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            dependencyPresentationOrders.removeValue(forKey: identity)
+            switch error {
+            case let .unsupportedPayload(version):
+                dependencyPresentationStatuses[identity] = .unsupported(version)
+            }
+        } catch {
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            dependencyPresentationStatuses[identity] = .saveFailed(error.localizedDescription)
+        }
+    }
+
+    func resetDependencyGraphPresentation(projectID: ProjectID) async {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID) else { return }
+        guard !dependencyGraphArrangementStatus(for: projectID).blocksAdjustment else { return }
+        guard let registration = identity.registration else {
+            dependencyPresentationOrders.removeValue(forKey: identity)
+            dependencyPresentationStatuses[identity] = .automatic
+            loadedDependencyPresentations.insert(identity)
+            return
+        }
+        let generation = nextDependencyPresentationOperationGeneration(for: identity)
+        dependencyPresentationStatuses[identity] = .saving
+        do {
+            try await dependencyGraphPresentationPersistence.reset(
+                store, registration, identity.focusTicketID
+            )
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            dependencyPresentationOrders.removeValue(forKey: identity)
+            dependencyPresentationStatuses[identity] = .automatic
+            loadedDependencyPresentations.insert(identity)
+        } catch let error as DependencyGraphPresentationError {
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            switch error {
+            case let .unsupportedPayload(version):
+                dependencyPresentationOrders.removeValue(forKey: identity)
+                dependencyPresentationStatuses[identity] = .unsupported(version)
+            }
+        } catch {
+            guard dependencyPresentationOperationGenerations[identity] == generation else { return }
+            dependencyPresentationStatuses[identity] = .resetFailed(error.localizedDescription)
+        }
+    }
+
+    func retryDependencyGraphPresentation(projectID: ProjectID) async {
+        guard let identity = dependencyGraphPresentationStateIdentity(for: projectID) else { return }
+        switch dependencyPresentationStatuses[identity] ?? .automatic {
+        case .loadFailed:
+            await loadDependencyGraphPresentation(projectID: projectID, force: true)
+        case .saveFailed:
+            guard let order = dependencyPresentationOrders[identity] else { return }
+            await saveDependencyGraphPresentation(order, projectID: projectID)
+        case .resetFailed:
+            await resetDependencyGraphPresentation(projectID: projectID)
+        default:
+            return
+        }
+    }
+
+    private func nextDependencyPresentationOperationGeneration(
+        for identity: DependencyGraphPresentationIdentity
+    ) -> UInt64 {
+        let generation = (dependencyPresentationOperationGenerations[identity] ?? 0) &+ 1
+        dependencyPresentationOperationGenerations[identity] = generation
+        return generation
     }
 
     func activity(for projectID: ProjectID) -> ProjectActivityProjection? {
@@ -2772,6 +3040,13 @@ final class AppModel {
 
     func selectTicket(_ ticketID: TicketID) {
         selectedTicketID = ticketID
+        if let key = dependencySessionKey(for: selection) {
+            if ticketID.rawValue.isEmpty {
+                dependencyFocusIDs.removeValue(forKey: key)
+            } else {
+                dependencyFocusIDs[key] = ticketID
+            }
+        }
         navigationFocus = ticketID.rawValue.isEmpty ? .filterSummary : .ticket(ticketID)
         let key = Data(currentProjectID.rawValue.utf8)
         let phaseID = viewedPhaseIDs[key]
@@ -3489,19 +3764,14 @@ final class AppModel {
             let observation = observations[project.id]
             projectDocumentationStates[project.id] = observation?.documentationState ?? .legacy(.unavailable)
             projectRoots[project.id] = observation?.identity.rootPath.map(URL.init(fileURLWithPath:))
+            dependencyGraphs[project.id] = try await dependencyGraphLoader(store, project.id)
             guard let board = dashboard.board(for: project.id) ?? defaultBoard(in: dashboard, for: project.id) else { continue }
             let plan = dashboard.plan(for: project.id)
             let allPhaseBoard = dashboard.allPhaseBoard(for: project.id)
-            var preferredID = board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
-                ?? plan?.unassignedTickets.map(\.id).min { $0.rawValue < $1.rawValue }
-            if project.id == visibleProjectID {
+            if project.id == visibleProjectID, selection != .dependencies(project.id) {
                 let visibleBoard = viewedBoard(in: dashboard, for: project.id)
                 let selectedTicketExists: Bool
-                if selection == .dependencies(project.id) {
-                    selectedTicketExists = plan?.detail(for: self.selectedTicketID) != nil || dashboard.boards.contains {
-                        $0.key.projectID == project.id && $0.value.detail(for: self.selectedTicketID) != nil
-                    }
-                } else if selection == .projectPlan(project.id) {
+                if selection == .projectPlan(project.id) {
                     selectedTicketExists = plan?.detail(for: self.selectedTicketID) != nil || dashboard.boards.contains {
                         $0.key.projectID == project.id && $0.value.detail(for: self.selectedTicketID) != nil
                     }
@@ -3521,7 +3791,6 @@ final class AppModel {
                 }
                 if selectedTicketExists {
                     selectedTicketID = self.selectedTicketID
-                    preferredID = self.selectedTicketID
                 } else if canChooseDefault {
                     if selection == .projectPlan(project.id) {
                         selectedTicketID = plan?.unassignedTickets.map(\.id).min { $0.rawValue < $1.rawValue }
@@ -3534,23 +3803,12 @@ final class AppModel {
                         selectedTicketID = visibleBoard?.lanes.flatMap(\.cards).map(\.id)
                             .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
                     }
-                    preferredID = selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
-                } else if selection == .projectPlan(project.id) || selection == .phaseBoard(project.id) || selection == .dependencies(project.id) {
+                } else if selection == .projectPlan(project.id) || selection == .phaseBoard(project.id) {
                     selectedTicketID = self.selectedTicketID
-                    preferredID = nil
                     if !self.selectedTicketID.rawValue.isEmpty {
                         unavailableSelectedTicketID = self.selectedTicketID
                     }
                 }
-            }
-            guard let preferredID else { continue }
-            if let graph = try? await DependencyGraphProjection.load(
-                from: store,
-                projectID: project.id,
-                phaseID: board.phaseID,
-                selectedTicketID: preferredID
-            ) {
-                dependencyGraphs[project.id] = graph
             }
         }
         for removed in dashboard.removedProjects {
@@ -3631,6 +3889,31 @@ final class AppModel {
             navigationFocus = .recovery
         }
         let activeProjectIDs = Set(prepared.dashboard.projects.map(\.id))
+        let activeDependencySessionKeys = Set(prepared.dashboard.projects.map {
+            DependencySessionKey(projectID: $0.id, registration: $0.registration)
+        })
+        dependencyFocusIDs = dependencyFocusIDs.filter { activeDependencySessionKeys.contains($0.key) }
+        var retainedDependencyPresentationIdentities = Set(dependencyPresentationOrders.keys)
+        retainedDependencyPresentationIdentities.formUnion(dependencyPresentationStatuses.keys)
+        retainedDependencyPresentationIdentities.formUnion(loadedDependencyPresentations)
+        retainedDependencyPresentationIdentities = Set(retainedDependencyPresentationIdentities.filter { identity in
+            activeDependencySessionKeys.contains(.init(
+                projectID: identity.projectID,
+                registration: identity.registration
+            ))
+        })
+        dependencyPresentationOrders = dependencyPresentationOrders.filter {
+            retainedDependencyPresentationIdentities.contains($0.key)
+        }
+        dependencyPresentationStatuses = dependencyPresentationStatuses.filter {
+            retainedDependencyPresentationIdentities.contains($0.key)
+        }
+        loadedDependencyPresentations = loadedDependencyPresentations.intersection(
+            retainedDependencyPresentationIdentities
+        )
+        dependencyPresentationOperationGenerations = dependencyPresentationOperationGenerations.filter {
+            retainedDependencyPresentationIdentities.contains($0.key)
+        }
         documentationObserver.retain(projectIDs: activeProjectIDs)
         for projectID in prepared.reviewInboxes.keys where deliveryGoalAcceptanceNeedsReload(for: projectID) {
             deliveryGoalReloadRequired.remove(Data(projectID.rawValue.utf8))

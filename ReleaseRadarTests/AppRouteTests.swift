@@ -768,8 +768,9 @@ final class AppRouteTests: XCTestCase {
         await model.navigate(to: .projectPlan(fixture.projectID))
         model.selectTicket(.init(rawValue: "PLAN-ONLY"))
         await model.navigate(to: .dependencies(fixture.projectID))
-        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.id.rawValue, "PLAN-ONLY")
-        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.phaseName, "Unassigned")
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "PLAN-ONLY")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected?.ticket.id.rawValue, "PLAN-ONLY")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected?.ticket.phaseName, "Unassigned")
 
         await model.goBack()
         XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
@@ -787,6 +788,379 @@ final class AppRouteTests: XCTestCase {
         XCTAssertNotNil(model.viewedAllPhaseBoard(for: fixture.projectID))
         XCTAssertEqual(model.selectedTicketID, boardTicket)
         XCTAssertEqual(model.navigationFocus, .ticket(boardTicket))
+    }
+
+    @MainActor
+    func testDependencyNavigationPrefersTheMostRecentFinderSelection() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "dependency-focus-fixture"), reason: "Recorded plan selection") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('PLAN-ONLY',?,NULL,'Retain this planned ticket',NULL)",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.selectTicket(.init(rawValue: "PLAN-ONLY"))
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        await model.navigate(to: .projectOverview(fixture.projectID))
+        await model.navigate(to: .dependencies(fixture.projectID))
+
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected?.ticket.id.rawValue, "ROAD-1")
+    }
+
+    @MainActor
+    func testDependencyHistoryRestorationDoesNotReviveSupersededFinderSelection() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.selectTicket(.init(rawValue: "ROAD-1"))
+        await model.navigate(to: .dependencies(fixture.projectID))
+        await model.navigate(to: .projectOverview(fixture.projectID))
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-2"), projectID: fixture.projectID)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectOverview(fixture.projectID))
+        await model.goBack()
+        XCTAssertEqual(model.selection, .dependencies(fixture.projectID))
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+
+        await model.navigate(to: .projectOverview(fixture.projectID))
+        await model.navigate(to: .dependencies(fixture.projectID))
+
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected?.ticket.id.rawValue, "ROAD-1")
+    }
+
+    @MainActor
+    func testActiveUnregisteredDependencyFocusDoesNotInheritRemovedRegistration() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "dependency-history-fixture"), reason: "Register prior project iteration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'historical-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let lifecycle = ProjectRemovalManager(store: fixture.store)
+        _ = try await lifecycle.apply(try await lifecycle.preview(projectID: fixture.projectID))
+        try await fixture.store.transact(actor: .init(id: "dependency-history-fixture"), reason: "Re-add active project without registration") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Re-added without registration')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('re-added-phase', ?, 'Re-added phase')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-1', ?, 're-added-phase', 'Re-added dependency ticket', 'backlog')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected?.ticket.id.rawValue, "ROAD-1")
+    }
+
+    @MainActor
+    func testDependencyFocusClearsWhenRecoveryAdoptsTheStoreAgain() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+
+        try await model.adoptRecovery(.init(
+            store: fixture.store,
+            operationID: UUID(),
+            requiresFreshServiceGraph: true,
+            newerHistoryWasReconciled: false
+        ))
+
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "")
+        XCTAssertNil(model.dependencyGraph(for: fixture.projectID)?.selected)
+    }
+
+    @MainActor
+    func testDependencyReloadKeepsExactFocusedGraphWhenLoaderFails() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let loader = RouteDependencyGraphLoader(failAfterSuccessfulLoads: 1)
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            dependencyGraphLoader: { store, projectID in
+                try await loader.load(from: store, projectID: projectID)
+            },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        let before = try XCTUnwrap(model.dependencyGraph(for: fixture.projectID))
+
+        await model.reloadDependencyData()
+
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "ROAD-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID), before)
+        XCTAssertNotNil(model.dashboardError)
+    }
+
+    @MainActor
+    func testDependencyPresentationUsesSavedOrderAndKeepsUnregisteredProjectsSessionOnly() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let calls = DependencyPresentationCallLog()
+        let persistence = DependencyGraphPresentationPersistence(
+            load: { _, _, _ in
+                await calls.recordLoad()
+                return .supported(.init(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-2"), .init(rawValue: "ROAD-1")])]))
+            },
+            save: { _, _, _, _ in await calls.recordSave() },
+            reset: { _, _, _ in await calls.recordReset() }
+        )
+        let model = AppModel(
+            store: fixture.store,
+            dependencyGraphPresentationPersistence: persistence,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        await model.loadDependencyGraphPresentation(projectID: fixture.projectID, force: true)
+
+        XCTAssertEqual(model.dependencyGraphPresentationIdentity(for: fixture.projectID), nil)
+        XCTAssertEqual(model.dependencyGraphArrangementStatus(for: fixture.projectID), .sessionOnly)
+        let sessionOnlyCalls = await calls.snapshot()
+        XCTAssertEqual(sessionOnlyCalls, .init(loads: 0, saves: 0, resets: 0))
+    }
+
+    @MainActor
+    func testDependencyPresentationUnsupportedPayloadRefusesAdjustmentWithoutOverwritingBytes() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "presentation-fixture"), reason: "Register dependency presentation") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'presentation-registration', 1, 'complete')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+        let calls = DependencyPresentationCallLog()
+        let persistence = DependencyGraphPresentationPersistence(
+            load: { _, _, _ in
+                await calls.recordLoad()
+                return .unsupported(payloadVersion: 2, payloadData: Data([0x28]))
+            },
+            save: { _, _, _, _ in await calls.recordSave() },
+            reset: { _, _, _ in await calls.recordReset() }
+        )
+        let model = AppModel(store: fixture.store, dependencyGraphPresentationPersistence: persistence, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        await model.loadDependencyGraphPresentation(projectID: fixture.projectID, force: true)
+
+        XCTAssertEqual(model.dependencyGraphRankOrder(for: fixture.projectID), nil)
+        XCTAssertEqual(model.dependencyGraphArrangementStatus(for: fixture.projectID), .unsupported(2))
+        await model.resetDependencyGraphPresentation(projectID: fixture.projectID)
+        let unsupportedCalls = await calls.snapshot()
+        XCTAssertEqual(unsupportedCalls, .init(loads: 1, saves: 0, resets: 0))
+    }
+
+    @MainActor
+    func testDependencyPresentationSaveFailureRetainsOrderAndRetrySaves() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "presentation-fixture"), reason: "Register dependency presentation") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'presentation-registration', 1, 'complete')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+        let probe = DependencyPresentationRetryProbe()
+        let persistence = DependencyGraphPresentationPersistence(
+            load: { _, _, _ in .none },
+            save: { _, _, _, _ in try await probe.save() },
+            reset: { _, _, _ in }
+        )
+        let model = AppModel(store: fixture.store, dependencyGraphPresentationPersistence: persistence, externalServicesSuppressed: true)
+        await model.loadDashboard(); await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        let order = DependencyGraphRankOrder(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-1")])])
+        await model.saveDependencyGraphPresentation(order, projectID: fixture.projectID)
+        XCTAssertEqual(model.dependencyGraphRankOrder(for: fixture.projectID), order)
+        if case .saveFailed = model.dependencyGraphArrangementStatus(for: fixture.projectID) {} else { XCTFail("Expected retryable save failure") }
+        await probe.allowSave()
+        await model.retryDependencyGraphPresentation(projectID: fixture.projectID)
+        XCTAssertEqual(model.dependencyGraphArrangementStatus(for: fixture.projectID), .saved)
+    }
+
+    @MainActor
+    func testDependencyPresentationResetFailureRetainsOrderAndRetryReturnsToAutomatic() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "presentation-fixture"), reason: "Register dependency presentation") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'presentation-registration', 1, 'complete')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+        let probe = DependencyPresentationRetryProbe(failSave: false, failReset: true)
+        let persistence = DependencyGraphPresentationPersistence(
+            load: { _, _, _ in .none },
+            save: { _, _, _, _ in try await probe.save() },
+            reset: { _, _, _ in try await probe.reset() }
+        )
+        let model = AppModel(store: fixture.store, dependencyGraphPresentationPersistence: persistence, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        let order = DependencyGraphRankOrder(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-1")])])
+        await model.saveDependencyGraphPresentation(order, projectID: fixture.projectID)
+        let persistedAfterSave = await probe.hasPersistedState()
+        XCTAssertTrue(persistedAfterSave)
+
+        await model.resetDependencyGraphPresentation(projectID: fixture.projectID)
+        XCTAssertEqual(model.dependencyGraphRankOrder(for: fixture.projectID), order)
+        let persistedAfterFailedReset = await probe.hasPersistedState()
+        XCTAssertTrue(persistedAfterFailedReset)
+        if case .resetFailed = model.dependencyGraphArrangementStatus(for: fixture.projectID) {} else { XCTFail("Expected retryable reset failure") }
+
+        await probe.allowReset()
+        await model.retryDependencyGraphPresentation(projectID: fixture.projectID)
+        XCTAssertNil(model.dependencyGraphRankOrder(for: fixture.projectID))
+        let persistedAfterRetry = await probe.hasPersistedState()
+        XCTAssertFalse(persistedAfterRetry)
+        XCTAssertEqual(model.dependencyGraphArrangementStatus(for: fixture.projectID), .automatic)
+    }
+
+    @MainActor
+    func testDependencyPresentationDelayedSaveBlocksSameMapSaveAndReset() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "presentation-fixture"), reason: "Register dependency presentation") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'presentation-registration', 1, 'complete')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+        let gate = DependencyPresentationSaveGate()
+        let persistence = DependencyGraphPresentationPersistence(
+            load: { _, _, _ in .none },
+            save: { _, layout, _, _ in await gate.save(layout) },
+            reset: { _, _, _ in await gate.recordReset() }
+        )
+        let model = AppModel(store: fixture.store, dependencyGraphPresentationPersistence: persistence, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        let firstOrder = DependencyGraphRankOrder(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-1")])])
+        let secondOrder = DependencyGraphRankOrder(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-2")])])
+
+        let delayedSave = Task { await model.saveDependencyGraphPresentation(firstOrder, projectID: fixture.projectID) }
+        await gate.waitUntilSaveBlocked()
+        var startedOperations = 0
+        let ignoredSave = Task { @MainActor in
+            startedOperations += 1
+            await model.saveDependencyGraphPresentation(secondOrder, projectID: fixture.projectID)
+        }
+        let ignoredReset = Task { @MainActor in
+            startedOperations += 1
+            await model.resetDependencyGraphPresentation(projectID: fixture.projectID)
+        }
+        while startedOperations < 2 { await Task.yield() }
+        await gate.releaseSave()
+        await delayedSave.value
+        await ignoredSave.value
+        await ignoredReset.value
+
+        let saveSnapshot = await gate.snapshot()
+        XCTAssertEqual(saveSnapshot, .init(saves: 1, resets: 0, persisted: firstOrder.presentation))
+        XCTAssertEqual(model.dependencyGraphRankOrder(for: fixture.projectID), firstOrder)
+        XCTAssertEqual(model.dependencyGraphArrangementStatus(for: fixture.projectID), .saved)
+    }
+
+    @MainActor
+    func testDependencyPresentationDelayedResetBlocksSameMapSaveAndReset() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "presentation-fixture"), reason: "Register dependency presentation") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'presentation-registration', 1, 'complete')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+        let gate = DependencyPresentationResetGate()
+        let persistence = DependencyGraphPresentationPersistence(
+            load: { _, _, _ in .none },
+            save: { _, layout, _, _ in await gate.save(layout) },
+            reset: { _, _, _ in await gate.reset() }
+        )
+        let model = AppModel(store: fixture.store, dependencyGraphPresentationPersistence: persistence, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .dependencies(fixture.projectID))
+        model.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        let firstOrder = DependencyGraphRankOrder(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-1")])])
+        let secondOrder = DependencyGraphRankOrder(ranks: [.init(depth: 0, ticketIDs: [.init(rawValue: "ROAD-2")])])
+        await model.saveDependencyGraphPresentation(firstOrder, projectID: fixture.projectID)
+
+        let delayedReset = Task { await model.resetDependencyGraphPresentation(projectID: fixture.projectID) }
+        await gate.waitUntilResetBlocked()
+        var startedOperations = 0
+        let ignoredSave = Task { @MainActor in
+            startedOperations += 1
+            await model.saveDependencyGraphPresentation(secondOrder, projectID: fixture.projectID)
+        }
+        let ignoredReset = Task { @MainActor in
+            startedOperations += 1
+            await model.resetDependencyGraphPresentation(projectID: fixture.projectID)
+        }
+        while startedOperations < 2 { await Task.yield() }
+        await gate.releaseReset()
+        await delayedReset.value
+        await ignoredSave.value
+        await ignoredReset.value
+
+        let resetSnapshot = await gate.snapshot()
+        XCTAssertEqual(resetSnapshot, .init(saves: 1, resets: 1, persisted: nil))
+        XCTAssertNil(model.dependencyGraphRankOrder(for: fixture.projectID))
+        XCTAssertEqual(model.dependencyGraphArrangementStatus(for: fixture.projectID), .automatic)
+    }
+
+    @MainActor
+    func testDependencyPresentationReopensSavedOrderAndReconcilesMissingAndNewNodes() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "presentation-fixture"), reason: "Register dependency presentation") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'presentation-registration', 1, 'complete')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+        let saved = DependencyGraphRankOrder(ranks: [
+            .init(depth: 0, ticketIDs: [.init(rawValue: "MISSING"), .init(rawValue: "B")]),
+        ])
+        let first = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await first.loadDashboard()
+        await first.navigate(to: .dependencies(fixture.projectID))
+        first.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        await first.saveDependencyGraphPresentation(saved, projectID: fixture.projectID)
+
+        let reopened = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await reopened.loadDashboard()
+        await reopened.navigate(to: .dependencies(fixture.projectID))
+        reopened.selectDependencyTicket(.init(rawValue: "ROAD-1"), projectID: fixture.projectID)
+        await reopened.loadDependencyGraphPresentation(projectID: fixture.projectID, force: true)
+        XCTAssertEqual(reopened.dependencyGraphRankOrder(for: fixture.projectID), saved)
+
+        let nodes = ["A", "B", "C", "SELECTED"].map {
+            DependencyGraphNode(id: .init(rawValue: $0), outcome: $0, lane: .backlog, blockerCount: 0)
+        }
+        let graph = DependencyGraphProjection(
+            projectID: fixture.projectID,
+            nodes: nodes,
+            edges: ["A", "B", "C"].map {
+                .init(
+                    id: .init(rawValue: "\($0)-selected"),
+                    sourceID: .init(rawValue: $0),
+                    targetID: .init(rawValue: "SELECTED")
+                )
+            },
+            focus: .none
+        ).selecting(.init(rawValue: "SELECTED"))
+        let layout = DependencyGraphLayout.makeLayout(graph: graph, size: .init(width: 800, height: 400), retainedOrder: saved)
+        XCTAssertEqual(layout.columns.first?.ticketIDs.map(\.rawValue), ["B", "A", "C"])
+        XCTAssertFalse(layout.frames.keys.contains(.init(rawValue: "MISSING")))
     }
 
     @MainActor
@@ -2000,7 +2374,7 @@ final class AppRouteTests: XCTestCase {
         await model.loadDashboard()
 
         XCTAssertEqual(model.selectedTicketID.rawValue, "CURRENT-1")
-        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.id.rawValue, "CURRENT-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected?.ticket.id.rawValue, "CURRENT-1")
     }
 
     @MainActor
@@ -2413,9 +2787,39 @@ final class AppRouteTests: XCTestCase {
             seedSampleData: true
         )
         await model.loadDashboard()
-        let graph = try XCTUnwrap(model.dependencyGraph(for: DashboardSampleData.projectID))
+        let finderNodes = (0..<12).map { index in
+            DependencyGraphNode(
+                id: .init(rawValue: String(format: "FINDER-%02d", index)),
+                outcome: "Finder ticket \(index)",
+                lane: .backlog,
+                blockerCount: 0,
+                phaseName: "Finder phase"
+            )
+        }
+        let arrangeSibling = DependencyGraphNode(
+            id: .init(rawValue: "ARRANGE-SIBLING"),
+            outcome: "Arrange sibling",
+            lane: .backlog,
+            blockerCount: 0,
+            phaseName: "Finder phase"
+        )
+        let nodes = finderNodes + [arrangeSibling]
+        let graph = DependencyGraphProjection(
+            projectID: DashboardSampleData.projectID,
+            nodes: nodes,
+            edges: zip(finderNodes, finderNodes.dropFirst()).enumerated().map { index, pair in
+                .init(id: .init(rawValue: "finder-edge-\(index)"), sourceID: pair.0.id, targetID: pair.1.id)
+            } + [
+                .init(
+                    id: .init(rawValue: "arrange-sibling-edge"),
+                    sourceID: arrangeSibling.id,
+                    targetID: finderNodes[1].id
+                ),
+            ],
+            focus: .none
+        )
         let window = NSWindow(
-            contentRect: NSRect(x: 30, y: 30, width: 1_420, height: 860),
+            contentRect: NSRect(x: 30, y: 30, width: 1_420, height: 520),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
@@ -2423,9 +2827,17 @@ final class AppRouteTests: XCTestCase {
         window.isReleasedWhenClosed = false
         window.title = "Phase 4 Project Dependencies — isolated native acceptance"
         window.appearance = NSAppearance(named: .darkAqua)
-        defer { window.close() }
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
 
         for width in [1_420.0, 760.0] {
+            let firstTicketID = try XCTUnwrap(finderNodes.first?.id)
+            let lastTicketID = try XCTUnwrap(finderNodes.last?.id)
+            model.selectTicket(lastTicketID)
             let hosting = NSHostingView(rootView: DependencyGraphView(
                 graph: graph,
                 selectedTicketID: Binding(
@@ -2434,17 +2846,196 @@ final class AppRouteTests: XCTestCase {
                 ),
                 freshness: model.codexSnapshot.freshness
             ).environment(\.colorScheme, .dark))
-            hosting.frame = NSRect(x: 0, y: 0, width: width, height: 860)
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: 520)
             hosting.appearance = window.appearance
             window.contentView = hosting
-            window.setContentSize(NSSize(width: width, height: 860))
-            window.orderFront(nil)
+            window.setContentSize(NSSize(width: width, height: 520))
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
             try await Task.sleep(for: .milliseconds(150))
             hosting.layoutSubtreeIfNeeded()
 
             XCTAssertTrue(window.isVisible)
-            XCTAssertEqual(graph.selected.ticket.id, TicketID(rawValue: "VD2-08"))
+            XCTAssertEqual(graph.selecting(firstTicketID).selected?.ticket.id, firstTicketID)
             XCTAssertTrue(graph.nodes.allSatisfy { !$0.phaseName.isEmpty })
+            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+            let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+            let finderInput = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "dependency-finder-input"))
+            XCTAssertEqual(AXUIElementSetAttributeValue(finderInput, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
+            XCTAssertEqual(AXUIElementSetAttributeValue(finderInput, kAXValueAttribute as CFString, "Finder ticket" as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            let firstResponder = window.firstResponder
+            let firstResponderClass = firstResponder.map { String(describing: type(of: $0)) } ?? "nil"
+            let isFieldEditor = (firstResponder as? NSTextView)?.isFieldEditor == true
+            let responderEvidence = "firstResponder=\(firstResponderClass); isFieldEditor=\(isFieldEditor)"
+            let responderAttachment = XCTAttachment(string: responderEvidence)
+            responderAttachment.name = "phase4-dependency-finder-responder-\(Int(width))"
+            responderAttachment.lifetime = .keepAlways
+            add(responderAttachment)
+            XCTAssertTrue(isFieldEditor, responderEvidence)
+            XCTAssertEqual(accessibilityFocusedIdentifier(application), "dependency-finder-input")
+
+            let firstResultIdentifier = "dependency-finder-result-\(firstTicketID.rawValue)"
+            let firstResult = try XCTUnwrap(
+                accessibilityElement(nativeWindow, identifier: firstResultIdentifier)
+            )
+            XCTAssertEqual(AXUIElementPerformAction(firstResult, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+            XCTAssertEqual(model.selectedTicketID, firstTicketID)
+            XCTAssertEqual(
+                accessibilityRouteState(nativeWindow, identifier: "dependency-finder-input")?.value,
+                "",
+                "Selecting a finder result while editing must visibly clear the native query"
+            )
+
+            let clearedFinderInput = try XCTUnwrap(
+                accessibilityElement(nativeWindow, identifier: "dependency-finder-input")
+            )
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(
+                    clearedFinderInput,
+                    kAXFocusedAttribute as CFString,
+                    kCFBooleanTrue
+                ),
+                .success
+            )
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+            XCTAssertEqual(accessibilityFocusedIdentifier(application), "dependency-finder-input")
+            XCTAssertEqual(
+                accessibilityRouteState(nativeWindow, identifier: "dependency-finder-input")?.value,
+                "",
+                "Refocusing the native finder must not restore the previous query"
+            )
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(
+                    clearedFinderInput,
+                    kAXValueAttribute as CFString,
+                    "Finder ticket" as CFString
+                ),
+                .success
+            )
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            for _ in 0..<11 {
+                let event = try XCTUnwrap(NSEvent.keyEvent(
+                    with: .keyDown, location: .zero, modifierFlags: [.numericPad], timestamp: 0,
+                    windowNumber: window.windowNumber, context: nil,
+                    characters: "\u{f701}", charactersIgnoringModifiers: "\u{f701}", isARepeat: false, keyCode: 125
+                ))
+                NSApp.sendEvent(event)
+            }
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            let resultIdentifier = "dependency-finder-result-\(lastTicketID.rawValue)"
+            XCTAssertEqual(accessibilityFocusedIdentifier(application), "dependency-finder-input")
+            try taskCapture(hosting, name: "phase4-dependency-finder-down-\(Int(width))")
+
+            let tabEvent = try XCTUnwrap(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil,
+                characters: "\t", charactersIgnoringModifiers: "\t", isARepeat: false, keyCode: 48
+            ))
+            NSApp.sendEvent(tabEvent)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            XCTAssertEqual(accessibilityFocusedIdentifier(application), resultIdentifier)
+            try taskCapture(hosting, name: "phase4-dependency-finder-keyboard-\(Int(width))")
+            let focusedResult = accessibilityElement(nativeWindow, identifier: resultIdentifier)
+            XCTAssertNotNil(focusedResult)
+            if let focusedResult {
+                XCTAssertEqual(AXUIElementPerformAction(focusedResult, kAXPressAction as CFString), .success)
+            }
+            try await Task.sleep(for: .milliseconds(150))
+            XCTAssertEqual(model.selectedTicketID, lastTicketID)
+            XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "dependency-arrange"))
+            XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "dependency-reset-layout"))
+            XCTAssertTrue(accessibilityText(nativeWindow).contains("Dependency depth"))
+
+            let dependencyNodesBeforeArrangement = graph.nodes
+            let dependencyEdgesBeforeArrangement = graph.edges
+            let automaticOrder = DependencyGraphLayout.makeLayout(
+                graph: graph.selecting(lastTicketID),
+                size: CGSize(width: max(width, 820), height: 398)
+            ).rankOrder
+            let arrangeRank = try XCTUnwrap(
+                automaticOrder.ranks.first { $0.ticketIDs.contains(arrangeSibling.id) }
+            )
+            XCTAssertEqual(Set(arrangeRank.ticketIDs), Set([arrangeSibling.id, firstTicketID]))
+            let sourceID = try XCTUnwrap(arrangeRank.ticketIDs.first)
+            let destinationID = try XCTUnwrap(arrangeRank.ticketIDs.dropFirst().first)
+
+            let arrangeControl = try XCTUnwrap(
+                accessibilityElement(nativeWindow, identifier: "dependency-arrange")
+            )
+            XCTAssertEqual(AXUIElementPerformAction(arrangeControl, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            func graphNodeElement(_ ticketID: TicketID) -> AXUIElement? {
+                accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
+                    var help: CFTypeRef?
+                    guard AXUIElementCopyAttributeValue(
+                        element, kAXHelpAttribute as CFString, &help
+                    ) == .success,
+                          (help as? String)?.contains("Option Up or Down reorders it within its rank") == true
+                    else { return false }
+                    return accessibilityText(element).contains(ticketID.rawValue)
+                }
+            }
+            let sourceNode = try XCTUnwrap(graphNodeElement(sourceID))
+            let destinationNode = try XCTUnwrap(graphNodeElement(destinationID))
+            let sourceFrameBefore = try accessibilityFrame(sourceNode)
+            let destinationFrameBefore = try accessibilityFrame(destinationNode)
+            XCTAssertEqual(sourceFrameBefore.minX, destinationFrameBefore.minX, accuracy: 1)
+            XCTAssertNotEqual(sourceFrameBefore.minY, destinationFrameBefore.minY)
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(sourceNode, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                .success
+            )
+            let moveDownEvent = try XCTUnwrap(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: [.option, .numericPad], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil,
+                characters: "\u{f701}", charactersIgnoringModifiers: "\u{f701}", isARepeat: false, keyCode: 125
+            ))
+            NSApp.sendEvent(moveDownEvent)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            let sourceFrameAfter = try accessibilityFrame(try XCTUnwrap(graphNodeElement(sourceID)))
+            let destinationFrameAfter = try accessibilityFrame(try XCTUnwrap(graphNodeElement(destinationID)))
+            let relativeOffsetBefore = sourceFrameBefore.midY - destinationFrameBefore.midY
+            let relativeOffsetAfter = sourceFrameAfter.midY - destinationFrameAfter.midY
+            XCTAssertEqual(relativeOffsetAfter, -relativeOffsetBefore, accuracy: 1)
+            XCTAssertEqual(graph.nodes, dependencyNodesBeforeArrangement)
+            XCTAssertEqual(graph.edges, dependencyEdgesBeforeArrangement)
+
+            let resetControl = try XCTUnwrap(
+                accessibilityElement(nativeWindow, identifier: "dependency-reset-layout")
+            )
+            XCTAssertEqual(AXUIElementPerformAction(resetControl, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+            let sourceFrameReset = try accessibilityFrame(try XCTUnwrap(graphNodeElement(sourceID)))
+            let destinationFrameReset = try accessibilityFrame(try XCTUnwrap(graphNodeElement(destinationID)))
+            XCTAssertEqual(sourceFrameReset.origin.y, sourceFrameBefore.origin.y, accuracy: 1)
+            XCTAssertEqual(destinationFrameReset.origin.y, destinationFrameBefore.origin.y, accuracy: 1)
+            XCTAssertEqual(graph.nodes, dependencyNodesBeforeArrangement)
+            XCTAssertEqual(graph.edges, dependencyEdgesBeforeArrangement)
+
+            XCTAssertEqual(
+                AXUIElementPerformAction(
+                    try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "dependency-arrange")),
+                    kAXPressAction as CFString
+                ),
+                .success
+            )
             try taskCapture(hosting, name: "phase4-project-dependencies-\(Int(width))")
         }
     }
@@ -5006,7 +5597,7 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(model.currentProject?.activePhaseID, fixture.roadmapPhaseID)
         XCTAssertEqual(model.dashboard?.board(for: fixture.projectID)?.lanes.map(\.count), [2, 0, 0, 1, 0])
         XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
-        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(model.dependencyFocusID(for: fixture.projectID).rawValue, "")
         XCTAssertEqual(model.activity(for: fixture.projectID)?.items.first?.detail, "Owner selected active phase phase-roadmap")
         let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
         XCTAssertEqual(state.activePhaseID, fixture.roadmapPhaseID.rawValue)
@@ -7763,6 +8354,129 @@ private actor RouteDashboardLoader {
         callCount += 1
         guard !failingCalls.contains(callCount) else { throw RouteProjectionError.forcedRefreshFailure }
         return try await DashboardProjection.load(from: store)
+    }
+}
+
+private actor DependencyPresentationCallLog {
+    struct Snapshot: Equatable { let loads: Int; let saves: Int; let resets: Int }
+    private var loads = 0, saves = 0, resets = 0
+    func recordLoad() { loads += 1 }
+    func recordSave() { saves += 1 }
+    func recordReset() { resets += 1 }
+    func snapshot() -> Snapshot { .init(loads: loads, saves: saves, resets: resets) }
+}
+
+private actor DependencyPresentationRetryProbe {
+    private var failSave: Bool
+    private var failReset: Bool
+    private var persisted = false
+
+    init(failSave: Bool = true, failReset: Bool = false) {
+        self.failSave = failSave
+        self.failReset = failReset
+    }
+
+    func save() throws {
+        if failSave { throw RouteProjectionError.forcedRefreshFailure }
+        persisted = true
+    }
+
+    func reset() throws {
+        if failReset { throw RouteProjectionError.forcedRefreshFailure }
+        persisted = false
+    }
+
+    func allowSave() { failSave = false }
+    func allowReset() { failReset = false }
+    func hasPersistedState() -> Bool { persisted }
+}
+
+private actor DependencyPresentationSaveGate {
+    struct Snapshot: Equatable { let saves: Int; let resets: Int; let persisted: DependencyGraphPresentationLayout? }
+    private var blocked = false
+    private var released = false
+    private var blockedContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+    private var persisted: DependencyGraphPresentationLayout?
+    private var saves = 0
+    private var resets = 0
+
+    func save(_ layout: DependencyGraphPresentationLayout) async {
+        saves += 1
+        blocked = true
+        blockedContinuations.forEach { $0.resume() }
+        blockedContinuations.removeAll()
+        if !released { await withCheckedContinuation { releaseContinuations.append($0) } }
+        persisted = layout
+    }
+
+    func recordReset() { resets += 1; persisted = nil }
+
+    func waitUntilSaveBlocked() async {
+        if blocked { return }
+        await withCheckedContinuation { blockedContinuations.append($0) }
+    }
+
+    func releaseSave() {
+        released = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+
+    func snapshot() -> Snapshot { .init(saves: saves, resets: resets, persisted: persisted) }
+}
+
+private actor DependencyPresentationResetGate {
+    typealias Snapshot = DependencyPresentationSaveGate.Snapshot
+    private var blocked = false
+    private var released = false
+    private var blockedContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+    private var persisted: DependencyGraphPresentationLayout?
+    private var saves = 0
+    private var resets = 0
+
+    func save(_ layout: DependencyGraphPresentationLayout) { saves += 1; persisted = layout }
+
+    func reset() async {
+        resets += 1
+        if resets == 1 {
+            blocked = true
+            blockedContinuations.forEach { $0.resume() }
+            blockedContinuations.removeAll()
+            if !released { await withCheckedContinuation { releaseContinuations.append($0) } }
+        }
+        persisted = nil
+    }
+
+    func waitUntilResetBlocked() async {
+        if blocked { return }
+        await withCheckedContinuation { blockedContinuations.append($0) }
+    }
+
+    func releaseReset() {
+        released = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+
+    func snapshot() -> Snapshot { .init(saves: saves, resets: resets, persisted: persisted) }
+}
+
+private actor RouteDependencyGraphLoader {
+    private let failAfterSuccessfulLoads: Int
+    private var successfulLoads = 0
+
+    init(failAfterSuccessfulLoads: Int) {
+        self.failAfterSuccessfulLoads = failAfterSuccessfulLoads
+    }
+
+    func load(from store: DeliveryStore, projectID: ProjectID) async throws -> DependencyGraphProjection {
+        guard successfulLoads < failAfterSuccessfulLoads else {
+            throw RouteProjectionError.forcedRefreshFailure
+        }
+        successfulLoads += 1
+        return try await DependencyGraphProjection.load(from: store, projectID: projectID)
     }
 }
 

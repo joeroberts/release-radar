@@ -32,35 +32,104 @@ struct DependencyInspectorProjection: Equatable, Sendable {
     var blockerCount: Int { ticket.blockerCount }
 }
 
+enum DependencyGraphFocus: Equatable, Sendable {
+    case none
+    case selected(DependencyInspectorProjection)
+    case missing(TicketID)
+}
+
+enum DependencyGraphFinderDirection: Equatable, Sendable {
+    case previous
+    case next
+}
+
+struct DependencyGraphFinderState: Equatable, Sendable {
+    var query = ""
+    var highlightedTicketID: TicketID?
+
+    mutating func updateQuery(_ value: String, in graph: DependencyGraphProjection) {
+        query = value
+        highlightedTicketID = graph.matchingTickets(value).first?.id
+    }
+
+    mutating func move(_ direction: DependencyGraphFinderDirection, in graph: DependencyGraphProjection) {
+        let results = graph.matchingTickets(query)
+        guard !results.isEmpty else {
+            highlightedTicketID = nil
+            return
+        }
+        let current = highlightedTicketID.flatMap { id in results.firstIndex(where: { $0.id == id }) }
+        let nextIndex: Int
+        switch (direction, current) {
+        case (.previous, nil): nextIndex = results.count - 1
+        case (.next, nil): nextIndex = 0
+        case let (.previous, index?): nextIndex = max(index - 1, 0)
+        case let (.next, index?): nextIndex = min(index + 1, results.count - 1)
+        }
+        highlightedTicketID = results[nextIndex].id
+    }
+
+    func selectedTicket(in graph: DependencyGraphProjection) -> DependencyGraphNode? {
+        guard let highlightedTicketID else { return nil }
+        return graph.matchingTickets(query).first { $0.id == highlightedTicketID }
+    }
+}
+
 struct DependencyGraphProjection: Equatable, Sendable {
     let projectID: ProjectID
-    let phaseID: PhaseID
     let nodes: [DependencyGraphNode]
     let edges: [DependencyGraphEdge]
-    let selected: DependencyInspectorProjection
+    let focus: DependencyGraphFocus
+
+    var selected: DependencyInspectorProjection? {
+        guard case let .selected(selection) = focus else { return nil }
+        return selection
+    }
 
     func node(id: TicketID) -> DependencyGraphNode? {
         nodes.first { $0.id == id }
     }
 
-    func selecting(_ ticketID: TicketID) -> DependencyGraphProjection? {
-        guard let inspector = Self.makeInspector(nodes: nodes, edges: edges, selectedTicketID: ticketID) else {
-            return nil
-        }
+    func selecting(_ ticketID: TicketID) -> DependencyGraphProjection {
+        let focus = Self.makeInspector(nodes: nodes, edges: edges, selectedTicketID: ticketID)
+            .map(DependencyGraphFocus.selected) ?? .missing(ticketID)
         return DependencyGraphProjection(
             projectID: projectID,
-            phaseID: phaseID,
             nodes: nodes,
             edges: edges,
-            selected: inspector
+            focus: focus
         )
+    }
+
+    func clearingSelection() -> DependencyGraphProjection {
+        DependencyGraphProjection(projectID: projectID, nodes: nodes, edges: edges, focus: .none)
+    }
+
+    func matchingTickets(_ query: String) -> [DependencyGraphNode] {
+        let ordered = nodes.sorted { $0.id.rawValue < $1.id.rawValue }
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+        guard !normalized.isEmpty else { return ordered }
+        return ordered.filter { node in
+            [
+                node.id.rawValue,
+                node.outcome,
+                node.phaseName,
+                node.lane?.rawValue ?? "",
+                node.lane?.dashboardTitle ?? "",
+            ].contains { value in
+                value.folding(
+                    options: [.caseInsensitive, .diacriticInsensitive],
+                    locale: Locale(identifier: "en_US_POSIX")
+                ).contains(normalized)
+            }
+        }
     }
 
     static func load(
         from store: DeliveryStore,
         projectID: ProjectID,
-        phaseID: PhaseID,
-        selectedTicketID: TicketID
+        selectedTicketID: TicketID? = nil
     ) async throws -> DependencyGraphProjection {
         try await store.read { connection in
             let nodeRows = try connection.graphRows(
@@ -98,16 +167,19 @@ struct DependencyGraphProjection: Equatable, Sendable {
             }.filter { edge in
                 nodeIDs.contains(edge.sourceID) && nodeIDs.contains(edge.targetID)
             }
-            guard let selected = makeInspector(nodes: nodes, edges: edges, selectedTicketID: selectedTicketID) else {
-                throw DependencyGraphProjectionError.missingSelectedTicket(selectedTicketID.rawValue)
+            let focus: DependencyGraphFocus
+            if let selectedTicketID {
+                focus = makeInspector(nodes: nodes, edges: edges, selectedTicketID: selectedTicketID)
+                    .map(DependencyGraphFocus.selected) ?? .missing(selectedTicketID)
+            } else {
+                focus = .none
             }
 
             return DependencyGraphProjection(
                 projectID: projectID,
-                phaseID: phaseID,
                 nodes: nodes,
                 edges: edges,
-                selected: selected
+                focus: focus
             )
         }
     }

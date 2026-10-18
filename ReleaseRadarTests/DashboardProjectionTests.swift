@@ -877,7 +877,6 @@ final class DashboardProjectionTests: XCTestCase {
         let initialGraph = try await DependencyGraphProjection.load(
             from: store,
             projectID: projectID,
-            phaseID: .init(rawValue: "phase-current"),
             selectedTicketID: .init(rawValue: "CURRENT-A")
         )
         XCTAssertEqual(Set(initialGraph.nodes.map(\.id.rawValue)), Set(
@@ -920,7 +919,6 @@ final class DashboardProjectionTests: XCTestCase {
         let roadmapGraph = try await DependencyGraphProjection.load(
             from: relaunchedStore,
             projectID: projectID,
-            phaseID: .init(rawValue: "phase-roadmap"),
             selectedTicketID: .init(rawValue: "ROAD-B1")
         )
         XCTAssertEqual(roadmapGraph.node(id: .init(rawValue: "CURRENT-A"))?.phaseName, "Current")

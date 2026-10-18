@@ -229,7 +229,7 @@ struct SidebarView: View {
             WorkspaceHelpView { destination in
                 Task { await model.openWorkspaceHelpDestination(destination) }
             }
-        } else if let error = model.dashboardError {
+        } else if let error = model.dashboardError, !hasLastSuccessfulDependencyGraph {
             FailureStateView(
                 presentation: .init(
                     title: model.permanentPurgeNeedsRefresh ? "History permanently purged; refresh needed" : "Delivery data unavailable",
@@ -660,15 +660,49 @@ struct SidebarView: View {
                     ProjectEmptyStateView(presentation: .phaseBoard)
                 }
             case let .dependencies(projectID):
-                if let graph = model.dependencyGraph(for: projectID) {
-                    DependencyGraphView(
-                        graph: graph,
-                        selectedTicketID: Binding(
-                            get: { model.selectedTicketID },
-                            set: { model.selectTicket($0) }
-                        ),
-                        freshness: model.codexSnapshot.freshness
-                    )
+                if let graph = model.dependencyGraph(for: projectID),
+                   let project = dashboard.projects.first(where: { $0.id == projectID }) {
+                    VStack(spacing: 0) {
+                        if let error = model.dashboardError {
+                            FailureStateView(
+                                presentation: .init(
+                                    title: "Dependency data may be stale",
+                                    detail: "The last successful project dependency graph is still shown. \(error)",
+                                    systemImage: "arrow.clockwise.circle",
+                                    tone: .warning,
+                                    accessibilityID: "dependency-data-stale"
+                                ),
+                                style: .inline,
+                                actionTitle: "Retry",
+                                action: { Task { await model.reloadDependencyData() } }
+                            )
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                        }
+                        DependencyGraphView(
+                            graph: graph,
+                            selectedTicketID: Binding(
+                                get: { model.dependencyFocusID(for: projectID) },
+                                set: { model.selectDependencyTicket($0, projectID: projectID) }
+                            ),
+                            freshness: model.codexSnapshot.freshness,
+                            projectName: project.name,
+                            retainedOrder: model.dependencyGraphRankOrder(for: projectID),
+                            arrangementStatus: model.dependencyGraphArrangementStatus(for: projectID),
+                            onUpdateOrder: { order in
+                                Task { await model.saveDependencyGraphPresentation(order, projectID: projectID) }
+                            },
+                            onResetOrder: {
+                                Task { await model.resetDependencyGraphPresentation(projectID: projectID) }
+                            },
+                            onRetryArrangement: {
+                                Task { await model.retryDependencyGraphPresentation(projectID: projectID) }
+                            }
+                        )
+                        .task(id: model.dependencyGraphPresentationLoadIdentity(for: projectID)) {
+                            await model.loadDependencyGraphPresentation(projectID: projectID)
+                        }
+                    }
                 } else {
                     if let project = dashboard.projects.first(where: { $0.id == projectID }), project.phases.isEmpty {
                         ProjectEmptyStateView(presentation: .dependencies)
@@ -753,6 +787,12 @@ struct SidebarView: View {
             ProgressView("Loading local delivery data…")
                 .controlSize(.large)
         }
+    }
+
+    private var hasLastSuccessfulDependencyGraph: Bool {
+        guard case let .dependencies(projectID) = model.selection,
+              model.dashboard != nil else { return false }
+        return model.dependencyGraph(for: projectID) != nil
     }
 
 }

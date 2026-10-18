@@ -453,13 +453,13 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         let graph = try await DependencyGraphProjection.load(
             from: store,
             projectID: DashboardSampleData.projectID,
-            phaseID: DashboardSampleData.phaseID,
             selectedTicketID: selectedID
         )
 
-        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06", "VD2-07"])
-        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
-        XCTAssertEqual(graph.selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
+        let selected = try XCTUnwrap(graph.selected)
+        XCTAssertEqual(selected.directRequires.map(\.id.rawValue), ["VD2-06", "VD2-07"])
+        XCTAssertEqual(selected.indirectRequires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
+        XCTAssertEqual(selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
         XCTAssertEqual(graph.node(id: TicketID(rawValue: "UX-D12"))?.blockerCount, 1)
         XCTAssertEqual(graph.node(id: selectedID)?.lane, .inProgress)
 
@@ -495,13 +495,13 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         let graph = try await DependencyGraphProjection.load(
             from: store,
             projectID: DashboardSampleData.projectID,
-            phaseID: DashboardSampleData.phaseID,
             selectedTicketID: .init(rawValue: "UNASSIGNED")
         )
 
-        XCTAssertEqual(graph.selected.ticket.phaseName, "Unassigned")
-        XCTAssertNil(graph.selected.ticket.lane)
-        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06"])
+        let selected = try XCTUnwrap(graph.selected)
+        XCTAssertEqual(selected.ticket.phaseName, "Unassigned")
+        XCTAssertNil(selected.ticket.lane)
+        XCTAssertEqual(selected.directRequires.map(\.id.rawValue), ["VD2-06"])
         XCTAssertEqual(graph.node(id: .init(rawValue: "UNASSIGNED"))?.outcome, "Plan dependency")
     }
 
@@ -546,17 +546,11 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         ]
         let base = DependencyGraphProjection(
             projectID: ProjectID(rawValue: "layout-project"),
-            phaseID: PhaseID(rawValue: "layout-phase"),
             nodes: nodes,
             edges: edges,
-            selected: DependencyInspectorProjection(
-                ticket: nodes[0],
-                directRequires: [],
-                indirectRequires: [],
-                unlocks: []
-            )
+            focus: .none
         )
-        let graph = try XCTUnwrap(base.selecting(TicketID(rawValue: "SELECTED")))
+        let graph = base.selecting(TicketID(rawValue: "SELECTED"))
 
         let first = DependencyGraphLayout.makeLayout(
             graph: graph,
@@ -568,7 +562,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         )
 
         XCTAssertEqual(first.columns.map(\.title), [
-            "Foundations", "Accepted work", "Selected ticket", "Unlocks next",
+            "Dependency depth 1", "Dependency depth 2", "Dependency depth 3 · selected ticket", "Dependency depth 4",
         ])
         XCTAssertEqual(first.columns.map { $0.ticketIDs.map(\.rawValue) }, [
             ["FOUND-1", "FOUND-2", "FOUND-3"],
@@ -594,6 +588,58 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(first, second)
     }
 
+    func testDependencyGraphLayoutShowsSelectedFocusInPrerequisiteRanks() throws {
+        func node(_ id: String) -> DependencyGraphNode {
+            DependencyGraphNode(
+                id: .init(rawValue: id),
+                outcome: "Outcome for \(id)",
+                lane: .backlog,
+                blockerCount: 0,
+                phaseName: id.hasPrefix("LATER") ? "Later phase" : "Current phase"
+            )
+        }
+        func edge(_ id: String, _ prerequisite: String, _ dependent: String) -> DependencyGraphEdge {
+            DependencyGraphEdge(
+                id: .init(rawValue: id),
+                sourceID: .init(rawValue: prerequisite),
+                targetID: .init(rawValue: dependent)
+            )
+        }
+
+        let nodes = ["ROOT-A", "ROOT-B", "EARLY", "MIDDLE", "SELECTED", "LATER"].map(node)
+        let edges = [
+            edge("a-early", "ROOT-A", "EARLY"),
+            edge("b-early", "ROOT-B", "EARLY"),
+            edge("early-middle", "EARLY", "MIDDLE"),
+            edge("middle-selected", "MIDDLE", "SELECTED"),
+            edge("selected-later", "SELECTED", "LATER"),
+        ]
+        let base = DependencyGraphProjection(
+            projectID: .init(rawValue: "project-wide-layout"),
+            nodes: nodes,
+            edges: edges,
+            focus: .none
+        )
+        let graph = base.selecting(.init(rawValue: "SELECTED"))
+
+        let layout = DependencyGraphLayout.makeLayout(
+            graph: graph,
+            size: CGSize(width: 1_200, height: 700)
+        )
+
+        XCTAssertEqual(Set(layout.frames.keys), Set(nodes.map(\.id)))
+        XCTAssertEqual(Set(layout.connectors.map(\.id)), Set(edges.map(\.id)))
+        for relationship in edges {
+            let prerequisite = try XCTUnwrap(layout.frames[relationship.sourceID])
+            let dependent = try XCTUnwrap(layout.frames[relationship.targetID])
+            XCTAssertLessThan(
+                prerequisite.midX,
+                dependent.midX,
+                "\(relationship.id.rawValue) must progress from prerequisite to dependent"
+            )
+        }
+    }
+
     func testDenseDependencyPathExpandsScrollableCanvasWithoutOverlappingNodes() throws {
         let selected = DependencyGraphNode(
             id: .init(rawValue: "SELECTED"), outcome: "Selected", lane: .inProgress, blockerCount: 0
@@ -606,16 +652,12 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         }
         let graph = DependencyGraphProjection(
             projectID: .init(rawValue: "dense-project"),
-            phaseID: .init(rawValue: "dense-phase"),
             nodes: foundations + [selected],
-            edges: [],
-            selected: .init(
-                ticket: selected,
-                directRequires: [],
-                indirectRequires: foundations,
-                unlocks: []
-            )
-        )
+            edges: foundations.enumerated().map { index, node in
+                .init(id: .init(rawValue: "dense-\(index)"), sourceID: node.id, targetID: selected.id)
+            },
+            focus: .none
+        ).selecting(selected.id)
 
         let height = DependencyGraphLayout.requiredCanvasHeight(for: graph, minimum: 400)
         let layout = DependencyGraphLayout.makeLayout(
@@ -675,7 +717,6 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         let graph = try await DependencyGraphProjection.load(
             from: store,
             projectID: DashboardSampleData.projectID,
-            phaseID: DashboardSampleData.phaseID,
             selectedTicketID: TicketID(rawValue: "VD2-08")
         )
         let nodeIDs = Set(graph.nodes.map(\.id))
@@ -688,9 +729,10 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             nodeIDs.contains($0.sourceID) && nodeIDs.contains($0.targetID)
         })
         XCTAssertEqual(graph.node(id: .init(rawValue: "CROSS-BRIDGE"))?.phaseName, "Later phase")
-        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-07"])
-        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["CROSS-BRIDGE", "VD2-03", "VD2-04", "VD2-05", "VD2-06"])
-        XCTAssertEqual(graph.selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
+        let selected = try XCTUnwrap(graph.selected)
+        XCTAssertEqual(selected.directRequires.map(\.id.rawValue), ["VD2-07"])
+        XCTAssertEqual(selected.indirectRequires.map(\.id.rawValue), ["CROSS-BRIDGE", "VD2-03", "VD2-04", "VD2-05", "VD2-06"])
+        XCTAssertEqual(selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
         XCTAssertEqual(layout.connectors.count, 13)
         XCTAssertTrue(layout.connectors.allSatisfy {
             layout.frames[$0.sourceID] != nil && layout.frames[$0.targetID] != nil
@@ -845,7 +887,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         await model.loadDashboard()
 
         XCTAssertEqual(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.count, 6)
-        XCTAssertEqual(model.dependencyGraph(for: DashboardSampleData.projectID)?.selected.ticket.id.rawValue, "VD2-08")
+        XCTAssertEqual(model.dependencyGraph(for: DashboardSampleData.projectID)?.selected?.ticket.id.rawValue, "VD2-08")
         XCTAssertFalse(model.activity(for: DashboardSampleData.projectID)?.items.isEmpty == true)
 
         try await store.transact(
