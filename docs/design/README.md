@@ -46,6 +46,9 @@ to [issue #153](https://github.com/joeroberts/release-radar/issues/153#issuecomm
 | 99310ee7-5191-44f3-936f-cd658a7f2d24 | [docs/design/mockups/activity.png](mockups/activity.png) | designAsset | nonAuthoritative | completed | none | none |
 | 2bdc0e4b-d6fe-4d3f-a228-ea14e5976891 | [docs/design/mockups/alerts.png](mockups/alerts.png) | designAsset | supporting | active | none | none |
 | 32e6ba81-f6d9-48be-9e76-b08e56b5dc60 | [docs/design/mockups/dependencies.png](mockups/dependencies.png) | designAsset | supporting | active | none | none |
+| cbc994f2-cf78-4276-94b0-5a31afcd6392 | [docs/design/mockups/dependencies-dense-layout-proposal.svg](mockups/dependencies-dense-layout-proposal.svg) | designAsset | supporting | proposed | none | none |
+| 0dc26cdc-edcf-4da6-9d50-804c393a0f46 | [docs/design/mockups/dependencies-direct-entry-compact-proposal.png](mockups/dependencies-direct-entry-compact-proposal.png) | designAsset | supporting | proposed | none | none |
+| 5936c12c-c68b-430c-820c-b5b4b131de1e | [docs/design/mockups/dependencies-direct-entry-proposal.png](mockups/dependencies-direct-entry-proposal.png) | designAsset | supporting | proposed | none | none |
 | cef27517-0dc5-4938-b3d3-1c5986b927fe | [docs/design/mockups/full&#95;logo.png](mockups/full_logo.png) | designAsset | nonAuthoritative | completed | none | none |
 | 99aa5b55-8e43-4aa7-8949-4508b17d0f4f | [docs/design/mockups/goal&#95;to&#95;work&#95;flow.png](mockups/goal_to_work_flow.png) | designAsset | supporting | proposed | none | none |
 | 602ec52b-90d6-4d90-ac46-bc1f21746e5e | [docs/design/mockups/goals.png](mockups/goals.png) | designAsset | supporting | proposed | none | none |

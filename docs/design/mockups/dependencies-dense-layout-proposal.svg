@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="900" viewBox="0 0 1680 900" role="img" aria-labelledby="title description">
+  <title id="title">Dependency layout proposal, dense fixture before and after constrained rank reordering</title>
+  <desc id="description">Two diagrams preserve the same thirteen dependency edges. The after diagram reorders nodes only within topological depth zero and reroutes every edge in dedicated tracks, reducing visual tangles without changing dependencies. Dashed cyan paths are skipped-rank dependencies.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071725"/>
+      <stop offset="1" stop-color="#0c2638"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#d8e6f5"/>
+    </marker>
+    <marker id="arrowSkip" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#37d7ef"/>
+    </marker>
+    <style>
+      .panel { fill: #0b2131; stroke: #35546d; stroke-width: 2; }
+      .divider { stroke: #28465d; stroke-width: 1.5; stroke-dasharray: 5 6; }
+      .node { fill: #102c3f; stroke: #84a7c7; stroke-width: 2; rx: 10; }
+      .focus { fill: #0e3443; stroke: #22d3ee; stroke-width: 3; rx: 10; }
+      .edge { fill: none; stroke: #d8e6f5; stroke-width: 2.3; marker-end: url(#arrow); }
+      .skip { fill: none; stroke: #37d7ef; stroke-width: 2.6; stroke-dasharray: 8 6; marker-end: url(#arrowSkip); }
+      .cross { fill: #ef4444; stroke: #071725; stroke-width: 2; }
+      .h1 { fill: #f7fbff; font: 700 31px sans-serif; }
+      .h2 { fill: #f7fbff; font: 650 22px sans-serif; }
+      .label { fill: #d8e6f5; font: 600 17px sans-serif; }
+      .small { fill: #9db6cc; font: 15px sans-serif; }
+      .note { fill: #bed0df; font: 16px sans-serif; }
+      .mono { fill: #e7f1fa; font: 600 15px monospace; }
+      .chip { fill: #10384b; stroke: #37d7ef; stroke-width: 1.5; rx: 12; }
+    </style>
+  </defs>
+
+  <rect width="1680" height="900" fill="url(#background)"/>
+  <text x="40" y="48" class="h1">Dense dependency layout · inspectable before / after</text>
+  <text x="40" y="78" class="note">Horizontal rank is topological depth, not a relationship-role bucket. “Indirect prerequisites” may span multiple depths.</text>
+  <rect x="40" y="94" width="760" height="654" class="panel" rx="16"/>
+  <rect x="840" y="94" width="800" height="654" class="panel" rx="16"/>
+
+  <text x="68" y="130" class="h2">Before · automatic stable-ID order</text>
+  <text x="868" y="130" class="h2">After · constrained reorder within depth 0</text>
+  <text x="68" y="156" class="small">Multiple inter-column traces intersect; red dots mark the most legibility-damaging junctions.</text>
+  <text x="868" y="156" class="small">Same nodes and edges; dedicated tracks preserve direction and keep paths outside cards.</text>
+
+  <text x="83" y="186" class="small">Depth 0</text>
+  <text x="267" y="186" class="small">Depth 1</text>
+  <text x="475" y="186" class="small">Focus · depth 2</text>
+  <text x="675" y="186" class="small">Depth 3</text>
+  <text x="883" y="186" class="small">Depth 0</text>
+  <text x="1082" y="186" class="small">Depth 1</text>
+  <text x="1290" y="186" class="small">Focus · depth 2</text>
+  <text x="1490" y="186" class="small">Depth 3</text>
+
+  <line x1="250" y1="170" x2="250" y2="700" class="divider"/>
+  <line x1="460" y1="170" x2="460" y2="700" class="divider"/>
+  <line x1="660" y1="170" x2="660" y2="700" class="divider"/>
+  <line x1="1050" y1="170" x2="1050" y2="700" class="divider"/>
+  <line x1="1260" y1="170" x2="1260" y2="700" class="divider"/>
+  <line x1="1460" y1="170" x2="1460" y2="700" class="divider"/>
+
+  <!-- Before routes: exact fixture edges. -->
+  <path d="M172 232 H204 V532 H270" class="edge"/>
+  <path d="M172 232 H218 V382 H270" class="edge"/>
+  <path d="M172 332 H232 V232 H270" class="edge"/>
+  <path d="M172 432 H238 V382 H270" class="edge"/>
+  <path d="M172 532 H246 V232 H270" class="edge"/>
+  <path d="M362 232 H408 V382 H480" class="edge"/>
+  <path d="M362 382 H480" class="edge"/>
+  <path d="M362 532 H438 V382 H480" class="edge"/>
+  <path d="M172 332 H188 V660 H452 V382 H480" class="skip"/>
+  <path d="M572 382 H606 V232 H680" class="edge"/>
+  <path d="M572 382 H680" class="edge"/>
+  <path d="M572 382 H624 V532 H680" class="edge"/>
+  <path d="M362 232 H390 V700 H648 V382 H680" class="skip"/>
+  <circle cx="218" cy="332" r="7" class="cross"/>
+  <circle cx="232" cy="232" r="7" class="cross"/>
+  <circle cx="238" cy="382" r="7" class="cross"/>
+  <circle cx="408" cy="382" r="7" class="cross"/>
+  <circle cx="438" cy="382" r="7" class="cross"/>
+
+  <!-- After routes: same exact edges after A/B/C/D becomes B/D/C/A. -->
+  <path d="M992 532 H1014 V542 H1090" class="edge"/>
+  <path d="M992 532 H1028 V392 H1090" class="edge"/>
+  <path d="M992 232 H1090" class="edge"/>
+  <path d="M992 432 H1018 V392 H1090" class="edge"/>
+  <path d="M992 332 H1038 V242 H1090" class="edge"/>
+  <path d="M1182 242 H1214 V392 H1300" class="edge"/>
+  <path d="M1182 392 H1300" class="edge"/>
+  <path d="M1182 542 H1240 V392 H1300" class="edge"/>
+  <path d="M992 232 H1008 V660 H1272 V392 H1300" class="skip"/>
+  <path d="M1392 392 H1418 V242 H1500" class="edge"/>
+  <path d="M1392 392 H1500" class="edge"/>
+  <path d="M1392 392 H1436 V542 H1500" class="edge"/>
+  <path d="M1182 242 H1202 V700 H1468 V392 H1500" class="skip"/>
+
+  <!-- Before nodes. -->
+  <g><rect x="80" y="210" width="92" height="44" class="node"/><text x="126" y="238" text-anchor="middle" class="label">A</text></g>
+  <g><rect x="80" y="310" width="92" height="44" class="node"/><text x="126" y="338" text-anchor="middle" class="label">B</text></g>
+  <g><rect x="80" y="410" width="92" height="44" class="node"/><text x="126" y="438" text-anchor="middle" class="label">C</text></g>
+  <g><rect x="80" y="510" width="92" height="44" class="node"/><text x="126" y="538" text-anchor="middle" class="label">D</text></g>
+  <g><rect x="270" y="210" width="92" height="44" class="node"/><text x="316" y="238" text-anchor="middle" class="label">P</text></g>
+  <g><rect x="270" y="360" width="92" height="44" class="node"/><text x="316" y="388" text-anchor="middle" class="label">Q</text></g>
+  <g><rect x="270" y="510" width="92" height="44" class="node"/><text x="316" y="538" text-anchor="middle" class="label">R</text></g>
+  <g><rect x="480" y="360" width="92" height="44" class="focus"/><text x="526" y="388" text-anchor="middle" class="label">S</text></g>
+  <g><rect x="680" y="210" width="92" height="44" class="node"/><text x="726" y="238" text-anchor="middle" class="label">U</text></g>
+  <g><rect x="680" y="360" width="92" height="44" class="node"/><text x="726" y="388" text-anchor="middle" class="label">V</text></g>
+  <g><rect x="680" y="510" width="92" height="44" class="node"/><text x="726" y="538" text-anchor="middle" class="label">W</text></g>
+
+  <!-- After nodes. -->
+  <g><rect x="900" y="210" width="92" height="44" class="node"/><text x="946" y="238" text-anchor="middle" class="label">B</text></g>
+  <g><rect x="900" y="310" width="92" height="44" class="node"/><text x="946" y="338" text-anchor="middle" class="label">D</text></g>
+  <g><rect x="900" y="410" width="92" height="44" class="node"/><text x="946" y="438" text-anchor="middle" class="label">C</text></g>
+  <g><rect x="900" y="510" width="92" height="44" class="node"/><text x="946" y="538" text-anchor="middle" class="label">A</text></g>
+  <g><rect x="1090" y="220" width="92" height="44" class="node"/><text x="1136" y="248" text-anchor="middle" class="label">P</text></g>
+  <g><rect x="1090" y="370" width="92" height="44" class="node"/><text x="1136" y="398" text-anchor="middle" class="label">Q</text></g>
+  <g><rect x="1090" y="520" width="92" height="44" class="node"/><text x="1136" y="548" text-anchor="middle" class="label">R</text></g>
+  <g><rect x="1300" y="370" width="92" height="44" class="focus"/><text x="1346" y="398" text-anchor="middle" class="label">S</text></g>
+  <g><rect x="1500" y="220" width="92" height="44" class="node"/><text x="1546" y="248" text-anchor="middle" class="label">U</text></g>
+  <g><rect x="1500" y="370" width="92" height="44" class="node"/><text x="1546" y="398" text-anchor="middle" class="label">V</text></g>
+  <g><rect x="1500" y="520" width="92" height="44" class="node"/><text x="1546" y="548" text-anchor="middle" class="label">W</text></g>
+
+  <rect x="868" y="607" width="267" height="30" class="chip"/>
+  <text x="1001" y="628" text-anchor="middle" class="small">Only depth-0 vertical order changed</text>
+  <rect x="1150" y="607" width="207" height="30" class="chip"/>
+  <text x="1254" y="628" text-anchor="middle" class="small">All arrows rerouted</text>
+  <rect x="1372" y="607" width="240" height="30" class="chip"/>
+  <text x="1492" y="628" text-anchor="middle" class="small">Cards and ranks unchanged</text>
+
+  <text x="40" y="788" class="h2">Exact fixture edges preserved</text>
+  <text x="40" y="820" class="mono">A→R · A→Q · B→P · C→Q · D→P · P→S · Q→S · R→S · B→S · S→U · S→V · S→W · P→V</text>
+  <text x="40" y="850" class="note">Dashed cyan: skipped-rank B→S and P→V, routed in outer channels. Multi-depth chains such as B→P→S remain left-to-right.</text>
+  <text x="40" y="877" class="small">Adequacy gate: constrained reordering must produce a materially clearer trace in this fixture; this proposal intentionally makes no numerical crossing-count claim.</text>
+</svg>
