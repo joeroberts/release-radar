@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 28
+    static let currentVersion: Int64 = 29
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -121,6 +121,9 @@ enum StoreMigrations {
             }
             if version < 28 {
                 try connection.executeScript(schemaVersion28)
+            }
+            if version < 29 {
+                try connection.executeScript(schemaVersion29)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -411,6 +414,12 @@ enum StoreMigrations {
                   AND ((last_operation_kind IS NULL) = (completed_at IS NULL))
                 """
             ) == 1 else { return false }
+        }
+        if version >= 29 {
+            guard let presentationSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'dependency_graph_presentations'"
+            ), normalizedSQL(presentationSQL) == normalizedSQL(dependencyGraphPresentationsTableSQL)
+            else { return false }
         }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
@@ -831,6 +840,10 @@ enum StoreMigrations {
         ]),
         (27, "ticket_lane_order", [
             "project_id", "ticket_id", "lane", "order_key",
+        ]),
+        (29, "dependency_graph_presentations", [
+            "project_id", "registration_id", "focus_ticket_id", "payload_version",
+            "payload_data", "updated_at",
         ]),
     ]
 
@@ -1677,6 +1690,7 @@ enum StoreMigrations {
         (25, "retained_ticket_delivery_evidence_targets", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
         (25, "retained_ticket_delivery_evidence_observations", "removal_id,historical_project_id,ticket_id,target_version", "retained_ticket_delivery_evidence_targets", "removal_id,historical_project_id,ticket_id,version", "NO ACTION"),
         (27, "ticket_lane_order", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (29, "dependency_graph_presentations", "project_id,focus_ticket_id", "tickets", "project_id,id", "CASCADE"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -3258,4 +3272,22 @@ enum StoreMigrations {
         \(permanentlyPurgeableRetainedDeleteTrigger(table: table));
         """
     }.joined(separator: "\n")
+
+    private static let dependencyGraphPresentationsTableSQL = """
+    CREATE TABLE dependency_graph_presentations (
+        project_id TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        focus_ticket_id TEXT NOT NULL,
+        payload_version INTEGER NOT NULL CHECK (payload_version > 0),
+        payload_data BLOB NOT NULL CHECK (length(payload_data) > 0),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, registration_id, focus_ticket_id, payload_version),
+        FOREIGN KEY(project_id, focus_ticket_id)
+            REFERENCES tickets(project_id, id) ON DELETE CASCADE
+    )
+    """
+
+    private static let schemaVersion29 = """
+    \(dependencyGraphPresentationsTableSQL);
+    """
 }

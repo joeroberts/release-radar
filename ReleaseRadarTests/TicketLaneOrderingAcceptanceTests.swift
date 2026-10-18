@@ -5,7 +5,7 @@ import XCTest
 
 final class TicketLaneOrderingAcceptanceTests: XCTestCase {
     func testVersionTwentySevenMigrationSeedsCanonicalOrderAndPreservesExistingState() async throws {
-        XCTAssertEqual(StoreMigrations.currentVersion, 27)
+        XCTAssertEqual(StoreMigrations.currentVersion, 29)
         let databaseURL = try makeDatabaseURL()
         let legacy = DeliveryStore(databaseURL: databaseURL)
         let legacyAvailability = await legacy.availability
@@ -80,6 +80,7 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
         await legacy.close()
 
         let versionTwentySix = try SQLiteConnection(url: databaseURL)
+        try versionTwentySix.execute("DROP TABLE dependency_graph_presentations")
         try versionTwentySix.execute("DROP TABLE ticket_lane_order")
         try versionTwentySix.execute("PRAGMA user_version = 26")
         versionTwentySix.close()
@@ -114,7 +115,7 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(migratedVersion, 27)
+        XCTAssertEqual(migratedVersion, 29)
         XCTAssertEqual(facts.backlogRows.compactMap { orderingText($0["ticket_id"]) }, [
             "ticket-a1", "ticket-a2", "ticket-b1", "ticket-c1",
         ])
@@ -138,6 +139,45 @@ final class TicketLaneOrderingAcceptanceTests: XCTestCase {
             )
         }
         XCTAssertEqual(reopenedOrder.count, 5)
+    }
+
+    func testVersionTwentyNineMigrationAddsDependencyPresentationsAndPreservesVersionTwentyEightFacts() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let current = DeliveryStore(databaseURL: databaseURL)
+        let currentAvailability = await current.availability
+        XCTAssertEqual(currentAvailability, .available)
+        try await current.transact(actor: .init(id: "fixture"), reason: "Seed v28 migration fact") { connection in
+            try connection.execute("INSERT INTO projects (id,name) VALUES ('v28-project','Preserved v28 project')")
+        }
+        await current.close()
+
+        let versionTwentyEight = try SQLiteConnection(url: databaseURL, createIfMissing: false)
+        try versionTwentyEight.execute("DROP TABLE dependency_graph_presentations")
+        try versionTwentyEight.execute("PRAGMA user_version = 28")
+        versionTwentyEight.close()
+
+        let migrated = DeliveryStore(databaseURL: databaseURL)
+        let migratedAvailability = await migrated.availability
+        XCTAssertEqual(migratedAvailability, .available)
+        let migratedVersionConnection = try SQLiteConnection(url: databaseURL, createIfMissing: false)
+        let migratedVersion = try migratedVersionConnection.scalarInt("PRAGMA user_version")
+        migratedVersionConnection.close()
+        let facts = try await migrated.read { connection in
+            (
+                projectName: try connection.scalarText("SELECT name FROM projects WHERE id='v28-project'"),
+                presentationCount: try connection.scalarInt("SELECT COUNT(*) FROM dependency_graph_presentations")
+            )
+        }
+        XCTAssertEqual(migratedVersion, 29)
+        XCTAssertEqual(facts.projectName, "Preserved v28 project")
+        XCTAssertEqual(facts.presentationCount, 0)
+
+        await migrated.close()
+        let reopened = DeliveryStore(databaseURL: databaseURL)
+        let reopenedAvailability = await reopened.availability
+        XCTAssertEqual(reopenedAvailability, .available)
+        let reopenedName = try await reopened.read { try $0.scalarText("SELECT name FROM projects WHERE id='v28-project'") }
+        XCTAssertEqual(reopenedName, "Preserved v28 project")
     }
 
     func testExactPrefixAllocationMovesOnlyTargetAndPreservesProtectedAnchorsAndProposalBaseline() async throws {

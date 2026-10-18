@@ -20,12 +20,13 @@ private func requireEmptyFixtureTables(
 
 func removeVersionTwentySixSearchSchema(_ connection: SQLiteConnection) throws {
     try requireEmptyFixtureTables(
-        ["workspace_search_preferences", "workspace_saved_queries"],
+        ["workspace_search_preferences", "workspace_saved_queries", "dependency_graph_presentations"],
         connection: connection
     )
     try connection.executeScript("""
     DROP TABLE workspace_saved_queries;
     DROP TABLE workspace_search_preferences;
+    DROP TABLE dependency_graph_presentations;
     """)
 }
 
