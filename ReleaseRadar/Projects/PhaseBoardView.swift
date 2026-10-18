@@ -169,6 +169,7 @@ struct PhaseBoardView: View {
 
                             detail
                                 .frame(minHeight: 420, alignment: .top)
+                                .containerRelativeFrame(.vertical, alignment: .top)
                         }
                     }
                     .scrollIndicators(.automatic)

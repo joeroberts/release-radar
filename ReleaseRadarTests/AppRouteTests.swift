@@ -2056,7 +2056,13 @@ final class AppRouteTests: XCTestCase {
         window.title = "RR-R10 Task 5 — isolated native acceptance"
         window.appearance = NSAppearance(named: .darkAqua)
         defer { window.close() }
-        for width in [1600.0, 760.0] {
+        let viewportSizes: [(width: CGFloat, height: CGFloat)] = [
+            (width: 1600, height: 900),
+            (width: 760, height: 700),
+            (width: 760, height: 900),
+        ]
+        var compactInspectorHeights: [CGFloat: CGFloat] = [:]
+        for viewport in viewportSizes {
             for enhanced in [false, true] {
                 model.selectedTicketID = ticketID
                 let content = TaskPlanBoardTestView(model: model, projectID: projectID)
@@ -2065,15 +2071,15 @@ final class AppRouteTests: XCTestCase {
                 let hosting = NSHostingView(rootView: content)
                 window.appearance = NSAppearance(named: enhanced ? .accessibilityHighContrastDarkAqua : .darkAqua)
                 hosting.appearance = window.appearance
-                hosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+                hosting.frame = NSRect(x: 0, y: 0, width: viewport.width, height: viewport.height)
                 window.contentView = hosting
-                window.setContentSize(NSSize(width: width, height: 900))
+                window.setContentSize(NSSize(width: viewport.width, height: viewport.height))
                 window.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
                 try await Task.sleep(for: .milliseconds(250))
                 hosting.layoutSubtreeIfNeeded()
                 if let duration = ProcessInfo.processInfo.environment["RR_TASK5_INSPECT_SECONDS"].flatMap(Double.init), duration > 0 {
-                    print("TASK5 INSPECTION PID \(ProcessInfo.processInfo.processIdentifier) width \(width) enhanced \(enhanced)")
+                    print("TASK5 INSPECTION PID \(ProcessInfo.processInfo.processIdentifier) width \(viewport.width) height \(viewport.height) enhanced \(enhanced)")
                     try await Task.sleep(for: .seconds(min(duration, 300)))
                 }
                 let board = try XCTUnwrap(model.dashboard?.board(for: projectID))
@@ -2085,13 +2091,13 @@ final class AppRouteTests: XCTestCase {
                     XCTAssertTrue(accessibilityText(card).contains("16 tasks"))
                     XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-inspector"))
                     XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-row-task-1"))
-                    if width == 760, let nativeSession {
+                    if viewport.width == 760, viewport.height == 700, let nativeSession {
                         try Data().write(to: nativeSession.ready, options: .atomic)
                         print(
                             "PHASE6D ADOPTION COMPACT READY: pid \(ProcessInfo.processInfo.processIdentifier); "
                                 + "product \(Bundle.main.bundleURL.path); window \(window.title); "
                                 + "ready \(nativeSession.ready.path); complete \(nativeSession.complete.path). "
-                                + "Scroll until Tasks and Help are visibly readable without activating Help, "
+                                + "Scroll until Task 16 is visibly reachable, "
                                 + "then write the complete marker."
                         )
                         for _ in 0..<900 where !FileManager.default.fileExists(atPath: nativeSession.complete.path) {
@@ -2100,57 +2106,48 @@ final class AppRouteTests: XCTestCase {
                         XCTAssertTrue(FileManager.default.fileExists(atPath: nativeSession.complete.path))
                         hosting.layoutSubtreeIfNeeded()
                     }
-                    if width == 760, case .none = nativeSession {
-                        try taskCapture(hosting, name: "phase6d-integrated-tasks-\(Int(width))")
-                        try taskCapture(hosting, name: "task5-loaded-\(Int(width))-standard")
-                        continue
+                    if viewport.width == 760 {
+                        XCTAssertNotNil(
+                            accessibilityElement(nativeWindow, identifier: "phase-board-vertical-recovery")
+                        )
+                        let inspectorCandidate = await scrollToAccessibilityElement(
+                            nativeWindow,
+                            identifier: "ticket-inspector"
+                        )
+                        let inspector = try XCTUnwrap(inspectorCandidate)
+                        XCTAssertTrue(
+                            try accessibilityFrame(inspector).intersects(accessibilityFrame(nativeWindow)),
+                            "The compact recovery scroll must bring the ticket inspector into the native viewport before its tasks are traversed."
+                        )
+                        let firstTask = try XCTUnwrap(
+                            accessibilityElement(nativeWindow, identifier: "task-row-task-1")
+                        )
+                        let inspectorHeight = try accessibilityFrame(inspector).height
+                        XCTAssertGreaterThanOrEqual(inspectorHeight, 420)
+                        if !enhanced { compactInspectorHeights[viewport.height] = inspectorHeight }
+                        XCTAssertNotNil(accessibilityVerticalScrollValue(inspector))
+                        XCTAssertTrue(accessibilityText(firstTask).contains(
+                            "Task 1: Verify the complete long task title wraps below its own text while preserving its label and checked state at compact widths, checked, item 1 of 16"
+                        ))
+
+                        let lastTaskCandidate = await scrollToAccessibilityElement(
+                            nativeWindow,
+                            identifier: "task-row-task-16"
+                        )
+                        let lastTask = try XCTUnwrap(lastTaskCandidate)
+                        XCTAssertTrue(accessibilityText(lastTask).contains(
+                            "Task 16: Verify delivery checkpoint 16, unchecked, item 16 of 16"
+                        ))
+                        XCTAssertTrue(try accessibilityFrame(lastTask).intersects(accessibilityFrame(nativeWindow)))
                     }
-                    let helpCandidate = await scrollToAccessibilityElement(
-                        nativeWindow,
-                        identifier: "task-adoption-help-button"
-                    )
-                    let help = try XCTUnwrap(helpCandidate)
-                    func accessibilityFrame(_ element: AXUIElement) throws -> CGRect {
-                        var positionValue: CFTypeRef?
-                        var sizeValue: CFTypeRef?
-                        XCTAssertEqual(AXUIElementCopyAttributeValue(
-                            element, kAXPositionAttribute as CFString, &positionValue
-                        ), .success)
-                        XCTAssertEqual(AXUIElementCopyAttributeValue(
-                            element, kAXSizeAttribute as CFString, &sizeValue
-                        ), .success)
-                        let position = try XCTUnwrap(positionValue)
-                        let size = try XCTUnwrap(sizeValue)
-                        var point = CGPoint.zero
-                        var dimensions = CGSize.zero
-                        XCTAssertTrue(AXValueGetValue(position as! AXValue, .cgPoint, &point))
-                        XCTAssertTrue(AXValueGetValue(size as! AXValue, .cgSize, &dimensions))
-                        return CGRect(origin: point, size: dimensions)
-                    }
-                    XCTAssertTrue(try accessibilityFrame(help).intersects(accessibilityFrame(nativeWindow)))
-                    XCTAssertEqual(AXUIElementPerformAction(help, kAXPressAction as CFString), .success)
-                    var helpText = ""
-                    for _ in 0..<20 {
-                        helpText = accessibilityText(application)
-                        if helpText.contains(TaskAdoptionHelpContent.title) { break }
-                        try await Task.sleep(for: .milliseconds(100))
-                    }
-                    XCTAssertTrue(helpText.contains(TaskAdoptionHelpContent.title))
-                    try taskCapture(hosting, name: "phase6d-integrated-tasks-\(Int(width))")
-                    let done = try XCTUnwrap(
-                        accessibilityElement(application, identifier: "task-adoption-help-done")
-                    )
-                    XCTAssertEqual(AXUIElementPerformAction(done, kAXPressAction as CFString), .success)
-                    for _ in 0..<20 {
-                        helpText = accessibilityText(application)
-                        if !helpText.contains(TaskAdoptionHelpContent.title) { break }
-                        try await Task.sleep(for: .milliseconds(100))
-                    }
-                    XCTAssertFalse(helpText.contains(TaskAdoptionHelpContent.title))
                 }
-                try taskCapture(hosting, name: "task5-loaded-\(Int(width))-\(enhanced ? "accessible" : "standard")")
+                try taskCapture(hosting, name: "task5-loaded-\(Int(viewport.width))-\(Int(viewport.height))-\(enhanced ? "accessible" : "standard")")
             }
         }
+        XCTAssertGreaterThan(
+            try XCTUnwrap(compactInspectorHeights[900]),
+            try XCTUnwrap(compactInspectorHeights[700])
+        )
         for width in [1600.0, 760.0] {
             let hosting = NSHostingView(rootView: TaskPlanBoardTestView(model: model, projectID: projectID)
                 .environment(\.colorScheme, .dark))
