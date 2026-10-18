@@ -25,6 +25,34 @@ public struct RepositoryPlanSourceOption: Codable, Equatable, Identifiable, Send
     }
 }
 
+public struct RepositoryPlanSourceInventory: Codable, Equatable, Sendable {
+    public let projectID: ProjectID
+    public let rootID: String
+    public let registration: ProjectRegistration
+    public let repositoryID: String
+    public let acceptedCatalogVersion: Int
+    public let acceptedCatalogDigest: String
+    public let sources: [RepositoryPlanSourceOption]
+
+    public init(
+        projectID: ProjectID,
+        rootID: String,
+        registration: ProjectRegistration,
+        repositoryID: String,
+        acceptedCatalogVersion: Int,
+        acceptedCatalogDigest: String,
+        sources: [RepositoryPlanSourceOption]
+    ) {
+        self.projectID = projectID
+        self.rootID = rootID
+        self.registration = registration
+        self.repositoryID = repositoryID
+        self.acceptedCatalogVersion = acceptedCatalogVersion
+        self.acceptedCatalogDigest = acceptedCatalogDigest
+        self.sources = sources
+    }
+}
+
 /// Reads the accepted documentation catalog through an already-authorized
 /// project root. The persisted registration, root and accepted catalog are
 /// rechecked after filesystem access so callers never present stale choices or
@@ -33,7 +61,7 @@ public enum RepositoryPlanSourceSelection {
     public static func availableSources(
         from store: DeliveryStore,
         project: AuthorizedProject
-    ) async throws -> [RepositoryPlanSourceOption] {
+    ) async throws -> RepositoryPlanSourceInventory {
         let context = try await currentContext(from: store, project: project)
         let catalog = try DocumentationCatalogContext(root: context.root)
         let snapshot = try catalog.managedSnapshot()
@@ -50,9 +78,21 @@ public enum RepositoryPlanSourceSelection {
         }
         try catalog.reader.verifyStable()
         try await requireCurrent(context, in: store)
-        return sources.sorted {
+        let sorted = sources.sorted {
             Data($0.path.utf8).lexicographicallyPrecedes(Data($1.path.utf8))
         }
+        guard let registration = context.registration, let binding = context.binding else {
+            throw DocumentationOperationError.staleRegistration
+        }
+        return .init(
+            projectID: registration.projectID,
+            rootID: context.rootID,
+            registration: registration,
+            repositoryID: binding.repositoryID,
+            acceptedCatalogVersion: binding.acceptedCatalogVersion,
+            acceptedCatalogDigest: binding.acceptedCatalogDigest,
+            sources: sorted
+        )
     }
 
     public static func capture(

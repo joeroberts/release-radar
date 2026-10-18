@@ -210,7 +210,8 @@ final class AppModel {
         DeliveryStore,
         FolderProjectOnboarding,
         ProjectID
-    ) async throws -> [RepositoryPlanSourceOption]
+    ) async throws -> RepositoryPlanSourceInventory
+    private let repositoryPlanPreparationService: any RepositoryPlanPreparationServicing
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
@@ -227,6 +228,7 @@ final class AppModel {
     private var activePhaseSelectionStatuses: [ProjectID: ActivePhaseSelectionStatus] = [:]
     private var repositoryPlanReconstructions: [ProjectID: RepositoryPlanReconstructionPresentation] = [:]
     private var repositoryPlanReconstructionGenerations: [ProjectID: UInt64] = [:]
+    private var repositoryPlanPreparationOperationGenerations: [ProjectID: UInt64] = [:]
     // View preferences are ephemeral, byte-exact identities, never another active pointer.
     private var viewedPhaseIDs: [Data: PhaseID] = [:]
     private var allPhaseBoardProjectIDs: Set<Data> = []
@@ -288,14 +290,15 @@ final class AppModel {
             DeliveryStore,
             FolderProjectOnboarding,
             ProjectID
-        ) async throws -> [RepositoryPlanSourceOption] = { store, onboarding, projectID in
+        ) async throws -> RepositoryPlanSourceInventory = { store, onboarding, projectID in
             try await onboarding.withAuthorizedProject(projectID: projectID) { project in
                 try await RepositoryPlanSourceSelection.availableSources(
                     from: store,
                     project: project
                 )
             }
-        }
+        },
+        repositoryPlanPreparationService: (any RepositoryPlanPreparationServicing)? = nil
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
@@ -333,6 +336,12 @@ final class AppModel {
         }
         self.requestIDGenerator = requestIDGenerator
         self.repositoryPlanSourceLoader = repositoryPlanSourceLoader
+        self.repositoryPlanPreparationService = repositoryPlanPreparationService
+            ?? RepositoryPlanPreparationService(
+                store: store,
+                onboarding: resolvedOnboarding,
+                plugin: codexPluginCoordinator
+            )
         self.recoveryServices = recoveryServices
         self.connectorHealthLoader = connectorHealthLoader
         self.recoveryStartupError = recoveryStartupError
@@ -1334,6 +1343,7 @@ final class AppModel {
         activePhaseSelectionStatuses.removeAll()
         repositoryPlanReconstructions.removeAll()
         repositoryPlanReconstructionGenerations.removeAll()
+        repositoryPlanPreparationOperationGenerations.removeAll()
         selectedReviewItemID = nil
     }
 
@@ -1376,15 +1386,26 @@ final class AppModel {
     }
 
     func openRepositoryPlanReconstruction(projectID: ProjectID) async {
+        if let existing = repositoryPlanReconstructions[projectID] {
+            guard existing.stage == .failed else { return }
+            if let state = existing.preparation?.state,
+               ![.failed, .cancelled].contains(state) {
+                return
+            }
+        }
         let generation = (repositoryPlanReconstructionGenerations[projectID] ?? 0) &+ 1
         repositoryPlanReconstructionGenerations[projectID] = generation
         repositoryPlanReconstructions[projectID] = .loading(projectID: projectID)
         do {
-            let sources = try await repositoryPlanSourceLoader(store, projectOnboarding, projectID)
+            async let inventory = repositoryPlanSourceLoader(store, projectOnboarding, projectID)
+            async let target = repositoryPlanPreparationService.target()
+            let loadedInventory = try await inventory
+            let loadedTarget = try await target
             guard repositoryPlanReconstructionGenerations[projectID] == generation else { return }
             repositoryPlanReconstructions[projectID] = .selecting(
                 projectID: projectID,
-                sources: sources
+                inventory: loadedInventory,
+                target: loadedTarget
             )
         } catch {
             guard repositoryPlanReconstructionGenerations[projectID] == generation else { return }
@@ -1411,6 +1432,188 @@ final class AppModel {
             presentation.selectedArtifactIDs.remove(artifactID)
         }
         repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    func startRepositoryPlanPreparation(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              let inventory = presentation.inventory,
+              let target = presentation.target,
+              !presentation.selectedArtifactIDs.isEmpty,
+              Self.canStartRepositoryPlanPreparation(from: presentation.stage) else {
+            return
+        }
+        let selectedSources = inventory.sources.filter {
+            presentation.selectedArtifactIDs.contains($0.artifactID)
+        }.sorted {
+            Data($0.artifactID.utf8).lexicographicallyPrecedes(Data($1.artifactID.utf8))
+        }
+        guard selectedSources.count == presentation.selectedArtifactIDs.count else { return }
+        let operationGeneration = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        presentation.stage = .starting
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        do {
+            let readback = try await repositoryPlanPreparationService.start(
+                consent: .init(
+                    inventory: inventory,
+                    selectedSources: selectedSources,
+                    target: target
+                )
+            )
+            guard readback.identity.registration.projectID == projectID else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.stage == .starting else { return }
+            presentation.apply(readback)
+            repositoryPlanReconstructions[projectID] = presentation
+        } catch {
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration else {
+                return
+            }
+            if let preparation = error as? RepositoryPlanPreparationError,
+               preparation.code == .sourceChanged {
+                await reloadRepositoryPlanSourceDisclosure(
+                    projectID: projectID,
+                    target: target,
+                    message: preparation.localizedDescription,
+                    operationGeneration: operationGeneration
+                )
+                return
+            }
+            presentation.stage = .failed
+            presentation.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = presentation
+        }
+    }
+
+    func refreshRepositoryPlanPreparation(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              let identity = presentation.preparation?.identity else {
+            return
+        }
+        let operationGeneration = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        do {
+            let readback = try await repositoryPlanPreparationService.status(identity: identity)
+            guard readback.identity == identity else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
+                return
+            }
+            presentation.apply(readback)
+        } catch {
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
+                return
+            }
+            presentation.stage = .outcomeUnknown
+            presentation.message = error.localizedDescription
+        }
+        repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    func cancelRepositoryPlanPreparation(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              let identity = presentation.preparation?.identity,
+              case let .preparing(state) = presentation.stage,
+              [.queued, .running, .awaitingResolution].contains(state) else {
+            return
+        }
+        let operationGeneration = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        do {
+            let readback = try await repositoryPlanPreparationService.cancel(identity: identity)
+            guard readback.identity == identity else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
+                return
+            }
+            presentation.apply(readback)
+        } catch {
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
+                return
+            }
+            presentation.stage = .outcomeUnknown
+            presentation.message = error.localizedDescription
+        }
+        repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    func reconcileRepositoryPlanPreparation(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .outcomeUnknown,
+              let identity = presentation.preparation?.identity else {
+            return
+        }
+        let operationGeneration = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        do {
+            let readback = try await repositoryPlanPreparationService.reconcile(identity: identity)
+            guard readback.identity == identity else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
+                return
+            }
+            presentation.apply(readback)
+        } catch {
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
+                return
+            }
+            presentation.stage = .outcomeUnknown
+            presentation.message = error.localizedDescription
+        }
+        repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    private func reloadRepositoryPlanSourceDisclosure(
+        projectID: ProjectID,
+        target: RepositoryPlanPreparationTarget,
+        message: String,
+        operationGeneration: UInt64
+    ) async {
+        do {
+            let inventory = try await repositoryPlanSourceLoader(store, projectOnboarding, projectID)
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration else {
+                return
+            }
+            repositoryPlanReconstructions[projectID] = .selecting(
+                projectID: projectID,
+                inventory: inventory,
+                target: target,
+                message: message
+            )
+        } catch {
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration else {
+                return
+            }
+            repositoryPlanReconstructions[projectID] = .failed(
+                projectID: projectID,
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private func nextRepositoryPlanPreparationOperationGeneration(_ projectID: ProjectID) -> UInt64 {
+        let generation = (repositoryPlanPreparationOperationGenerations[projectID] ?? 0) &+ 1
+        repositoryPlanPreparationOperationGenerations[projectID] = generation
+        return generation
+    }
+
+    private static func canStartRepositoryPlanPreparation(
+        from stage: RepositoryPlanReconstructionStage
+    ) -> Bool {
+        switch stage {
+        case .selectingSources, .failed, .preparing(.failed), .preparing(.cancelled):
+            true
+        case .loadingSources, .starting, .preparing, .reviewing, .applying, .outcomeUnknown, .applied:
+            false
+        }
     }
 
     func eligibleProjectsForFolderAttachment() async throws -> [ProjectRecord] {

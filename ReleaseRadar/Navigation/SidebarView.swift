@@ -485,6 +485,26 @@ struct SidebarView: View {
                                 selected: selected
                             )
                         },
+                        startRepositoryPlanPreparation: {
+                            Task {
+                                await model.startRepositoryPlanPreparation(projectID: projectID)
+                            }
+                        },
+                        refreshRepositoryPlanPreparation: {
+                            Task {
+                                await model.refreshRepositoryPlanPreparation(projectID: projectID)
+                            }
+                        },
+                        cancelRepositoryPlanPreparation: {
+                            Task {
+                                await model.cancelRepositoryPlanPreparation(projectID: projectID)
+                            }
+                        },
+                        reconcileRepositoryPlanPreparation: {
+                            Task {
+                                await model.reconcileRepositoryPlanPreparation(projectID: projectID)
+                            }
+                        },
                         referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
                         isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),
                         requestedFocus: model.navigationFocus,

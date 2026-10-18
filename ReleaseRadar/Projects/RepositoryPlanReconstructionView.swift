@@ -8,6 +8,10 @@ struct RepositoryPlanReconstructionView: View {
     let presentation: RepositoryPlanReconstructionPresentation?
     let retry: () -> Void
     let setSourceSelected: (String, Bool) -> Void
+    let startPreparation: () -> Void
+    let refreshPreparation: () -> Void
+    let cancelPreparation: () -> Void
+    let reconcilePreparation: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -19,10 +23,18 @@ struct RepositoryPlanReconstructionView: View {
                         .accessibilityIdentifier("repository-plan-source-loading")
                 case .selectingSources:
                     sourceSelection
+                case .starting:
+                    ProgressView("Capturing the authorized source snapshot…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityIdentifier("repository-plan-preparation-starting")
                 case .failed:
                     failure
-                case .preparing, .reviewing, .applying, .outcomeUnknown, .applied:
-                    ProgressView("Preparing repository plan review…")
+                case .preparing:
+                    preparationStatus
+                case .outcomeUnknown:
+                    outcomeUnknown
+                case .reviewing, .applying, .applied:
+                    ProgressView("Loading repository plan review…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
@@ -45,6 +57,27 @@ struct RepositoryPlanReconstructionView: View {
                 .font(RekonTypography.sectionTitle)
             Text("Release Radar will copy only the documents you select into a read-only preparation snapshot. Review lifecycle, authority, and digest before continuing.")
                 .foregroundStyle(RekonTheme.secondaryText)
+            if let target = presentation?.target {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Send selected contents to")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(RekonTheme.secondaryText)
+                    Text(target.destinationLabel)
+                        .font(.body.weight(.medium))
+                    Text("\(target.model) · \(target.effort) reasoning · context \(target.codexContextID.uuidString.lowercased())")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .textSelection(.enabled)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RekonTheme.surface, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("repository-plan-preparation-target")
+            }
+            if let message = presentation?.message, !message.isEmpty {
+                Text(message)
+                    .foregroundStyle(RekonTheme.warning)
+            }
             if presentation?.sources.isEmpty == true {
                 ContentUnavailableView(
                     "No accepted sources",
@@ -59,6 +92,13 @@ struct RepositoryPlanReconstructionView: View {
                         }
                     }
                 }
+            }
+            HStack {
+                Spacer()
+                Button("Prepare selected sources", action: startPreparation)
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .disabled(presentation?.selectedArtifactIDs.isEmpty != false)
+                    .accessibilityIdentifier("repository-plan-prepare-selected")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -109,6 +149,92 @@ struct RepositoryPlanReconstructionView: View {
         } actions: {
             Button("Retry", action: retry)
                 .accessibilityIdentifier("repository-plan-source-retry")
+        }
+    }
+
+    private var preparationStatus: some View {
+        let state = presentation?.preparation?.state
+        return VStack(alignment: .leading, spacing: 16) {
+            Label(preparationTitle(state), systemImage: preparationImage(state))
+                .font(RekonTypography.sectionTitle)
+            Text(preparationDetail(state))
+                .foregroundStyle(RekonTheme.secondaryText)
+            if let message = presentation?.message, !message.isEmpty {
+                Text(message)
+                    .foregroundStyle(RekonTheme.warning)
+            }
+            HStack {
+                if state == .queued || state == .running || state == .awaitingResolution {
+                    Button("Cancel preparation", action: cancelPreparation)
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("repository-plan-prepare-cancel")
+                }
+                Spacer()
+                if state == .failed || state == .cancelled {
+                    Button("Prepare again", action: startPreparation)
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .accessibilityIdentifier("repository-plan-prepare-again")
+                } else if state != .readyForReview {
+                    Button("Refresh status", action: refreshPreparation)
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .accessibilityIdentifier("repository-plan-prepare-refresh")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("repository-plan-preparation-status")
+    }
+
+    private var outcomeUnknown: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Preparation outcome unknown", systemImage: "questionmark.diamond")
+                .font(RekonTypography.sectionTitle)
+            Text("Release Radar will not start another preparation. Reconcile the recorded attempt before continuing.")
+                .foregroundStyle(RekonTheme.secondaryText)
+            if let message = presentation?.message, !message.isEmpty {
+                Text(message).foregroundStyle(RekonTheme.warning)
+            }
+            Button("End uncertain attempt and reconcile", action: reconcilePreparation)
+                .buttonStyle(RekonPrimaryButtonStyle())
+                .accessibilityIdentifier("repository-plan-prepare-reconcile")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("repository-plan-preparation-unknown")
+    }
+
+    private func preparationTitle(_ state: RepositoryPlanPreparationState?) -> String {
+        switch state {
+        case .queued: "Preparation queued"
+        case .running: "Preparing project plan"
+        case .awaitingResolution: "Preparation needs resolution"
+        case .readyForReview: "Prepared plan ready for review"
+        case .failed: "Preparation failed"
+        case .cancelled: "Preparation cancelled"
+        case .outcomeUnknown: "Preparation outcome unknown"
+        case nil: "Preparation status unavailable"
+        }
+    }
+
+    private func preparationImage(_ state: RepositoryPlanPreparationState?) -> String {
+        switch state {
+        case .readyForReview: "checkmark.circle"
+        case .failed: "xmark.octagon"
+        case .cancelled: "stop.circle"
+        case .outcomeUnknown: "questionmark.diamond"
+        case .queued, .running, .awaitingResolution, nil: "doc.badge.clock"
+        }
+    }
+
+    private func preparationDetail(_ state: RepositoryPlanPreparationState?) -> String {
+        switch state {
+        case .queued: "The exact source snapshot is recorded and waiting for the selected Codex context."
+        case .running: "The isolated read-only preparation is producing a proposed plan."
+        case .awaitingResolution: "Resolve the recorded preparation condition before review can continue."
+        case .readyForReview: "Review every proposed phase, ticket, dependency, task, source reference, and comparison before deciding."
+        case .failed: "No plan change was applied. You may start a fresh attempt from the selected sources."
+        case .cancelled: "The attempt ended without applying a plan change. You may start a fresh attempt."
+        case .outcomeUnknown: "Do not start another attempt until this exact identity is reconciled."
+        case nil: "Refresh the recorded attempt before continuing."
         }
     }
 }

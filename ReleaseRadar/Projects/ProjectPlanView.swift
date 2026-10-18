@@ -24,6 +24,10 @@ struct ProjectPlanView: View {
     var repositoryPlanReconstruction: RepositoryPlanReconstructionPresentation? = nil
     var openRepositoryPlanReconstruction: (() -> Void)? = nil
     var setRepositoryPlanSourceSelected: ((String, Bool) -> Void)? = nil
+    var startRepositoryPlanPreparation: (() -> Void)? = nil
+    var refreshRepositoryPlanPreparation: (() -> Void)? = nil
+    var cancelRepositoryPlanPreparation: (() -> Void)? = nil
+    var reconcileRepositoryPlanPreparation: (() -> Void)? = nil
     var referenceQueryContextIdentity: String? = nil
     var isReferenceQueryReady = false
     var requestedFocus: NavigationFocus? = nil
@@ -82,7 +86,11 @@ struct ProjectPlanView: View {
                 retry: { openRepositoryPlanReconstruction?() },
                 setSourceSelected: { artifactID, selected in
                     setRepositoryPlanSourceSelected?(artifactID, selected)
-                }
+                },
+                startPreparation: { startRepositoryPlanPreparation?() },
+                refreshPreparation: { refreshRepositoryPlanPreparation?() },
+                cancelPreparation: { cancelRepositoryPlanPreparation?() },
+                reconcilePreparation: { reconcileRepositoryPlanPreparation?() }
             )
         }
     }

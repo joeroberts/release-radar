@@ -110,6 +110,7 @@ public struct RepositoryPlanPreparationError: Error, LocalizedError, Equatable, 
         case outputLimitExceeded
         case outputTruncated
         case outcomeUnknown
+        case sourceChanged
     }
 
     public let code: Code
@@ -134,6 +135,8 @@ public struct RepositoryPlanPreparationError: Error, LocalizedError, Equatable, 
             "The prepared repository plan was truncated and cannot be reviewed or applied."
         case .outcomeUnknown:
             "The preparation outcome is unknown. Reconcile the existing attempt before starting another."
+        case .sourceChanged:
+            "The selected repository sources changed. Review the current source disclosure before preparing again."
         }
         guard let detail, !detail.isEmpty else { return message }
         return message + " " + detail
