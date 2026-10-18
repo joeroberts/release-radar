@@ -142,8 +142,8 @@ enum WorkspaceHelpContent {
         .init(
             id: "search-navigation",
             title: "Navigate exact search results",
-            detail: "Search uses recorded identities rather than names. Typing in the toolbar keeps the current page and results unchanged; Return and the magnifying glass submit the draft once and open Search. Back and Forward restore the source page, query, filters, selected result, scroll position and focus; archived or removed destinations open their safe read-only recovery surface. \(historyProvenance)",
-            keywords: "search toolbar draft submit navigation exact identity back forward archived removed history source provenance retained observations",
+            detail: "Search uses recorded identities rather than names. Typing in the toolbar keeps the current page and results unchanged; Return and the magnifying glass submit the draft once and open Search. Back and Forward restore the source page, query, filters, selected result, scroll position and focus. Archived destinations open their recovery surface; removed destinations open retained read-only history and offer a separately confirmed permanent purge. That purge never deletes repository files or backups, and copies outside Release Radar may remain. \(historyProvenance)",
+            keywords: "search toolbar draft submit navigation exact identity back forward archived removed history permanent purge backup source provenance retained observations",
             actionTitle: "Open History",
             destination: .history,
             group: .projects

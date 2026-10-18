@@ -8,6 +8,18 @@ extension ProjectRegistration {
     }
 }
 
+extension WorkspaceSearchDefinition {
+    func removing(_ registration: ProjectRegistration) -> Self {
+        guard case let .registrations(identities) = scope else { return self }
+        var updated = self
+        updated.scope = .registrations(identities.filter {
+            !$0.projectID.rawValue.utf8.elementsEqual(registration.projectID.rawValue.utf8)
+                || !$0.registrationID.utf8.elementsEqual(registration.registrationID.utf8)
+        })
+        return updated
+    }
+}
+
 enum NavigationFocus: Hashable, Sendable {
     case route(AppRoute)
     case ticket(TicketID)
@@ -167,6 +179,26 @@ struct NavigationHistory: Equatable, Sendable {
 
     mutating func reset(to route: AppRoute = .projects) {
         self = .init(initial: route)
+    }
+
+    mutating func removePurgedRegistration(_ registration: ProjectRegistration, removalID: ProjectRemovalID) {
+        for index in entries.indices {
+            if entries[index].route == .removedProject(removalID)
+                || entries[index].registration?.hasSameNavigationIdentity(as: registration) == true {
+                entries[index] = .init(route: .projects)
+                continue
+            }
+            if var search = entries[index].workspaceSearch {
+                search.definition = search.definition.removing(registration)
+                // A stored result ID has no independently verifiable registration.
+                // Keep the query and surviving scopes, but resolve selection anew.
+                search.selectedResultID = nil
+                entries[index].workspaceSearch = search
+                if case .workspaceSearchResult = entries[index].focus {
+                    entries[index].focus = .workspaceSearchFilters
+                }
+            }
+        }
     }
 
     mutating func goBack() -> Bool {

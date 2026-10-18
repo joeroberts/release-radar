@@ -179,11 +179,13 @@ public final class SQLiteConnection: @unchecked Sendable {
 
     func withTransactionCallbackRestrictions<T>(
         allowProjectRemovalHistoryWrites: Bool = false,
+        allowPermanentProjectPurgeWrites: Bool = false,
         _ body: () throws -> T
     ) throws -> T {
         let authorizerContext = SQLiteAuthorizerContext(
             isInTransaction: isInTransaction,
-            allowProjectRemovalHistoryWrites: allowProjectRemovalHistoryWrites
+            allowProjectRemovalHistoryWrites: allowProjectRemovalHistoryWrites,
+            allowPermanentProjectPurgeWrites: allowPermanentProjectPurgeWrites
         )
         let context = Unmanaged.passUnretained(authorizerContext).toOpaque()
         let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionAuthorizer, context)
@@ -284,10 +286,16 @@ public final class SQLiteConnection: @unchecked Sendable {
 private final class SQLiteAuthorizerContext {
     let isInTransaction: Bool
     let allowProjectRemovalHistoryWrites: Bool
+    let allowPermanentProjectPurgeWrites: Bool
 
-    init(isInTransaction: Bool, allowProjectRemovalHistoryWrites: Bool = false) {
+    init(
+        isInTransaction: Bool,
+        allowProjectRemovalHistoryWrites: Bool = false,
+        allowPermanentProjectPurgeWrites: Bool = false
+    ) {
         self.isInTransaction = isInTransaction
         self.allowProjectRemovalHistoryWrites = allowProjectRemovalHistoryWrites
+        self.allowPermanentProjectPurgeWrites = allowPermanentProjectPurgeWrites
     }
 }
 
@@ -325,6 +333,10 @@ private func deliveryStoreTransactionAuthorizer(
         "retained_delivery_goal_assignment_events",
         "retained_ticket_reference_links",
         "retained_ticket_reference_versions",
+        "retained_plan_change_proposals",
+        "retained_plan_change_proposal_versions",
+        "retained_plan_change_proposal_decisions",
+        "retained_plan_change_proposal_applications",
         "retained_ticket_retirements",
         "retained_ticket_successor_links",
         "retained_delivery_goal_obligations",
@@ -348,6 +360,10 @@ private func deliveryStoreTransactionAuthorizer(
         }
         if removalHistoryTables.contains(where: { $0.caseInsensitiveCompare(protectedTable) == .orderedSame }),
            authorizerContext?.allowProjectRemovalHistoryWrites == true {
+            return SQLITE_OK
+        }
+        if authorizerContext?.allowPermanentProjectPurgeWrites == true,
+           protectedTable.caseInsensitiveCompare("project_removal_authorizations") != .orderedSame {
             return SQLITE_OK
         }
         recordAuthorizerDenial(

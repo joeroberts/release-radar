@@ -267,6 +267,15 @@ public enum WorkspaceSearchQuery {
         }
     }
 
+    // Save callers use the same exact authority check within their write
+    // transaction, so a removal or purge cannot race the persisted payload.
+    static func validateCurrentAuthority(
+        connection: SQLiteConnection,
+        definition: WorkspaceSearchDefinition
+    ) throws {
+        _ = try validatedAuthority(connection: connection, definition: definition)
+    }
+
     private struct Authority: Sendable {
         let projects: [WorkspaceSearchProjectIdentity]
         var projectIDs: Set<String> { Set(projects.map { $0.projectID.rawValue }) }

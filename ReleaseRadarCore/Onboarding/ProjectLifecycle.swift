@@ -821,3 +821,500 @@ public actor ProjectRemovalManager {
         )
     }
 }
+
+public enum ProjectPermanentPurgeError: Error, LocalizedError, Equatable, Sendable {
+    case targetAbsent
+    case stalePreview
+    case databaseFailure
+    case activeExecutionResources
+    case unsupportedOpaqueData
+
+    public var errorDescription: String? {
+        switch self {
+        case .targetAbsent:
+            "This removed registration is no longer available. Reload Removed Projects and try again."
+        case .stalePreview:
+            "Retained project data changed after this confirmation was prepared. Review the latest purge summary and try again."
+        case .databaseFailure:
+            "Release Radar could not complete the permanent purge. Retained database and execution metadata were preserved or left recoverable."
+        case .activeExecutionResources:
+            "A worker or execution assignment for this registration is still active or unresolved. Finish its supported recovery before purging history."
+        case .unsupportedOpaqueData:
+            "Release Radar found retained data whose registration identity cannot be verified safely. Permanent purge is blocked without deleting unrelated data."
+        }
+    }
+}
+
+public enum ProjectPermanentPurgeResult: Equatable, Sendable {
+    case purged
+    case alreadyAbsent
+}
+
+public struct ProjectPermanentPurgeInventory: Equatable, Sendable {
+    public let retainedRecordCount: Int64
+    public let auditEventCount: Int64
+    public let commandReceiptCount: Int64
+    public let searchReferenceCount: Int64
+    public let executionPolicyCount: Int64
+    public let executionAssignmentCount: Int64
+}
+
+public struct ProjectPermanentPurgePreview: Equatable, Sendable {
+    public let removalID: ProjectRemovalID
+    public let projectID: ProjectID
+    public let projectName: String
+    public let registrationID: String
+    public let requestGeneration: Int64
+    public let removedAt: Date
+    public let inventory: ProjectPermanentPurgeInventory
+
+    fileprivate let databaseInventory: ProjectPermanentPurgeDatabaseInventory
+    let executionInventory: ProjectExecutionPurgeInventory
+}
+
+fileprivate struct ProjectPermanentPurgeSearchMutation: Equatable, Sendable {
+    enum Location: Equatable, Sendable {
+        case working
+        case saved(String)
+    }
+
+    let location: Location
+    let originalPayload: Data
+    // Compare the proposed value, not a fresh encoding of its unordered domains.
+    // The original persisted bytes still participate in stale-preview validation.
+    let updatedDefinition: WorkspaceSearchDefinition
+}
+
+fileprivate struct ProjectPermanentPurgeDatabaseInventory: Equatable, Sendable {
+    let record: RemovedProjectRecord
+    let retainedCounts: [String: Int64]
+    let identifyingAuditIDs: [String]
+    let structuredReceiptIDs: [String]
+    let hasPendingExecutionReceipt: Bool
+    let searchMutations: [ProjectPermanentPurgeSearchMutation]
+}
+
+public actor ProjectPermanentPurgeManager {
+    private static let retainedTables = [
+        "retained_project_activity_events",
+        "retained_delivery_goal_assignment_events",
+        "retained_ticket_reference_versions",
+        "retained_ticket_reference_links",
+        "retained_plan_change_proposal_applications",
+        "retained_plan_change_proposal_decisions",
+        "retained_plan_change_proposal_versions",
+        "retained_plan_change_proposals",
+        "retained_ticket_successor_links",
+        "retained_ticket_retirements",
+        "retained_delivery_goal_obligation_lineage",
+        "retained_delivery_goal_obligation_drops",
+        "retained_delivery_goal_obligations",
+        "retained_phase_lifecycle_events",
+        "retained_phase_lifecycles",
+        "retained_ticket_delivery_evidence_observations",
+        "retained_ticket_delivery_evidence_targets",
+    ]
+
+    private let store: DeliveryStore
+    private let executionStore: ProjectExecutionFileStore
+
+    public init(store: DeliveryStore, executionStore: ProjectExecutionFileStore) {
+        self.store = store
+        self.executionStore = executionStore
+    }
+
+    public func preview(removalID: ProjectRemovalID) async throws -> ProjectPermanentPurgePreview {
+        try await recoverPendingExecutionMetadata()
+        guard let databaseInventory = try await store.read({ connection in
+            try Self.databaseInventory(removalID: removalID, connection: connection)
+        }) else {
+            throw ProjectPermanentPurgeError.targetAbsent
+        }
+        let executionInventory: ProjectExecutionPurgeInventory
+        do {
+            executionInventory = try executionStore.permanentPurgeInventory(
+                registration: databaseInventory.record.registration
+            )
+        } catch {
+            throw ProjectPermanentPurgeError.unsupportedOpaqueData
+        }
+        let retainedCount = databaseInventory.retainedCounts.values.reduce(0, +) + 1
+        return .init(
+            removalID: databaseInventory.record.id,
+            projectID: databaseInventory.record.projectID,
+            projectName: databaseInventory.record.projectName,
+            registrationID: databaseInventory.record.registration.registrationID,
+            requestGeneration: databaseInventory.record.registration.requestGeneration,
+            removedAt: databaseInventory.record.removedAt,
+            inventory: .init(
+                retainedRecordCount: retainedCount,
+                auditEventCount: Int64(databaseInventory.identifyingAuditIDs.count),
+                commandReceiptCount: Int64(databaseInventory.structuredReceiptIDs.count),
+                searchReferenceCount: Int64(databaseInventory.searchMutations.count),
+                executionPolicyCount: executionInventory.targetPolicy == nil ? 0 : 1,
+                executionAssignmentCount: Int64(executionInventory.targetAssignments.count)
+            ),
+            databaseInventory: databaseInventory,
+            executionInventory: executionInventory
+        )
+    }
+
+    public func apply(_ preview: ProjectPermanentPurgePreview) async throws -> ProjectPermanentPurgeResult {
+        do {
+            try await recoverPendingExecutionMetadata()
+            guard let currentDatabase = try await store.read({ connection in
+                try Self.databaseInventory(removalID: preview.removalID, connection: connection)
+            }) else {
+                return .alreadyAbsent
+            }
+            let currentExecution = try executionStore.permanentPurgeInventory(
+                registration: currentDatabase.record.registration
+            )
+            guard currentExecution.blockingAssignmentIDs.isEmpty,
+                  !currentDatabase.hasPendingExecutionReceipt else {
+                throw ProjectPermanentPurgeError.activeExecutionResources
+            }
+            guard currentDatabase == preview.databaseInventory,
+                  currentExecution == preview.executionInventory else {
+                throw ProjectPermanentPurgeError.stalePreview
+            }
+
+            let lease: ProjectExecutionPurgeLease
+            do {
+                lease = try executionStore.stagePermanentPurge(
+                    removalID: preview.removalID,
+                    expected: preview.executionInventory
+                )
+            } catch ProjectExecutionError.assignmentNotAuthorized {
+                throw ProjectPermanentPurgeError.activeExecutionResources
+            } catch ProjectExecutionError.conflict {
+                throw ProjectPermanentPurgeError.stalePreview
+            } catch {
+                throw ProjectPermanentPurgeError.databaseFailure
+            }
+
+            do {
+                try await store.transactPermanentlyPurgingProject(
+                    removalID: preview.removalID,
+                    projectID: preview.projectID,
+                    registrationID: preview.registrationID,
+                    requestGeneration: preview.requestGeneration
+                ) { connection in
+                    guard let transactionInventory = try Self.databaseInventory(
+                        removalID: preview.removalID,
+                        connection: connection
+                    ), transactionInventory == preview.databaseInventory else {
+                        throw ProjectPermanentPurgeError.stalePreview
+                    }
+                    try Self.applySearchMutations(
+                        preview.databaseInventory.searchMutations,
+                        connection: connection
+                    )
+                    for receiptID in preview.databaseInventory.structuredReceiptIDs {
+                        try connection.execute(
+                            "DELETE FROM agent_command_requests WHERE request_id = ?",
+                            bindings: [.text(receiptID)]
+                        )
+                    }
+                    for table in Self.retainedTables {
+                        try connection.execute(
+                            "DELETE FROM \(table) WHERE removal_id = ?",
+                            bindings: [.text(preview.removalID.rawValue)]
+                        )
+                    }
+                    for auditID in preview.databaseInventory.identifyingAuditIDs {
+                        try connection.execute(
+                            "DELETE FROM audit_events WHERE id = ?",
+                            bindings: [.text(auditID)]
+                        )
+                    }
+                    try connection.execute(
+                        "DELETE FROM removed_projects WHERE removal_id = ?",
+                        bindings: [.text(preview.removalID.rawValue)]
+                    )
+                }
+            } catch ProjectPermanentPurgeError.targetAbsent {
+                try executionStore.finalizePermanentPurge(lease)
+                return .alreadyAbsent
+            } catch {
+                do {
+                    try executionStore.restorePermanentPurge(lease)
+                } catch {
+                    throw ProjectPermanentPurgeError.databaseFailure
+                }
+                if let error = error as? ProjectPermanentPurgeError { throw error }
+                throw ProjectPermanentPurgeError.databaseFailure
+            }
+            do {
+                try executionStore.finalizePermanentPurge(lease)
+            } catch {
+                // The database commit is authoritative. Leave the staged manifest
+                // for deterministic completion on the next manager operation.
+                throw ProjectPermanentPurgeError.databaseFailure
+            }
+            return .purged
+        } catch let error as ProjectPermanentPurgeError {
+            throw error
+        } catch {
+            throw ProjectPermanentPurgeError.databaseFailure
+        }
+    }
+
+    private func recoverPendingExecutionMetadata() async throws {
+        do {
+            for stage in try executionStore.pendingPermanentPurgeStages() {
+                guard let lease = try executionStore.recoverPermanentPurgeLease(stage) else { continue }
+                let targetExists = try await store.read { connection in
+                    try connection.scalarInt(
+                        "SELECT COUNT(*) FROM removed_projects WHERE removal_id = ?",
+                        bindings: [.text(stage.removalID.rawValue)]
+                    ) == 1
+                }
+                if targetExists {
+                    try executionStore.restorePermanentPurge(lease)
+                } else {
+                    try executionStore.finalizePermanentPurge(lease)
+                }
+            }
+        } catch {
+            throw ProjectPermanentPurgeError.databaseFailure
+        }
+    }
+
+    private nonisolated static func databaseInventory(
+        removalID: ProjectRemovalID,
+        connection: SQLiteConnection
+    ) throws -> ProjectPermanentPurgeDatabaseInventory? {
+        guard let row = try connection.row(
+            "SELECT * FROM removed_projects WHERE removal_id = ?",
+            bindings: [.text(removalID.rawValue)]
+        ) else { return nil }
+        guard case let .text(projectIDText)? = row["historical_project_id"],
+              case let .text(projectName)? = row["project_name"],
+              case let .text(lifecycleText)? = row["original_lifecycle"],
+              let lifecycle = ProjectLifecycle(rawValue: lifecycleText),
+              case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"],
+              case let .text(removedAtText)? = row["removed_at"],
+              let removedAt = ISO8601DateFormatter().date(from: removedAtText),
+              case let .integer(phaseCount)? = row["phase_count"],
+              case let .integer(ticketCount)? = row["ticket_count"],
+              case let .integer(evidenceCount)? = row["evidence_count"],
+              case let .integer(historyCount)? = row["history_count"] else {
+            throw ProjectPermanentPurgeError.unsupportedOpaqueData
+        }
+        let projectID = ProjectID(rawValue: projectIDText)
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: registrationID,
+            requestGeneration: requestGeneration
+        )
+        let record = RemovedProjectRecord(
+            id: removalID,
+            projectID: projectID,
+            projectName: projectName,
+            originalLifecycle: lifecycle,
+            registration: registration,
+            removedAt: removedAt,
+            counts: .init(
+                phases: phaseCount,
+                tickets: ticketCount,
+                evidence: evidenceCount,
+                history: historyCount
+            )
+        )
+        var retainedCounts = [String: Int64]()
+        for table in retainedTables {
+            retainedCounts[table] = try connection.scalarInt(
+                "SELECT COUNT(*) FROM \(table) WHERE removal_id = ?",
+                bindings: [.text(removalID.rawValue)]
+            ) ?? 0
+        }
+        let auditCandidates = try connection.rows(
+            """
+            SELECT id, project_id, historical_project_id, historical_registration_id, event_registration_id
+            FROM audit_events
+            WHERE project_id = ? OR historical_project_id = ?
+               OR historical_registration_id = ? OR event_registration_id = ?
+            ORDER BY id
+            """,
+            bindings: [
+                .text(projectID.rawValue), .text(projectID.rawValue),
+                .text(registrationID), .text(registrationID),
+            ],
+            maximum: 10_000
+        )
+        func text(_ value: SQLiteValue?) -> String? {
+            guard case let .text(value)? = value else { return nil }
+            return value
+        }
+        var audits = [String]()
+        for audit in auditCandidates {
+            let projects = Set([text(audit["project_id"]), text(audit["historical_project_id"])].compactMap { $0 })
+            let registrations = Set([text(audit["historical_registration_id"]), text(audit["event_registration_id"])].compactMap { $0 })
+            // A project ID alone cannot distinguish successive registrations. A
+            // conflicting or missing provenance field must never widen deletion.
+            guard projects.count == 1, registrations.count == 1 else {
+                throw ProjectPermanentPurgeError.unsupportedOpaqueData
+            }
+            if projects.contains(projectIDText), registrations.contains(registrationID) {
+                guard let id = text(audit["id"]) else { throw ProjectPermanentPurgeError.unsupportedOpaqueData }
+                audits.append(id)
+            }
+        }
+        let auditSet = Set(audits)
+        let receiptCandidates = try connection.rows(
+            """
+            SELECT request_id, registration_project_id, registration_id, request_generation, result_data
+            FROM agent_command_requests
+            ORDER BY request_id
+            """,
+            maximum: 10_000
+        )
+        var receipts = [String]()
+        var hasPendingExecutionReceipt = false
+        for receipt in receiptCandidates {
+            let receiptProject = text(receipt["registration_project_id"])
+            let receiptRegistration = text(receipt["registration_id"])
+            let auditID: String?
+            let commandResult: AgentCommandResult?
+            if case let .blob(data)? = receipt["result_data"] {
+                commandResult = try? JSONDecoder().decode(AgentCommandResult.self, from: data)
+                auditID = (try? JSONDecoder().decode(AuditEventID.self, from: data))?.rawValue
+                    ?? commandResult?.auditEventID?.rawValue
+            } else {
+                auditID = nil
+                commandResult = nil
+            }
+            let mappedToTarget = auditID.map(auditSet.contains) == true
+            let exact = receiptProject == projectIDText && receiptRegistration == registrationID
+            let legacy = receiptProject == nil && receiptRegistration == nil && receipt["request_generation"] == .null
+            if exact || (legacy && mappedToTarget) {
+                guard let id = text(receipt["request_id"]) else { throw ProjectPermanentPurgeError.unsupportedOpaqueData }
+                receipts.append(id)
+                // Preparation records its intent before provisioning can create
+                // an assignment file. An unresolved result fences that interval.
+                if commandResult?.error == .outcomeUnknown { hasPendingExecutionReceipt = true }
+            } else if mappedToTarget {
+                throw ProjectPermanentPurgeError.unsupportedOpaqueData
+            } else if legacy {
+                guard let auditID, let audit = try connection.row(
+                    "SELECT project_id, historical_project_id, historical_registration_id, event_registration_id FROM audit_events WHERE id = ?",
+                    bindings: [.text(auditID)]
+                ) else { throw ProjectPermanentPurgeError.unsupportedOpaqueData }
+                let projects = Set([text(audit["project_id"]), text(audit["historical_project_id"])].compactMap { $0 })
+                let registrations = Set([text(audit["historical_registration_id"]), text(audit["event_registration_id"])].compactMap { $0 })
+                guard projects.count == 1, registrations.count == 1,
+                      !projects.contains(projectIDText) || !registrations.contains(registrationID) else {
+                    throw ProjectPermanentPurgeError.unsupportedOpaqueData
+                }
+            } else if receiptProject == nil || receiptRegistration == nil {
+                throw ProjectPermanentPurgeError.unsupportedOpaqueData
+            }
+            // Preserve proven unrelated receipts, including opaque payloads with
+            // complete identity columns. Never search payload bytes for IDs.
+        }
+        let searchMutations = try searchMutations(
+            registration: registration,
+            connection: connection
+        )
+        return .init(
+            record: record,
+            retainedCounts: retainedCounts,
+            identifyingAuditIDs: audits,
+            structuredReceiptIDs: receipts,
+            hasPendingExecutionReceipt: hasPendingExecutionReceipt,
+            searchMutations: searchMutations
+        )
+    }
+
+    private nonisolated static func searchMutations(
+        registration: ProjectRegistration,
+        connection: SQLiteConnection
+    ) throws -> [ProjectPermanentPurgeSearchMutation] {
+        var result = [ProjectPermanentPurgeSearchMutation]()
+        if let row = try connection.row(
+            "SELECT payload_version, payload_data FROM workspace_search_preferences WHERE singleton_id = 1"
+        ) {
+            guard case let .integer(version)? = row["payload_version"],
+                  case let .blob(payload)? = row["payload_data"],
+                  version == WorkspaceSearchPreferencesRepository.payloadVersion,
+                  let definition = try? JSONDecoder().decode(WorkspaceSearchDefinition.self, from: payload) else {
+                throw ProjectPermanentPurgeError.unsupportedOpaqueData
+            }
+            if let updated = try pruned(definition, removing: registration) {
+                result.append(.init(location: .working, originalPayload: payload, updatedDefinition: updated))
+            }
+        }
+        for row in try connection.rows(
+            "SELECT id, payload_version, payload_data FROM workspace_saved_queries ORDER BY id",
+            maximum: 1_000
+        ) {
+            guard case let .text(id)? = row["id"],
+                  case let .integer(version)? = row["payload_version"],
+                  case let .blob(payload)? = row["payload_data"],
+                  version == WorkspaceSearchPreferencesRepository.payloadVersion,
+                  let definition = try? JSONDecoder().decode(WorkspaceSearchDefinition.self, from: payload) else {
+                throw ProjectPermanentPurgeError.unsupportedOpaqueData
+            }
+            if let updated = try pruned(definition, removing: registration) {
+                result.append(.init(location: .saved(id), originalPayload: payload, updatedDefinition: updated))
+            }
+        }
+        return result
+    }
+
+    private nonisolated static func pruned(
+        _ definition: WorkspaceSearchDefinition,
+        removing registration: ProjectRegistration
+    ) throws -> WorkspaceSearchDefinition? {
+        guard case let .registrations(scope) = definition.scope else { return nil }
+        let filtered = scope.filter {
+            $0.projectID != registration.projectID || $0.registrationID != registration.registrationID
+        }
+        guard filtered.count != scope.count else { return nil }
+        var updated = definition
+        updated.scope = .registrations(filtered)
+        return updated
+    }
+
+    private nonisolated static func applySearchMutations(
+        _ mutations: [ProjectPermanentPurgeSearchMutation],
+        connection: SQLiteConnection
+    ) throws {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        for mutation in mutations {
+            let updatedPayload = try encoder.encode(mutation.updatedDefinition)
+            switch mutation.location {
+            case .working:
+                try connection.execute(
+                    """
+                    UPDATE workspace_search_preferences
+                    SET payload_data = ?, updated_at = ?
+                    WHERE singleton_id = 1 AND payload_version = ? AND payload_data = ?
+                    """,
+                    bindings: [
+                        .blob(updatedPayload), .text(timestamp),
+                        .integer(WorkspaceSearchPreferencesRepository.payloadVersion),
+                        .blob(mutation.originalPayload),
+                    ]
+                )
+            case let .saved(id):
+                try connection.execute(
+                    """
+                    UPDATE workspace_saved_queries
+                    SET payload_data = ?, updated_at = ?
+                    WHERE id = ? AND payload_version = ? AND payload_data = ?
+                    """,
+                    bindings: [
+                        .blob(updatedPayload), .text(timestamp), .text(id),
+                        .integer(WorkspaceSearchPreferencesRepository.payloadVersion),
+                        .blob(mutation.originalPayload),
+                    ]
+                )
+            }
+        }
+    }
+}

@@ -5,6 +5,32 @@ import XCTest
 @testable import ReleaseRadar
 @testable import ReleaseRadarCore
 
+private enum NativeKeyboardShortcut: CustomStringConvertible {
+    case cancelAction
+    case defaultAction
+
+    var characters: String {
+        switch self {
+        case .cancelAction: "\u{1b}"
+        case .defaultAction: "\r"
+        }
+    }
+
+    var keyCode: UInt16 {
+        switch self {
+        case .cancelAction: 53
+        case .defaultAction: 36
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .cancelAction: "Escape"
+        case .defaultAction: "Return"
+        }
+    }
+}
+
 @MainActor
 final class ProjectDocumentationRenderingTests: XCTestCase {
     func testOverviewMetricsCenterUntruncatedLongValuesAtWideAndCompactWidths() async throws {
@@ -1079,6 +1105,100 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             pressTitles: ["Cancel"]
         )
         XCTAssertEqual(confirmationCalls, 0)
+    }
+
+    func testRemovedProjectPermanentPurgeIsDiscoverableAndConfirmsExactRegistrationAtWideAndCompactWidths() async throws {
+        let (record, preview) = try await permanentPurgeRenderingFixture()
+        let activity = ProjectActivityProjection(projectID: record.projectID, items: [])
+
+        for width in [1100.0, 620.0] {
+            var previewCalls = 0
+            var receivedPreview: ProjectPermanentPurgePreview?
+            try await render(
+                RemovedProjectView(
+                    project: record,
+                    activity: activity,
+                    previewPurge: {
+                        previewCalls += 1
+                        return preview
+                    },
+                    purge: { receivedPreview = $0 }
+                ),
+                name: "permanent-purge-removed-history-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    record.projectName,
+                    "Permanently Delete History…",
+                ],
+                presentIdentifiers: ["removed-project-history", "removed-project-permanent-purge"],
+                pressIdentifiers: ["removed-project-permanent-purge"],
+                afterPressIdentifiers: [[
+                    "project-permanent-purge-confirmation",
+                    "project-permanent-purge-cancel",
+                    "project-permanent-purge-confirm",
+                ]],
+                afterPressActionableTitles: [["Cancel", "Permanently Delete History"]],
+                afterPressText: [[
+                    "Permanently delete \(record.projectName)?",
+                    record.registration.registrationID,
+                    "generation \(record.registration.requestGeneration)",
+                    "cannot be undone",
+                    "Repository files and backups are never deleted",
+                ]],
+                pressKeyboardShortcuts: [.cancelAction],
+                sheetAttachmentName: "permanent-purge-confirmation-\(Int(width))"
+            )
+            XCTAssertEqual(previewCalls, 1)
+            XCTAssertNil(receivedPreview, "Opening the confirmation must not purge the removed registration")
+        }
+    }
+
+    func testPermanentPurgeConfirmationCancelAndErrorKeepTheDestructiveActionRecoverable() async throws {
+        let (_, preview) = try await permanentPurgeRenderingFixture()
+
+        var confirmationCalls = 0
+        try await render(
+            ProjectPermanentPurgeConfirmationView(preview: preview) {
+                confirmationCalls += 1
+            },
+            name: "permanent-purge-cancel",
+            width: 620,
+            expected: nil,
+            expectedText: ["Cancel", "Permanently Delete History"],
+            presentIdentifiers: [
+                "project-permanent-purge-confirmation",
+                "project-permanent-purge-cancel",
+                "project-permanent-purge-confirm",
+            ],
+            pressKeyboardShortcuts: [.cancelAction]
+        )
+        XCTAssertEqual(confirmationCalls, 0, "Cancel must not purge the removed registration")
+
+        confirmationCalls = 0
+        try await render(
+            ProjectPermanentPurgeConfirmationView(preview: preview) {
+                confirmationCalls += 1
+                throw ProjectPermanentPurgeError.stalePreview
+            },
+            name: "permanent-purge-error",
+            width: 620,
+            expected: nil,
+            expectedText: [
+                "Permanent purge was not completed",
+                "Retained project data changed after this confirmation was prepared",
+                "Permanently Delete History",
+            ],
+            presentIdentifiers: [
+                "project-permanent-purge-confirmation",
+                "project-permanent-purge-confirm",
+            ],
+            postActionIdentifiers: ["project-permanent-purge-error"],
+            postActionVisibleIdentifiers: ["project-permanent-purge-error"],
+            postActionFocusedIdentifier: "project-permanent-purge-error",
+            pressKeyboardShortcuts: [.defaultAction]
+        )
+        XCTAssertEqual(confirmationCalls, 1)
     }
 
     func testProjectArchiveAndArchivedDetailAtWideAndCompactWidths() async throws {
@@ -2226,6 +2346,41 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         ]
     }
 
+    private func permanentPurgeRenderingFixture() async throws -> (RemovedProjectRecord, ProjectPermanentPurgePreview) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PermanentPurgeRendering-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let projectID = ProjectID(rawValue: "permanent-purge-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "permanent-purge-rendering-registration",
+            requestGeneration: 9
+        )
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Register permanent purge rendering fixture") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Purgeable History')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, ?, 'complete')",
+                bindings: [.text(projectID.rawValue), .text(registration.registrationID), .integer(registration.requestGeneration)]
+            )
+        }
+
+        let removal = ProjectRemovalManager(store: store)
+        let record = try await removal.apply(try await removal.preview(projectID: projectID))
+        let execution = try ProjectExecutionFileStore(
+            root: directory.appendingPathComponent("Execution", isDirectory: true),
+            create: true
+        )
+        let preview = try await ProjectPermanentPurgeManager(store: store, executionStore: execution)
+            .preview(removalID: record.id)
+        return (record, preview)
+    }
+
     private func accessibilityText(_ root: AXUIElement) -> String {
         var pending = [root], result: [String] = [], count = 0
         while let element = pending.popLast(), count < 1000 {
@@ -2263,8 +2418,10 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         afterPressIdentifiers: [[String]] = [],
         afterPressFocusIdentifiers: [[String]] = [],
         afterPressFocusTitles: [[String]] = [],
+        afterPressActionableTitles: [[String]] = [],
         afterPressText: [[String]] = [],
         pressTitles: [String] = [],
+        pressKeyboardShortcuts: [NativeKeyboardShortcut] = [],
         minimumElementSizes: [String: CGSize] = [:],
         sheetAttachmentName: String? = nil,
         externalInspectionStage: String? = nil,
@@ -2490,6 +2647,21 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 )
                 XCTAssertEqual(focusedValue as? Bool, true, "\(title) did not retain focus")
             }
+            for title in afterPressActionableTitles.indices.contains(index) ? afterPressActionableTitles[index] : [] {
+                let element = try XCTUnwrap(
+                    accessibilityButton(try XCTUnwrap(ownWindow), title: title),
+                    "Missing actionable post-press accessibility button titled \(title)"
+                )
+                var actions: CFArray?
+                XCTAssertEqual(
+                    AXUIElementCopyActionNames(element, &actions),
+                    .success
+                )
+                XCTAssertTrue(
+                    (actions as? [String])?.contains(kAXPressAction) == true,
+                    "\(title) must expose the accessibility press action"
+                )
+            }
             for text in afterPressText.indices.contains(index) ? afterPressText[index] : [] {
                 XCTAssertTrue(
                     accessibilityText(try XCTUnwrap(ownWindow)).contains(text),
@@ -2526,6 +2698,34 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             )
             XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
             try await Task.sleep(for: .milliseconds(300))
+        }
+        for shortcut in pressKeyboardShortcuts {
+            let hadPresentedSheet = !window.sheets.isEmpty
+            let targetWindow = window.sheets.last ?? window
+            let event = try XCTUnwrap(NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: [],
+                timestamp: 0,
+                windowNumber: targetWindow.windowNumber,
+                context: nil,
+                characters: shortcut.characters,
+                charactersIgnoringModifiers: shortcut.characters,
+                isARepeat: false,
+                keyCode: shortcut.keyCode
+            ))
+            XCTAssertTrue(
+                targetWindow.performKeyEquivalent(with: event),
+                "Native \(shortcut.description) key did not reach the purge confirmation"
+            )
+            try await Task.sleep(for: .milliseconds(300))
+            if shortcut == .cancelAction, hadPresentedSheet {
+                let deadline = Date().addingTimeInterval(2)
+                while !window.sheets.isEmpty, Date() < deadline {
+                    try? await Task.sleep(for: .milliseconds(25))
+                }
+                XCTAssertTrue(window.sheets.isEmpty, "Native Escape must dismiss the purge confirmation sheet")
+            }
         }
         for identifier in postActionIdentifiers {
             XCTAssertNotNil(

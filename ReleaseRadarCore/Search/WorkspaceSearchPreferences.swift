@@ -55,9 +55,15 @@ public struct WorkspaceSearchPreferencesRepository: Sendable {
     public static let payloadVersion: Int64 = 1
 
     private let store: DeliveryStore
+    private let beforeSaveTransaction: @Sendable () async -> Void
 
     public init(store: DeliveryStore) {
+        self.init(store: store, beforeSaveTransaction: {})
+    }
+
+    init(store: DeliveryStore, beforeSaveTransaction: @escaping @Sendable () async -> Void) {
         self.store = store
+        self.beforeSaveTransaction = beforeSaveTransaction
     }
 
     public func loadWorkingDefinition() async throws -> WorkspaceSearchPreferenceRecord {
@@ -80,7 +86,9 @@ public struct WorkspaceSearchPreferencesRepository: Sendable {
         let bound = try await WorkspaceSearchQuery.boundToCurrentAuthority(store: store, definition: definition)
         let payload = try Self.encoder.encode(bound)
         let now = ISO8601DateFormatter().string(from: Date())
+        await beforeSaveTransaction()
         try await store.transact(actor: .init(id: "release-radar"), reason: "Save workspace search preferences") { connection in
+            try WorkspaceSearchQuery.validateCurrentAuthority(connection: connection, definition: bound)
             try connection.execute(
                 """
                 INSERT INTO workspace_search_preferences (singleton_id, payload_version, payload_data, updated_at)
@@ -136,7 +144,9 @@ public struct WorkspaceSearchPreferencesRepository: Sendable {
         let bound = try await WorkspaceSearchQuery.boundToCurrentAuthority(store: store, definition: definition)
         let payload = try Self.encoder.encode(bound)
         let now = ISO8601DateFormatter().string(from: Date())
+        await beforeSaveTransaction()
         try await store.transact(actor: .init(id: "release-radar"), reason: "Save workspace query") { connection in
+            try WorkspaceSearchQuery.validateCurrentAuthority(connection: connection, definition: bound)
             try connection.execute(
                 """
                 INSERT INTO workspace_saved_queries (id, name, payload_version, payload_data, created_at, updated_at)

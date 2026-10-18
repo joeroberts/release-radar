@@ -446,6 +446,69 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(projection.results.count, 1)
     }
 
+    func testWorkingAndSavedQueryWritesRejectRegistrationRemovedAfterValidation() async throws {
+        for writer in WorkspaceSearchPreferenceWriter.allCases {
+            let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+            let projectID = ProjectID(rawValue: "project-save-race-\(writer.rawValue)")
+            let registrationID = "registration-save-race"
+            try await seedProject(store, projectID: projectID, registrationID: registrationID)
+            let gate = WorkspaceSearchPreferenceSaveGate()
+            let repository = WorkspaceSearchPreferencesRepository(
+                store: store,
+                beforeSaveTransaction: { await gate.pause() }
+            )
+            let definition = WorkspaceSearchDefinition(
+                text: "Needle",
+                scope: .registrations([.init(projectID: projectID, registrationID: registrationID)]),
+                domains: [.project]
+            )
+            let save = Task { () -> WorkspaceSearchPreferenceSaveOutcome in
+                do {
+                    switch writer {
+                    case .working:
+                        try await repository.saveWorkingDefinition(definition)
+                    case .saved:
+                        _ = try await repository.saveQuery(
+                            id: "saved-save-race",
+                            name: "Save race",
+                            definition: definition
+                        )
+                    }
+                    return .succeeded
+                } catch let error as WorkspaceSearchError where error == .authorizationRequired {
+                    return .authorizationRequired
+                } catch {
+                    return .other(error.localizedDescription)
+                }
+            }
+
+            await gate.waitUntilPaused()
+            try await store.transact(actor: .init(id: "fixture"), reason: "Remove registration before search save transaction") { connection in
+                try connection.execute(
+                    "DELETE FROM project_registrations WHERE project_id = ? AND registration_id = ?",
+                    bindings: [.text(projectID.rawValue), .text(registrationID)]
+                )
+            }
+            await gate.resume()
+
+            let saveOutcome = await save.value
+            XCTAssertEqual(
+                saveOutcome,
+                .authorizationRequired,
+                "The \(writer.rawValue) writer must revalidate exact registration scope inside its transaction"
+            )
+            let persistedCount = try await store.read { connection in
+                switch writer {
+                case .working:
+                    try connection.scalarInt("SELECT COUNT(*) FROM workspace_search_preferences")
+                case .saved:
+                    try connection.scalarInt("SELECT COUNT(*) FROM workspace_saved_queries WHERE id = 'saved-save-race'")
+                }
+            }
+            XCTAssertEqual(persistedCount, 0)
+        }
+    }
+
     func testAuthorityScopeRejectsCanonicallyEquivalentButByteDistinctIdentity() async throws {
         let store = DeliveryStore(databaseURL: try makeDatabaseURL())
         let recordedProjectID = ProjectID(rawValue: "project-\u{00E9}")
@@ -702,5 +765,39 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
                 ]
             )
         }
+    }
+}
+
+private enum WorkspaceSearchPreferenceWriter: String, CaseIterable, Sendable {
+    case working
+    case saved
+}
+
+private enum WorkspaceSearchPreferenceSaveOutcome: Equatable, Sendable {
+    case succeeded
+    case authorizationRequired
+    case other(String)
+}
+
+private actor WorkspaceSearchPreferenceSaveGate {
+    private var paused = false
+    private var arrival: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+    func pause() async {
+        paused = true
+        arrival?.resume()
+        arrival = nil
+        await withCheckedContinuation { releaseContinuation = $0 }
+    }
+
+    func waitUntilPaused() async {
+        guard !paused else { return }
+        await withCheckedContinuation { arrival = $0 }
+    }
+
+    func resume() {
+        releaseContinuation?.resume()
+        releaseContinuation = nil
     }
 }

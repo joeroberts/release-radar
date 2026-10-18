@@ -287,6 +287,78 @@ public actor DeliveryStore {
         }
     }
 
+    func transactPermanentlyPurgingProject<T: Sendable>(
+        removalID: ProjectRemovalID,
+        projectID: ProjectID,
+        registrationID: String,
+        requestGeneration: Int64,
+        _ body: @Sendable (SQLiteConnection) throws -> T
+    ) throws -> T {
+        guard readOnlyFiles == nil else { throw StoreError.unavailable("Documentation preflight is read-only") }
+        let connection = try availableConnection()
+        try connection.execute("BEGIN IMMEDIATE TRANSACTION")
+        let scopedConnection = connection.makeScopedConnection(access: .transaction)
+        defer { scopedConnection.invalidate() }
+        do {
+            guard let row = try connection.row(
+                """
+                SELECT historical_project_id, registration_id, request_generation
+                FROM removed_projects WHERE removal_id = ?
+                """,
+                bindings: [.text(removalID.rawValue)]
+            ) else {
+                throw ProjectPermanentPurgeError.targetAbsent
+            }
+            guard row["historical_project_id"] == .text(projectID.rawValue),
+                  row["registration_id"] == .text(registrationID),
+                  row["request_generation"] == .integer(requestGeneration) else {
+                throw ProjectPermanentPurgeError.stalePreview
+            }
+            try connection.execute(
+                "INSERT INTO project_removal_authorizations (project_id, registration_id, removal_id) VALUES (?, ?, ?)",
+                bindings: [.text(projectID.rawValue), .text(registrationID), .text(removalID.rawValue)]
+            )
+            let result = try connection.withTransactionCallbackRestrictions(
+                allowProjectRemovalHistoryWrites: true,
+                allowPermanentProjectPurgeWrites: true
+            ) {
+                try body(scopedConnection)
+            }
+            guard connection.isInTransaction else {
+                throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
+            }
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_removal_authorizations WHERE project_id = ? AND registration_id = ? AND removal_id = ?",
+                bindings: [.text(projectID.rawValue), .text(registrationID), .text(removalID.rawValue)]
+            ) == 1 else {
+                throw StoreError.unavailable("Permanent purge authorization changed during the transaction")
+            }
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM removed_projects WHERE removal_id = ?",
+                bindings: [.text(removalID.rawValue)]
+            ) == 0 else {
+                throw StoreError.unavailable("Permanent purge did not remove the retained project record")
+            }
+            try connection.execute(
+                "DELETE FROM project_removal_authorizations WHERE project_id = ? AND registration_id = ? AND removal_id = ?",
+                bindings: [.text(projectID.rawValue), .text(registrationID), .text(removalID.rawValue)]
+            )
+            let timestamp = ISO8601DateFormatter().string(from: Date())
+            try connection.execute(
+                """
+                INSERT INTO audit_events (id, actor_id, reason, created_at)
+                VALUES (?, 'release-radar-owner', 'Permanently purge removed project history', ?)
+                """,
+                bindings: [.text(UUID().uuidString), .text(timestamp)]
+            )
+            try connection.execute("COMMIT")
+            return result
+        } catch {
+            try? connection.execute("ROLLBACK")
+            throw error
+        }
+    }
+
     public func transact<T: Sendable>(
         actor: DeliveryActor,
         reason: String,

@@ -1,6 +1,57 @@
 import Darwin
 import Foundation
 
+struct ProjectExecutionPurgeInventory: Codable, Equatable, Sendable {
+    let registration: ProjectRegistration
+    let targetPolicy: ProjectExecutionPolicy?
+    let targetAssignments: [ProjectExecutionAssignment]
+    let policyUpdates: [ProjectExecutionPurgePolicyUpdate]
+    let blockingAssignmentIDs: [String]
+}
+
+struct ProjectExecutionPurgePolicyUpdate: Codable, Equatable, Sendable {
+    let before: ProjectExecutionPolicy
+    let after: ProjectExecutionPolicy
+}
+
+struct ProjectExecutionPurgeFile: Codable, Equatable, Sendable {
+    let path: [String]
+    let bytes: Data
+}
+
+struct ProjectExecutionPurgeFileUpdate: Codable, Equatable, Sendable {
+    let path: [String]
+    let before: Data
+    let after: Data
+}
+
+struct ProjectExecutionPurgeStage: Codable, Equatable, Sendable {
+    let id: String
+    let removalID: ProjectRemovalID
+    let registration: ProjectRegistration
+    let deletedFiles: [ProjectExecutionPurgeFile]
+    let updatedFiles: [ProjectExecutionPurgeFileUpdate]
+}
+
+/// Owns the exact writer locks and manifest lock until commit/rollback cleanup.
+/// The owner flock also distinguishes a suspended live operation from a crash.
+final class ProjectExecutionPurgeLease: @unchecked Sendable {
+    let stage: ProjectExecutionPurgeStage
+    private let descriptors: [Int32]
+
+    fileprivate init(stage: ProjectExecutionPurgeStage, descriptors: [Int32]) {
+        self.stage = stage
+        self.descriptors = descriptors
+    }
+
+    deinit {
+        for descriptor in descriptors.reversed() {
+            flock(descriptor, LOCK_UN)
+            close(descriptor)
+        }
+    }
+}
+
 /// Fixed file contract, separate from SQLite. All authority paths stay outside worker checkouts.
 public final class ProjectExecutionFileStore: @unchecked Sendable {
     public let root: URL
@@ -130,10 +181,13 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     }
 
     public func savePolicy(_ value: ProjectExecutionPolicy, expected: ProjectExecutionPolicy?) throws {
-        try withAuthorityLock(["context-selection"]) {
-            try lock.withLock {
-                let path = ["Projects", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), "policy.json"]
-                try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
+        let path = ["Projects", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), "policy.json"]
+        // Store transactions reconcile synchronously. Never wait here for a
+        // purge lease whose owner may itself be awaiting the store actor, or
+        // for a context-selection holder waiting on that lease.
+        try withAuthorityLock(["context-selection"], nonblocking: true) {
+            try withAuthorityLock(path, nonblocking: true) {
+                try lock.withLock { try write(value, expected: expected, path: path) }
             }
         }
     }
@@ -141,16 +195,19 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     public func saveAssignment(_ value: ProjectExecutionAssignment, expected: ProjectExecutionAssignment?) throws {
         try value.validated()
         let selectionSensitive = expected == nil || value.state == .preparing || value.state == .authorized
+        let project = try ProjectExecutionPaths.component(value.registration.projectID.rawValue)
+        let path = ["Assignments", project, try ProjectExecutionPaths.component(value.id), "assignment.json"]
         let persist = {
-            try self.lock.withLock {
-                let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
-                if selectionSensitive {
-                    try self.requireSelectedCodexContext(value.codexContextID)
+            try self.withAuthorityLocks([path, ["Projects", project, "policy.json"]], nonblocking: true) {
+                try self.lock.withLock {
+                    if selectionSensitive {
+                        try self.requireSelectedCodexContext(value.codexContextID)
+                    }
+                    try self.write(value, expected: expected, path: path)
                 }
-                try self.withAuthorityLock(path) { try self.write(value, expected: expected, path: path) }
             }
         }
-        if selectionSensitive { try withAuthorityLock(["context-selection"], persist) }
+        if selectionSensitive { try withAuthorityLock(["context-selection"], nonblocking: true, persist) }
         else { try persist() } // STOP/closure cannot wait behind unrelated provisioning.
     }
 
@@ -164,14 +221,421 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
                 try value.validated()
                 guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
                 try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
-                    try lock.withLock {
-                        let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
-                        try withAuthorityLock(path) { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
+                    let project = try ProjectExecutionPaths.component(value.registration.projectID.rawValue)
+                    let path = ["Assignments", project, try ProjectExecutionPaths.component(value.id), "assignment.json"]
+                    try withAuthorityLocks([path, ["Projects", project, "policy.json"]]) {
+                        try lock.withLock { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
                     }
                 }
                 return value
             }
         }
+    }
+
+    func permanentPurgeInventory(registration: ProjectRegistration) throws -> ProjectExecutionPurgeInventory {
+        try lock.withLock { try permanentPurgeInventoryUnlocked(registration: registration) }
+    }
+
+    func stagePermanentPurge(
+        removalID: ProjectRemovalID,
+        expected: ProjectExecutionPurgeInventory
+    ) throws -> ProjectExecutionPurgeLease {
+        let project = try ProjectExecutionPaths.component(expected.registration.projectID.rawValue)
+        let paths = [["Projects", project, "policy.json"]]
+            + expected.targetAssignments.map { ["Assignments", project, $0.id, "assignment.json"] }
+            + expected.policyUpdates.map { ["Projects", $0.before.registration.projectID.rawValue, "policy.json"] }
+        var descriptors = try acquireAuthorityLocks(paths)
+        var transferred = false
+        defer { if !transferred { releaseAuthorityLocks(descriptors) } }
+        let stage = try lock.withLock {
+            let current = try permanentPurgeInventoryUnlocked(registration: expected.registration)
+            guard current == expected else { throw ProjectExecutionError.conflict }
+            guard current.blockingAssignmentIDs.isEmpty else { throw ProjectExecutionError.assignmentNotAuthorized }
+
+            let project = try ProjectExecutionPaths.component(expected.registration.projectID.rawValue)
+            var deleted = [ProjectExecutionPurgeFile]()
+            if current.targetPolicy != nil {
+                let path = ["Projects", project, "policy.json"]
+                deleted.append(.init(path: path, bytes: try readBytes(path: path)))
+            }
+            for assignment in current.targetAssignments {
+                let path = [
+                    "Assignments", project,
+                    try ProjectExecutionPaths.component(assignment.id), "assignment.json",
+                ]
+                deleted.append(.init(path: path, bytes: try readBytes(path: path)))
+            }
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let updates = try current.policyUpdates.map { update -> ProjectExecutionPurgeFileUpdate in
+                let path = [
+                    "Projects", try ProjectExecutionPaths.component(update.before.registration.projectID.rawValue),
+                    "policy.json",
+                ]
+                return .init(
+                    path: path,
+                    before: try readBytes(path: path),
+                    after: try encoder.encode(update.after)
+                )
+            }
+            let stage = ProjectExecutionPurgeStage(
+                id: UUID().uuidString,
+                removalID: removalID,
+                registration: expected.registration,
+                deletedFiles: deleted,
+                updatedFiles: updates
+            )
+            let manifestPath = ["PermanentPurge", stage.id]
+            guard let owner = try acquireAuthorityLock(manifestPath, nonblocking: true) else {
+                throw ProjectExecutionError.conflict
+            }
+            descriptors.append(owner)
+            let manifest = try encoder.encode(stage)
+            try writeBytes(manifest, expected: nil, path: manifestPath)
+            do {
+                for file in deleted { try removeBytes(path: file.path, expected: file.bytes) }
+                for update in updates {
+                    try writeBytes(update.after, expected: update.before, path: update.path)
+                }
+                return stage
+            } catch {
+                try? restorePermanentPurgeUnlocked(stage, manifestBytes: manifest)
+                throw error
+            }
+        }
+        transferred = true
+        return ProjectExecutionPurgeLease(stage: stage, descriptors: descriptors)
+    }
+
+    func pendingPermanentPurgeStages() throws -> [ProjectExecutionPurgeStage] {
+        try lock.withLock {
+            let names = try childNames(["PermanentPurge"], metadataEntries: true)
+            for name in names where name.hasPrefix(".rr-") && name.hasSuffix(".tmp") {
+                _ = try validatedTemporaryPurgeStage(readBytes(path: ["PermanentPurge", name]))
+            }
+            return try names.filter { !$0.hasPrefix(".") }.sorted().map { name in
+                let stage = try read(ProjectExecutionPurgeStage.self, path: ["PermanentPurge", name])
+                guard stage.id == name else { throw ProjectExecutionError.identityMismatch }
+                try validate(stage: stage)
+                return stage
+            }
+        }
+    }
+
+    /// A live owner wins even while suspended awaiting SQLite. Recovery never
+    /// waits for it or interprets a still-existing removal row as a rollback.
+    func recoverPermanentPurgeLease(_ stage: ProjectExecutionPurgeStage) throws -> ProjectExecutionPurgeLease? {
+        try validate(stage: stage)
+        guard let owner = try acquireAuthorityLock(["PermanentPurge", stage.id], nonblocking: true) else { return nil }
+        var descriptors = [owner]
+        var transferred = false
+        defer { if !transferred { releaseAuthorityLocks(descriptors) } }
+        guard try lock.withLock({ try exists(["PermanentPurge", stage.id]) }) else {
+            try lock.withLock {
+                try removeLockFile(for: ["PermanentPurge", stage.id])
+                try removeEmptyDirectory(["PermanentPurge"])
+            }
+            return nil
+        }
+        let project = try ProjectExecutionPaths.component(stage.registration.projectID.rawValue)
+        descriptors += try acquireAuthorityLocks(
+            [["Projects", project, "policy.json"]] + stage.deletedFiles.map(\.path) + stage.updatedFiles.map(\.path)
+        )
+        try lock.withLock { _ = try manifestBytes(for: stage) }
+        transferred = true
+        return ProjectExecutionPurgeLease(stage: stage, descriptors: descriptors)
+    }
+
+    func restorePermanentPurge(_ lease: ProjectExecutionPurgeLease) throws {
+        let stage = lease.stage
+        try lock.withLock {
+            let manifest = try manifestBytes(for: stage)
+            try restorePermanentPurgeUnlocked(stage, manifestBytes: manifest)
+        }
+    }
+
+    func finalizePermanentPurge(_ lease: ProjectExecutionPurgeLease) throws {
+        let stage = lease.stage
+        try lock.withLock {
+            let manifest = try manifestBytes(for: stage)
+            for file in stage.deletedFiles {
+                if try exists(file.path) { try removeBytes(path: file.path, expected: file.bytes) }
+            }
+            for update in stage.updatedFiles {
+                if try readBytes(path: update.path) == update.before {
+                    try writeBytes(update.after, expected: update.before, path: update.path)
+                } else {
+                    guard try readBytes(path: update.path) == update.after else {
+                        throw ProjectExecutionError.conflict
+                    }
+                }
+            }
+            try removeTargetMetadataDirectories(after: stage)
+            try removePurgeManifest(stage, bytes: manifest)
+        }
+    }
+
+    private func permanentPurgeInventoryUnlocked(
+        registration: ProjectRegistration
+    ) throws -> ProjectExecutionPurgeInventory {
+        let project = try ProjectExecutionPaths.component(registration.projectID.rawValue)
+        let policyPath = ["Projects", project, "policy.json"]
+        let storedPolicy = try exists(policyPath) ? read(ProjectExecutionPolicy.self, path: policyPath) : nil
+        let targetPolicy = storedPolicy.map { Self.sameRegistration($0.registration, registration) } == true ? storedPolicy : nil
+
+        var assignments = [ProjectExecutionAssignment]()
+        for task in try childNames(["Assignments", project]) {
+            let value = try read(
+                ProjectExecutionAssignment.self,
+                path: ["Assignments", project, task, "assignment.json"]
+            )
+            try value.validated()
+            guard value.id == task, value.registration.projectID.rawValue == project else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            if Self.sameRegistration(value.registration, registration) { assignments.append(value) }
+        }
+        assignments.sort { $0.id < $1.id }
+
+        var updates = [ProjectExecutionPurgePolicyUpdate]()
+        for policyProject in try childNames(["Projects"]) {
+            let path = ["Projects", policyProject, "policy.json"]
+            if try !exists(path) {
+                guard try childNames(["Projects", policyProject], metadataEntries: true).allSatisfy({ $0 == ".policy.json.lock" }) else {
+                    throw ProjectExecutionError.conflict
+                }
+                continue
+            }
+            let policy = try read(ProjectExecutionPolicy.self, path: path)
+            guard policy.registration.projectID.rawValue == policyProject else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            guard !Self.sameRegistration(policy.registration, registration),
+                  policy.previousProjectIDs?.contains(registration.projectID.rawValue) == true else { continue }
+            var updated = policy
+            updated.previousProjectIDs = policy.previousProjectIDs?.filter {
+                $0 != registration.projectID.rawValue
+            }
+            updates.append(.init(before: policy, after: updated))
+        }
+        updates.sort { $0.before.registration.projectID.rawValue < $1.before.registration.projectID.rawValue }
+
+        let blockers = assignments.filter(Self.blocksPermanentPurge).map(\.id).sorted()
+        return .init(
+            registration: registration,
+            targetPolicy: targetPolicy,
+            targetAssignments: assignments,
+            policyUpdates: updates,
+            blockingAssignmentIDs: blockers
+        )
+    }
+
+    private static func sameRegistration(_ lhs: ProjectRegistration, _ rhs: ProjectRegistration) -> Bool {
+        lhs.projectID == rhs.projectID && lhs.registrationID == rhs.registrationID
+    }
+
+    private static func blocksPermanentPurge(_ assignment: ProjectExecutionAssignment) -> Bool {
+        assignment.state == .authorized
+            || assignment.state == .preparing
+            || assignment.state == .unknown
+            || assignment.state == .stopped
+            || assignment.uncertainOutcome == true
+            || assignment.finalizationFailed == true
+            || assignment.retirement.map { !$0.completed } == true
+            || ((assignment.sessionID != nil || assignment.launchReserved == true)
+                && assignment.connectionClosed != true && assignment.state != .closed)
+    }
+
+    private func validate(stage: ProjectExecutionPurgeStage) throws {
+        guard !stage.id.isEmpty else { throw ProjectExecutionError.identityMismatch }
+        try ProjectExecutionPaths.component(stage.id)
+        let project = try ProjectExecutionPaths.component(stage.registration.projectID.rawValue)
+        for file in stage.deletedFiles {
+            if file.path == ["Projects", project, "policy.json"] {
+                let policy = try JSONDecoder().decode(ProjectExecutionPolicy.self, from: file.bytes)
+                guard Self.sameRegistration(policy.registration, stage.registration) else {
+                    throw ProjectExecutionError.identityMismatch
+                }
+                continue
+            }
+            guard file.path.count == 4,
+                  file.path[0] == "Assignments",
+                  file.path[1] == project,
+                  file.path[3] == "assignment.json" else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            try ProjectExecutionPaths.component(file.path[2])
+            let assignment = try JSONDecoder().decode(ProjectExecutionAssignment.self, from: file.bytes)
+            try assignment.validated()
+            guard assignment.id == file.path[2], Self.sameRegistration(assignment.registration, stage.registration),
+                  !Self.blocksPermanentPurge(assignment) else { throw ProjectExecutionError.identityMismatch }
+        }
+        for update in stage.updatedFiles {
+            guard update.path.count == 3,
+                  update.path[0] == "Projects",
+                  update.path[2] == "policy.json" else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            let updateProject = update.path[1]
+            try ProjectExecutionPaths.component(updateProject)
+            guard let before = try? JSONDecoder().decode(ProjectExecutionPolicy.self, from: update.before),
+                  let after = try? JSONDecoder().decode(ProjectExecutionPolicy.self, from: update.after),
+                  !Self.sameRegistration(before.registration, stage.registration),
+                  before.registration.projectID.rawValue == updateProject,
+                  before.previousProjectIDs?.contains(project) == true else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            var expected = before
+            expected.previousProjectIDs = before.previousProjectIDs?.filter { $0 != project }
+            guard after == expected else { throw ProjectExecutionError.identityMismatch }
+        }
+    }
+
+    private func manifestBytes(for stage: ProjectExecutionPurgeStage) throws -> Data {
+        try validate(stage: stage)
+        let path = ["PermanentPurge", stage.id]
+        let bytes = try readBytes(path: path)
+        guard try JSONDecoder().decode(ProjectExecutionPurgeStage.self, from: bytes) == stage else {
+            throw ProjectExecutionError.conflict
+        }
+        return bytes
+    }
+
+    private func restorePermanentPurgeUnlocked(
+        _ stage: ProjectExecutionPurgeStage,
+        manifestBytes: Data
+    ) throws {
+        for file in stage.deletedFiles {
+            if try exists(file.path) {
+                guard try readBytes(path: file.path) == file.bytes else { throw ProjectExecutionError.conflict }
+            } else {
+                try writeBytes(file.bytes, expected: nil, path: file.path)
+            }
+        }
+        for update in stage.updatedFiles {
+            let current = try readBytes(path: update.path)
+            if current == update.after {
+                try writeBytes(update.before, expected: update.after, path: update.path)
+            } else if current != update.before {
+                throw ProjectExecutionError.conflict
+            }
+        }
+        for file in stage.deletedFiles {
+            let names = try childNames(Array(file.path.dropLast()), metadataEntries: true)
+            let allowed = Set([file.path.last!, "." + file.path.last! + ".lock"])
+            guard names.allSatisfy(allowed.contains) else { throw ProjectExecutionError.conflict }
+        }
+        let project = try ProjectExecutionPaths.component(stage.registration.projectID.rawValue)
+        let policyPath = ["Projects", project, "policy.json"]
+        if try !exists(policyPath) {
+            try removeLockFile(for: policyPath)
+            try removeEmptyDirectory(["Projects", project], requireEmpty: true)
+        }
+        try removePurgeManifest(stage, bytes: manifestBytes)
+    }
+
+    private func removePurgeManifest(_ stage: ProjectExecutionPurgeStage, bytes: Data) throws {
+        // A crash between link/rename and writeBytes' deferred unlink can leave
+        // an identifying manifest copy. Only remove a decoded exact-stage copy;
+        // opaque interrupted writes remain recoverable and block completion.
+        for name in try childNames(["PermanentPurge"], metadataEntries: true) where name.hasPrefix(".rr-") && name.hasSuffix(".tmp") {
+            let path = ["PermanentPurge", name]
+            let temporary = try readBytes(path: path)
+            let candidate = try validatedTemporaryPurgeStage(temporary)
+            if candidate.id == stage.id {
+                guard candidate == stage else { throw ProjectExecutionError.conflict }
+                try removeBytes(path: path, expected: temporary)
+            }
+        }
+        try removeBytes(path: ["PermanentPurge", stage.id], expected: bytes)
+        try removeLockFile(for: ["PermanentPurge", stage.id])
+        try removeEmptyDirectory(["PermanentPurge"])
+    }
+
+    private func validatedTemporaryPurgeStage(_ bytes: Data) throws -> ProjectExecutionPurgeStage {
+        let candidate = try JSONDecoder().decode(ProjectExecutionPurgeStage.self, from: bytes)
+        try validate(stage: candidate)
+        // A temporary file may predate publication of its manifest. Without a
+        // matching durable manifest, preserve it and block both discovery and
+        // finalization; a new purge must not hide an older identifying orphan.
+        guard try exists(["PermanentPurge", candidate.id]) else { throw ProjectExecutionError.conflict }
+        _ = try manifestBytes(for: candidate)
+        return candidate
+    }
+
+    private func removeBytes(path: [String], expected: Data) throws {
+        guard try readBytes(path: path) == expected else { throw ProjectExecutionError.conflict }
+        let directory = try parent(path, create: false)
+        defer { close(directory) }
+        guard unlinkat(directory, path.last!, 0) == 0, fsync(directory) == 0 else {
+            throw ProjectExecutionError.unavailable
+        }
+    }
+
+    private func removeTargetMetadataDirectories(after stage: ProjectExecutionPurgeStage) throws {
+        for file in stage.deletedFiles where file.path.first == "Assignments" {
+            try removeLockFile(for: file.path)
+            try removeEmptyDirectory(Array(file.path.dropLast()), requireEmpty: true)
+        }
+        let project = try ProjectExecutionPaths.component(stage.registration.projectID.rawValue)
+        // Every remaining task must prove a different registration. Unknown
+        // directories/temp files keep the recovery manifest and fail cleanup.
+        for task in try childNames(["Assignments", project]) {
+            let assignment = try read(ProjectExecutionAssignment.self, path: ["Assignments", project, task, "assignment.json"])
+            try assignment.validated()
+            guard assignment.id == task, assignment.registration.projectID.rawValue == project,
+                  !Self.sameRegistration(assignment.registration, stage.registration) else {
+                throw ProjectExecutionError.conflict
+            }
+        }
+        let policyPath = ["Projects", project, "policy.json"]
+        if try exists(policyPath) {
+            let policy = try read(ProjectExecutionPolicy.self, path: policyPath)
+            guard policy.registration.projectID.rawValue == project,
+                  !Self.sameRegistration(policy.registration, stage.registration) else {
+                throw ProjectExecutionError.conflict
+            }
+        } else {
+            try removeLockFile(for: policyPath)
+            try removeEmptyDirectory(["Projects", project], requireEmpty: true)
+        }
+        try removeEmptyDirectory(["Assignments", project])
+    }
+
+    private func removeLockFile(for path: [String]) throws {
+        let lockPath = Array(path.dropLast()) + ["." + path.last! + ".lock"]
+        guard try exists(lockPath) else { return }
+        let directory = try parent(path, create: false)
+        defer { close(directory) }
+        let name = "." + path.last! + ".lock"
+        var metadata = stat()
+        guard fstatat(directory, name, &metadata, AT_SYMLINK_NOFOLLOW) == 0 else {
+            if errno == ENOENT { return }
+            throw ProjectExecutionError.unavailable
+        }
+        guard metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_uid == getuid(), metadata.st_mode & 0o077 == 0,
+              metadata.st_nlink == 1 else { throw ProjectExecutionError.conflict }
+        guard unlinkat(directory, name, 0) == 0, fsync(directory) == 0 else {
+            throw ProjectExecutionError.unavailable
+        }
+    }
+
+    private func removeEmptyDirectory(_ path: [String], requireEmpty: Bool = false) throws {
+        guard !path.isEmpty, try exists(path) else { return }
+        // Open the target itself to enforce the same no-follow/owner checks as
+        // reads, including on a restart where some ancestors already vanished.
+        let target = try parent(path + ["unused"], create: false)
+        close(target)
+        let parentPath = Array(path.dropLast()) + ["unused"]
+        let directory = try parent(parentPath, create: false)
+        defer { close(directory) }
+        if unlinkat(directory, path.last!, AT_REMOVEDIR) != 0 {
+            if errno == ENOENT || (errno == ENOTEMPTY && !requireEmpty) { return }
+            throw ProjectExecutionError.unavailable
+        }
+        guard fsync(directory) == 0 else { throw ProjectExecutionError.unavailable }
     }
 
     private func requireSelectedCodexContext(_ id: UUID?) throws {
@@ -194,13 +658,20 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
             }
         }
         for project in try childNames(["Projects"]) {
-            let value = try read(ProjectExecutionPolicy.self, path: ["Projects", project, "policy.json"])
+            let path = ["Projects", project, "policy.json"]
+            if try !exists(path) {
+                guard try childNames(["Projects", project], metadataEntries: true).allSatisfy({ $0 == ".policy.json.lock" }) else {
+                    throw ProjectExecutionError.conflict
+                }
+                continue
+            }
+            let value = try read(ProjectExecutionPolicy.self, path: path)
             guard value.registration.projectID.rawValue == project else { throw ProjectExecutionError.identityMismatch }
             guard value.hookReceipt?.installed != true else { throw CodexExecutionContextError.resourcesRetained }
         }
     }
 
-    private func childNames(_ path: [String]) throws -> [String] {
+    private func childNames(_ path: [String], metadataEntries: Bool = false) throws -> [String] {
         guard try exists(path) else { return [] }
         let directory = try parent(path + ["unused"], create: false); defer { close(directory) }
         let listing = openat(directory, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
@@ -214,7 +685,7 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
                 $0.withMemoryRebound(to: CChar.self, capacity: 256) { String(cString: $0) }
             }
             if name == "." || name == ".." { continue }
-            try ProjectExecutionPaths.component(name)
+            if !metadataEntries { try ProjectExecutionPaths.component(name) }
             guard names.count < 1000 else { throw ProjectExecutionError.unavailable }
             names.append(name); errno = 0
         }
@@ -224,24 +695,63 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
 
     /// Serialize cooperating native writers across process instances. The stable
     /// lock inode is separate from the atomically replaced authority JSON file.
-    private func withAuthorityLock<T>(_ path: [String], _ body: () throws -> T) throws -> T {
+    private func withAuthorityLock<T>(_ path: [String], nonblocking: Bool = false, _ body: () throws -> T) throws -> T {
+        guard let file = try acquireAuthorityLock(path, nonblocking: nonblocking) else { throw ProjectExecutionError.conflict }
+        defer { releaseAuthorityLocks([file]) }
+        return try body()
+    }
+
+    private func withAuthorityLocks<T>(_ paths: [[String]], nonblocking: Bool = false, _ body: () throws -> T) throws -> T {
+        let files = try acquireAuthorityLocks(paths, nonblocking: nonblocking)
+        defer { releaseAuthorityLocks(files) }
+        return try body()
+    }
+
+    private func acquireAuthorityLocks(_ paths: [[String]], nonblocking: Bool = false) throws -> [Int32] {
+        // Project policy locks fence creation of new assignment paths. Acquire
+        // them before task locks so a waiting writer cannot leave a new task
+        // directory inside a purge that is already cleaning up.
+        let ordered = Set(paths).sorted {
+            if ($0.first == "Projects") != ($1.first == "Projects") { return $0.first == "Projects" }
+            return $0.lexicographicallyPrecedes($1)
+        }
+        var result = [Int32]()
+        do {
+            for path in ordered {
+                guard let file = try acquireAuthorityLock(path, nonblocking: nonblocking) else { throw ProjectExecutionError.conflict }
+                result.append(file)
+            }
+            return result
+        } catch {
+            releaseAuthorityLocks(result)
+            throw error
+        }
+    }
+
+    private func releaseAuthorityLocks(_ descriptors: [Int32]) {
+        for file in descriptors.reversed() { flock(file, LOCK_UN); close(file) }
+    }
+
+    private func acquireAuthorityLock(_ path: [String], nonblocking: Bool = false) throws -> Int32? {
         let directory = try parent(path, create: true); defer { close(directory) }
         let name = "." + path.last! + ".lock"
         let file = openat(directory, name, O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o600)
         guard file >= 0 else { throw ProjectExecutionError.conflict }
-        defer { close(file) }
+        var transferred = false
+        defer { if !transferred { close(file) } }
         var metadata = stat(), entry = stat()
         guard fstat(file, &metadata) == 0, metadata.st_mode & S_IFMT == S_IFREG,
               metadata.st_uid == getuid(), metadata.st_mode & 0o077 == 0, metadata.st_nlink == 1 else {
             throw ProjectExecutionError.conflict
         }
-        while flock(file, LOCK_EX) != 0 {
+        while flock(file, LOCK_EX | (nonblocking ? LOCK_NB : 0)) != 0 {
+            if nonblocking, errno == EWOULDBLOCK { return nil }
             if errno == EINTR { continue }; throw ProjectExecutionError.unavailable
         }
-        defer { flock(file, LOCK_UN) }
         guard fstatat(directory, name, &entry, AT_SYMLINK_NOFOLLOW) == 0,
               metadata.st_dev == entry.st_dev, metadata.st_ino == entry.st_ino else { throw ProjectExecutionError.conflict }
-        return try body()
+        transferred = true
+        return file
     }
 
     private func parent(_ path: [String], create: Bool) throws -> Int32 {

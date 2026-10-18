@@ -1137,13 +1137,147 @@ struct ProjectRemovalConfirmationView: View {
     }
 }
 
+struct ProjectPermanentPurgeConfirmationView: View {
+    @Environment(\.dismiss) private var dismiss
+    let preview: ProjectPermanentPurgePreview
+    let confirm: () async throws -> Void
+    @State private var isPurging = false
+    @State private var purgeCommitted = false
+    @State private var errorMessage: String?
+    @FocusState private var cancelKeyboardFocused: Bool
+    @FocusState private var errorKeyboardFocused: Bool
+    @AccessibilityFocusState private var cancelAccessibilityFocused: Bool
+    @AccessibilityFocusState private var errorAccessibilityFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Label("Permanently delete \(preview.projectName)?", systemImage: "trash.slash")
+                .font(RekonTypography.screenTitle)
+                .foregroundStyle(RekonTheme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Release Radar will permanently delete its retained history for this exact removed registration. This cannot be undone.")
+                .foregroundStyle(RekonTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            RekonCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Exact removed registration").font(.headline)
+                    Text(preview.projectID.rawValue)
+                        .font(.caption.monospaced())
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    Text("registration \(preview.registrationID) · generation \(preview.requestGeneration)")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 18) { purgeCounts }
+                        VStack(alignment: .leading, spacing: 8) { purgeCounts }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            RekonCallout(tone: .warning, systemImage: "externaldrive.badge.exclamationmark") {
+                Text("Copies outside Release Radar may remain").font(.headline)
+                Text("Repository files and backups are never deleted. Existing exports, backups, and forensic copies may continue to contain this history.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let errorMessage {
+                RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                    Text(purgeErrorTitle)
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityLabel("\(purgeErrorTitle). \(errorMessage)")
+                        .accessibilityIdentifier("project-permanent-purge-error")
+                        .accessibilityFocused($errorAccessibilityFocused)
+                        .focusable()
+                        .focused($errorKeyboardFocused)
+                    Text(errorMessage)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .accessibilityHidden(true)
+                }
+            }
+            HStack {
+                Spacer()
+                Button(purgeCommitted ? "Close" : "Cancel") { dismiss() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(isPurging)
+                    .accessibilityIdentifier("project-permanent-purge-cancel")
+                    .accessibilityFocused($cancelAccessibilityFocused)
+                    .focused($cancelKeyboardFocused)
+                Button(isPurging ? "Deleting…" : "Permanently Delete History") { performPurge() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RekonTheme.danger)
+                    .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isPurging || purgeCommitted)
+                    .accessibilityIdentifier("project-permanent-purge-confirm")
+            }
+        }
+        .padding(28)
+        .frame(minWidth: 520, idealWidth: 680)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("project-permanent-purge-confirmation")
+        .onAppear {
+            cancelKeyboardFocused = true
+            cancelAccessibilityFocused = true
+        }
+    }
+
+    @ViewBuilder private var purgeCounts: some View {
+        Text("\(preview.inventory.retainedRecordCount) retained records")
+        Text("\(preview.inventory.auditEventCount) audit events")
+        Text("\(preview.inventory.commandReceiptCount) command receipts")
+        Text("\(preview.inventory.searchReferenceCount) search references")
+        Text("\(preview.inventory.executionPolicyCount) execution policies")
+        Text("\(preview.inventory.executionAssignmentCount) execution assignments")
+    }
+
+    private var purgeErrorTitle: String {
+        purgeCommitted ? "History was permanently purged; refresh needed" : "Permanent purge was not completed"
+    }
+
+    private func performPurge() {
+        isPurging = true
+        errorMessage = nil
+        Task {
+            do {
+                try await confirm()
+                dismiss()
+            } catch {
+                purgeCommitted = error is PermanentProjectPurgeRefreshError
+                errorMessage = error.localizedDescription
+                isPurging = false
+                cancelKeyboardFocused = false
+                cancelAccessibilityFocused = false
+                errorKeyboardFocused = true
+                errorAccessibilityFocused = true
+            }
+        }
+    }
+}
+
 struct RemovedProjectView: View {
     let project: RemovedProjectRecord
     let activity: ProjectActivityProjection
+    var previewPurge: () async throws -> ProjectPermanentPurgePreview = {
+        throw ProjectPermanentPurgeError.targetAbsent
+    }
+    var purge: (ProjectPermanentPurgePreview) async throws -> Void = { _ in }
     @State private var selectedFilter: HistoryFilter = .all
     @State private var selectedEventID: HistoryEventIdentity?
     @State private var viewportOffset: Double?
     @State private var historyFocus: NavigationFocus? = .filterSummary
+    @State private var purgePreview: ProjectPermanentPurgePreview?
+    @State private var purgePreparationError: String?
+    @State private var isPreparingPurge = false
+    @State private var showsPurgeConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1153,7 +1287,7 @@ struct RemovedProjectView: View {
                     VStack(alignment: .leading, spacing: 14) { heading; retainedCounts }
                 }
                 RekonCallout(tone: .information, systemImage: "lock") {
-                    Text("Retained history is read-only").font(.headline)
+                    Text("Retained history is read-only until permanently deleted").font(.headline)
                     Text("This is the historical record for the removed registration. It has no saved folder access, live delivery graph, notifications, or restore action.")
                         .foregroundStyle(RekonTheme.secondaryText)
                 }
@@ -1161,6 +1295,25 @@ struct RemovedProjectView: View {
                     .font(.caption.monospaced())
                     .foregroundStyle(RekonTheme.secondaryText)
                     .textSelection(.enabled)
+                if let purgePreparationError {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Permanent purge could not be prepared").font(.headline)
+                        Text(purgePreparationError)
+                            .foregroundStyle(RekonTheme.secondaryText)
+                            .textSelection(.enabled)
+                    }
+                }
+                HStack {
+                    Spacer()
+                    Button(isPreparingPurge ? "Preparing…" : "Permanently Delete History…") {
+                        preparePermanentPurge()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RekonTheme.danger)
+                    .controlSize(.large)
+                    .disabled(isPreparingPurge)
+                    .accessibilityIdentifier("removed-project-permanent-purge")
+                }
             }
             .padding(.horizontal, 28)
             .padding(.top, 26)
@@ -1179,7 +1332,15 @@ struct RemovedProjectView: View {
             )
         }
         .background(RekonTheme.background)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("removed-project-history")
+        .sheet(isPresented: $showsPurgeConfirmation, onDismiss: { purgePreview = nil }) {
+            if let purgePreview {
+                ProjectPermanentPurgeConfirmationView(preview: purgePreview) {
+                    try await purge(purgePreview)
+                }
+            }
+        }
     }
 
     private var heading: some View {
@@ -1198,6 +1359,20 @@ struct RemovedProjectView: View {
         }
         .font(.caption)
         .foregroundStyle(RekonTheme.secondaryText)
+    }
+
+    private func preparePermanentPurge() {
+        isPreparingPurge = true
+        purgePreparationError = nil
+        Task {
+            do {
+                purgePreview = try await previewPurge()
+                showsPurgeConfirmation = true
+            } catch {
+                purgePreparationError = error.localizedDescription
+            }
+            isPreparingPurge = false
+        }
     }
 }
 

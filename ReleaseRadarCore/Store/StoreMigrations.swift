@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 27
+    static let currentVersion: Int64 = 28
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -118,6 +118,9 @@ enum StoreMigrations {
             if version < 27 {
                 try connection.executeScript(schemaVersion27)
                 try seedTicketLaneOrder(connection)
+            }
+            if version < 28 {
+                try connection.executeScript(schemaVersion28)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -418,7 +421,12 @@ enum StoreMigrations {
     ) throws -> Bool {
         for trigger in criticalTriggers where trigger.version <= version {
             let expectedSQL: String
-            if version >= 17 {
+            if version >= 28,
+               trigger.name.hasPrefix("retained_"),
+               trigger.name.hasSuffix("_reject_delete") {
+                let table = String(trigger.name.dropLast("_reject_delete".count))
+                expectedSQL = permanentlyPurgeableRetainedDeleteTrigger(table: table)
+            } else if version >= 17 {
                 switch trigger.name {
                 case "ticket_task_plans_reject_delete": expectedSQL = ticketTaskPlansRejectDeleteVersionSeventeenTrigger
                 case "ticket_tasks_reject_delete": expectedSQL = ticketTasksRejectDeleteVersionSeventeenTrigger
@@ -1418,6 +1426,36 @@ enum StoreMigrations {
         END
         """
     }
+
+    private static func permanentlyPurgeableRetainedDeleteTrigger(table: String) -> String {
+        """
+        CREATE TRIGGER \(table)_reject_delete
+        BEFORE DELETE ON \(table)
+        WHEN NOT EXISTS (
+            SELECT 1 FROM project_removal_authorizations
+            WHERE project_removal_authorizations.removal_id = OLD.removal_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'retained history cannot be deleted without permanent purge authorization');
+        END
+        """
+    }
+
+    private static let permanentPurgeRetainedTables = [
+        "retained_plan_change_proposals",
+        "retained_plan_change_proposal_versions",
+        "retained_plan_change_proposal_decisions",
+        "retained_plan_change_proposal_applications",
+        "retained_ticket_retirements",
+        "retained_ticket_successor_links",
+        "retained_delivery_goal_obligations",
+        "retained_delivery_goal_obligation_lineage",
+        "retained_delivery_goal_obligation_drops",
+        "retained_phase_lifecycles",
+        "retained_phase_lifecycle_events",
+        "retained_ticket_delivery_evidence_targets",
+        "retained_ticket_delivery_evidence_observations",
+    ]
 
     private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
         (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
@@ -3213,4 +3251,11 @@ enum StoreMigrations {
             REFERENCES tickets(project_id, id) ON DELETE CASCADE
     );
     """
+
+    private static let schemaVersion28 = permanentPurgeRetainedTables.map { table in
+        """
+        DROP TRIGGER \(table)_reject_delete;
+        \(permanentlyPurgeableRetainedDeleteTrigger(table: table));
+        """
+    }.joined(separator: "\n")
 }

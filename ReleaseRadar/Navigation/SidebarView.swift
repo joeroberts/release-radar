@@ -232,7 +232,7 @@ struct SidebarView: View {
         } else if let error = model.dashboardError {
             FailureStateView(
                 presentation: .init(
-                    title: "Delivery data unavailable",
+                    title: model.permanentPurgeNeedsRefresh ? "History permanently purged; refresh needed" : "Delivery data unavailable",
                     detail: error,
                     systemImage: "externaldrive.badge.exclamationmark",
                     tone: .error,
@@ -241,7 +241,13 @@ struct SidebarView: View {
                 style: .full,
                 actionTitle: "Reload dashboard",
                 action: {
-                    Task { await model.reloadDashboardAfterCommittedAgentCommand() }
+                    Task {
+                        if model.permanentPurgeNeedsRefresh {
+                            await model.reloadAfterPermanentProjectPurge()
+                        } else {
+                            await model.reloadDashboardAfterCommittedAgentCommand()
+                        }
+                    }
                 }
             )
         } else if let dashboard = model.dashboard {
@@ -486,7 +492,12 @@ struct SidebarView: View {
             case let .removedProject(removalID):
                 if let project = dashboard.removedProjects.first(where: { $0.id == removalID }),
                    let activity = model.removedActivity(for: removalID) {
-                    RemovedProjectView(project: project, activity: activity)
+                    RemovedProjectView(
+                        project: project,
+                        activity: activity,
+                        previewPurge: { try await model.previewPermanentProjectPurge(removalID: removalID) },
+                        purge: { try await model.applyPermanentProjectPurge($0) }
+                    )
                 } else {
                     DetailUnavailableView(title: "Removed Project", image: "clock.badge.xmark")
                 }

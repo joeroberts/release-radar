@@ -49,6 +49,93 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testCommittedPermanentPurgeWithdrawsExactSearchIdentityCachesAndLateSearchResult() async throws {
+        let fixture = try await permanentPurgeSearchFixture()
+        let gate = PermanentPurgeWorkspaceSearchGate()
+        let model = AppModel(
+            store: fixture.store,
+            permanentPurgeExecutionRoot: { fixture.executionRoot },
+            workspaceSearchLoader: { store, definition in
+                let projection = try await WorkspaceSearchQuery.search(store: store, definition: definition)
+                await gate.blockAfterPreparing(projection)
+                return projection
+            },
+            externalServicesSuppressed: true,
+            seedSampleData: false
+        )
+
+        await model.loadDashboard()
+        await model.loadWorkspaceSearchPreferences(runSearch: false)
+        await model.navigate(to: .search)
+        let outstandingSearch = Task { await model.runWorkspaceSearch(persist: false) }
+        await gate.waitUntilBlocked()
+
+        let removed = try await model.applyProjectRemoval(
+            try await model.previewProjectRemoval(projectID: fixture.target.projectID)
+        )
+        let purge = try await model.previewPermanentProjectPurge(removalID: removed.id)
+        try await model.applyPermanentProjectPurge(purge)
+
+        try await assertSearchDefinitions(
+            model: model,
+            store: fixture.store,
+            preserve: fixture.other,
+            remove: fixture.target
+        )
+        XCTAssertEqual(model.selection, .projects)
+
+        await gate.release()
+        await outstandingSearch.value
+
+        try await assertSearchDefinitions(
+            model: model,
+            store: fixture.store,
+            preserve: fixture.other,
+            remove: fixture.target
+        )
+    }
+
+    @MainActor
+    func testCommittedPermanentPurgeReportsRefreshFailureWithoutClaimingDismissedSuccess() async throws {
+        let fixture = try await permanentPurgeSearchFixture()
+        let dashboardLoader = RouteDashboardLoader(failingCalls: [3])
+        let model = AppModel(
+            store: fixture.store,
+            permanentPurgeExecutionRoot: { fixture.executionRoot },
+            dashboardLoader: { try await dashboardLoader.load(from: $0) },
+            externalServicesSuppressed: true,
+            seedSampleData: false
+        )
+
+        await model.loadDashboard()
+        await model.loadWorkspaceSearchPreferences(runSearch: false)
+        await model.navigate(to: .search)
+        await model.runWorkspaceSearch(persist: false)
+        let removed = try await model.applyProjectRemoval(
+            try await model.previewProjectRemoval(projectID: fixture.target.projectID)
+        )
+        let purge = try await model.previewPermanentProjectPurge(removalID: removed.id)
+
+        do {
+            try await model.applyPermanentProjectPurge(purge)
+            XCTFail("A committed purge with a failed refresh must not report ordinary success")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.localizedCaseInsensitiveContains("permanently purged"))
+            XCTAssertTrue(error.localizedDescription.localizedCaseInsensitiveContains("refresh"))
+        }
+
+        try await assertSearchDefinitions(
+            model: model,
+            store: fixture.store,
+            preserve: fixture.other,
+            remove: fixture.target
+        )
+        XCTAssertEqual(model.selection, .removedProject(removed.id))
+        XCTAssertTrue(model.dashboardError?.localizedCaseInsensitiveContains("permanently purged") == true)
+        XCTAssertTrue(model.dashboardError?.localizedCaseInsensitiveContains("refresh") == true)
+    }
+
+    @MainActor
     func testAddProjectWindowUsesRekonChrome() async throws {
         let databaseURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-AddProjectChrome-\(UUID().uuidString).sqlite")
@@ -6988,6 +7075,112 @@ final class AppRouteTests: XCTestCase {
         return values
     }
 
+    @MainActor
+    private func permanentPurgeSearchFixture() async throws -> PermanentPurgeSearchFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PermanentPurgeSearch-\(UUID().uuidString)", isDirectory: true)
+        let executionRoot = directory.appendingPathComponent("Execution", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let target = WorkspaceSearchProjectIdentity(
+            projectID: .init(rawValue: "permanent-purge-search-target"),
+            registrationID: "permanent-purge-search-target-registration",
+            name: "Purge Search Target",
+            lifecycle: .active
+        )
+        let other = WorkspaceSearchProjectIdentity(
+            projectID: .init(rawValue: "permanent-purge-search-other"),
+            registrationID: "permanent-purge-search-other-registration",
+            name: "Purge Search Other",
+            lifecycle: .active
+        )
+        let store = DeliveryStore(
+            databaseURL: directory.appendingPathComponent("store.sqlite"),
+            executionAssignmentRoot: { executionRoot }
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed permanent purge search identities") { connection in
+            for project in [target, other] {
+                try connection.execute(
+                    "INSERT INTO projects (id, name) VALUES (?, ?)",
+                    bindings: [.text(project.projectID.rawValue), .text(project.name)]
+                )
+                try connection.execute(
+                    "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, 1, 'complete')",
+                    bindings: [.text(project.projectID.rawValue), .text(project.registrationID)]
+                )
+            }
+        }
+        let definition = WorkspaceSearchDefinition(
+            text: "Purge Search",
+            scope: .registrations([
+                .init(projectID: target.projectID, registrationID: target.registrationID),
+                .init(projectID: other.projectID, registrationID: other.registrationID),
+            ]),
+            domains: [.project]
+        )
+        let preferences = WorkspaceSearchPreferencesRepository(store: store)
+        try await preferences.saveWorkingDefinition(definition)
+        _ = try await preferences.saveQuery(
+            id: "permanent-purge-search-saved",
+            name: "Permanent purge search",
+            definition: definition
+        )
+        return .init(store: store, executionRoot: executionRoot, target: target, other: other)
+    }
+
+    @MainActor
+    private func assertSearchDefinitions(
+        model: AppModel,
+        store: DeliveryStore,
+        preserve: WorkspaceSearchProjectIdentity,
+        remove: WorkspaceSearchProjectIdentity
+    ) async throws {
+        let expected = [WorkspaceSearchRegistrationIdentity(
+            projectID: preserve.projectID,
+            registrationID: preserve.registrationID
+        )]
+        XCTAssertEqual(searchRegistrations(model.workspaceSearchDefinition), expected)
+        XCTAssertEqual(
+            model.workspaceSearchProjection?.results.map { result in
+                WorkspaceSearchRegistrationIdentity(
+                    projectID: result.project.projectID,
+                    registrationID: result.project.registrationID
+                )
+            },
+            expected
+        )
+        let saved = try XCTUnwrap(model.workspaceSearchSavedQueries.first)
+        guard case let .supported(saved) = saved else {
+            return XCTFail("Permanent purge must retain the supported saved query with its surviving registration")
+        }
+        XCTAssertEqual(searchRegistrations(saved.definition), expected)
+        for entry in model.navigationHistory.entries {
+            guard let search = entry.workspaceSearch else { continue }
+            XCTAssertEqual(searchRegistrations(search.definition), expected)
+        }
+        let repository = WorkspaceSearchPreferencesRepository(store: store)
+        guard case let .supported(working) = try await repository.loadWorkingDefinition() else {
+            return XCTFail("Permanent purge must retain a pruned working search definition")
+        }
+        XCTAssertEqual(searchRegistrations(working), expected)
+        let persisted = try await repository.loadSavedQueries()
+        guard case let .supported(savedDefinition)? = persisted.first else {
+            return XCTFail("Permanent purge must retain a pruned saved search definition")
+        }
+        XCTAssertEqual(searchRegistrations(savedDefinition.definition), expected)
+        XCTAssertFalse(searchRegistrations(model.workspaceSearchDefinition).contains {
+            $0.projectID == remove.projectID && $0.registrationID == remove.registrationID
+        })
+    }
+
+    private func searchRegistrations(_ definition: WorkspaceSearchDefinition) -> [WorkspaceSearchRegistrationIdentity] {
+        guard case let .registrations(registrations) = definition.scope else {
+            return []
+        }
+        return registrations
+    }
+
 }
 
 private struct Task10GoalState: Equatable {
@@ -7576,6 +7769,40 @@ private actor RouteDashboardLoader {
 private enum RouteProjectionError: Error {
     case forcedRefreshFailure
     case missingSnapshotText
+}
+
+private struct PermanentPurgeSearchFixture {
+    let store: DeliveryStore
+    let executionRoot: URL
+    let target: WorkspaceSearchProjectIdentity
+    let other: WorkspaceSearchProjectIdentity
+}
+
+private actor PermanentPurgeWorkspaceSearchGate {
+    private var didBlock = false
+    private var didRelease = false
+    private var blockedContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func blockAfterPreparing(_ projection: WorkspaceSearchProjection) async {
+        guard !didBlock else { return }
+        didBlock = true
+        blockedContinuations.forEach { $0.resume() }
+        blockedContinuations.removeAll()
+        guard !didRelease else { return }
+        await withCheckedContinuation { releaseContinuations.append($0) }
+    }
+
+    func waitUntilBlocked() async {
+        guard !didBlock else { return }
+        await withCheckedContinuation { blockedContinuations.append($0) }
+    }
+
+    func release() {
+        didRelease = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
 }
 
 private actor RouteCountingTransport: PushoverTransport {

@@ -13,6 +13,14 @@ enum WorkspaceSearchSaveOutcome: Equatable, Sendable {
     case failed(String)
 }
 
+enum PermanentProjectPurgeRefreshError: Error, LocalizedError {
+    case committedNeedsRefresh
+
+    var errorDescription: String? {
+        "The history was permanently purged, but Release Radar could not refresh the latest views. Reload the dashboard to finish refreshing; do not repeat the purge."
+    }
+}
+
 private extension WorkspaceSearchHistorySource {
     var activitySource: ActivitySource {
         switch self {
@@ -95,6 +103,7 @@ final class AppModel {
     private(set) var navigationFailureMessage: String?
     private(set) var navigationFocus: NavigationFocus? = .route(.projects)
     var dashboardError: String?
+    private(set) var permanentPurgeNeedsRefresh = false
     var codexContextPath: String?
     var codexContextSelectedAt: Date?
     var codexContextStatus = "Selection required"
@@ -144,6 +153,8 @@ final class AppModel {
     private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore, [ProjectID: [EvidenceReadback]]) async throws -> DashboardProjection
+    private let permanentPurgeExecutionRoot: () throws -> URL
+    private let workspaceSearchLoader: @Sendable (DeliveryStore, WorkspaceSearchDefinition) async throws -> WorkspaceSearchProjection
     private var documentationObserver: DocumentationObservationCoordinator
     private let deliveryEvidenceBookmarkStore: any ProjectBookmarkStoring
     private let evidencePreviewLoader: @Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview
@@ -192,6 +203,10 @@ final class AppModel {
         pushoverKeychain: PushoverKeychainStore? = nil,
         notificationCoordinator: AppNotificationCoordinator? = nil,
         projectOnboarding: FolderProjectOnboarding? = nil,
+        permanentPurgeExecutionRoot: @escaping () throws -> URL = { try ProjectExecutionFileStore.applicationRoot() },
+        workspaceSearchLoader: @escaping @Sendable (DeliveryStore, WorkspaceSearchDefinition) async throws -> WorkspaceSearchProjection = {
+            try await WorkspaceSearchQuery.search(store: $0, definition: $1)
+        },
         reviewInboxLoader: @escaping @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection = {
             try await ReviewInboxProjection.load(from: $0, projectID: $1)
         },
@@ -219,6 +234,8 @@ final class AppModel {
         self.pushoverKeychain = resolvedKeychain
         let resolvedOnboarding = projectOnboarding ?? FolderProjectOnboarding(store: store)
         self.projectOnboarding = resolvedOnboarding
+        self.permanentPurgeExecutionRoot = permanentPurgeExecutionRoot
+        self.workspaceSearchLoader = workspaceSearchLoader
         self.reviewInboxLoader = reviewInboxLoader
         self.dashboardLoader = if let dashboardLoader {
             { store, _ in try await dashboardLoader(store) }
@@ -827,6 +844,100 @@ final class AppModel {
         return record
     }
 
+    func previewPermanentProjectPurge(removalID: ProjectRemovalID) async throws -> ProjectPermanentPurgePreview {
+        let executionStore = try ProjectExecutionFileStore(
+            root: permanentPurgeExecutionRoot(),
+            create: true
+        )
+        return try await ProjectPermanentPurgeManager(store: store, executionStore: executionStore)
+            .preview(removalID: removalID)
+    }
+
+    func applyPermanentProjectPurge(_ preview: ProjectPermanentPurgePreview) async throws {
+        let executionStore = try ProjectExecutionFileStore(
+            root: permanentPurgeExecutionRoot(),
+            create: true
+        )
+        _ = try await ProjectPermanentPurgeManager(store: store, executionStore: executionStore)
+            .apply(preview)
+        // Withdraw committed data synchronously before any refresh can suspend.
+        // Earlier reads must not republish the identity after this boundary.
+        projectionReloadGeneration &+= 1
+        navigationGeneration &+= 1
+        invalidateWorkspaceSearchRun(clearProjection: false)
+        let registration = ProjectRegistration(
+            projectID: preview.projectID,
+            registrationID: preview.registrationID,
+            requestGeneration: preview.requestGeneration
+        )
+        removedActivities[preview.removalID] = nil
+        if let current = dashboard {
+            dashboard = DashboardProjection(
+                projects: current.projects,
+                archivedProjects: current.archivedProjects,
+                removedProjects: current.removedProjects.filter { $0.id != preview.removalID },
+                boards: current.boards,
+                projectPlans: current.projectPlans,
+                allPhaseBoards: current.allPhaseBoards,
+                ticketOrderingContexts: current.ticketOrderingContexts,
+                ticketOrderingFailures: current.ticketOrderingFailures,
+                workspaceGoals: current.workspaceGoals
+            )
+        }
+        workspaceSearchDefinition = workspaceSearchDefinition.removing(registration)
+        if let projection = workspaceSearchProjection {
+            let results = projection.results.filter {
+                !registrationIdentity(
+                    .init(projectID: $0.project.projectID, registrationID: $0.project.registrationID),
+                    matches: .init(projectID: preview.projectID, registrationID: preview.registrationID)
+                )
+            }
+            workspaceSearchProjection = .init(
+                definition: projection.definition.removing(registration),
+                results: results,
+                omissions: projection.omissions
+            )
+            if let selectedWorkspaceSearchResultID,
+               !results.contains(where: { $0.id == selectedWorkspaceSearchResultID }) {
+                self.selectedWorkspaceSearchResultID = nil
+            }
+        }
+        workspaceSearchSavedQueries = workspaceSearchSavedQueries.map { record in
+            guard case var .supported(query) = record else { return record }
+            query.definition = query.definition.removing(registration)
+            return .supported(query)
+        }
+        navigationHistory.removePurgedRegistration(registration, removalID: preview.removalID)
+        navigationFocus = .recovery
+        permanentPurgeNeedsRefresh = true
+        try await refreshAfterPermanentProjectPurge()
+    }
+
+    func reloadAfterPermanentProjectPurge() async {
+        do {
+            try await refreshAfterPermanentProjectPurge()
+        } catch {
+            dashboardError = error.localizedDescription
+        }
+    }
+
+    private func refreshAfterPermanentProjectPurge() async throws {
+        let dashboardOutcome = await reloadProjectProjections()
+        let dashboardGeneration = projectionReloadGeneration
+        let searchRefreshed = await loadWorkspaceSearchPreferences(runSearch: true)
+        guard dashboardOutcome == .published,
+              dashboardGeneration == projectionReloadGeneration,
+              searchRefreshed else {
+            permanentPurgeNeedsRefresh = true
+            dashboardError = PermanentProjectPurgeRefreshError.committedNeedsRefresh.localizedDescription
+            throw PermanentProjectPurgeRefreshError.committedNeedsRefresh
+        }
+        permanentPurgeNeedsRefresh = false
+        selectedProjectID = nil
+        selection = .projects
+        navigationFocus = .route(.projects)
+    }
+
     func loadDashboard() async {
         await loadAlertRules()
         await notificationCoordinator.setActivityRefreshHandler { [weak self] projectID in
@@ -1076,6 +1187,7 @@ final class AppModel {
 
     private func clearEphemeralViewState() {
         invalidateWorkspaceSearchRun()
+        permanentPurgeNeedsRefresh = false
         workspaceGoalsDomain = .delivery
         workspaceGoalsProjectID = nil
         workspaceGoalsDeliveryLifecycle = nil
@@ -1332,7 +1444,8 @@ final class AppModel {
         }
     }
 
-    func runWorkspaceSearch(persist: Bool = true, captureNavigation: Bool = true) async {
+    @discardableResult
+    func runWorkspaceSearch(persist: Bool = true, captureNavigation: Bool = true) async -> Bool {
         if captureNavigation {
             captureCurrentNavigationContext()
         }
@@ -1352,7 +1465,7 @@ final class AppModel {
                 await navigate(to: .search)
             }
         }
-        guard canExecuteWorkspaceSearch else { return }
+        guard canExecuteWorkspaceSearch else { return false }
         workspaceSearchGeneration &+= 1
         let generation = workspaceSearchGeneration
         workspaceSearchIsLoading = true
@@ -1367,8 +1480,9 @@ final class AppModel {
             } else {
                 workspaceSearchDefinition
             }
-            let projection = try await WorkspaceSearchQuery.search(store: store, definition: definition)
-            guard generation == workspaceSearchGeneration else { return }
+            guard generation == workspaceSearchGeneration else { return false }
+            let projection = try await workspaceSearchLoader(store, definition)
+            guard generation == workspaceSearchGeneration else { return false }
             workspaceSearchDefinition = definition
             workspaceSearchProjection = projection
             workspaceSearchNeedsScopeReselection = false
@@ -1385,7 +1499,7 @@ final class AppModel {
                 }
             }
         } catch {
-            guard generation == workspaceSearchGeneration else { return }
+            guard generation == workspaceSearchGeneration else { return false }
             workspaceSearchProjection = nil
             selectedWorkspaceSearchResultID = nil
             workspaceSearchFailure = error.localizedDescription
@@ -1393,17 +1507,24 @@ final class AppModel {
                 workspaceSearchNeedsScopeReselection = true
             }
         }
-        guard generation == workspaceSearchGeneration else { return }
+        guard generation == workspaceSearchGeneration else { return false }
         workspaceSearchIsLoading = false
         if captureNavigation { captureCurrentNavigationContext() }
+        return workspaceSearchFailure == nil && workspaceSearchProjection != nil
     }
 
-    func loadWorkspaceSearchPreferences(runSearch: Bool) async {
+    @discardableResult
+    func loadWorkspaceSearchPreferences(runSearch: Bool) async -> Bool {
         let repository = WorkspaceSearchPreferencesRepository(store: store)
+        invalidateWorkspaceSearchRun(clearProjection: false)
+        let generation = workspaceSearchGeneration
         do {
-            invalidateWorkspaceSearchRun(clearProjection: false)
-            workspaceSearchSavedQueries = try await repository.loadSavedQueries()
-            switch try await repository.loadWorkingDefinition() {
+            let savedQueries = try await repository.loadSavedQueries()
+            let workingDefinition = try await repository.loadWorkingDefinition()
+            guard generation == workspaceSearchGeneration else { return false }
+            workspaceSearchSavedQueries = savedQueries
+            workspaceSearchFailure = nil
+            switch workingDefinition {
             case .none:
                 workspaceSearchPreferenceIsUnsupported = false
                 workspaceSearchNeedsScopeReselection = false
@@ -1424,10 +1545,13 @@ final class AppModel {
                 workspaceSearchPersistenceMessage = "The saved working search was created by a newer Release Radar. Its filters remain stored and were not replaced."
             }
             if runSearch, !workspaceSearchPreferenceIsUnsupported {
-                await runWorkspaceSearch(persist: false, captureNavigation: false)
+                return await runWorkspaceSearch(persist: false, captureNavigation: false)
             }
+            return !workspaceSearchPreferenceIsUnsupported
         } catch {
+            guard generation == workspaceSearchGeneration else { return false }
             workspaceSearchFailure = error.localizedDescription
+            return false
         }
     }
 
@@ -1456,14 +1580,19 @@ final class AppModel {
                     ?? "The query could not be saved."
             )
         }
+        let generation = workspaceSearchGeneration
         do {
             var definition = workspaceSearchDefinition
             definition.text = workspaceSearchDraft
             let repository = WorkspaceSearchPreferencesRepository(store: store)
             let saved = try await repository.saveQuery(name: name, definition: definition)
+            guard generation == workspaceSearchGeneration else { return .saved(saved) }
             do {
-                workspaceSearchSavedQueries = try await repository.loadSavedQueries()
+                let queries = try await repository.loadSavedQueries()
+                guard generation == workspaceSearchGeneration else { return .saved(saved) }
+                workspaceSearchSavedQueries = queries
             } catch {
+                guard generation == workspaceSearchGeneration else { return .saved(saved) }
                 workspaceSearchSavedQueries.removeAll { $0.id == saved.id }
                 workspaceSearchSavedQueries.append(.supported(saved))
                 workspaceSearchSavedQueries.sort {
@@ -1474,6 +1603,7 @@ final class AppModel {
             return .saved(saved)
         } catch {
             let message = error.localizedDescription
+            guard generation == workspaceSearchGeneration else { return .failed(message) }
             workspaceSearchPersistenceMessage = message
             if (error as? WorkspaceSearchError) == .authorizationRequired {
                 workspaceSearchNeedsScopeReselection = true
@@ -1483,11 +1613,15 @@ final class AppModel {
     }
 
     func deleteWorkspaceSavedQuery(id: String) async {
+        let generation = workspaceSearchGeneration
         do {
             let repository = WorkspaceSearchPreferencesRepository(store: store)
             try await repository.deleteQuery(id: id)
-            workspaceSearchSavedQueries = try await repository.loadSavedQueries()
+            let queries = try await repository.loadSavedQueries()
+            guard generation == workspaceSearchGeneration else { return }
+            workspaceSearchSavedQueries = queries
         } catch {
+            guard generation == workspaceSearchGeneration else { return }
             workspaceSearchPersistenceMessage = error.localizedDescription
         }
     }
