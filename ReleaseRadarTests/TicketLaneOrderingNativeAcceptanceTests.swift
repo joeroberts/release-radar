@@ -7,6 +7,88 @@ import XCTest
 
 @MainActor
 final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
+    func testPreStartBlockerRendersBlockedCardInspectorAndAuditedActivity() async throws {
+        let fixture = try await makePreStartBlockerFixture()
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(
+                    registration: fixture.registration,
+                    canonicalRoot: fixture.root,
+                    authorizedRoots: [fixture.root]
+                ),
+            ]),
+            bookmarkStore: NativeOrderingBookmarkStore()
+        )
+        let blockerSummary = "Owner STOP: prerequisite is unavailable"
+        let blocker = await dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(),
+            projectRoot: fixture.root.path,
+            expectedRegistration: fixture.registration,
+            reason: blockerSummary,
+            command: .recordBlocker(
+                id: "native-pre-start-blocker",
+                ticketID: fixture.ticketID.rawValue,
+                summary: blockerSummary
+            )
+        ))
+        XCTAssertNil(blocker.error)
+
+        let transitionReason = "Block before phase readiness"
+        let transition = await dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(),
+            projectRoot: fixture.root.path,
+            expectedRegistration: fixture.registration,
+            reason: transitionReason,
+            command: .transitionTicket(ticketID: fixture.ticketID.rawValue, lane: .blocked)
+        ))
+        XCTAssertNil(transition.error)
+
+        let dashboard = try await DashboardProjection.load(
+            from: fixture.store,
+            bookmarkStore: NativeOrderingBookmarkStore()
+        )
+        let board = try XCTUnwrap(dashboard.board(for: fixture.projectID, phaseID: fixture.phaseID))
+        let activity = try await ProjectActivityProjection.load(from: fixture.store, projectID: fixture.projectID)
+        let boardHost = try await host(
+            PhaseBoardView(
+                board: board,
+                selectedTicketID: .constant(fixture.ticketID),
+                filter: .constant(.unassigned),
+                phaseSelectionStatus: .idle,
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in }
+            ),
+            title: "Pre-start blocker native board"
+        )
+        defer { boardHost.close() }
+
+        let boardWindow = try requiredAccessibilityWindow(title: boardHost.title)
+        let card = try XCTUnwrap(accessibilityElement(
+            boardWindow,
+            exactIdentifier: "ticket-\(fixture.ticketID.rawValue)"
+        ))
+        XCTAssertTrue(accessibilityText(boardWindow).contains("Blocked"))
+        XCTAssertTrue(accessibilityText(card).contains("1 blockers"))
+        XCTAssertTrue(accessibilityText(boardWindow).contains(blockerSummary))
+        XCTAssertTrue(accessibilityText(boardWindow).contains(transitionReason))
+
+        let historyHost = try await host(
+            HistoryView(
+                activity: activity,
+                projectName: "Native pre-start blocker",
+                freshness: .init(state: .unavailable, lastObservedAt: nil, reason: "Fixture")
+            ),
+            title: "Pre-start blocker native activity"
+        )
+        defer { historyHost.close() }
+        let historyWindow = try requiredAccessibilityWindow(title: historyHost.title)
+        XCTAssertTrue(accessibilityText(historyWindow).contains(transitionReason))
+    }
+
     func testPhaseBoardUsesFullLaneAnchorsAndSingleFlightPendingState() async throws {
         let nativeSession: (id: String, pauseSeconds: Double)?
         if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_TICKET_ORDERING_NATIVE_SESSION"] {
@@ -651,6 +733,73 @@ final class TicketLaneOrderingNativeAcceptanceTests: XCTestCase {
         )
     }
 
+    private func makePreStartBlockerFixture() async throws -> NativePreStartBlockerFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("release-radar-native-pre-start-\(UUID().uuidString)", isDirectory: true)
+        let root = directory.appendingPathComponent("project", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let bookmarks = NativeOrderingBookmarkStore()
+        let projectID = ProjectID(rawValue: "native-pre-start-project")
+        let phaseID = PhaseID(rawValue: "native-pre-start-phase")
+        let ticketID = TicketID(rawValue: "native-pre-start-ticket")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "native-pre-start-registration",
+            requestGeneration: 1
+        )
+        let bookmark = try bookmarks.makeBookmark(for: root)
+
+        try await store.transact(actor: .init(id: "native-pre-start-fixture"), reason: "Seed native pre-start blocker") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id,name,first_dashboard_opened) VALUES (?,?,1)",
+                bindings: [.text(projectID.rawValue), .text("Native pre-start blocker")]
+            )
+            try connection.execute(
+                "INSERT INTO project_roots (id,project_id,path) VALUES ('native-pre-start-root',?,?)",
+                bindings: [.text(projectID.rawValue), .text(root.path)]
+            )
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id,path,bookmark_data,is_stale) VALUES (?,?,?,0)",
+                bindings: [.text(projectID.rawValue), .text(root.path), .blob(bookmark)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id,registration_id,request_generation,setup_state) VALUES (?,?,?,'complete')",
+                bindings: [
+                    .text(projectID.rawValue),
+                    .text(registration.registrationID),
+                    .integer(Int64(registration.requestGeneration)),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO phases (id,project_id,name) VALUES (?,?,?)",
+                bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text("Pre-start phase")]
+            )
+            try connection.execute(
+                "INSERT INTO project_active_phases (project_id,phase_id) VALUES (?,?)",
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,?,?,?, 'backlog')",
+                bindings: [
+                    .text(ticketID.rawValue), .text(projectID.rawValue),
+                    .text(phaseID.rawValue), .text("Pre-start blocker"),
+                ]
+            )
+        }
+
+        return .init(
+            store: store,
+            projectID: projectID,
+            phaseID: phaseID,
+            ticketID: ticketID,
+            root: root,
+            registration: registration
+        )
+    }
+
     private func host<V: View>(_ view: V, title: String) async throws -> NativeOrderingHost {
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
@@ -850,6 +999,15 @@ private struct NativeOrderingFixture {
     let composedTicket: TicketID
     let decomposedTicket: TicketID
     let visibleGoal: DeliveryGoalID
+}
+
+private struct NativePreStartBlockerFixture {
+    let store: DeliveryStore
+    let projectID: ProjectID
+    let phaseID: PhaseID
+    let ticketID: TicketID
+    let root: URL
+    let registration: ProjectRegistration
 }
 
 @MainActor

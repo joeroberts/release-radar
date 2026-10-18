@@ -208,13 +208,16 @@ public enum DeliveryPlanningPolicy {
         guard ticketTaskPlanRevision == nil || lane == .accepted else {
             throw invalid("A task-plan revision is valid only for an Accepted transition.")
         }
-        if from == TicketLane.backlog.rawValue, lane != .backlog, lane != .inProgress {
+        if from == TicketLane.backlog.rawValue,
+           lane != .backlog,
+           lane != .inProgress,
+           lane != .blocked {
             throw invalid("Backlog work must enter In progress through the phase readiness gate first.")
         }
         let phase = PhaseID(rawValue: try requiredText(ticket, "phase_id"))
         if lane == .backlog {
             try clearContinuation(projectID, ticketID, connection)
-        } else if from == TicketLane.backlog.rawValue ||
+        } else if (from == TicketLane.backlog.rawValue && lane == .inProgress) ||
                     (from == TicketLane.blocked.rawValue && lane != .blocked) {
             let plan = try currentPlan(projectID, phase, connection)
             guard plan.state == .ready, plan.readyRevision == plan.revision else {
@@ -225,7 +228,8 @@ public enum DeliveryPlanningPolicy {
             if goal.lifecycle == .planned || goal.lifecycle == .awaitingAcceptance {
                 try writeLifecycle(projectID, goal.id, .active, operationTimestamp(), connection)
             }
-        } else if from != TicketLane.blocked.rawValue {
+        } else if from != TicketLane.blocked.rawValue &&
+                    !(from == TicketLane.backlog.rawValue && lane == .blocked) {
             try assertContinuingWork(projectID, ticketID, ticket, connection)
         }
         if lane == .accepted {

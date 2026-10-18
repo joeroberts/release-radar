@@ -120,13 +120,76 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
         let store = try await fixture()
         for lane in TicketLane.allCases where lane != .backlog {
             try await rejectsCommand(store, .upsertTicket(ticketID: "new", phaseID: "phase", outcome: "New", lane: lane))
-            try await rejectsCommand(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Outcome", lane: lane))
-            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: lane))
+            if lane == .blocked {
+                try await succeeds(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Outcome", lane: lane))
+                try await succeeds(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Outcome", lane: .backlog))
+                try await succeeds(store, .transitionTicket(ticketID: "t", lane: lane))
+                try await succeeds(store, .transitionTicket(ticketID: "t", lane: .backlog))
+            } else {
+                try await rejectsCommand(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Outcome", lane: lane))
+                try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: lane))
+            }
         }
         for command in [AgentCommand.requestReview(id: "review", ticketID: "t", kind: "review", summary: "Review"),
                         .recordCompletion(id: "completion", ticketID: "t", summary: "Done")] {
             try await rejectsCommand(store, command)
         }
+    }
+
+    func testPreStartBlockerUsesTypedTransitionWithoutActivatingWorkAndLaterStartStillUsesGates() async throws {
+        let store = try await fixture()
+        _ = try await revise(store, goals: [goal("g")], assignments: [assignment("t", "g")])
+        let root = URL(fileURLWithPath: "/synthetic-task7")
+        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: Self.project, canonicalRoot: root, authorizedRoots: [root])
+        ]))
+        let blocker = AgentCommandEnvelope(
+            version: 1, requestID: UUID(), projectRoot: root.path,
+            reason: "Owner STOP: prerequisite is unavailable",
+            command: .recordBlocker(id: "owner-stop", ticketID: "t", summary: "Owner STOP: prerequisite is unavailable")
+        )
+        let blockerResult = await dispatcher.dispatch(blocker)
+        XCTAssertNil(blockerResult.error)
+
+        let requestID = UUID(uuidString: "10210210-2102-4102-8102-102102102102")!
+        let block = AgentCommandEnvelope(
+            version: 1, requestID: requestID, projectRoot: root.path,
+            reason: "Block before phase readiness", command: .transitionTicket(ticketID: "t", lane: .blocked)
+        )
+        let first = await dispatcher.dispatch(block)
+        XCTAssertNil(first.error)
+        let replay = await dispatcher.dispatch(block)
+        XCTAssertEqual(replay, first, "An uncertain-outcome replay returns the committed receipt")
+
+        let preStart = try await store.read { db in
+            (
+                try db.scalarText("SELECT lane FROM tickets WHERE id='t'"),
+                try db.scalarText("SELECT summary FROM blockers WHERE id='owner-stop' AND resolved_at IS NULL"),
+                try db.scalarText("SELECT lifecycle FROM delivery_goals WHERE id='g'"),
+                try db.scalarText("SELECT activated_at FROM delivery_goals WHERE id='g'"),
+                try db.scalarText("SELECT state FROM phase_plans WHERE project_id='p' AND phase_id='phase'"),
+                try db.scalarInt("SELECT COUNT(*) FROM project_active_phases WHERE project_id='p'"),
+                try db.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason='Block before phase readiness'"),
+                try db.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id=?", bindings: [.text(requestID.uuidString)])
+            )
+        }
+        XCTAssertEqual(preStart.0, TicketLane.blocked.rawValue)
+        XCTAssertEqual(preStart.1, "Owner STOP: prerequisite is unavailable")
+        XCTAssertEqual(preStart.2, DeliveryGoalLifecycle.draft.rawValue)
+        XCTAssertNil(preStart.3)
+        XCTAssertEqual(preStart.4, PhasePlanState.draft.rawValue)
+        XCTAssertEqual(preStart.5, 0)
+        XCTAssertEqual(preStart.6, 1)
+        XCTAssertEqual(preStart.7, 1)
+
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .backlog))
+        try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        _ = try await finalize(store, revision: 1)
+        try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        try await succeeds(store, .resolveBlocker(blockerID: "owner-stop"))
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        let started = try await goals(store)
+        XCTAssertEqual(started[0].lifecycle, .active)
     }
 
     func testReadyStartActivatesGoalAndOrdinaryProgressSurvivesStructuralInvalidation() async throws {
@@ -180,7 +243,7 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
                 let store = try await readyFixture()
                 try await seed(store, "UPDATE tickets SET lane='\(from.rawValue)' WHERE id='t'")
                 let command = AgentCommand.transitionTicket(ticketID: "t", lane: to)
-                if from == .accepted || (from == .backlog && to != .backlog && to != .inProgress) {
+                if from == .accepted || (from == .backlog && to != .backlog && to != .inProgress && to != .blocked) {
                     try await rejectsCommand(store, command)
                 } else {
                     try await succeeds(store, command)

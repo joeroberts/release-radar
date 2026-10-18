@@ -3,6 +3,51 @@ import XCTest
 @testable import ReleaseRadar
 
 final class DashboardProjectionTests: XCTestCase {
+    func testPreStartBlockerProjectsTypedLaneReasonAndAuditHistory() async throws {
+        let projectID = ProjectID(rawValue: "pre-start-project")
+        let phaseID = PhaseID(rawValue: "pre-start-phase")
+        let ticketID = TicketID(rawValue: "pre-start-ticket")
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed pre-start blocker projection") { connection in
+            try connection.execute("INSERT INTO projects (id,name) VALUES ('pre-start-project','Pre-start project')")
+            try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('pre-start-phase','pre-start-project','Planning')")
+            try connection.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('pre-start-project','pre-start-phase')")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('pre-start-ticket','pre-start-project','pre-start-phase','Await prerequisite','backlog')")
+        }
+        let root = databaseURL.deletingLastPathComponent()
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(projectID: projectID, canonicalRoot: root, authorizedRoots: [root]),
+            ])
+        )
+        let blockerResult = await dispatcher.dispatch(.init(
+            version: 1, requestID: UUID(), projectRoot: root.path,
+            reason: "Owner STOP: await prerequisite",
+            command: .recordBlocker(id: "pre-start-owner-stop", ticketID: ticketID.rawValue, summary: "Owner STOP: await prerequisite")
+        ))
+        XCTAssertNil(blockerResult.error)
+        let transitionResult = await dispatcher.dispatch(.init(
+            version: 1, requestID: UUID(), projectRoot: root.path,
+            reason: "Block before planning is ready", command: .transitionTicket(ticketID: ticketID.rawValue, lane: .blocked)
+        ))
+        XCTAssertNil(transitionResult.error)
+
+        let dashboard = try await DashboardProjection.load(from: store)
+        let board = try XCTUnwrap(dashboard.board(for: projectID, phaseID: phaseID))
+        let card = try XCTUnwrap(board.lane(.blocked)?.cards.first)
+        let detail = try XCTUnwrap(board.detail(for: ticketID))
+        let activity = try await ProjectActivityProjection.load(from: store, projectID: projectID)
+
+        XCTAssertEqual(card.id, ticketID)
+        XCTAssertEqual(card.blockerCount, 1)
+        XCTAssertEqual(detail.ownerAttention, ["Owner STOP: await prerequisite"])
+        XCTAssertTrue(detail.auditHistory.contains("Block before planning is ready"))
+        XCTAssertTrue(activity.items.contains {
+            $0.source == .audit && $0.ticketID == ticketID && $0.detail == "Block before planning is ready"
+        })
+    }
+
     func testTicketOrderingFailureIsIsolatedToAffectedProject() async throws {
         let healthyProjectID = ProjectID(rawValue: "ordering-healthy")
         let brokenProjectID = ProjectID(rawValue: "ordering-broken")
