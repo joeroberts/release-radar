@@ -70,3 +70,43 @@ struct RepositoryPlanSourceCapture {
         SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
     }
 }
+
+/// Verifies an app-materialized preparation snapshot through the same
+/// descriptor-relative, no-follow reader used for repository capture.
+public enum RepositoryPlanSourceSnapshot {
+    public static func verify(
+        rootURL: URL,
+        manifest: RepositoryPlanSourceManifest
+    ) throws {
+        let reader = try RepositoryDocumentReader(
+            rootURL: rootURL,
+            limits: .init(),
+            afterRead: nil
+        )
+        let expectedFiles = Set(manifest.sources.map { "input/" + $0.path })
+        var expectedDirectories: Set<String> = ["input", "session"]
+        for file in expectedFiles {
+            let components = file.split(separator: "/").map(String.init)
+            guard components.count > 1 else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            var path = components[0]
+            for component in components.dropFirst().dropLast() {
+                path += "/" + component
+                expectedDirectories.insert(path)
+            }
+        }
+        let inventory = try reader.inventory(rootDirectories: ["input", "session"])
+        guard inventory.files == expectedFiles,
+              inventory.directories == expectedDirectories else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        for source in manifest.sources {
+            let bytes = try reader.read("input/" + source.path)
+            guard bytes == source.bytes else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+        }
+        try reader.verifyStable()
+    }
+}

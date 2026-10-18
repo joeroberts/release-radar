@@ -4,6 +4,35 @@ import OSLog
 import ReleaseRadarCore
 import Security
 
+protocol PlanPreparationServicing: Sendable {
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String]
+    ) async throws -> RepositoryPlanPreparationReadback
+    func status(
+        _ identity: RepositoryPlanPreparationIdentity
+    ) async throws -> RepositoryPlanPreparationReadback
+    func cancel(
+        _ identity: RepositoryPlanPreparationIdentity
+    ) async throws -> RepositoryPlanPreparationReadback
+    func close(_ identity: RepositoryPlanPreparationIdentity) async throws
+}
+
+extension PlanPreparationAdapter: PlanPreparationServicing {
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String]
+    ) async throws -> RepositoryPlanPreparationReadback {
+        try await prepare(
+            request,
+            context: context as any ExecutionContextLease & AnyObject,
+            allowedInstructionSources: allowedInstructionSources
+        )
+    }
+}
+
 /// The app's bounded configuration client. The installer keeps its four operations.
 actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "ExecutionSetup")
@@ -11,9 +40,12 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let bundle: URL
     private let executionRoot: @Sendable () throws -> URL
     private let contextAccessFactory: @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease
+    private let planPreparationFactory: @Sendable () -> any PlanPreparationServicing
     private var contextAccess: CodexExecutionContextLease?
     private var boundContext: CodexExecutionContext?
     private var transport: AppServerTransport?
+    private var planPreparation: (any PlanPreparationServicing)?
+    private var planPreparationIdentity: RepositoryPlanPreparationIdentity?
     private var cleanupFailure: AppServerTransportError?
 
     nonisolated static func canonicalProjectTrustKey(primaryRoot: String) throws -> String {
@@ -66,9 +98,13 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
          executionRoot: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
          contextAccessFactory: @escaping @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease = { context, store in
              try CodexExecutionContextLease(context: context, current: { try store.codexContext() })
+         },
+         planPreparationFactory: @escaping @Sendable () -> any PlanPreparationServicing = {
+             PlanPreparationAdapter()
          }) {
         self.plugin = plugin; self.bundle = bundle; self.executionRoot = executionRoot
         self.contextAccessFactory = contextAccessFactory
+        self.planPreparationFactory = planPreparationFactory
     }
 
     private func contextStore() throws -> ProjectExecutionFileStore {
@@ -91,6 +127,71 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         if let contextAccess { try contextAccess.validate() }
         else { contextAccess = try contextAccessFactory(current, contextStore()) }
         boundContext = current
+    }
+
+    func preparePlanDraft(
+        _ request: RepositoryPlanPreparationRequest
+    ) async throws -> RepositoryPlanPreparationReadback {
+        if let cleanupFailure { throw cleanupFailure }
+        guard transport == nil, planPreparation == nil,
+              let current = try contextStore().codexContext(),
+              current.id == request.codexContextID
+        else { throw CodexExecutionContextError.changed }
+
+        try await useCodexContext(request.codexContextID)
+        guard let lease = contextAccess, boundContext == current else {
+            throw CodexExecutionContextError.accessRequired
+        }
+        let globalInstruction = try current.globalInstructionSource()
+        try lease.validate()
+
+        let adapter = planPreparationFactory()
+        planPreparation = adapter
+        planPreparationIdentity = request.identity
+        contextAccess = nil // Ownership transfers to the adapter's transport.
+        do {
+            return try await adapter.prepare(
+                request,
+                context: lease,
+                allowedInstructionSources: globalInstruction.map { [$0] } ?? []
+            )
+        } catch {
+            if (try? await adapter.status(request.identity)) == nil {
+                try? lease.physicallyClosed()
+                planPreparation = nil
+                planPreparationIdentity = nil
+                boundContext = nil
+            }
+            throw error
+        }
+    }
+
+    func planDraftStatus(
+        _ identity: RepositoryPlanPreparationIdentity
+    ) async throws -> RepositoryPlanPreparationReadback {
+        guard planPreparationIdentity == identity, let planPreparation else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        return try await planPreparation.status(identity)
+    }
+
+    func cancelPlanDraft(
+        _ identity: RepositoryPlanPreparationIdentity
+    ) async throws -> RepositoryPlanPreparationReadback {
+        guard planPreparationIdentity == identity, let planPreparation else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        return try await planPreparation.cancel(identity)
+    }
+
+    func closePlanDraft(_ identity: RepositoryPlanPreparationIdentity) async throws {
+        guard planPreparationIdentity == identity, let planPreparation else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        try await planPreparation.close(identity)
+        self.planPreparation = nil
+        planPreparationIdentity = nil
+        boundContext = nil
     }
 
     static func setup(plugin: CodexPluginLifecycleCoordinator?) -> ProjectExecutionSetupCoordinator {
@@ -148,6 +249,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     private func rpc(_ method: String, _ params: RPCObject, readback: Bool = false, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
         if let cleanupFailure { throw cleanupFailure }
+        guard planPreparation == nil else { throw ProjectExecutionError.conflict }
         if transport == nil {
             guard let context = boundContext else { throw CodexExecutionContextError.selectionRequired }
             try await useCodexContext(context.id)
@@ -409,6 +511,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     func finishConfiguration() throws {
         if let cleanupFailure { throw cleanupFailure }
+        guard planPreparation == nil else { throw ProjectExecutionError.conflict }
         guard let current = transport else { contextAccess?.release(); contextAccess = nil; boundContext = nil; return }
         do { try current.close(); transport = nil; contextAccess = nil; boundContext = nil }
         catch {

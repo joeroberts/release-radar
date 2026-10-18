@@ -241,12 +241,42 @@ final class RepositoryDocumentReader {
     func inventory() throws -> (files: Set<String>, directories: Set<String>) {
         var files = Set<String>()
         var directories = Set<String>()
-        try walk("docs", files: &files, directories: &directories)
+        try walk("docs", docsOnly: true, files: &files, directories: &directories)
         return (files, directories)
     }
 
-    private func walk(_ path: String, files: inout Set<String>, directories: inout Set<String>) throws {
-        try Self.validatePath(path, limits: limits)
+    func inventory(rootDirectories: Set<String>) throws -> (files: Set<String>, directories: Set<String>) {
+        let before = Set(try rootDirectoryNames())
+        guard before == rootDirectories else { throw RepositoryDocumentError(.changedDuringRead) }
+        var files = Set<String>()
+        var directories = Set<String>()
+        for path in rootDirectories.sorted() {
+            try walk(path, docsOnly: false, files: &files, directories: &directories)
+        }
+        guard Set(try rootDirectoryNames()) == before else {
+            throw RepositoryDocumentError(.changedDuringRead)
+        }
+        return (files, directories)
+    }
+
+    private func rootDirectoryNames() throws -> [String] {
+        let descriptor = openat(root, ".", O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_DIRECTORY)
+        guard descriptor >= 0 else { throw RepositoryDocumentError(.readFailed) }
+        defer { close(descriptor) }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, Stamp(info) == rootStamp else {
+            throw RepositoryDocumentError(.changedDuringRead)
+        }
+        return try directoryNames(descriptor, path: "")
+    }
+
+    private func walk(
+        _ path: String,
+        docsOnly: Bool,
+        files: inout Set<String>,
+        directories: inout Set<String>
+    ) throws {
+        try Self.validatePath(path, limits: limits, docsOnly: docsOnly)
         directoryCount += 1
         guard directoryCount <= limits.maximumCollectionCount else { throw RepositoryDocumentError(.limitExceeded, path: path) }
         let descriptor = try openRelative(path, directory: true)
@@ -258,14 +288,14 @@ final class RepositoryDocumentReader {
         let names = try directoryNames(descriptor, path: path)
         for name in names.sorted() {
             let child = path + "/" + name
-            try Self.validatePath(child, limits: limits)
+            try Self.validatePath(child, limits: limits, docsOnly: docsOnly)
             guard fstatat(descriptor, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else {
                 throw RepositoryDocumentError(.changedDuringRead, path: child)
             }
-            if Self.isExcludedDiscoveryEntry(name: name, metadata: info) { continue }
+            if docsOnly, Self.isExcludedDiscoveryEntry(name: name, metadata: info) { continue }
             guard !Self.isProhibited(child) else { throw RepositoryDocumentError(.prohibitedContent, path: child) }
             switch info.st_mode & S_IFMT {
-            case S_IFDIR: try walk(child, files: &files, directories: &directories)
+            case S_IFDIR: try walk(child, docsOnly: docsOnly, files: &files, directories: &directories)
             case S_IFREG:
                 fileCount += 1
                 guard fileCount <= limits.maximumArtifactCount + 1 else { throw RepositoryDocumentError(.limitExceeded, path: child) }

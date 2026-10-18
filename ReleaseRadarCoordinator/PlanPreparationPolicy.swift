@@ -81,7 +81,7 @@ struct PlanPreparationPolicy: Sendable {
         try validateConfiguration(config)
         return [
             "cwd": request.snapshot.workingPath,
-            "runtimeWorkspaceRoots": [request.snapshot.rootPath],
+            "runtimeWorkspaceRoots": [request.snapshot.workingPath],
             "permissions": Self.permissionProfileID,
             "model": request.model,
             "allowProviderModelFallback": false,
@@ -95,7 +95,7 @@ struct PlanPreparationPolicy: Sendable {
     ) throws {
         guard Self.exact(result["cwd"] as? String, request.snapshot.workingPath),
               let roots = result["runtimeWorkspaceRoots"] as? [String], roots.count == 1,
-              Self.exact(roots[0], request.snapshot.rootPath),
+              Self.exact(roots[0], request.snapshot.workingPath),
               Self.exact(result["model"] as? String, request.model),
               Self.exact(result["reasoningEffort"] as? String, request.effort),
               (result["thread"] as? [String: Any])?["modelProvider"] as? String == "openai",

@@ -132,7 +132,7 @@ final class PlanPreparationPolicyTests: XCTestCase {
         let fixture = try Fixture(); let policy = try PlanPreparationPolicy(request: fixture.request)
         let parameters = try policy.threadStartParameters(config: ["permissions": [PlanPreparationPolicy.permissionProfileID: fixture.profile()]])
         XCTAssertEqual(parameters["cwd"] as? String, fixture.request.snapshot.workingPath)
-        XCTAssertEqual(parameters["runtimeWorkspaceRoots"] as? [String], [fixture.request.snapshot.rootPath])
+        XCTAssertEqual(parameters["runtimeWorkspaceRoots"] as? [String], [fixture.request.snapshot.workingPath])
         XCTAssertEqual(parameters["model"] as? String, fixture.request.model)
         XCTAssertEqual(parameters["permissions"] as? String, PlanPreparationPolicy.permissionProfileID)
         XCTAssertEqual(parameters["allowProviderModelFallback"] as? Bool, false)
@@ -143,7 +143,7 @@ final class PlanPreparationPolicyTests: XCTestCase {
         let fixture = try Fixture(); let policy = try PlanPreparationPolicy(request: fixture.request)
         let permitted = ["/selected-codex/AGENTS.md"]
         var thread: [String: Any] = [
-            "cwd": fixture.request.snapshot.workingPath, "runtimeWorkspaceRoots": [fixture.request.snapshot.rootPath],
+            "cwd": fixture.request.snapshot.workingPath, "runtimeWorkspaceRoots": [fixture.request.snapshot.workingPath],
             "model": fixture.request.model, "reasoningEffort": fixture.request.effort,
             "thread": ["id": "thread-101", "modelProvider": "openai"],
             "activePermissionProfile": ["id": PlanPreparationPolicy.permissionProfileID],
@@ -156,7 +156,7 @@ final class PlanPreparationPolicyTests: XCTestCase {
                        ["instructionSources": ["/untrusted/AGENTS.md"]]] as [[String: Any]] {
             for (key, value) in change { thread[key] = value }
             XCTAssertThrowsError(try policy.validateThreadStart(thread, allowedInstructionSources: permitted), change.keys.joined(separator: ","))
-            thread["cwd"] = fixture.request.snapshot.workingPath; thread["runtimeWorkspaceRoots"] = [fixture.request.snapshot.rootPath]
+            thread["cwd"] = fixture.request.snapshot.workingPath; thread["runtimeWorkspaceRoots"] = [fixture.request.snapshot.workingPath]
             thread["model"] = fixture.request.model; thread["reasoningEffort"] = fixture.request.effort
             thread["activePermissionProfile"] = ["id": PlanPreparationPolicy.permissionProfileID]; thread["thread"] = ["id": "thread-101", "modelProvider": "openai"]
             thread["sandbox"] = ["networkAccess": false]; thread["approvalPolicy"] = "never"; thread.removeValue(forKey: "approvalsReviewer"); thread["instructionSources"] = permitted
