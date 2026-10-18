@@ -1889,31 +1889,6 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             rootPath: "/Synthetic/Phase3A",
             binding: nil
         )
-        let unavailableState = ProjectDocumentationState.managedUnavailable(
-            hasAuditedHandoff: true,
-            reason: .rootUnavailable,
-            validationError: nil
-        )
-        let unavailableEvidence = EvidenceProjection(
-            EvidenceReadback(
-                evidence: .init(
-                    id: .init(rawValue: "phase3a-evidence"),
-                    projectID: projectID,
-                    ticketID: nil,
-                    locator: .managedDocument(artifactID: "current-plan"),
-                    isAvailable: false
-                ),
-                managedDocument: .init(
-                    artifactID: "current-plan",
-                    resolvedPath: nil,
-                    label: "Current plan",
-                    lifecycle: nil,
-                    authority: nil,
-                    authorityRole: nil,
-                    failure: .rootUnavailable
-                )
-            )
-        )
         let project = ProjectDashboardProjection(
             id: projectID,
             name: "Documentation Freshness",
@@ -1921,19 +1896,22 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             activePhaseName: "Current delivery",
             goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
             currentWorkCount: 2,
-            attentionCount: 1,
-            evidence: [unavailableEvidence]
+            attentionCount: 1
+        )
+        let settings = ProjectSettingsSnapshot(
+            registration: registration,
+            projectName: project.name,
+            excludedTaskIDs: []
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: identity.rootPath,
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: []
         )
         let checkingStatus = DocumentationObservationStatus.checking(identity: identity, generation: 7)
-        let unavailableStatus = DocumentationObservationStatus.observed(
-            .init(
-                identity: identity,
-                generation: 8,
-                checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
-                documentationState: unavailableState,
-                evidence: []
-            )
-        )
+
         for width in [1100.0, 620.0] {
             try await render(
                 ProjectOverviewView(
@@ -1946,35 +1924,133 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     openBoard: {},
                     selectActivePhase: { _ in },
                     reloadActivePhase: {},
-                    reauthorizeActivePhase: { _ in }
+                    reauthorizeActivePhase: { _ in },
+                    loadProjectSettings: { settings }
                 ),
                 name: "phase3a-checking-\(Int(width))",
                 width: width,
-                expected: .checking,
-                expectedText: ["Checking"]
-            )
-            try await render(
-                ProjectOverviewView(
-                    project: project,
-                    board: nil,
-                    documentationState: unavailableState,
-                    documentationStatus: unavailableStatus,
-                    projectRoot: URL(fileURLWithPath: "/Synthetic/Phase3A"),
-                    phaseSelectionStatus: .idle,
-                    openBoard: {},
-                    selectActivePhase: { _ in },
-                    reloadActivePhase: {},
-                    reauthorizeActivePhase: { _ in },
-                    reauthorizeProjectHealth: { _, _ in
-                        throw ProjectRootManagementError.stale
-                    }
-                ),
-                name: "phase3a-folder-recovery-\(Int(width))",
-                width: width,
-                expected: ProjectGuidancePresentation(documentationState: unavailableState),
-                expectedText: ["Restore folder access", "Repository folder is unavailable"]
+                expected: nil,
+                postActionText: [ProjectGuidancePresentation.checking.status],
+                pressIdentifiers: ["project-manage"],
+                afterPressIdentifiers: [["manage-project-panel", "manage-project-section-documentation"]]
             )
         }
+
+        for (reason, evidenceFailure) in [
+            (DocumentationOperationError.rootUnavailable, ManagedDocumentResolutionFailure.rootUnavailable),
+            (.staleRoot, .staleRoot),
+        ] {
+            let unavailableState = ProjectDocumentationState.managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: reason,
+                validationError: nil
+            )
+            let unavailableEvidence = EvidenceProjection(
+                EvidenceReadback(
+                    evidence: .init(
+                        id: .init(rawValue: "phase3a-evidence"),
+                        projectID: projectID,
+                        ticketID: nil,
+                        locator: .managedDocument(artifactID: "current-plan"),
+                        isAvailable: false
+                    ),
+                    managedDocument: .init(
+                        artifactID: "current-plan",
+                        resolvedPath: nil,
+                        label: "Current plan",
+                        lifecycle: nil,
+                        authority: nil,
+                        authorityRole: nil,
+                        failure: evidenceFailure
+                    )
+                )
+            )
+            let unavailableProject = ProjectDashboardProjection(
+                id: project.id,
+                name: project.name,
+                registration: registration,
+                activePhaseName: project.activePhaseName,
+                goalContext: project.goalContext,
+                currentWorkCount: project.currentWorkCount,
+                attentionCount: project.attentionCount,
+                evidence: [unavailableEvidence]
+            )
+            let unavailableStatus = DocumentationObservationStatus.observed(
+                .init(
+                    identity: identity,
+                    generation: 8,
+                    checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+                    documentationState: unavailableState,
+                    evidence: []
+                )
+            )
+            var reauthorizationCalls = 0
+            for width in [1100.0, 620.0] {
+                try await render(
+                    ProjectOverviewView(
+                        project: unavailableProject,
+                        board: nil,
+                        documentationState: unavailableState,
+                        documentationStatus: unavailableStatus,
+                        projectRoot: URL(fileURLWithPath: "/Synthetic/Phase3A"),
+                        phaseSelectionStatus: .idle,
+                        openBoard: {},
+                        selectActivePhase: { _ in },
+                        reloadActivePhase: {},
+                        reauthorizeActivePhase: { _ in },
+                        loadProjectSettings: { settings },
+                        loadProjectHealth: { health },
+                        reauthorizeProjectHealth: { _, _ in reauthorizationCalls += 1; return health },
+                        documentationFolderChooser: { nil }
+                    ),
+                    name: "phase3a-folder-recovery-\(reason.rawValue)-\(Int(width))",
+                    width: width,
+                    expected: nil,
+                    postActionText: [
+                        "Restore folder access",
+                        reason == .rootUnavailable ? "Repository folder is unavailable" : "Folder authorization is stale",
+                        "Folder access was not changed.",
+                    ],
+                    pressIdentifiers: ["project-manage", "project-guidance-restore-folder"],
+                    afterPressIdentifiers: [
+                        ["manage-project-panel", "project-guidance-restore-folder", "evidence-restore-folder-phase3a-evidence"],
+                        ["project-health-recovery-result"],
+                    ]
+                )
+            }
+            XCTAssertEqual(reauthorizationCalls, 0, "Cancelling must preserve the saved association")
+        }
+
+        var reauthorizedIdentity: DocumentationObservationIdentity?
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .managedUnavailable(hasAuditedHandoff: true, reason: .rootUnavailable, validationError: nil),
+                documentationStatus: .observed(.init(identity: identity, generation: 9, checkedAt: Date(), documentationState: .managedUnavailable(hasAuditedHandoff: true, reason: .rootUnavailable, validationError: nil), evidence: [])),
+                projectRoot: URL(fileURLWithPath: "/Synthetic/Phase3A"),
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectSettings: { settings },
+                loadProjectHealth: { health },
+                reauthorizeProjectHealth: { folder, capturedIdentity in
+                    XCTAssertEqual(folder.path, "/Synthetic/Phase3A")
+                    reauthorizedIdentity = capturedIdentity
+                    throw ProjectRootManagementError.stale
+                },
+                documentationFolderChooser: { URL(fileURLWithPath: "/Synthetic/Phase3A") }
+            ),
+            name: "phase3a-folder-recovery-error",
+            width: 620,
+            expected: nil,
+            postActionText: [ProjectRootManagementError.stale.localizedDescription],
+            pressIdentifiers: ["project-manage", "project-guidance-restore-folder"],
+            afterPressIdentifiers: [[], ["project-health-recovery-result"]]
+        )
+        XCTAssertEqual(reauthorizedIdentity, identity)
     }
 
     func testSharedExecutionCompatibilityPresentationCoversEveryReviewedState() {
