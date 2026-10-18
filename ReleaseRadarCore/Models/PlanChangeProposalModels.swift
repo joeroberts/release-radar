@@ -39,6 +39,7 @@ public struct DeliveryGoalObligationKey: Codable, Equatable, Hashable, Sendable 
 }
 
 public enum PlanChangeOperation: Codable, Equatable, Sendable {
+    case reconstructRepositoryPlan(RepositoryPlanReconstructionPayload)
     case addPhase(id: PhaseID, name: String)
     case addDeliveryGoal(phaseID: PhaseID, goal: DeliveryGoalDraft)
     case addUnassignedTicket(id: TicketID, outcome: String)

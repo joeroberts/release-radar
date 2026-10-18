@@ -392,6 +392,46 @@ struct FailureStatePresentation: Equatable, Sendable {
             self.init(title: "Proposal state changed",
                       detail: "Refresh the proposal history before continuing. No planning state changed.",
                       systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-proposal-state")
+        case let .invalidRepositoryPlanReconstruction(message):
+            self.init(
+                title: "Repository plan action rejected",
+                detail: "\(message) Refresh the prepared plan before continuing. No planning state changed.",
+                systemImage: "xmark.octagon",
+                tone: .error,
+                accessibilityID: "failure-repository-plan-validation"
+            )
+        case let .repositoryPlanReconstructionBlocked(blockers):
+            self.init(
+                title: "Repository plan needs review",
+                detail: blockers.map(\.message).joined(separator: " "),
+                systemImage: "exclamationmark.triangle",
+                tone: .warning,
+                accessibilityID: "failure-repository-plan-blocked"
+            )
+        case .repositoryPlanReconstructionStaleSource:
+            self.init(
+                title: "Repository plan source changed",
+                detail: "Prepare a new version from the current repository documents, review it, and approve it again. No planning state changed.",
+                systemImage: "arrow.clockwise",
+                tone: .warning,
+                accessibilityID: "failure-repository-plan-stale"
+            )
+        case .repositoryPlanReconstructionApplicationAttemptConflict:
+            self.init(
+                title: "Repository plan Apply conflict",
+                detail: "Another Apply attempt is already recorded for this proposal version. Refresh the proposal history before continuing.",
+                systemImage: "xmark.octagon",
+                tone: .error,
+                accessibilityID: "failure-repository-plan-apply-conflict"
+            )
+        case .repositoryPlanReconstructionApplicationOutcomeUnknown:
+            self.init(
+                title: "Repository plan Apply outcome unknown",
+                detail: "Do not apply again. Reconcile the recorded attempt with persisted plan state before continuing.",
+                systemImage: "questionmark.diamond",
+                tone: .warning,
+                accessibilityID: "failure-repository-plan-apply-unknown"
+            )
         case let .ticketOrdering(error):
             self.init(
                 title: "Ticket order unchanged",

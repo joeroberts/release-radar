@@ -1,0 +1,346 @@
+import CryptoKit
+import Foundation
+
+public enum RepositoryPlanReconstructionPreviewQuery {
+    public static func preview(
+        source: RepositoryPlanReconstructionSourceSnapshot,
+        reviewedProjection: RepositoryPlanProjection,
+        corrections: [RepositoryPlanReconstructionCorrection],
+        explicitMappings: [RepositoryPlanReconstructionMappingSelection],
+        from store: DeliveryStore
+    ) async throws -> RepositoryPlanReconstructionPreview {
+        try await store.read { connection in
+            try preview(
+                source: source,
+                reviewedProjection: reviewedProjection,
+                corrections: corrections,
+                explicitMappings: explicitMappings,
+                connection: connection
+            )
+        }
+    }
+
+    private static func preview(
+        source: RepositoryPlanReconstructionSourceSnapshot,
+        reviewedProjection: RepositoryPlanProjection,
+        corrections: [RepositoryPlanReconstructionCorrection],
+        explicitMappings: [RepositoryPlanReconstructionMappingSelection],
+        connection: SQLiteConnection
+    ) throws -> RepositoryPlanReconstructionPreview {
+        try validateSource(
+            source,
+            reviewedProjection: reviewedProjection,
+            corrections: corrections,
+            connection: connection
+        )
+        let subjects = RepositoryPlanReconstructionPolicy.subjects(in: reviewedProjection)
+        let subjectSet = Set(subjects)
+        let selected = Dictionary(grouping: explicitMappings, by: \.subject)
+        guard selected.values.allSatisfy({ $0.count == 1 }),
+              selected.keys.allSatisfy(subjectSet.contains) else {
+            throw RepositoryPlanReconstructionError.invalidPayload(
+                "Explicit reconstruction mappings must name each reviewed subject at most once."
+            )
+        }
+
+        let priorMappings = try priorMappings(
+            source: source,
+            projectID: source.projectID,
+            connection: connection
+        )
+        var comparisons: [RepositoryPlanReconstructionComparison] = []
+        var blockers: [RepositoryPlanReconstructionBlocker] = []
+
+        for subject in subjects {
+            if let mapping = selected[subject]?.first {
+                comparisons.append(try mappedComparison(
+                    subject: subject,
+                    destinationID: mapping.destinationID,
+                    source: source,
+                    connection: connection,
+                    blockers: &blockers
+                ))
+                continue
+            }
+
+            let prior = Set(priorMappings[subject] ?? [])
+            if prior.count == 1, let destinationID = prior.first {
+                comparisons.append(try mappedComparison(
+                    subject: subject,
+                    destinationID: destinationID,
+                    source: source,
+                    connection: connection,
+                    blockers: &blockers
+                ))
+                continue
+            }
+            if prior.count > 1 {
+                comparisons.append(comparison(subject, destinationID: nil, disposition: .blocked))
+                blockers.append(.init(
+                    code: "ambiguous_prior_mapping",
+                    subject: subject,
+                    message: "Persisted reconstruction provenance names more than one destination; select one explicitly."
+                ))
+                continue
+            }
+
+            if try RepositoryPlanReconstructionPolicy.destinationExists(
+                kind: subject.kind,
+                destinationID: subject.sourceID,
+                projectID: source.projectID,
+                connection: connection
+            ) {
+                comparisons.append(comparison(
+                    subject,
+                    destinationID: subject.sourceID,
+                    disposition: .blocked
+                ))
+                blockers.append(.init(
+                    code: "raw_source_id_candidate",
+                    subject: subject,
+                    message: "An existing record has the raw source identity; confirm that mapping explicitly before reuse."
+                ))
+                continue
+            }
+
+            let destinationID = RepositoryPlanReconstructionIdentity.destinationID(
+                source: source,
+                subject: subject
+            )
+            if try RepositoryPlanReconstructionPolicy.destinationExists(
+                kind: subject.kind,
+                destinationID: destinationID,
+                projectID: source.projectID,
+                connection: connection
+            ) {
+                comparisons.append(comparison(
+                    subject,
+                    destinationID: destinationID,
+                    disposition: .conflicting
+                ))
+                blockers.append(.init(
+                    code: "deterministic_destination_occupied",
+                    subject: subject,
+                    message: "The deterministic reconstruction destination is already occupied without reusable provenance."
+                ))
+            } else {
+                comparisons.append(comparison(
+                    subject,
+                    destinationID: destinationID,
+                    disposition: .new
+                ))
+            }
+        }
+
+        for index in comparisons.indices
+            where comparisons[index].disposition == .new
+                || comparisons[index].disposition == .unchanged {
+            let subject = comparisons[index].subject
+            if let authority = RepositoryPlanReconstructionPolicy.authorityClass(
+                for: subject,
+                projection: reviewedProjection
+            ), authority != .currentApproved {
+                comparisons[index] = comparison(
+                    subject,
+                    destinationID: comparisons[index].destinationID,
+                    disposition: .blocked
+                )
+                blockers.append(.init(
+                    code: "source_authority_unresolved",
+                    subject: subject,
+                    message: "Only source records explicitly resolved as current approved may enter the live plan."
+                ))
+            }
+        }
+
+        for index in comparisons.indices where comparisons[index].disposition == .unchanged {
+            if try !RepositoryPlanReconstructionPolicy.exactMatch(
+                comparisons[index],
+                projection: reviewedProjection,
+                comparisons: comparisons,
+                source: source,
+                projectID: source.projectID,
+                connection: connection
+            ) {
+                let subject = comparisons[index].subject
+                comparisons[index] = comparison(
+                    subject,
+                    destinationID: comparisons[index].destinationID,
+                    disposition: .conflicting
+                )
+                blockers.append(.init(
+                    code: "mapped_destination_conflict",
+                    subject: subject,
+                    message: "The selected destination does not exactly match the reviewed source fields and relationships."
+                ))
+            }
+        }
+
+        for index in comparisons.indices where comparisons[index].disposition == .new {
+            if let message = try RepositoryPlanReconstructionPolicy.protectedAdditionMessage(
+                for: comparisons[index],
+                projection: reviewedProjection,
+                comparisons: comparisons,
+                projectID: source.projectID,
+                connection: connection
+            ) {
+                let subject = comparisons[index].subject
+                comparisons[index] = comparison(
+                    subject,
+                    destinationID: comparisons[index].destinationID,
+                    disposition: .blocked
+                )
+                blockers.append(.init(
+                    code: "protected_destination_addition",
+                    subject: subject,
+                    message: message
+                ))
+            }
+        }
+
+        for index in comparisons.indices
+            where comparisons[index].kind == .task
+                && (comparisons[index].disposition == .new
+                    || comparisons[index].disposition == .unchanged) {
+            let subject = comparisons[index].subject
+            guard let parent = subject.parentSourceID,
+                  let parentComparison = comparisons.first(where: {
+                      $0.kind == .ticket && exact($0.sourceID, parent)
+                  }), parentComparison.disposition != .new
+                    && parentComparison.disposition != .unchanged else { continue }
+            comparisons[index] = comparison(
+                subject,
+                destinationID: comparisons[index].destinationID,
+                disposition: .blocked
+            )
+            blockers.append(.init(
+                code: "unresolved_parent_destination",
+                subject: subject,
+                message: "An included task requires an included destination ticket."
+            ))
+        }
+
+        return .init(comparisons: comparisons, blockers: blockers)
+    }
+
+    private static func mappedComparison(
+        subject: RepositoryPlanReconstructionSubject,
+        destinationID: String,
+        source: RepositoryPlanReconstructionSourceSnapshot,
+        connection: SQLiteConnection,
+        blockers: inout [RepositoryPlanReconstructionBlocker]
+    ) throws -> RepositoryPlanReconstructionComparison {
+        guard !destinationID.isEmpty,
+              try RepositoryPlanReconstructionPolicy.destinationExists(
+                  kind: subject.kind,
+                  destinationID: destinationID,
+                  projectID: source.projectID,
+                  connection: connection
+              ) else {
+            blockers.append(.init(
+                code: "mapped_destination_missing",
+                subject: subject,
+                message: "The selected reconstruction destination no longer exists."
+            ))
+            return comparison(subject, destinationID: destinationID, disposition: .blocked)
+        }
+        return comparison(subject, destinationID: destinationID, disposition: .unchanged)
+    }
+
+    private static func comparison(
+        _ subject: RepositoryPlanReconstructionSubject,
+        destinationID: String?,
+        disposition: RepositoryPlanReconstructionComparisonDisposition
+    ) -> RepositoryPlanReconstructionComparison {
+        .init(
+            kind: subject.kind,
+            parentSourceID: subject.parentSourceID,
+            sourceID: subject.sourceID,
+            destinationID: destinationID,
+            disposition: disposition
+        )
+    }
+
+    private static func priorMappings(
+        source: RepositoryPlanReconstructionSourceSnapshot,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> [RepositoryPlanReconstructionSubject: [String]] {
+        let readbacks = try RepositoryPlanReconstructionQuery.load(
+            from: connection,
+            projectID: projectID
+        )
+        var result: [RepositoryPlanReconstructionSubject: [String]] = [:]
+        for readback in readbacks
+            where exact(readback.payload.source.repositoryID, source.repositoryID)
+                && readback.payload.source.projectionID == source.projectionID {
+            for record in readback.provenance {
+                guard let destinationID = record.comparison.destinationID else { continue }
+                result[record.comparison.subject, default: []].append(destinationID)
+            }
+        }
+        return result
+    }
+
+    private static func validateSource(
+        _ source: RepositoryPlanReconstructionSourceSnapshot,
+        reviewedProjection: RepositoryPlanProjection,
+        corrections: [RepositoryPlanReconstructionCorrection],
+        connection: SQLiteConnection
+    ) throws {
+        guard source.capturedSourceManifest.projectID == source.projectID,
+              source.capturedSourceManifest.registration == source.registration,
+              exact(source.rootID, source.capturedSourceManifest.rootID),
+              exact(source.repositoryID, source.capturedSourceManifest.repositoryID),
+              source.acceptedCatalogVersion == source.capturedSourceManifest.acceptedCatalogVersion,
+              exact(source.acceptedCatalogDigest, source.capturedSourceManifest.acceptedCatalogDigest),
+              digest(source.projectionBytes) == source.projectionSHA256,
+              let registration = try connection.row(
+                  "SELECT registration_id,request_generation FROM project_registrations WHERE project_id=?",
+                  bindings: [.text(source.projectID.rawValue)]
+              ),
+              registration["registration_id"] == .text(source.registration.registrationID),
+              registration["request_generation"] == .integer(source.registration.requestGeneration),
+              let binding = try connection.row(
+                  """
+                  SELECT root_id,repository_id,accepted_catalog_version,accepted_catalog_digest
+                  FROM project_documentation_bindings WHERE project_id=?
+                  """,
+                  bindings: [.text(source.projectID.rawValue)]
+              ),
+              binding["root_id"] == .text(source.rootID),
+              binding["repository_id"] == .text(source.repositoryID),
+              binding["accepted_catalog_version"] == .integer(Int64(source.acceptedCatalogVersion)),
+              binding["accepted_catalog_digest"] == .text(source.acceptedCatalogDigest)
+        else { throw RepositoryPlanReconstructionError.staleSource }
+
+        let original = try RepositoryPlanProjectionValidator.validate(
+            source.projectionBytes,
+            against: source.capturedSourceManifest
+        )
+        let derived = try RepositoryPlanReconstructionCorrections.apply(
+            corrections,
+            to: original.projection
+        )
+        guard original.contentSHA256 == source.projectionSHA256,
+              derived == reviewedProjection,
+              source.projectionRevision == reviewedProjection.projectionRevision,
+              exact(source.repositoryID, reviewedProjection.repositoryID),
+              exact(
+                  source.projectionID.uuidString.lowercased(),
+                  reviewedProjection.projectionID.lowercased()
+              ) else { throw RepositoryPlanReconstructionError.staleSource }
+        try RepositoryPlanReconstructionPolicy.validateReviewedProjection(
+            reviewedProjection,
+            manifest: source.capturedSourceManifest
+        )
+    }
+
+    private static func digest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func exact(_ lhs: String, _ rhs: String) -> Bool {
+        Data(lhs.utf8) == Data(rhs.utf8)
+    }
+}

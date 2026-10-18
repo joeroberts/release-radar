@@ -4,6 +4,103 @@ import Foundation
 enum PlanChangeProposalPolicy {
     static let maximumOperations = 256
 
+    static func reconstructionPayload(
+        for command: AgentCommand,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> RepositoryPlanReconstructionPayload? {
+        if case let .saveRepositoryPlanReconstruction(_, _, _, payload) = command {
+            return payload
+        }
+        let identity: (String, Int64)? = switch command {
+        case let .decidePlanChangeProposal(proposalID, version, _, _, _),
+             let .applyPlanChangeProposal(proposalID, version, _, _, _):
+            (proposalID, version)
+        default:
+            nil
+        }
+        guard let identity,
+              let row = try storedVersion(
+                projectID: projectID,
+                proposalID: .init(rawValue: identity.0),
+                version: identity.1,
+                connection: connection
+              ),
+              case let .blob(data)? = row["operations_data"],
+              let operations = try? JSONDecoder().decode([PlanChangeOperation].self, from: data),
+              operations.count == 1,
+              case let .reconstructRepositoryPlan(payload) = operations[0]
+        else { return nil }
+        return payload
+    }
+
+    static func saveReconstructionVersion(
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID,
+        expectedPreviousVersion: Int64?,
+        rationale: String,
+        payload: RepositoryPlanReconstructionPayload,
+        registration: ProjectRegistration?,
+        actorID: String,
+        connection: SQLiteConnection
+    ) throws -> Int64 {
+        guard let registration, registration.projectID == projectID else {
+            throw PlanChangeProposalError.registrationRequired
+        }
+        let currentVersion = try connection.scalarInt(
+            "SELECT current_version FROM plan_change_proposals WHERE project_id = ? AND id = ?",
+            bindings: [.text(projectID.rawValue), .text(proposalID.rawValue)]
+        )
+        guard currentVersion == expectedPreviousVersion else {
+            throw PlanChangeProposalError.versionConflict(expected: expectedPreviousVersion, current: currentVersion)
+        }
+        try RepositoryPlanReconstructionPolicy.validateForSave(
+            payload,
+            projectID: projectID,
+            registration: registration,
+            actorID: actorID,
+            connection: connection
+        )
+
+        let baseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
+        let baselineDigest = SHA256.hash(data: baseline).map { String(format: "%02x", $0) }.joined()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let operationData = try encoder.encode([PlanChangeOperation.reconstructRepositoryPlan(payload)])
+        let diffData = try encoder.encode(RepositoryPlanReconstructionPolicy.diff(for: payload))
+        let sourceImpactData = try encoder.encode([PlanChangeRecordedSourceImpact]())
+        let version = (currentVersion ?? 0) + 1
+        let now = timestamp()
+
+        if currentVersion == nil {
+            try connection.execute(
+                "INSERT INTO plan_change_proposals (project_id, id, current_version, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                bindings: [.text(projectID.rawValue), .text(proposalID.rawValue), .integer(version), .text(now), .text(now)]
+            )
+        } else {
+            try connection.execute(
+                "UPDATE plan_change_proposals SET current_version = ?, updated_at = ? WHERE project_id = ? AND id = ?",
+                bindings: [.integer(version), .text(now), .text(projectID.rawValue), .text(proposalID.rawValue)]
+            )
+        }
+        try connection.execute(
+            """
+            INSERT INTO plan_change_proposal_versions (
+                project_id, proposal_id, version, registration_id, request_generation,
+                baseline_digest, baseline_data, operations_data, diff_data,
+                source_impacts_data, rationale, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            bindings: [
+                .text(projectID.rawValue), .text(proposalID.rawValue), .integer(version),
+                .text(registration.registrationID), .integer(registration.requestGeneration),
+                .text(baselineDigest), .blob(baseline), .blob(operationData), .blob(diffData),
+                .blob(sourceImpactData), .text(rationale), .text(now),
+            ]
+        )
+        return version
+    }
+
     static func saveVersion(
         projectID: ProjectID,
         proposalID: PlanChangeProposalID,
@@ -117,6 +214,17 @@ enum PlanChangeProposalPolicy {
         guard case let .blob(savedBaseline)? = row["baseline_data"] else {
             throw PlanChangeProposalError.invalidStoredProposal
         }
+        if disposition == .approved,
+           case let .blob(operationData)? = row["operations_data"],
+           let operations = try? JSONDecoder().decode([PlanChangeOperation].self, from: operationData),
+           operations.count == 1,
+           case let .reconstructRepositoryPlan(payload) = operations[0] {
+            try RepositoryPlanReconstructionPolicy.validateForDecision(
+                payload,
+                decisionID: decisionID,
+                connection: connection
+            )
+        }
         let currentBaseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
         guard currentBaseline == savedBaseline else {
             throw PlanChangeProposalError.stale(
@@ -194,6 +302,31 @@ enum PlanChangeProposalPolicy {
             throw PlanChangeProposalError.invalidStoredProposal
         }
         let operations = try JSONDecoder().decode([PlanChangeOperation].self, from: operationData)
+        if operations.count == 1,
+           case let .reconstructRepositoryPlan(payload) = operations[0] {
+            let currentBaseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
+            guard currentBaseline == savedBaseline else {
+                throw PlanChangeProposalError.stale(
+                    try PlanningBaseline.changedCategories(from: savedBaseline, to: currentBaseline)
+                )
+            }
+            try RepositoryPlanReconstructionPolicy.apply(
+                payload,
+                projectID: projectID,
+                proposalID: proposalID,
+                version: version,
+                decisionID: decisionID,
+                applicationID: applicationID,
+                registration: registration,
+                connection: connection
+            )
+            try insertApplication(
+                projectID: projectID, proposalID: proposalID, version: version,
+                applicationID: applicationID, decisionID: decisionID,
+                auditEventID: auditEventID, connection: connection
+            )
+            return
+        }
         try requireOpenPhaseOwners(
             for: operations, projectID: projectID, connection: connection)
         let currentBaseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
@@ -209,6 +342,22 @@ enum PlanChangeProposalPolicy {
             auditEventID: auditEventID,
             connection: connection
         )
+        try insertApplication(
+            projectID: projectID, proposalID: proposalID, version: version,
+            applicationID: applicationID, decisionID: decisionID,
+            auditEventID: auditEventID, connection: connection
+        )
+    }
+
+    private static func insertApplication(
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID,
+        version: Int64,
+        applicationID: String,
+        decisionID: String,
+        auditEventID: AuditEventID,
+        connection: SQLiteConnection
+    ) throws {
         try connection.execute(
             """
             INSERT INTO plan_change_proposal_applications (
@@ -246,6 +395,8 @@ enum PlanChangeProposalPolicy {
 
         for operation in operations {
             switch operation {
+            case .reconstructRepositoryPlan:
+                break
             case .addPhase, .addUnassignedTicket:
                 break
             case let .addDeliveryGoal(phaseID, _):
@@ -450,6 +601,10 @@ enum PlanChangeProposalPolicy {
         }
         for operation in operations {
             switch operation {
+            case .reconstructRepositoryPlan:
+                throw PlanChangeProposalError.invalidOperation(
+                    "Repository reconstruction must use the dedicated save command."
+                )
             case let .addPhase(id, name):
                 guard phaseIDs.insert(Data(id.rawValue.utf8)).inserted,
                       try connection.scalarInt(
@@ -823,6 +978,10 @@ enum PlanChangeProposalPolicy {
         }
         for operation in operations {
             switch operation {
+            case .reconstructRepositoryPlan:
+                throw PlanChangeProposalError.invalidOperation(
+                    "Repository reconstruction must use the dedicated save command."
+                )
             case let .addPhase(id, name):
                 phaseItems.append(.init(summary: """
                 Add phase \(id.rawValue)

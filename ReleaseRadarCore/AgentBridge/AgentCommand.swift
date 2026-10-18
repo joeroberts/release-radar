@@ -40,6 +40,12 @@ public enum AgentCommand: Codable, Equatable, Sendable {
         planningBaselineDigest: String?
     )
     case savePlanChangeProposal(proposalID: String, expectedPreviousVersion: Int64?, rationale: String, operations: [PlanChangeOperation])
+    case saveRepositoryPlanReconstruction(
+        proposalID: String,
+        expectedPreviousVersion: Int64?,
+        rationale: String,
+        payload: RepositoryPlanReconstructionPayload
+    )
     case decidePlanChangeProposal(
         proposalID: String,
         version: Int64,
@@ -168,6 +174,11 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case planChangeProposalDecisionMismatch
     case planChangeProposalAlreadyApplied
     case planChangeProposalStale([PlanChangeBaselineCategory])
+    case invalidRepositoryPlanReconstruction(String)
+    case repositoryPlanReconstructionBlocked([RepositoryPlanReconstructionBlocker])
+    case repositoryPlanReconstructionStaleSource
+    case repositoryPlanReconstructionApplicationAttemptConflict
+    case repositoryPlanReconstructionApplicationOutcomeUnknown
     case ticketOrdering(TicketOrderingError)
     case outcomeUnknown
     case internalFailure(String)
@@ -193,13 +204,14 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let planChangeProposalDecisionID: String?
     public let planChangeProposalApplicationID: String?
     public let planChangeProposals: [PlanChangeProposalRecord]?
+    public let repositoryPlanReconstruction: RepositoryPlanReconstructionReadback?
     public let phaseLifecycle: PhaseLifecycleRecord?
     public let phaseLifecycles: [PhaseLifecycleRecord]?
     public let phaseLifecycleEvents: [PhaseLifecycleEventRecord]?
     public let phaseCompletionAssessments: [PhaseCompletionAssessment]?
     public let ticketOrderingContext: TicketOrderingContext?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, preparationDiagnostic: ProjectExecutionPreparationDiagnostic? = nil, inventory: EvidenceInventory? = nil, deliveryInventory: DeliveryInventory? = nil, documentationCatalogTransition: DocumentationCatalogTransitionDiagnostic? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil, ticketOrderingContext: TicketOrderingContext? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, preparationDiagnostic: ProjectExecutionPreparationDiagnostic? = nil, inventory: EvidenceInventory? = nil, deliveryInventory: DeliveryInventory? = nil, documentationCatalogTransition: DocumentationCatalogTransitionDiagnostic? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, repositoryPlanReconstruction: RepositoryPlanReconstructionReadback? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil, ticketOrderingContext: TicketOrderingContext? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
@@ -218,6 +230,7 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
         self.planChangeProposalDecisionID = planChangeProposalDecisionID
         self.planChangeProposalApplicationID = planChangeProposalApplicationID
         self.planChangeProposals = planChangeProposals
+        self.repositoryPlanReconstruction = repositoryPlanReconstruction
         self.phaseLifecycle = phaseLifecycle
         self.phaseLifecycles = phaseLifecycles
         self.phaseLifecycleEvents = phaseLifecycleEvents
@@ -338,7 +351,8 @@ extension AgentCommand {
 
     var isPlanChangeProposalCommand: Bool {
         switch self {
-        case .savePlanChangeProposal, .decidePlanChangeProposal, .applyPlanChangeProposal:
+        case .savePlanChangeProposal, .saveRepositoryPlanReconstruction,
+             .decidePlanChangeProposal, .applyPlanChangeProposal:
             true
         default:
             false
@@ -347,7 +361,8 @@ extension AgentCommand {
 
     var requiresPlanChangeOwnerAuthority: Bool {
         switch self {
-        case .decidePlanChangeProposal, .applyPlanChangeProposal:
+        case .saveRepositoryPlanReconstruction,
+             .decidePlanChangeProposal, .applyPlanChangeProposal:
             true
         default:
             false

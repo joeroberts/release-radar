@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 29
+    static let currentVersion: Int64 = 30
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -124,6 +124,9 @@ enum StoreMigrations {
             }
             if version < 29 {
                 try connection.executeScript(schemaVersion29)
+            }
+            if version < 30 {
+                try connection.executeScript(schemaVersion30)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -377,10 +380,12 @@ enum StoreMigrations {
         }
         if version >= 12 {
             for table in ticketTaskTableSQL {
+                let expectedSQL = version >= 30 && table.name == "ticket_tasks"
+                    ? ticketTasksVersionThirtyTableSQL : table.sql
                 guard let actualSQL = try connection.scalarText(
                     "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
                     bindings: [.text(table.name)]
-                ), normalizedSQL(actualSQL) == normalizedSQL(table.sql)
+                ), normalizedSQL(actualSQL) == normalizedSQL(expectedSQL)
                 else { return false }
             }
         }
@@ -420,6 +425,17 @@ enum StoreMigrations {
                 "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'dependency_graph_presentations'"
             ), normalizedSQL(presentationSQL) == normalizedSQL(dependencyGraphPresentationsTableSQL)
             else { return false }
+        }
+        if version >= 30 {
+            guard let lifecycleSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'phase_lifecycles'"
+            ), normalizedSQL(lifecycleSQL) == normalizedSQL(phaseLifecyclesVersionThirtyTableSQL)
+            else { return false }
+            guard let currentAttemptIndexSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'index' AND name = 'repository_plan_preparation_current_unique'"
+            ), normalizedSQL(currentAttemptIndexSQL) == normalizedSQL(
+                "CREATE UNIQUE INDEX repository_plan_preparation_current_unique ON repository_plan_preparation_attempts(project_id, proposal_id) WHERE is_current = 1"
+            ) else { return false }
         }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
@@ -845,6 +861,40 @@ enum StoreMigrations {
             "project_id", "registration_id", "focus_ticket_id", "payload_version",
             "payload_data", "updated_at",
         ]),
+        (30, "repository_plan_preparation_attempts", [
+            "project_id", "proposal_id", "attempt_id", "request_id", "registration_id",
+            "request_generation", "root_id", "request_data", "revision", "state",
+            "thread_id", "turn_id", "draft_data", "error", "is_current",
+            "replaced_by_attempt_id", "created_at", "updated_at",
+        ]),
+        (30, "repository_plan_reconstruction_application_attempts", [
+            "project_id", "proposal_id", "version", "application_id", "request_id",
+            "registration_id", "request_generation", "envelope_data", "state",
+            "result_data", "created_at", "updated_at",
+        ]),
+        (30, "repository_plan_reconstruction_provenance", [
+            "project_id", "proposal_id", "version", "application_id", "record_kind",
+            "parent_source_id", "source_id", "destination_id", "disposition",
+            "source_fields_data", "source_refs_data", "evidence_data",
+            "original_occurred_at", "original_actor_id",
+        ]),
+        (30, "retained_repository_plan_preparation_attempts", [
+            "removal_id", "historical_project_id", "proposal_id", "attempt_id", "request_id",
+            "registration_id", "request_generation", "root_id", "request_data", "revision",
+            "state", "thread_id", "turn_id", "draft_data", "error", "is_current",
+            "replaced_by_attempt_id", "created_at", "updated_at",
+        ]),
+        (30, "retained_repository_plan_reconstruction_application_attempts", [
+            "removal_id", "historical_project_id", "proposal_id", "version",
+            "application_id", "request_id", "registration_id", "request_generation",
+            "envelope_data", "state", "result_data", "created_at", "updated_at",
+        ]),
+        (30, "retained_repository_plan_reconstruction_provenance", [
+            "removal_id", "historical_project_id", "proposal_id", "version",
+            "application_id", "record_kind", "parent_source_id", "source_id",
+            "destination_id", "disposition", "source_fields_data", "source_refs_data",
+            "evidence_data", "original_occurred_at", "original_actor_id",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -889,6 +939,8 @@ enum StoreMigrations {
         (17, "agent_command_requests", "registration_project_id"),
         (17, "agent_command_requests", "registration_id"),
         (17, "agent_command_requests", "request_generation"),
+        (30, "ticket_tasks", "record_origin"),
+        (30, "phase_lifecycles", "record_origin"),
     ]
 
     private static let criticalObjects: [(version: Int64, type: String, name: String)] = [
@@ -1331,6 +1383,48 @@ enum StoreMigrations {
     END
     """
 
+    private static let repositoryPlanReconstructionProvenanceRejectUpdateTrigger = """
+    CREATE TRIGGER repository_plan_reconstruction_provenance_reject_update
+    BEFORE UPDATE ON repository_plan_reconstruction_provenance
+    BEGIN
+        SELECT RAISE(ABORT, 'repository plan reconstruction provenance is immutable');
+    END
+    """
+
+    private static let repositoryPlanPreparationRejectIdentityUpdateTrigger = """
+    CREATE TRIGGER repository_plan_preparation_attempts_reject_identity_update
+    BEFORE UPDATE OF project_id,proposal_id,attempt_id,request_id,registration_id,
+        request_generation,root_id,request_data,created_at
+    ON repository_plan_preparation_attempts
+    BEGIN
+        SELECT RAISE(ABORT, 'repository plan preparation identity is immutable');
+    END
+    """
+
+    private static let repositoryPlanApplicationAttemptRejectIdentityUpdateTrigger = """
+    CREATE TRIGGER repository_plan_reconstruction_application_attempts_reject_identity_update
+    BEFORE UPDATE OF project_id,proposal_id,version,application_id,request_id,
+        registration_id,request_generation,envelope_data,created_at
+    ON repository_plan_reconstruction_application_attempts
+    BEGIN
+        SELECT RAISE(ABORT, 'repository plan reconstruction application identity is immutable');
+    END
+    """
+
+    private static let repositoryPlanReconstructionProvenanceRejectDeleteTrigger = """
+    CREATE TRIGGER repository_plan_reconstruction_provenance_reject_delete
+    BEFORE DELETE ON repository_plan_reconstruction_provenance
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'repository plan reconstruction provenance cannot be deleted');
+    END
+    """
+
     private static let planChangeProposalVersionsRejectDeleteTrigger = """
     CREATE TRIGGER plan_change_proposal_versions_reject_delete
     BEFORE DELETE ON plan_change_proposal_versions
@@ -1530,6 +1624,16 @@ enum StoreMigrations {
         (25, "retained_ticket_delivery_evidence_targets_reject_delete", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_targets", action: "delete")),
         (25, "retained_ticket_delivery_evidence_observations_reject_update", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "update")),
         (25, "retained_ticket_delivery_evidence_observations_reject_delete", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "delete")),
+        (30, "retained_repository_plan_preparation_attempts_reject_update", immutableRetainedTrigger(table: "retained_repository_plan_preparation_attempts", action: "update")),
+        (30, "retained_repository_plan_preparation_attempts_reject_delete", immutableRetainedTrigger(table: "retained_repository_plan_preparation_attempts", action: "delete")),
+        (30, "retained_repository_plan_reconstruction_application_attempts_reject_update", immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_application_attempts", action: "update")),
+        (30, "retained_repository_plan_reconstruction_application_attempts_reject_delete", immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_application_attempts", action: "delete")),
+        (30, "retained_repository_plan_reconstruction_provenance_reject_update", immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_provenance", action: "update")),
+        (30, "retained_repository_plan_reconstruction_provenance_reject_delete", immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_provenance", action: "delete")),
+        (30, "repository_plan_reconstruction_provenance_reject_update", repositoryPlanReconstructionProvenanceRejectUpdateTrigger),
+        (30, "repository_plan_reconstruction_provenance_reject_delete", repositoryPlanReconstructionProvenanceRejectDeleteTrigger),
+        (30, "repository_plan_preparation_attempts_reject_identity_update", repositoryPlanPreparationRejectIdentityUpdateTrigger),
+        (30, "repository_plan_reconstruction_application_attempts_reject_identity_update", repositoryPlanApplicationAttemptRejectIdentityUpdateTrigger),
     ]
 
     private static let criticalIndexes: [(
@@ -1691,6 +1795,13 @@ enum StoreMigrations {
         (25, "retained_ticket_delivery_evidence_observations", "removal_id,historical_project_id,ticket_id,target_version", "retained_ticket_delivery_evidence_targets", "removal_id,historical_project_id,ticket_id,version", "NO ACTION"),
         (27, "ticket_lane_order", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
         (29, "dependency_graph_presentations", "project_id,focus_ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (30, "repository_plan_preparation_attempts", "project_id", "projects", "id", "NO ACTION"),
+        (30, "repository_plan_reconstruction_application_attempts", "project_id,proposal_id,version", "plan_change_proposal_versions", "project_id,proposal_id,version", "NO ACTION"),
+        (30, "repository_plan_reconstruction_provenance", "project_id,proposal_id,version", "plan_change_proposal_versions", "project_id,proposal_id,version", "NO ACTION"),
+        (30, "repository_plan_reconstruction_provenance", "project_id,application_id", "repository_plan_reconstruction_application_attempts", "project_id,application_id", "NO ACTION"),
+        (30, "retained_repository_plan_preparation_attempts", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (30, "retained_repository_plan_reconstruction_application_attempts", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (30, "retained_repository_plan_reconstruction_provenance", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -2424,6 +2535,39 @@ enum StoreMigrations {
     )
     """
 
+    private static let ticketTasksVersionThirtyTableSQL = """
+    CREATE TABLE ticket_tasks (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        label TEXT NOT NULL CHECK (length(CAST(label AS BLOB)) BETWEEN 1 AND 256),
+        title TEXT NOT NULL CHECK (length(CAST(title AS BLOB)) BETWEEN 1 AND 4096),
+        sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+        completion TEXT NOT NULL CHECK (completion IN ('pending', 'completed')),
+        lifecycle TEXT NOT NULL CHECK (lifecycle IN ('active', 'superseded')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        superseded_at TEXT,
+        record_origin TEXT NOT NULL DEFAULT 'ordinary'
+            CHECK (record_origin IN ('ordinary', 'reconstruction')),
+        PRIMARY KEY(project_id, ticket_id, id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES ticket_task_plans(project_id, ticket_id)
+            ON DELETE NO ACTION,
+        CHECK (
+            (completion = 'pending' AND completed_at IS NULL)
+            OR (completion = 'completed' AND (record_origin = 'reconstruction' OR completed_at IS NOT NULL))
+        ),
+        CHECK (
+            (lifecycle = 'active' AND superseded_at IS NULL)
+            OR (lifecycle = 'superseded' AND (record_origin = 'reconstruction' OR superseded_at IS NOT NULL))
+        ),
+        CHECK (record_origin = 'reconstruction' OR completed_at IS NULL OR completed_at >= created_at),
+        CHECK (record_origin = 'reconstruction' OR superseded_at IS NULL OR superseded_at >= created_at),
+        CHECK (updated_at >= created_at)
+    )
+    """
+
     private static let ticketTaskTableSQL: [(name: String, sql: String)] = [
         ("ticket_task_plans", ticketTaskPlansTableSQL),
         ("ticket_tasks", ticketTasksTableSQL),
@@ -3011,6 +3155,33 @@ enum StoreMigrations {
       AND tickets.lane <> 'accepted';
     """
 
+    private static let phaseLifecyclesVersionThirtyTableSQL = """
+    CREATE TABLE phase_lifecycles (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        lifecycle TEXT NOT NULL CHECK (lifecycle IN ('unassessed', 'upcoming', 'in_delivery', 'completed')),
+        revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0),
+        completion_baseline_digest TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        record_origin TEXT NOT NULL DEFAULT 'ordinary'
+            CHECK (record_origin IN ('ordinary', 'reconstruction')),
+        PRIMARY KEY(project_id, phase_id),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE,
+        CHECK (
+            (lifecycle <> 'completed' AND completion_baseline_digest IS NULL AND completed_at IS NULL)
+            OR (
+                lifecycle = 'completed'
+                AND (
+                    record_origin = 'reconstruction'
+                    OR (completion_baseline_digest IS NOT NULL AND completed_at IS NOT NULL)
+                )
+            )
+        )
+    )
+    """
+
     private static let schemaVersion23 = """
     CREATE TABLE phase_lifecycles (
         project_id TEXT NOT NULL,
@@ -3289,5 +3460,199 @@ enum StoreMigrations {
 
     private static let schemaVersion29 = """
     \(dependencyGraphPresentationsTableSQL);
+    """
+
+    private static let schemaVersion30 = """
+    DROP TRIGGER ticket_tasks_reject_identity_update;
+    DROP TRIGGER ticket_tasks_reject_label_update;
+    DROP TRIGGER ticket_tasks_reject_delete;
+    DROP INDEX ticket_tasks_label_unique;
+    DROP INDEX ticket_tasks_active_order_index;
+    ALTER TABLE ticket_tasks RENAME TO ticket_tasks_v29;
+    \(ticketTasksVersionThirtyTableSQL);
+    INSERT INTO ticket_tasks (
+        project_id, ticket_id, id, label, title, sort_order, completion, lifecycle,
+        created_at, updated_at, completed_at, superseded_at, record_origin
+    )
+    SELECT project_id, ticket_id, id, label, title, sort_order, completion, lifecycle,
+           created_at, updated_at, completed_at, superseded_at, 'ordinary'
+    FROM ticket_tasks_v29;
+    DROP TABLE ticket_tasks_v29;
+    CREATE UNIQUE INDEX ticket_tasks_label_unique
+        ON ticket_tasks(project_id, ticket_id, label);
+    CREATE INDEX ticket_tasks_active_order_index
+        ON ticket_tasks(project_id, ticket_id, lifecycle, sort_order, label, id);
+    \(ticketTasksRejectIdentityUpdateTrigger);
+    \(ticketTasksRejectLabelUpdateTrigger);
+    \(ticketTasksRejectDeleteVersionSeventeenTrigger);
+
+    DROP TRIGGER phase_lifecycles_after_phase_insert;
+    ALTER TABLE phase_lifecycles RENAME TO phase_lifecycles_v29;
+    \(phaseLifecyclesVersionThirtyTableSQL);
+    INSERT INTO phase_lifecycles (
+        project_id, phase_id, lifecycle, revision, completion_baseline_digest,
+        created_at, updated_at, completed_at, record_origin
+    )
+    SELECT project_id, phase_id, lifecycle, revision, completion_baseline_digest,
+           created_at, updated_at, completed_at, 'ordinary'
+    FROM phase_lifecycles_v29;
+    DROP TABLE phase_lifecycles_v29;
+    \(phaseLifecyclesAfterPhaseInsertTrigger);
+
+    CREATE TABLE repository_plan_preparation_attempts (
+        project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        attempt_id TEXT NOT NULL,
+        request_id TEXT NOT NULL UNIQUE,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL CHECK (request_generation >= 1),
+        root_id TEXT NOT NULL,
+        request_data BLOB NOT NULL CHECK (length(request_data) > 0),
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        state TEXT NOT NULL CHECK (state IN (
+            'queued','running','awaiting_resolution','ready_for_review',
+            'failed','cancelled','outcome_unknown'
+        )),
+        thread_id TEXT,
+        turn_id TEXT,
+        draft_data BLOB CHECK (draft_data IS NULL OR length(draft_data) <= 1048576),
+        error TEXT,
+        is_current INTEGER NOT NULL CHECK (is_current IN (0,1)),
+        replaced_by_attempt_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, proposal_id, attempt_id),
+        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE NO ACTION,
+        CHECK ((state = 'ready_for_review') = (draft_data IS NOT NULL)),
+        CHECK (replaced_by_attempt_id IS NULL OR is_current = 0),
+        CHECK (updated_at >= created_at)
+    );
+    CREATE UNIQUE INDEX repository_plan_preparation_current_unique
+        ON repository_plan_preparation_attempts(project_id, proposal_id)
+        WHERE is_current = 1;
+    \(repositoryPlanPreparationRejectIdentityUpdateTrigger);
+
+    CREATE TABLE repository_plan_reconstruction_application_attempts (
+        project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL CHECK (version > 0),
+        application_id TEXT NOT NULL,
+        request_id TEXT NOT NULL UNIQUE,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL CHECK (request_generation >= 1),
+        envelope_data BLOB NOT NULL CHECK (length(envelope_data) > 0),
+        state TEXT NOT NULL CHECK (state IN ('pending','outcome_unknown','applied','refused')),
+        result_data BLOB,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, proposal_id, version),
+        UNIQUE(project_id, application_id),
+        FOREIGN KEY(project_id, proposal_id, version)
+            REFERENCES plan_change_proposal_versions(project_id, proposal_id, version)
+            ON DELETE NO ACTION,
+        CHECK (state <> 'pending' OR result_data IS NULL),
+        CHECK (state NOT IN ('applied','refused') OR result_data IS NOT NULL),
+        CHECK (updated_at >= created_at)
+    );
+    \(repositoryPlanApplicationAttemptRejectIdentityUpdateTrigger);
+
+    CREATE TABLE repository_plan_reconstruction_provenance (
+        project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL CHECK (version > 0),
+        application_id TEXT NOT NULL,
+        record_kind TEXT NOT NULL CHECK (record_kind IN (
+            'phase','ticket','task','phase_dependency','ticket_dependency'
+        )),
+        parent_source_id TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        destination_id TEXT,
+        disposition TEXT NOT NULL CHECK (disposition IN (
+            'new','unchanged','conflicting','blocked','excluded'
+        )),
+        source_fields_data BLOB NOT NULL,
+        source_refs_data BLOB NOT NULL,
+        evidence_data BLOB NOT NULL,
+        original_occurred_at TEXT,
+        original_actor_id TEXT,
+        PRIMARY KEY(project_id, proposal_id, version, record_kind, parent_source_id, source_id),
+        FOREIGN KEY(project_id, proposal_id, version)
+            REFERENCES plan_change_proposal_versions(project_id, proposal_id, version)
+            ON DELETE NO ACTION,
+        FOREIGN KEY(project_id, application_id)
+            REFERENCES repository_plan_reconstruction_application_attempts(project_id, application_id)
+            ON DELETE NO ACTION
+    );
+    \(repositoryPlanReconstructionProvenanceRejectUpdateTrigger);
+    \(repositoryPlanReconstructionProvenanceRejectDeleteTrigger);
+
+    CREATE TABLE retained_repository_plan_preparation_attempts (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        attempt_id TEXT NOT NULL,
+        request_id TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL,
+        root_id TEXT NOT NULL,
+        request_data BLOB NOT NULL,
+        revision INTEGER NOT NULL,
+        state TEXT NOT NULL,
+        thread_id TEXT,
+        turn_id TEXT,
+        draft_data BLOB,
+        error TEXT,
+        is_current INTEGER NOT NULL,
+        replaced_by_attempt_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id, attempt_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_repository_plan_reconstruction_application_attempts (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        application_id TEXT NOT NULL,
+        request_id TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL,
+        envelope_data BLOB NOT NULL,
+        state TEXT NOT NULL,
+        result_data BLOB,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id, version),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_repository_plan_reconstruction_provenance (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        application_id TEXT NOT NULL,
+        record_kind TEXT NOT NULL,
+        parent_source_id TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        destination_id TEXT,
+        disposition TEXT NOT NULL,
+        source_fields_data BLOB NOT NULL,
+        source_refs_data BLOB NOT NULL,
+        evidence_data BLOB NOT NULL,
+        original_occurred_at TEXT,
+        original_actor_id TEXT,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id, version, record_kind, parent_source_id, source_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    \(immutableRetainedTrigger(table: "retained_repository_plan_preparation_attempts", action: "update"));
+    \(permanentlyPurgeableRetainedDeleteTrigger(table: "retained_repository_plan_preparation_attempts"));
+    \(immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_application_attempts", action: "update"));
+    \(permanentlyPurgeableRetainedDeleteTrigger(table: "retained_repository_plan_reconstruction_application_attempts"));
+    \(immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_provenance", action: "update"));
+    \(permanentlyPurgeableRetainedDeleteTrigger(table: "retained_repository_plan_reconstruction_provenance"));
     """
 }

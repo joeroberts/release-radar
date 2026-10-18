@@ -652,6 +652,21 @@ public actor ProjectRemovalManager {
                 """,
                 bindings: [removal, project]
             )
+            try connection.execute(
+                "INSERT INTO retained_repository_plan_preparation_attempts SELECT ?, project_id, proposal_id, attempt_id, request_id, registration_id, request_generation, root_id, request_data, revision, state, thread_id, turn_id, draft_data, error, is_current, replaced_by_attempt_id, created_at, updated_at FROM repository_plan_preparation_attempts WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_repository_plan_reconstruction_application_attempts SELECT ?, project_id, proposal_id, version, application_id, request_id, registration_id, request_generation, envelope_data, state, result_data, created_at, updated_at FROM repository_plan_reconstruction_application_attempts WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_repository_plan_reconstruction_provenance SELECT ?, project_id, proposal_id, version, application_id, record_kind, parent_source_id, source_id, destination_id, disposition, source_fields_data, source_refs_data, evidence_data, original_occurred_at, original_actor_id FROM repository_plan_reconstruction_provenance WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute("DELETE FROM repository_plan_reconstruction_provenance WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM repository_plan_reconstruction_application_attempts WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM repository_plan_preparation_attempts WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_applications WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_decisions WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_versions WHERE project_id = ?", bindings: [project])
@@ -913,6 +928,9 @@ public actor ProjectPermanentPurgeManager {
         "retained_phase_lifecycles",
         "retained_ticket_delivery_evidence_observations",
         "retained_ticket_delivery_evidence_targets",
+        "retained_repository_plan_reconstruction_provenance",
+        "retained_repository_plan_reconstruction_application_attempts",
+        "retained_repository_plan_preparation_attempts",
     ]
 
     private let store: DeliveryStore

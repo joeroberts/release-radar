@@ -495,7 +495,7 @@ private struct DependencyPair: Hashable {
     let prerequisite: Data
 }
 
-private struct StrictJSONDuplicateKeyScanner {
+struct StrictJSONDuplicateKeyScanner {
     private static let maximumNestingDepth = 128
     private let bytes: [UInt8]
     private var index = 0

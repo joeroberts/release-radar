@@ -393,6 +393,37 @@ public actor DeliveryStore {
         )
     }
 
+    /// Persists reconstruction preparation and recovery state without creating a
+    /// product History event. The one audited event is reserved for the actual
+    /// owner-approved graph application transaction.
+    func transactRepositoryPlanRecovery<T: Sendable>(
+        _ body: @Sendable (SQLiteConnection) throws -> T
+    ) throws -> T {
+        guard readOnlyFiles == nil else {
+            throw StoreError.unavailable("Documentation preflight is read-only")
+        }
+        let connection = try availableConnection()
+        try connection.execute("BEGIN IMMEDIATE TRANSACTION")
+        let scopedConnection = connection.makeScopedConnection(access: .transaction)
+        defer { scopedConnection.invalidate() }
+        do {
+            let result = try connection.withTransactionCallbackRestrictions {
+                try body(scopedConnection)
+            }
+            guard connection.isInTransaction else {
+                throw SQLiteError(
+                    code: SQLITE_MISUSE,
+                    message: "The transaction callback ended the store-owned transaction"
+                )
+            }
+            try connection.execute("COMMIT")
+            return result
+        } catch {
+            try? connection.execute("ROLLBACK")
+            throw error
+        }
+    }
+
     private func auditedTransaction<T: Sendable>(
         actor: DeliveryActor,
         reason: String,

@@ -917,6 +917,18 @@ final class AppModel {
                 id == ticketID || from == ticketID || to == ticketID
             case let .removeTicketDependency(_, id, dependency):
                 id == ticketID || dependency == ticketID
+            case let .reconstructRepositoryPlan(payload):
+                payload.comparisons.contains { comparison in
+                    guard comparison.kind == .ticket else { return false }
+                    let destinationID = comparison.destinationID
+                        ?? (comparison.disposition == .new
+                            ? RepositoryPlanReconstructionIdentity.destinationID(
+                                source: payload.source,
+                                subject: comparison.subject
+                            )
+                            : nil)
+                    return destinationID == ticketID.rawValue
+                }
             case .addPhase, .addDeliveryGoal, .addPhaseDependency, .supersedeDeliveryGoal:
                 false
             }

@@ -512,6 +512,8 @@ public actor ApplicationRecoveryManager {
             WHERE EXISTS (
                 SELECT 1 FROM plan_change_proposals proposals WHERE proposals.project_id = projects.id
             )
+               OR EXISTS (SELECT 1 FROM repository_plan_preparation_attempts WHERE project_id = projects.id)
+               OR EXISTS (SELECT 1 FROM repository_plan_reconstruction_application_attempts WHERE project_id = projects.id)
                OR EXISTS (SELECT 1 FROM ticket_retirements WHERE project_id = projects.id)
                OR EXISTS (SELECT 1 FROM delivery_goal_obligations WHERE project_id = projects.id)
                OR EXISTS (SELECT 1 FROM phase_lifecycle_events WHERE project_id = projects.id)
@@ -616,6 +618,21 @@ public actor ApplicationRecoveryManager {
                 "INSERT INTO retained_plan_change_proposal_applications SELECT ?, project_id, proposal_id, version, id, decision_id, audit_event_id, applied_at FROM plan_change_proposal_applications WHERE project_id = ?",
                 bindings: [removal, project]
             )
+            try connection.execute(
+                "INSERT INTO retained_repository_plan_preparation_attempts SELECT ?, project_id, proposal_id, attempt_id, request_id, registration_id, request_generation, root_id, request_data, revision, state, thread_id, turn_id, draft_data, error, is_current, replaced_by_attempt_id, created_at, updated_at FROM repository_plan_preparation_attempts WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_repository_plan_reconstruction_application_attempts SELECT ?, project_id, proposal_id, version, application_id, request_id, registration_id, request_generation, envelope_data, state, result_data, created_at, updated_at FROM repository_plan_reconstruction_application_attempts WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_repository_plan_reconstruction_provenance SELECT ?, project_id, proposal_id, version, application_id, record_kind, parent_source_id, source_id, destination_id, disposition, source_fields_data, source_refs_data, evidence_data, original_occurred_at, original_actor_id FROM repository_plan_reconstruction_provenance WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute("DELETE FROM repository_plan_reconstruction_provenance WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM repository_plan_reconstruction_application_attempts WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM repository_plan_preparation_attempts WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_applications WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_decisions WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_versions WHERE project_id = ?", bindings: [project])
@@ -688,6 +705,12 @@ public actor ApplicationRecoveryManager {
                 SELECT * FROM current_state.retained_plan_change_proposal_decisions;
             INSERT OR IGNORE INTO retained_plan_change_proposal_applications
                 SELECT * FROM current_state.retained_plan_change_proposal_applications;
+            INSERT OR IGNORE INTO retained_repository_plan_preparation_attempts
+                SELECT * FROM current_state.retained_repository_plan_preparation_attempts;
+            INSERT OR IGNORE INTO retained_repository_plan_reconstruction_application_attempts
+                SELECT * FROM current_state.retained_repository_plan_reconstruction_application_attempts;
+            INSERT OR IGNORE INTO retained_repository_plan_reconstruction_provenance
+                SELECT * FROM current_state.retained_repository_plan_reconstruction_provenance;
             INSERT OR IGNORE INTO audit_events
                 SELECT * FROM current_state.audit_events
                 WHERE historical_project_id IS NOT NULL AND project_id IS NULL;
@@ -1028,6 +1051,48 @@ public actor ApplicationRecoveryManager {
               ON registrations.project_id = applications.project_id
             JOIN removed_projects removed
               ON removed.historical_project_id = applications.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_repository_plan_preparation_attempts
+            SELECT removed.removal_id, attempts.project_id, attempts.proposal_id,
+                attempts.attempt_id, attempts.request_id, attempts.registration_id,
+                attempts.request_generation, attempts.root_id, attempts.request_data,
+                attempts.revision, attempts.state, attempts.thread_id, attempts.turn_id,
+                attempts.draft_data, attempts.error, attempts.is_current,
+                attempts.replaced_by_attempt_id, attempts.created_at, attempts.updated_at
+            FROM current_state.repository_plan_preparation_attempts attempts
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = attempts.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = attempts.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_repository_plan_reconstruction_application_attempts
+            SELECT removed.removal_id, attempts.project_id, attempts.proposal_id,
+                attempts.version, attempts.application_id, attempts.request_id,
+                attempts.registration_id, attempts.request_generation,
+                attempts.envelope_data, attempts.state, attempts.result_data,
+                attempts.created_at, attempts.updated_at
+            FROM current_state.repository_plan_reconstruction_application_attempts attempts
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = attempts.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = attempts.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_repository_plan_reconstruction_provenance
+            SELECT removed.removal_id, provenance.project_id, provenance.proposal_id,
+                provenance.version, provenance.application_id, provenance.record_kind,
+                provenance.parent_source_id, provenance.source_id,
+                provenance.destination_id, provenance.disposition,
+                provenance.source_fields_data, provenance.source_refs_data,
+                provenance.evidence_data, provenance.original_occurred_at,
+                provenance.original_actor_id
+            FROM current_state.repository_plan_reconstruction_provenance provenance
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = provenance.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = provenance.project_id
              AND removed.registration_id = registrations.registration_id;
 
             INSERT INTO observed_threads (id, project_id, status, last_observed_at)

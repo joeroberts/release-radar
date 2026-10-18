@@ -20,6 +20,202 @@ public actor AgentCommandDispatcher {
         self.executionAssignments = executionAssignments
     }
 
+    public func dispatchReconstructionApply(
+        _ envelope: AgentCommandEnvelope,
+        origin: AgentCommandOrigin = .externalAgent
+    ) async -> AgentCommandResult {
+        guard case .ownerApp = origin else {
+            return .init(
+                entityIDs: [], auditEventID: nil,
+                error: .planChangeProposalOwnerAuthorityRequired
+            )
+        }
+        guard case let .applyPlanChangeProposal(
+            proposalID, version, _, _, applicationID
+        ) = envelope.command,
+              let registration = envelope.expectedRegistration,
+              let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot),
+              project.registration == registration else {
+            return .init(
+                entityIDs: [], auditEventID: nil,
+                error: .invalidRepositoryPlanReconstruction(
+                    "Reconstruction Apply requires an exact current registration and apply command."
+                )
+            )
+        }
+        do {
+            let envelopeBytes = try Self.canonicalEnvelopeBytes(envelope)
+            let inserted = try await store.transactRepositoryPlanRecovery { connection in
+                guard try PlanChangeProposalPolicy.reconstructionPayload(
+                    for: envelope.command,
+                    projectID: project.projectID,
+                    connection: connection
+                ) != nil else {
+                    throw RepositoryPlanReconstructionError.invalidPayload(
+                        "The selected proposal version is not a repository reconstruction."
+                    )
+                }
+                if let row = try connection.row(
+                    """
+                    SELECT * FROM repository_plan_reconstruction_application_attempts
+                    WHERE project_id=? AND proposal_id=? AND version=?
+                    """,
+                    bindings: [
+                        .text(project.projectID.rawValue), .text(proposalID), .integer(version),
+                    ]
+                ) {
+                    guard row["application_id"] == .text(applicationID),
+                          row["request_id"] == .text(envelope.requestID.uuidString),
+                          row["registration_id"] == .text(registration.registrationID),
+                          row["request_generation"] == .integer(registration.requestGeneration),
+                          row["envelope_data"] == .blob(envelopeBytes) else {
+                        throw RepositoryPlanReconstructionError.applicationAttemptConflict
+                    }
+                    return false
+                }
+                let now = ISO8601DateFormatter().string(from: Date())
+                try connection.execute(
+                    """
+                    INSERT INTO repository_plan_reconstruction_application_attempts (
+                        project_id,proposal_id,version,application_id,request_id,
+                        registration_id,request_generation,envelope_data,state,result_data,
+                        created_at,updated_at
+                    ) VALUES (?,?,?,?,?,?,?,?,'pending',NULL,?,?)
+                    """,
+                    bindings: [
+                        .text(project.projectID.rawValue), .text(proposalID), .integer(version),
+                        .text(applicationID), .text(envelope.requestID.uuidString),
+                        .text(registration.registrationID), .integer(registration.requestGeneration),
+                        .blob(envelopeBytes), .text(now), .text(now),
+                    ]
+                )
+                return true
+            }
+            if !inserted {
+                do {
+                    let attempt = try await reconcileReconstructionApply(
+                        projectID: project.projectID,
+                        proposalID: .init(rawValue: proposalID),
+                        version: version,
+                        applicationID: applicationID,
+                        requestID: envelope.requestID
+                    )
+                    if (attempt.state == .applied || attempt.state == .refused),
+                       let result = attempt.result { return result }
+                } catch {
+                    return .init(entityIDs: [proposalID], auditEventID: nil, error: Self.map(error, command: envelope.command))
+                }
+            }
+
+            let result = await dispatch(envelope, origin: .ownerApp)
+            try await store.transactRepositoryPlanRecovery { connection in
+                let resultData = try JSONEncoder().encode(result)
+                try connection.execute(
+                    """
+                    UPDATE repository_plan_reconstruction_application_attempts
+                    SET state=?,result_data=?,updated_at=?
+                    WHERE project_id=? AND proposal_id=? AND version=?
+                      AND application_id=? AND request_id=?
+                      AND state IN ('pending','outcome_unknown')
+                    """,
+                    bindings: [
+                        .text(result.error == nil ? "applied" : "refused"), .blob(resultData),
+                        .text(ISO8601DateFormatter().string(from: Date())),
+                        .text(project.projectID.rawValue), .text(proposalID), .integer(version),
+                        .text(applicationID), .text(envelope.requestID.uuidString),
+                    ]
+                )
+                guard try connection.scalarInt("SELECT changes()") == 1 else {
+                    throw RepositoryPlanReconstructionError.applicationAttemptConflict
+                }
+            }
+            return result
+        } catch {
+            return .init(entityIDs: [proposalID], auditEventID: nil, error: Self.map(error, command: envelope.command))
+        }
+    }
+
+    public func reconcileReconstructionApply(
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID,
+        version: Int64,
+        applicationID: String,
+        requestID: UUID
+    ) async throws -> RepositoryPlanReconstructionApplicationAttemptRecord {
+        try await store.transactRepositoryPlanRecovery { connection in
+            guard let row = try connection.row(
+                """
+                SELECT * FROM repository_plan_reconstruction_application_attempts
+                WHERE project_id=? AND proposal_id=? AND version=?
+                  AND application_id=? AND request_id=?
+                """,
+                bindings: [
+                    .text(projectID.rawValue), .text(proposalID.rawValue), .integer(version),
+                    .text(applicationID), .text(requestID.uuidString),
+                ]
+            ) else { throw RepositoryPlanReconstructionError.applicationAttemptConflict }
+            guard let attempt = try? Self.decodeReconstructionAttempt(row) else {
+                throw RepositoryPlanReconstructionError.applicationAttemptConflict
+            }
+            if attempt.state == .applied || attempt.state == .refused { return attempt }
+
+            let receipt = try connection.row(
+                "SELECT request_body,result_data FROM agent_command_requests WHERE request_id=?",
+                bindings: [.text(requestID.uuidString)]
+            )
+            let applicationExists = try connection.scalarInt(
+                """
+                SELECT COUNT(*) FROM plan_change_proposal_applications
+                WHERE project_id=? AND proposal_id=? AND version=? AND id=?
+                """,
+                bindings: [
+                    .text(projectID.rawValue), .text(proposalID.rawValue),
+                    .integer(version), .text(applicationID),
+                ]
+            ) == 1
+            var result: AgentCommandResult?
+            let exactReceipt: Bool
+            if let envelope = try? JSONDecoder().decode(AgentCommandEnvelope.self, from: attempt.envelopeBytes),
+               case let .blob(requestBody)? = receipt?["request_body"],
+               let expectedBody = try? Self.canonicalRequestBody(envelope) {
+                exactReceipt = requestBody == expectedBody
+            } else {
+                exactReceipt = false
+            }
+            if exactReceipt, case let .blob(data)? = receipt?["result_data"] {
+                result = try? JSONDecoder().decode(AgentCommandResult.self, from: data)
+            }
+            let state: RepositoryPlanReconstructionApplicationAttemptState
+            if applicationExists, result?.error == nil {
+                state = .applied
+            } else if let result {
+                state = result.error == nil ? .outcomeUnknown : .refused
+            } else {
+                state = .outcomeUnknown
+            }
+            try connection.execute(
+                """
+                UPDATE repository_plan_reconstruction_application_attempts
+                SET state=?,result_data=?,updated_at=?
+                WHERE project_id=? AND proposal_id=? AND version=?
+                """,
+                bindings: [
+                    .text(state.rawValue), result.flatMap { try? JSONEncoder().encode($0) }.map(SQLiteValue.blob) ?? .null,
+                    .text(ISO8601DateFormatter().string(from: Date())),
+                    .text(projectID.rawValue), .text(proposalID.rawValue), .integer(version),
+                ]
+            )
+            guard let updated = try connection.row(
+                """
+                SELECT * FROM repository_plan_reconstruction_application_attempts
+                WHERE project_id=? AND proposal_id=? AND version=?
+                """,
+                bindings: [.text(projectID.rawValue), .text(proposalID.rawValue), .integer(version)]
+            ) else { throw RepositoryPlanReconstructionError.applicationAttemptConflict }
+            return try Self.decodeReconstructionAttempt(updated)
+        }
+    }
+
     /// Fixed maintenance admits documentation operations and the existing exact
     /// root-guidance handoff only; ordinary delivery commands have no route here.
     public func dispatchDocumentationMaintenance(_ envelope: AgentCommandEnvelope, admissionDeadline: TimeInterval? = nil) async -> AgentCommandResult {
@@ -87,7 +283,7 @@ public actor AgentCommandDispatcher {
             guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
             }
-            guard let body = try? canonicalRequestBody(envelope) else {
+            guard let body = try? Self.canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .invalidDeliveryEvidence("Evidence request could not be encoded"))
             }
             return await DeliveryEvidenceCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
@@ -106,7 +302,7 @@ public actor AgentCommandDispatcher {
             guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
             }
-            guard let body = try? canonicalRequestBody(envelope) else {
+            guard let body = try? Self.canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .invalidEnvelope("Reference request could not be encoded"))
             }
             return await TicketReferenceCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
@@ -120,7 +316,7 @@ public actor AgentCommandDispatcher {
             guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
             }
-            guard let body = try? canonicalRequestBody(envelope) else {
+            guard let body = try? Self.canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
             }
             return await DocumentationCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
@@ -151,7 +347,7 @@ public actor AgentCommandDispatcher {
         )
 
         do {
-            let requestBody = try canonicalRequestBody(envelope)
+            let requestBody = try Self.canonicalRequestBody(envelope)
             let auditEventID = AuditEventID(rawValue: UUID().uuidString)
             let auditScope = Self.auditScope(for: envelope.command, projectID: project.projectID)
             let actor: DeliveryActor = switch origin {
@@ -164,7 +360,7 @@ public actor AgentCommandDispatcher {
             case .ownerApp:
                 .init(id: "release-radar-owner")
             }
-            do {
+            let executeTransaction: @Sendable () async throws -> AgentCommandResult = {
                 let operation: @Sendable (SQLiteConnection) throws -> AgentCommandResult = { connection in
                     if let admissionDeadline,
                        admissionDeadline <= Date().timeIntervalSince1970 {
@@ -248,10 +444,12 @@ public actor AgentCommandDispatcher {
                     let lifecycle = try Self.phaseLifecycleResult(
                         for: envelope.command, projectID: project.projectID, connection: connection
                     )
-                    let result = Self.resultForCommand(
+                    let result = try Self.resultForCommand(
                         envelope.command, auditEventID: auditEventID,
                         revision: revision, phaseLifecycle: lifecycle,
-                        ticketOrderingContext: orderingContext
+                        ticketOrderingContext: orderingContext,
+                        projectID: project.projectID,
+                        connection: connection
                     )
                     let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
@@ -263,10 +461,11 @@ public actor AgentCommandDispatcher {
                             .text(ISO8601DateFormatter().string(from: Date())),
                         ] + ProjectLifecycleManager.receiptScopeBindings(project.registration)
                     )
+                    try proposalSourcePreflight.requireFilesystemCurrent()
                     return result
                 }
                 if envelope.command.requiresTicketOrderingOwnerAuthority {
-                    return try await store.transactOrdering(
+                    return try await self.store.transactOrdering(
                         actor: actor,
                         reason: envelope.reason,
                         auditEventID: auditEventID,
@@ -274,13 +473,24 @@ public actor AgentCommandDispatcher {
                         operation
                     )
                 }
-                return try await store.transact(
+                return try await self.store.transact(
                     actor: actor,
                     reason: envelope.reason,
                     auditEventID: auditEventID,
                     auditScope: auditScope,
                     operation
                 )
+            }
+            do {
+                if let context = proposalSourcePreflight.context {
+                    return try await bookmarkStore.withSecurityScopedAccess(
+                        bookmark: context.bookmark
+                    ) { resolved in
+                        try context.verifyAuthorization(resolved)
+                        return try await executeTransaction()
+                    }
+                }
+                return try await executeTransaction()
             } catch let control as DispatchControl {
                 switch control {
                 case let .replay(result): return result
@@ -310,23 +520,42 @@ public actor AgentCommandDispatcher {
         guard command.isPlanChangeProposalCommand else { return .notRequired }
         do {
             let capture = try await store.documentationRead { connection in
+                let reconstruction = try PlanChangeProposalPolicy.reconstructionPayload(
+                    for: command,
+                    projectID: project.projectID,
+                    connection: connection
+                )
                 let impacts = try PlanChangeProposalPolicy.sourceImpacts(
                     for: command,
                     projectID: project.projectID,
                     connection: connection
                 )
-                guard !impacts.isEmpty else { return nil as PlanChangeProposalSourceCapture? }
+                guard reconstruction != nil || !impacts.isEmpty else {
+                    return nil as PlanChangeProposalSourceCapture?
+                }
                 let context = try DocumentationRootContext.read(
                     connection,
                     path: projectRoot,
                     projectID: project.projectID.rawValue,
                     schemaVersion: store.schemaVersionForDocumentation
                 )
-                return PlanChangeProposalSourceCapture(context: context, impacts: impacts)
+                return PlanChangeProposalSourceCapture(
+                    context: context,
+                    impacts: impacts,
+                    reconstructionManifest: reconstruction?.source.capturedSourceManifest
+                )
             }
             guard let capture else { return .notRequired }
             return try await bookmarkStore.withSecurityScopedAccess(bookmark: capture.context.bookmark) { resolved in
                 try capture.context.verifyAuthorization(resolved)
+                if let expected = capture.reconstructionManifest {
+                    let current = try RepositoryPlanSourceCapture.capture(
+                        context: capture.context,
+                        artifactIDs: expected.sources.map(\.artifactID)
+                    )
+                    guard current == expected else { return .unavailable }
+                    return .verifiedReconstruction(context: capture.context, manifest: current)
+                }
                 let catalog = try DocumentationCatalogContext(root: resolved.url)
                 let snapshot = try catalog.managedSnapshot()
                 try capture.context.requireAccepted(snapshot)
@@ -367,8 +596,13 @@ public actor AgentCommandDispatcher {
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        guard let data = try? encoder.encode(envelope.command), data.count <= 65_536 else {
-            return .invalidEnvelope("command payload must not exceed 65536 bytes")
+        let commandLimit = if case .saveRepositoryPlanReconstruction = envelope.command {
+            16_777_216
+        } else {
+            65_536
+        }
+        guard let data = try? encoder.encode(envelope.command), data.count <= commandLimit else {
+            return .invalidEnvelope("command payload exceeds its bounded size limit")
         }
         func valid(_ value: String, maximum: Int = 4_096) -> Bool {
             !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -395,6 +629,8 @@ public actor AgentCommandDispatcher {
                 && !operations.isEmpty && operations.count <= PlanChangeProposalPolicy.maximumOperations
                 && operations.allSatisfy { operation in
                     switch operation {
+                    case .reconstructRepositoryPlan:
+                        false
                     case let .addPhase(id, name):
                         valid(id.rawValue, maximum: 256) && !id.rawValue.contains("\0")
                             && valid(name) && !name.contains("\0")
@@ -457,6 +693,11 @@ public actor AgentCommandDispatcher {
                         [id.rawValue, ticketID.rawValue, dependsOnTicketID.rawValue].allSatisfy { valid($0, maximum: 256) && !$0.contains("\0") }
                     }
                 }
+        case let .saveRepositoryPlanReconstruction(proposalID, expectedPreviousVersion, rationale, payload):
+            commandFieldsAreValid = valid(proposalID, maximum: 256) && !proposalID.contains("\0")
+                && expectedPreviousVersion.map { $0 > 0 } != false
+                && valid(rationale) && !rationale.contains("\0")
+                && payload.source.projectionBytes.count <= RepositoryPlanProjectionValidator.maximumProjectionBytes
         case let .decidePlanChangeProposal(proposalID, version, baselineDigest, decisionID, _):
             commandFieldsAreValid = valid(proposalID, maximum: 256) && !proposalID.contains("\0")
                 && version > 0 && valid(decisionID, maximum: 256) && !decisionID.contains("\0")
@@ -609,7 +850,7 @@ public actor AgentCommandDispatcher {
         }) == true
     }
 
-    private func canonicalRequestBody(_ envelope: AgentCommandEnvelope) throws -> Data {
+    private nonisolated static func canonicalRequestBody(_ envelope: AgentCommandEnvelope) throws -> Data {
         struct Body: Codable {
             let version: Int
             let projectRoot: String
@@ -631,13 +872,59 @@ public actor AgentCommandDispatcher {
         return try encoder.encode(body)
     }
 
+    private nonisolated static func canonicalEnvelopeBytes(_ envelope: AgentCommandEnvelope) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(envelope)
+    }
+
+    private static func decodeReconstructionAttempt(
+        _ row: [String: SQLiteValue]
+    ) throws -> RepositoryPlanReconstructionApplicationAttemptRecord {
+        guard case let .text(projectID)? = row["project_id"],
+              case let .text(proposalID)? = row["proposal_id"],
+              case let .integer(version)? = row["version"],
+              case let .text(applicationID)? = row["application_id"],
+              case let .text(requestID)? = row["request_id"],
+              let requestUUID = UUID(uuidString: requestID),
+              case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"],
+              case let .blob(envelopeBytes)? = row["envelope_data"],
+              case let .text(rawState)? = row["state"],
+              let state = RepositoryPlanReconstructionApplicationAttemptState(rawValue: rawState)
+        else { throw RepositoryPlanReconstructionError.applicationAttemptConflict }
+        let result: AgentCommandResult?
+        if case let .blob(data)? = row["result_data"] {
+            result = try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        } else {
+            result = nil
+        }
+        return .init(
+            projectID: .init(rawValue: projectID),
+            proposalID: .init(rawValue: proposalID),
+            version: version,
+            applicationID: applicationID,
+            requestID: requestUUID,
+            registration: .init(
+                projectID: .init(rawValue: projectID),
+                registrationID: registrationID,
+                requestGeneration: requestGeneration
+            ),
+            envelopeBytes: envelopeBytes,
+            state: state,
+            result: result
+        )
+    }
+
     private static func resultForCommand(
         _ command: AgentCommand,
         auditEventID: AuditEventID,
         revision: Int64?,
         phaseLifecycle: PhaseLifecycleRecord?,
-        ticketOrderingContext: TicketOrderingContext?
-    ) -> AgentCommandResult {
+        ticketOrderingContext: TicketOrderingContext?,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> AgentCommandResult {
         switch command {
         case .prepareExecutionAssignment:
             return .init(entityIDs: [], auditEventID: nil, error: .execution(.unavailable))
@@ -653,17 +940,40 @@ public actor AgentCommandDispatcher {
                 error: nil,
                 planChangeProposalVersion: revision
             )
+        case let .saveRepositoryPlanReconstruction(proposalID, _, _, _):
+            let readback = try RepositoryPlanReconstructionQuery.load(
+                from: connection,
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID)
+            ).first { $0.version.version == revision }
+            return .init(
+                entityIDs: [proposalID], auditEventID: auditEventID, error: nil,
+                planChangeProposalVersion: revision,
+                repositoryPlanReconstruction: readback
+            )
         case let .decidePlanChangeProposal(proposalID, version, _, decisionID, _):
+            let readback = try RepositoryPlanReconstructionQuery.load(
+                from: connection,
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID)
+            ).first { $0.version.version == version }
             return .init(
                 entityIDs: [proposalID], auditEventID: auditEventID, error: nil,
                 planChangeProposalVersion: version,
-                planChangeProposalDecisionID: decisionID
+                planChangeProposalDecisionID: decisionID,
+                repositoryPlanReconstruction: readback
             )
         case let .applyPlanChangeProposal(proposalID, version, _, _, applicationID):
+            let readback = try RepositoryPlanReconstructionQuery.load(
+                from: connection,
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID)
+            ).first { $0.version.version == version }
             return .init(
                 entityIDs: [proposalID], auditEventID: auditEventID, error: nil,
                 planChangeProposalVersion: version,
-                planChangeProposalApplicationID: applicationID
+                planChangeProposalApplicationID: applicationID,
+                repositoryPlanReconstruction: readback
             )
         case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil, phasePlanRevision: revision)
@@ -724,6 +1034,7 @@ public actor AgentCommandDispatcher {
         case let .prepareExecutionAssignment(_, ticket, _, _, _, _, _): (.ticketTaskPlan, ticket)
         case let .transitionPhaseLifecycle(_, phaseID, _, _, _): (.phaseLifecycle, phaseID)
         case let .savePlanChangeProposal(proposalID, _, _, _),
+             let .saveRepositoryPlanReconstruction(proposalID, _, _, _),
              let .decidePlanChangeProposal(proposalID, _, _, _, _),
              let .applyPlanChangeProposal(proposalID, _, _, _, _):
             (.planChangeProposal, proposalID)
@@ -793,6 +1104,22 @@ public actor AgentCommandDispatcher {
                 rationale: rationale,
                 operations: operations,
                 registration: project.registration,
+                connection: connection
+            )
+        case let .saveRepositoryPlanReconstruction(proposalID, expectedPreviousVersion, rationale, payload):
+            let reconstructionActorID: String
+            switch origin {
+            case .ownerApp: reconstructionActorID = "release-radar-owner"
+            case .externalAgent: reconstructionActorID = "release-radar-agent"
+            }
+            return try PlanChangeProposalPolicy.saveReconstructionVersion(
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID),
+                expectedPreviousVersion: expectedPreviousVersion,
+                rationale: rationale,
+                payload: payload,
+                registration: project.registration,
+                actorID: reconstructionActorID,
                 connection: connection
             )
         case let .decidePlanChangeProposal(proposalID, version, baselineDigest, decisionID, disposition):
@@ -1311,6 +1638,17 @@ public actor AgentCommandDispatcher {
     }
 
     private static func map(_ error: Error, command: AgentCommand) -> AgentCommandError {
+        if let error = error as? RepositoryPlanReconstructionError {
+            switch error {
+            case let .invalidPayload(message): return .invalidRepositoryPlanReconstruction(message)
+            case let .blocked(blockers): return .repositoryPlanReconstructionBlocked(blockers)
+            case .staleSource: return .repositoryPlanReconstructionStaleSource
+            case .applicationAttemptConflict: return .repositoryPlanReconstructionApplicationAttemptConflict
+            case .applicationOutcomeUnknown: return .repositoryPlanReconstructionApplicationOutcomeUnknown
+            case .preparationConflict, .preparationRevisionConflict, .invalidPreparationTransition:
+                return .invalidRepositoryPlanReconstruction(error.localizedDescription)
+            }
+        }
         if let error = error as? TicketOrderingError {
             return .ticketOrdering(error)
         }
@@ -1349,7 +1687,8 @@ public actor AgentCommandDispatcher {
         // Preserve the existing Accepted-transition error contract. Only the
         // additive task commands expose these task-policy rejection categories.
         switch command {
-        case .savePlanChangeProposal, .decidePlanChangeProposal, .applyPlanChangeProposal:
+        case .savePlanChangeProposal, .saveRepositoryPlanReconstruction,
+             .decidePlanChangeProposal, .applyPlanChangeProposal:
             break
         case .applyPhasePlanRevision, .finalizePhasePlan, .transitionDeliveryGoal:
             if let error = error as? DeliveryPlanningPolicyError {
@@ -1424,6 +1763,7 @@ private enum DispatchControl: Error, Sendable {
 private struct PlanChangeProposalSourceCapture: Sendable {
     let context: DocumentationRootContext
     let impacts: [PlanChangeRecordedSourceImpact]
+    let reconstructionManifest: RepositoryPlanSourceManifest?
 }
 
 private enum PlanChangeProposalSourcePreflight: Sendable {
@@ -1433,12 +1773,68 @@ private enum PlanChangeProposalSourcePreflight: Sendable {
         context: DocumentationRootContext,
         impacts: [PlanChangeRecordedSourceImpact]
     )
+    case verifiedReconstruction(
+        context: DocumentationRootContext,
+        manifest: RepositoryPlanSourceManifest
+    )
+
+    var context: DocumentationRootContext? {
+        switch self {
+        case let .verified(context, _), let .verifiedReconstruction(context, _): context
+        case .notRequired, .unavailable: nil
+        }
+    }
+
+    func requireFilesystemCurrent() throws {
+        switch self {
+        case .notRequired:
+            return
+        case .unavailable:
+            throw PlanChangeProposalError.stale([.referenceVersions])
+        case let .verified(context, impacts):
+            let catalog = try DocumentationCatalogContext(root: context.root)
+            let snapshot = try catalog.managedSnapshot()
+            try context.requireAccepted(snapshot)
+            for impact in impacts {
+                guard impact.repositoryID == snapshot.catalog.repositoryID.lowercased(),
+                      let artifact = snapshot.catalog.artifacts.first(where: {
+                          $0.artifactID == impact.artifactID
+                      }),
+                      artifact.path == impact.observedPath,
+                      artifact.lifecycle == impact.observedLifecycle,
+                      artifact.authorityLevel == impact.observedAuthority,
+                      documentationDigest(try catalog.reader.read(artifact.path))
+                        == impact.contentDigest else {
+                    throw PlanChangeProposalError.stale([.referenceVersions])
+                }
+            }
+            try catalog.reader.verifyStable()
+        case let .verifiedReconstruction(context, manifest):
+            let current: RepositoryPlanSourceManifest
+            do {
+                current = try RepositoryPlanSourceCapture.capture(
+                    context: context,
+                    artifactIDs: manifest.sources.map(\.artifactID)
+                )
+            } catch {
+                throw RepositoryPlanReconstructionError.staleSource
+            }
+            guard current == manifest else {
+                throw RepositoryPlanReconstructionError.staleSource
+            }
+        }
+    }
 
     func requireCurrent(
         command: AgentCommand,
         projectID: ProjectID,
         connection: SQLiteConnection
     ) throws {
+        let reconstruction = try PlanChangeProposalPolicy.reconstructionPayload(
+            for: command,
+            projectID: projectID,
+            connection: connection
+        )
         let current = try PlanChangeProposalPolicy.sourceImpacts(
             for: command,
             projectID: projectID,
@@ -1446,10 +1842,16 @@ private enum PlanChangeProposalSourcePreflight: Sendable {
         )
         switch self {
         case .notRequired:
+            if reconstruction != nil {
+                throw RepositoryPlanReconstructionError.staleSource
+            }
             guard current.isEmpty else {
                 throw PlanChangeProposalError.stale([.referenceVersions])
             }
         case .unavailable:
+            if reconstruction != nil {
+                throw RepositoryPlanReconstructionError.staleSource
+            }
             throw PlanChangeProposalError.stale([.referenceVersions])
         case let .verified(context, impacts):
             do {
@@ -1459,6 +1861,16 @@ private enum PlanChangeProposalSourcePreflight: Sendable {
             }
             guard current == impacts else {
                 throw PlanChangeProposalError.stale([.referenceVersions])
+            }
+        case let .verifiedReconstruction(context, manifest):
+            do {
+                try context.verifyPersisted(connection)
+            } catch {
+                throw RepositoryPlanReconstructionError.staleSource
+            }
+            guard current.isEmpty,
+                  reconstruction?.source.capturedSourceManifest == manifest else {
+                throw RepositoryPlanReconstructionError.staleSource
             }
         }
     }
