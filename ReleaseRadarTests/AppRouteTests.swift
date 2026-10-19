@@ -3156,7 +3156,8 @@ final class AppRouteTests: XCTestCase {
             phaseID: fixture.roadmapPhaseID,
             expectedRevision: 2
         )
-        XCTAssertEqual((await unavailable.requests()).count, 2, "Unavailable finalization must use a fresh explicit retry")
+        let unavailableRequests = await unavailable.requests()
+        XCTAssertEqual(unavailableRequests.count, 2, "Unavailable finalization must use a fresh explicit retry")
 
         let definite = DeliveryGoalAssignmentDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .planRevisionConflict(expected: 2, current: 3)
@@ -3319,8 +3320,12 @@ final class AppRouteTests: XCTestCase {
         XCTAssertTrue(accessibilityText(message).contains("Current saved revision: 3"))
         let reload = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "reload-phase-plan-finalization"))
         XCTAssertEqual(AXUIElementPerformAction(reload, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where await reloads.count() == 0 { try await Task.sleep(for: .milliseconds(100)) }
-        XCTAssertEqual(await reloads.count(), 1)
+        for _ in 0..<20 {
+            if await reloads.count() > 0 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let reloadCount = await reloads.count()
+        XCTAssertEqual(reloadCount, 1)
         XCTAssertTrue(window.isVisible)
         XCTAssertTrue(hosting.bounds.width > 0)
     }
@@ -3472,6 +3477,111 @@ final class AppRouteTests: XCTestCase {
             XCTAssertEqual(current.readiness.revision, 3)
             XCTAssertEqual(current.readiness.readyRevision, 3)
         }
+    }
+
+    @MainActor
+    func testNativePhasePlanCompleteCreateAssignFinalizeJourneyUsesRenderedControls() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        func button(named title: String, in root: AXUIElement) -> AXUIElement? {
+            accessibilityElements(root, role: kAXButtonRole).first { element in
+                var candidate: CFTypeRef?
+                _ = AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &candidate)
+                return candidate as? String == title
+            }
+        }
+        func host(_ view: ProjectPlanView, title: String) -> (NSWindow, AXUIElement) {
+            let window = NSWindow(
+                contentRect: .init(x: 30, y: 30, width: 1_280, height: 850),
+                styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+            )
+            window.isReleasedWhenClosed = false
+            window.title = title
+            let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+            window.contentView = hosting
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return (window, AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier))
+        }
+        func view(for plan: ProjectPlanProjection) -> ProjectPlanView {
+            ProjectPlanView(
+                plan: plan,
+                selectedTicketID: .constant(.init(rawValue: "ROAD-1")),
+                openAllPhases: {},
+                openPhase: { _ in },
+                loadDeliveryGoalEditor: { phaseID, goalID in
+                    await model.loadDeliveryGoalEditor(projectID: fixture.projectID, phaseID: phaseID, goalID: goalID)
+                },
+                saveDeliveryGoalDraft: { phaseID, revision, draft in
+                    await model.saveDeliveryGoalDraft(projectID: fixture.projectID, phaseID: phaseID, expectedRevision: revision, draft: draft)
+                },
+                loadDeliveryGoalAssignmentEditor: { phaseID in
+                    await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+                },
+                saveDeliveryGoalAssignmentDraft: { phaseID, revision, edits in
+                    await model.saveDeliveryGoalAssignmentDraft(projectID: fixture.projectID, phaseID: phaseID, expectedRevision: revision, edits: edits)
+                },
+                finalizePhasePlan: { phaseID, revision in
+                    await model.finalizePhasePlan(projectID: fixture.projectID, phaseID: phaseID, expectedRevision: revision)
+                }
+            )
+        }
+
+        let initialPlan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let createHost = host(view(for: initialPlan), title: "Phase finalization create journey")
+        defer { createHost.0.close() }
+        let createWindow = try XCTUnwrap(accessibilityWindow(createHost.1, title: createHost.0.title))
+        let create = try XCTUnwrap(accessibilityElement(createWindow, identifier: "create-delivery-goal-\(fixture.roadmapPhaseID.rawValue)"))
+        XCTAssertEqual(AXUIElementPerformAction(create, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where !accessibilityText(createHost.1).contains("New Delivery Goal") { try await Task.sleep(for: .milliseconds(100)) }
+        let inputs = accessibilityElements(createHost.1, role: kAXTextFieldRole)
+            + accessibilityElements(createHost.1, role: kAXTextAreaRole)
+        XCTAssertGreaterThanOrEqual(inputs.count, 3, "Create journey must expose title, outcome, and criteria fields")
+        for (input, value) in zip(inputs.prefix(3), ["Journey goal", "Deliver the owner-visible outcome", "Owner can verify delivery"]) {
+            XCTAssertEqual(AXUIElementSetAttributeValue(input, kAXValueAttribute as CFString, value as CFString), .success)
+        }
+        let goalSave = try XCTUnwrap(button(named: "Save", in: createHost.1))
+        XCTAssertEqual(AXUIElementPerformAction(goalSave, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityText(createHost.1).contains("New Delivery Goal") { try await Task.sleep(for: .milliseconds(100)) }
+        createHost.0.close()
+
+        let goalPlan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let goalID = try XCTUnwrap(goalPlan.phases.first { $0.id == fixture.roadmapPhaseID }?.deliveryGoals.first?.goalID)
+        let assignmentHost = host(view(for: goalPlan), title: "Phase finalization assign journey")
+        defer { assignmentHost.0.close() }
+        let assignmentWindow = try XCTUnwrap(accessibilityWindow(assignmentHost.1, title: assignmentHost.0.title))
+        let edit = try XCTUnwrap(accessibilityElement(assignmentWindow, identifier: "edit-delivery-goal-assignments-\(fixture.roadmapPhaseID.rawValue)"))
+        XCTAssertEqual(AXUIElementPerformAction(edit, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where !accessibilityText(assignmentHost.1).contains("Eligible tickets") { try await Task.sleep(for: .milliseconds(100)) }
+        let pickers = accessibilityElements(assignmentHost.1, role: kAXPopUpButtonRole)
+        XCTAssertEqual(pickers.count, 3, "Assignment journey must expose one picker per eligible ticket")
+        for picker in pickers {
+            XCTAssertEqual(AXUIElementSetAttributeValue(picker, kAXValueAttribute as CFString, "Journey goal" as CFString), .success)
+        }
+        let assignmentSave = try XCTUnwrap(button(named: "Save", in: assignmentHost.1))
+        XCTAssertEqual(AXUIElementPerformAction(assignmentSave, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityText(assignmentHost.1).contains("Assign Delivery Goal Tickets") { try await Task.sleep(for: .milliseconds(100)) }
+        assignmentHost.0.close()
+
+        let assignedPlan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        XCTAssertEqual(assignedPlan.phases.first { $0.id == fixture.roadmapPhaseID }?.deliveryGoals.first?.goalID, goalID)
+        let finalizeHost = host(view(for: assignedPlan), title: "Phase finalization complete journey")
+        defer { finalizeHost.0.close() }
+        let finalizeWindow = try XCTUnwrap(accessibilityWindow(finalizeHost.1, title: finalizeHost.0.title))
+        let finalize = try XCTUnwrap(accessibilityElement(finalizeWindow, identifier: "finalize-phase-plan-\(fixture.roadmapPhaseID.rawValue)"))
+        XCTAssertEqual(AXUIElementPerformAction(finalize, kAXPressAction as CFString), .success)
+        for _ in 0..<30 where accessibilityElement(finalizeWindow, identifier: "phase-plan-finalization-message") == nil { try await Task.sleep(for: .milliseconds(100)) }
+        let message = try XCTUnwrap(accessibilityElement(finalizeWindow, identifier: "phase-plan-finalization-message"))
+        XCTAssertTrue(accessibilityText(message).contains("Ready at revision 2"))
+        XCTAssertEqual(
+            model.dashboard?.plan(for: fixture.projectID)?.phases.first { $0.id == fixture.roadmapPhaseID }?.readiness.state,
+            .ready
+        )
     }
 
     @MainActor
