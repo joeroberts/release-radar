@@ -22,6 +22,10 @@ public struct ReadOnlyCompanionPublication: Codable, Equatable, Sendable {
 }
 
 public struct CompanionManifest: Codable, Equatable, Sendable {
+    public static let currentSchemaVersion = 1
+    public static let minimumReaderVersionForCurrentSchema = 1
+    public static let currentReaderVersion = 1
+
     public let registrationID: String
     public let publisherEpoch: String
     public let controlSequence: Int64
@@ -79,6 +83,24 @@ public struct CompanionManifest: Codable, Equatable, Sendable {
             }
         }
     }
+
+    /// Verifies only whether this manifest's content schema can be consumed by
+    /// the supplied reader. Control validation remains an independent step and
+    /// must not be skipped when replacement content requires an update.
+    public func requireCompatible(readerVersion: Int = CompanionManifest.currentReaderVersion) throws {
+        guard schemaVersion > 0, minimumReaderVersion > 0, readerVersion > 0 else {
+            throw CompanionManifestCompatibilityError.invalidVersion
+        }
+        guard schemaVersion == CompanionManifest.currentSchemaVersion,
+              minimumReaderVersion <= readerVersion else {
+            throw CompanionManifestCompatibilityError.updateRequired
+        }
+    }
+}
+
+public enum CompanionManifestCompatibilityError: Error, Equatable, Sendable {
+    case invalidVersion
+    case updateRequired
 }
 
 public enum CompanionManifestActivation: String, Codable, Equatable, Sendable {
