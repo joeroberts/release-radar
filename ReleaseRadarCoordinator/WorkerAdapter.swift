@@ -2,12 +2,20 @@ import Foundation
 import ReleaseRadarCore
 
 actor WorkerAdapter {
+    private struct CodexProjectAssociationError: LocalizedError {
+        let detail: String
+        var errorDescription: String? {
+            "Codex project association could not be resolved. \(detail) Resolve the saved Codex project for this repository and retry the existing assignment."
+        }
+    }
+
     struct Worker {
         let id: String
         let attemptID: UUID
         let policy: WorkerPolicy
         var server: (any ExecutionPeer)?
         var threadID: String?
+        var codexProjectID: String?
         var turnID: String?
         var status = "starting"
         var verified = false
@@ -41,6 +49,53 @@ actor WorkerAdapter {
     private func rpc(_ server: any ExecutionPeer, _ method: String, _ params: [String: Any]) async throws -> [String: Any] {
         let response = try await server.call(method, RPCObject(params))
         return try response.object()
+    }
+
+    /// Resolves the saved Codex project from the exact repository root rather
+    /// than from a title, checkout prefix, or an RR-persisted cache.
+    private func resolveCodexProjectID(
+        server: any ExecutionPeer, selected: WorkerPolicy
+    ) async throws -> String {
+        let expectedRoot = try ProjectExecutionHookReadiness.canonicalPrimaryRoot(selected.policy.primaryRoot)
+        var cursor: String?
+        var seenCursors: Set<String> = []
+        var matchingIDs: Set<String> = []
+
+        repeat {
+            var params: [String: Any] = [:]
+            if let cursor { params["cursor"] = cursor }
+            let result = try await rpc(server, "project/list", params)
+            guard let projects = result["data"] as? [[String: Any]] else {
+                throw CodexProjectAssociationError(detail: "The saved-project inventory was malformed.")
+            }
+            for project in projects {
+                guard let id = project["id"] as? String, !id.isEmpty,
+                      let roots = project["roots"] as? [[String: Any]],
+                      roots.allSatisfy({ $0["path"] is String }) else {
+                    throw CodexProjectAssociationError(detail: "The saved-project inventory contained an invalid project record.")
+                }
+                if roots.contains(where: { $0["path"] as? String == expectedRoot }) {
+                    matchingIDs.insert(id)
+                }
+            }
+            if let next = result["nextCursor"], !(next is NSNull) {
+                guard let nextCursor = next as? String, !nextCursor.isEmpty,
+                      seenCursors.insert(nextCursor).inserted else {
+                    throw CodexProjectAssociationError(detail: "The saved-project inventory pagination was invalid.")
+                }
+                cursor = nextCursor
+            } else {
+                cursor = nil
+            }
+        } while cursor != nil
+
+        guard matchingIDs.count == 1, let id = matchingIDs.first else {
+            let detail = matchingIDs.isEmpty
+                ? "No saved Codex project has the registered repository root."
+                : "More than one saved Codex project has the registered repository root."
+            throw CodexProjectAssociationError(detail: detail)
+        }
+        return id
     }
 
     func event(_ id: String, _ payload: RPCObject) {
@@ -125,14 +180,20 @@ actor WorkerAdapter {
             let configResult = try await rpc(server, "config/read", ["cwd": selected.assignment.checkoutPath, "includeLayers": false])
             guard let config = configResult["config"] as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
             try selected.validate(config: config)
+            let codexProjectID = try await resolveCodexProjectID(server: server, selected: selected)
+            guard try store.policy(projectID: projectID) == selected.policy else {
+                throw ProjectExecutionError.assignmentNotAuthorized
+            }
             let result = try await rpc(server, "thread/start", [
                 "cwd": selected.assignment.checkoutPath, "runtimeWorkspaceRoots": [selected.assignment.checkoutPath],
                 "permissions": selected.assignment.permissionProfile, "model": selected.assignment.model,
                 "allowProviderModelFallback": false, "config": try selected.overrides(config: config),
+                "projectId": codexProjectID,
             ])
             guard let thread = result["thread"] as? [String: Any], let threadID = thread["id"] as? String else { throw ProjectExecutionError.identityMismatch }
             workers[id]?.threadID = threadID
-            guard thread["modelProvider"] as? String == "openai" else { throw CodexExecutionContextError.routingUnsupported }
+            guard thread["modelProvider"] as? String == "openai",
+                  thread["projectId"] as? String == codexProjectID else { throw ProjectExecutionError.identityMismatch }
             workers[id]?.effective = result.filter { ["cwd", "runtimeWorkspaceRoots", "model", "reasoningEffort", "activePermissionProfile", "sandbox", "approvalPolicy", "approvalsReviewer", "instructionSources"].contains($0.key) }
             guard result["cwd"] as? String == selected.assignment.checkoutPath,
                   result["runtimeWorkspaceRoots"] as? [String] == [selected.assignment.checkoutPath],
@@ -157,6 +218,7 @@ actor WorkerAdapter {
             } while cursor != nil
             try await verifyHook(server, selected: selected)
             try selected.bind(sessionID: threadID, attemptID: attemptID)
+            workers[id]?.codexProjectID = codexProjectID
             workers[id]?.verified = true; workers[id]?.status = "ready"
             _ = try await followUp(workerID: id, prompt: value)
         } catch {
@@ -196,6 +258,7 @@ actor WorkerAdapter {
                                     "projectId": worker.policy.assignment.registration.projectID.rawValue,
                                     "pendingRequests": worker.approvals.map { ["requestKey": $0.key, "method": $0.value["method"] ?? NSNull(), "params": $0.value["params"] ?? [:]] }]
         if let threadID = worker.threadID { result["threadId"] = threadID }
+        if let codexProjectID = worker.codexProjectID { result["codexProjectId"] = codexProjectID }
         if let turnID = worker.turnID { result["turnId"] = turnID }
         if let error = worker.error { result["error"] = error }
         if let failure = worker.accessFailure {
