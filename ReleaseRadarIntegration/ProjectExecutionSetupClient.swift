@@ -419,7 +419,6 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     func validateInstallation(handlerPath: String) async throws {
         try await validateHandlerIdentity(handlerPath: handlerPath)
-        _ = try await validatedShippedPlugin()
     }
 
     func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
@@ -428,6 +427,8 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         }
         try lease.validate()
         let package = try await validatedShippedPlugin()
+        try lease.validate()
+        guard boundContext == context else { throw CodexExecutionContextError.changed }
         let skill = try ProjectExecutionSharedExecutionSkill.verifyingInstalledPackage(
             in: context, expected: package
         )
