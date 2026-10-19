@@ -493,6 +493,14 @@ struct SidebarView: View {
                             model.deliveryGoalDraftSaveRecovery(projectID: projectID, phaseID: phaseID)
                         },
                         requestedDeliveryGoalEditor: model.takeWorkspaceDeliveryGoalPlanningTarget(for: projectID),
+                        loadDeliveryGoalAssignmentEditor: { phaseID in
+                            await model.loadDeliveryGoalAssignmentEditor(projectID: projectID, phaseID: phaseID)
+                        },
+                        saveDeliveryGoalAssignmentDraft: { phaseID, revision, edits in
+                            await model.saveDeliveryGoalAssignmentDraft(projectID: projectID, phaseID: phaseID, expectedRevision: revision, edits: edits)
+                        },
+                        reconcileDeliveryGoalAssignmentDraftSave: { await model.reconcileDeliveryGoalAssignmentDraftSave(attemptID: $0) },
+                        deliveryGoalAssignmentDraftSaveRecovery: { model.deliveryGoalAssignmentDraftSaveRecovery(projectID: projectID, phaseID: $0) },
                         repositoryPlanReconstruction: model.repositoryPlanReconstruction(
                             for: projectID
                         ),

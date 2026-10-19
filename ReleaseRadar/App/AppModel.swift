@@ -67,6 +67,15 @@ private struct PendingDeliveryGoalDraftSave: Sendable {
     let expectedRevision: Int64
     var error: AgentCommandError
 }
+private struct PendingDeliveryGoalAssignmentSave: Sendable {
+    let envelope: AgentCommandEnvelope
+    let projectID: ProjectID
+    let phaseID: PhaseID
+    let registration: ProjectRegistration
+    let expectedRevision: Int64
+    let edits: [DeliveryGoalAssignmentEdit]
+    var error: AgentCommandError
+}
 
 private struct PreparedProjectProjections: Sendable {
     let dashboard: DashboardProjection
@@ -246,6 +255,9 @@ final class AppModel {
         UUID,
         AgentCommand
     ) async -> AgentCommandResult
+    private let deliveryGoalAssignmentDraftOwnerCommandDispatch: @Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult
+    private var pendingDeliveryGoalAssignmentSaves: [UUID: PendingDeliveryGoalAssignmentSave] = [:]
+    private var pendingDeliveryGoalAssignmentSaveIDs: [DeliveryGoalDraftSaveKey: UUID] = [:]
     private var pendingDeliveryGoalDraftSaves: [UUID: PendingDeliveryGoalDraftSave] = [:]
     private var pendingDeliveryGoalDraftSaveIDs: [DeliveryGoalDraftSaveKey: UUID] = [:]
     private let repositoryPlanReadbackLoader: @Sendable (
@@ -364,6 +376,7 @@ final class AppModel {
             UUID,
             AgentCommand
         ) async -> AgentCommandResult)? = nil,
+        deliveryGoalAssignmentDraftOwnerCommandDispatch: (@Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult)? = nil,
         repositoryPlanReadbackLoader: @escaping @Sendable (
             DeliveryStore,
             ProjectID,
@@ -465,7 +478,7 @@ final class AppModel {
                     )
                 }
             }
-        self.deliveryGoalDraftOwnerCommandDispatch = deliveryGoalDraftOwnerCommandDispatch
+        let resolvedDeliveryGoalDraftOwnerCommandDispatch = deliveryGoalDraftOwnerCommandDispatch
             ?? { projectID, registration, requestID, command in
                 do {
                     return try await resolvedOnboarding.withAuthorizedProject(projectID: projectID) { project in
@@ -491,6 +504,7 @@ final class AppModel {
                     return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
                 }
             }
+        self.deliveryGoalDraftOwnerCommandDispatch = resolvedDeliveryGoalDraftOwnerCommandDispatch
         self.repositoryPlanReadbackLoader = repositoryPlanReadbackLoader
         self.repositoryPlanApplyReconciler = repositoryPlanApplyReconciler
             ?? { attempt in
@@ -567,6 +581,8 @@ final class AppModel {
                 store: store,
                 dispatcher: PushoverNotificationDispatcher(store: store, credentials: resolvedKeychain)
             )
+        self.deliveryGoalAssignmentDraftOwnerCommandDispatch = deliveryGoalAssignmentDraftOwnerCommandDispatch
+            ?? resolvedDeliveryGoalDraftOwnerCommandDispatch
         recoveryServices?.observeAgentBridgeHealth { [weak self] snapshot in
             self?.applyConnectorHealthSnapshot(snapshot)
         }
@@ -5245,6 +5261,151 @@ final class AppModel {
         } catch {
             return .failed(deliveryGoalEditorError(error))
         }
+    }
+
+    func loadDeliveryGoalAssignmentEditor(projectID: ProjectID, phaseID: PhaseID) async -> DeliveryGoalAssignmentEditorLoadOutcome {
+        do {
+            let snapshot = try await store.read { connection -> DeliveryGoalAssignmentEditorSnapshot in
+                guard let plan = try DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection) else { throw DeliveryPlanningPolicyError.phasePlanNotFound }
+                let lifecycle = try PhaseLifecyclePolicy.current(projectID: projectID, phaseID: phaseID, connection: connection)
+                guard lifecycle.lifecycle != .completed else { throw PhaseLifecyclePolicyError.completedPhaseReadOnly(phaseID) }
+                let goalRecords = try DeliveryPlanningPolicy.loadGoals(projectID: projectID, phaseID: phaseID, connection: connection)
+                let assignments = try DeliveryPlanningPolicy.loadAssignments(projectID: projectID, phaseID: phaseID, connection: connection)
+                let goals = try goalRecords.map { goal in
+                    DeliveryGoalSummaryProjection(
+                        goalID: goal.id, title: goal.title, outcome: goal.outcome, lifecycle: goal.lifecycle,
+                        doneCriteria: try DeliveryPlanningPolicy.loadCriteria(projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection).map(\.text),
+                        ticketIDs: assignments.filter { Data($0.goalID.rawValue.utf8) == Data(goal.id.rawValue.utf8) }.map(\.ticketID),
+                        coverage: try DeliveryGoalCoveragePolicy.assess(projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection)
+                    )
+                }
+                let goalsByID = Dictionary(uniqueKeysWithValues: goals.map { (Data($0.goalID.rawValue.utf8), $0) })
+                let assignmentByTicket = Dictionary(uniqueKeysWithValues: assignments.map { (Data($0.ticketID.rawValue.utf8), $0.goalID) })
+                let rows = try connection.rows(
+                    "SELECT id,outcome FROM tickets WHERE project_id=? AND phase_id=? AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY id COLLATE BINARY",
+                    bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+                )
+                let tickets = try rows.map { row -> TicketCardProjection in
+                    guard case let .text(id)? = row["id"], case let .text(outcome)? = row["outcome"] else { throw DashboardProjectionError.invalidColumn("ticket") }
+                    let ticketID = TicketID(rawValue: id)
+                    let goal = assignmentByTicket[Data(id.utf8)].flatMap { goalsByID[Data($0.rawValue.utf8)] }
+                    return .init(
+                        id: ticketID, outcome: outcome, dependencyCount: 0, blockerCount: 0,
+                        deliveryGoal: goal.map { .init(goalID: $0.goalID, title: $0.title, outcome: $0.outcome, lifecycle: $0.lifecycle, doneCriteria: $0.doneCriteria) },
+                        phaseID: phaseID
+                    )
+                }
+                return .init(
+                    projectID: projectID, phaseID: phaseID, planRevision: plan.revision,
+                    phaseLifecycle: lifecycle.lifecycle, tickets: tickets, goals: goals,
+                    assignments: assignments.map { .init(goalID: $0.goalID, ticketID: $0.ticketID) }
+                )
+            }
+            return .loaded(snapshot)
+        } catch { return .failed(deliveryGoalEditorError(error)) }
+    }
+
+    func saveDeliveryGoalAssignmentDraft(projectID: ProjectID, phaseID: PhaseID, expectedRevision: Int64, edits: [DeliveryGoalAssignmentEdit]) async -> DeliveryGoalAssignmentSaveOutcome {
+        let attemptID = requestIDGenerator()
+        let key = DeliveryGoalDraftSaveKey(projectID: projectID, phaseID: phaseID)
+        if let pendingAttemptID = pendingDeliveryGoalAssignmentSaveIDs[key] {
+            return .init(attemptID: pendingAttemptID, status: .unconfirmed(error: .outcomeUnknown))
+        }
+        guard Set(edits.map(\.ticketID)).count == edits.count, !edits.isEmpty else { return .init(attemptID: attemptID, status: .rejected(error: .invalidPlanMutation("Choose one distinct ticket assignment before saving."), refreshedEditor: nil)) }
+        let authorization: (ProjectRegistration?, String)
+        do { authorization = try await projectOnboarding.withAuthorizedProject(projectID: projectID) { ($0.registration, $0.canonicalRoot.path) } }
+        catch { return .init(attemptID: attemptID, status: .rejected(error: .unauthorizedProjectRoot, refreshedEditor: nil)) }
+        guard let registration = authorization.0 else {
+            return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
+        }
+        let assignments = edits.compactMap { edit in edit.goalID.map { DeliveryGoalAssignment(goalID: $0, ticketID: edit.ticketID) } }
+        let command = AgentCommand.applyPhasePlanRevision(projectID: projectID.rawValue, phaseID: phaseID.rawValue, expectedRevision: expectedRevision, assignments: assignments, unassignedTicketIDs: edits.filter { $0.goalID == nil }.map(\.ticketID))
+        let pending = PendingDeliveryGoalAssignmentSave(
+            envelope: .init(version: AgentCommandDispatcher.commandEnvelopeVersion, requestID: attemptID, projectRoot: authorization.1, expectedRegistration: registration, reason: "Owner saved Delivery Goal ticket assignments", command: command),
+            projectID: projectID, phaseID: phaseID, registration: registration,
+            expectedRevision: expectedRevision, edits: edits, error: .outcomeUnknown
+        )
+        return await resolveDeliveryGoalAssignmentSave(pending, key: key)
+    }
+    func reconcileDeliveryGoalAssignmentDraftSave(attemptID: UUID) async -> DeliveryGoalAssignmentSaveOutcome {
+        guard let pending = pendingDeliveryGoalAssignmentSaves[attemptID] else { return .init(attemptID: attemptID, status: .rejected(error: .outcomeUnknown, refreshedEditor: nil)) }
+        let key = DeliveryGoalDraftSaveKey(projectID: pending.projectID, phaseID: pending.phaseID)
+        guard pendingDeliveryGoalAssignmentSaveIDs[key] == attemptID else { return .init(attemptID: attemptID, status: .rejected(error: .outcomeUnknown, refreshedEditor: nil)) }
+        guard pending.envelope.version == AgentCommandDispatcher.commandEnvelopeVersion,
+              pending.envelope.requestID == attemptID,
+              pending.envelope.expectedRegistration == pending.registration,
+              case let .applyPhasePlanRevision(projectID, phaseID, revision, _, _, _, _) = pending.envelope.command,
+              Data(projectID.utf8) == Data(pending.projectID.rawValue.utf8),
+              Data(phaseID.utf8) == Data(pending.phaseID.rawValue.utf8),
+              revision == pending.expectedRevision else {
+            removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
+            return .init(attemptID: attemptID, status: .rejected(
+                error: .invalidEnvelope("The saved assignment attempt no longer matches its original phase operation."),
+                refreshedEditor: nil
+            ))
+        }
+        do {
+            let current = try await projectOnboarding.withAuthorizedProject(projectID: pending.projectID) { ($0.registration, $0.canonicalRoot.path) }
+            guard let registration = current.0,
+                  registration == pending.registration,
+                  current.1 == pending.envelope.projectRoot else {
+                removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
+                return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
+            }
+        } catch {
+            removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
+            return .init(attemptID: attemptID, status: .rejected(error: .unauthorizedProjectRoot, refreshedEditor: nil))
+        }
+        return await resolveDeliveryGoalAssignmentSave(pending, key: key)
+    }
+    func deliveryGoalAssignmentDraftSaveRecovery(projectID: ProjectID, phaseID: PhaseID) -> DeliveryGoalAssignmentSaveRecovery? {
+        let key = DeliveryGoalDraftSaveKey(projectID: projectID, phaseID: phaseID)
+        guard let id = pendingDeliveryGoalAssignmentSaveIDs[key], let pending = pendingDeliveryGoalAssignmentSaves[id] else { return nil }
+        return .init(attemptID: id, edits: pending.edits, expectedRevision: pending.expectedRevision, error: pending.error)
+    }
+
+    private func resolveDeliveryGoalAssignmentSave(_ pending: PendingDeliveryGoalAssignmentSave, key: DeliveryGoalDraftSaveKey) async -> DeliveryGoalAssignmentSaveOutcome {
+        let attemptID = pending.envelope.requestID
+        let result = await deliveryGoalAssignmentDraftOwnerCommandDispatch(pending.projectID, pending.registration, attemptID, pending.envelope.command)
+        if let error = result.error {
+            if error == .outcomeUnknown {
+                var retained = pending; retained.error = error
+                pendingDeliveryGoalAssignmentSaves[attemptID] = retained
+                pendingDeliveryGoalAssignmentSaveIDs[key] = attemptID
+                return .init(attemptID: attemptID, status: .unconfirmed(error: error))
+            }
+            let refreshed = await currentDeliveryGoalAssignmentEditor(projectID: pending.projectID, phaseID: pending.phaseID)
+            removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
+            return .init(attemptID: attemptID, status: .rejected(error: error, refreshedEditor: refreshed))
+        }
+        guard let auditEventID = result.auditEventID,
+              let savedRevision = result.phasePlanRevision,
+              savedRevision == pending.expectedRevision + 1 else {
+            var retained = pending; retained.error = .outcomeUnknown
+            pendingDeliveryGoalAssignmentSaves[attemptID] = retained
+            pendingDeliveryGoalAssignmentSaveIDs[key] = attemptID
+            return .init(attemptID: attemptID, status: .unconfirmed(error: .outcomeUnknown))
+        }
+        removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
+        guard await reloadProjectProjections(context: .agentCommandCommitted) == .published else {
+            return .init(
+                attemptID: attemptID,
+                status: .savedNeedsReload(savedRevision: savedRevision, auditEventID: auditEventID)
+            )
+        }
+        guard let readback = await currentDeliveryGoalAssignmentEditor(projectID: pending.projectID, phaseID: pending.phaseID),
+              readback.planRevision == savedRevision else {
+            return .init(attemptID: attemptID, status: .savedNeedsReload(savedRevision: savedRevision, auditEventID: auditEventID))
+        }
+        return .init(attemptID: attemptID, status: .confirmed(savedRevision: savedRevision, auditEventID: auditEventID, readback: readback))
+    }
+    private func currentDeliveryGoalAssignmentEditor(projectID: ProjectID, phaseID: PhaseID) async -> DeliveryGoalAssignmentEditorSnapshot? {
+        guard case let .loaded(snapshot) = await loadDeliveryGoalAssignmentEditor(projectID: projectID, phaseID: phaseID) else { return nil }
+        return snapshot
+    }
+    private func removePendingDeliveryGoalAssignmentSave(_ attemptID: UUID, key: DeliveryGoalDraftSaveKey) {
+        pendingDeliveryGoalAssignmentSaves.removeValue(forKey: attemptID)
+        pendingDeliveryGoalAssignmentSaveIDs.removeValue(forKey: key)
     }
 
     func saveDeliveryGoalDraft(

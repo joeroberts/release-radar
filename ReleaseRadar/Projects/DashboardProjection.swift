@@ -368,6 +368,7 @@ struct DashboardProjection: Equatable, Sendable {
                         lifecycle: board.phaseLifecycle!,
                         completionAssessment: board.completionAssessment!,
                         deliveryGoals: board.deliveryGoals,
+                        tickets: board.lanes.flatMap(\.cards),
                         ticketCount: board.lanes.reduce(0) { $0 + $1.count }
                     )
                 }
@@ -693,6 +694,7 @@ struct ProjectPlanPhaseProjection: Equatable, Sendable, Identifiable {
     let lifecycle: PhaseLifecycleRecord
     let completionAssessment: PhaseCompletionAssessment
     let deliveryGoals: [DeliveryGoalSummaryProjection]
+    var tickets: [TicketCardProjection] = []
     let ticketCount: Int
 }
 
