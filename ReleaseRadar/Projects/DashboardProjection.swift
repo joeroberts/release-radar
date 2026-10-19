@@ -694,7 +694,7 @@ struct ProjectPlanPhaseProjection: Equatable, Sendable, Identifiable {
     let lifecycle: PhaseLifecycleRecord
     let completionAssessment: PhaseCompletionAssessment
     let deliveryGoals: [DeliveryGoalSummaryProjection]
-    let tickets: [TicketCardProjection]
+    var tickets: [TicketCardProjection] = []
     let ticketCount: Int
 }
 

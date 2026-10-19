@@ -49,7 +49,20 @@ enum DeliveryGoalAssignmentEditorLoadOutcome: Equatable, Sendable { case loaded(
 struct DeliveryGoalAssignmentEdit: Equatable, Sendable { let ticketID: TicketID; let goalID: DeliveryGoalID? }
 struct DeliveryGoalAssignmentSaveOutcome: Equatable, Sendable { enum Status: Equatable, Sendable { case confirmed(savedRevision: Int64, auditEventID: AuditEventID, readback: DeliveryGoalAssignmentEditorSnapshot); case savedNeedsReload(savedRevision: Int64, auditEventID: AuditEventID); case rejected(error: AgentCommandError, refreshedEditor: DeliveryGoalAssignmentEditorSnapshot?); case unconfirmed(error: AgentCommandError) }; let attemptID: UUID; let status: Status }
 struct DeliveryGoalAssignmentSaveRecovery: Equatable, Sendable { let attemptID: UUID; let edits: [DeliveryGoalAssignmentEdit]; let expectedRevision: Int64; let error: AgentCommandError }
-func deliveryGoalAssignmentDraftErrorMessage(_ error: AgentCommandError) -> String { deliveryGoalDraftErrorMessage(error) }
+func deliveryGoalAssignmentDraftErrorMessage(_ error: AgentCommandError) -> String {
+    switch error {
+    case let .goalNotActionable(goalID):
+        "Delivery Goal \(goalID.rawValue) is immutable and cannot receive ticket assignments."
+    case .staleProjectRegistration, .planRevisionConflict:
+        "This phase plan changed. Keep your assignment edits, refresh the plan, then save again."
+    case .appUnavailable:
+        "Release Radar is temporarily unavailable. Your assignment edits are still here; save again when it is available."
+    case .outcomeUnknown:
+        "Release Radar could not confirm that save. Reconcile the same saved attempt before making another assignment change."
+    default:
+        deliveryGoalDraftErrorMessage(error)
+    }
+}
 
 func deliveryGoalDraftErrorMessage(_ error: AgentCommandError) -> String {
     switch error {
@@ -145,7 +158,9 @@ struct ProjectPlanView: View {
     @State private var isSavingDeliveryGoal = false
     @State private var showsDeliveryGoalAssignmentEditor = false
     @State private var deliveryGoalAssignmentEditor: DeliveryGoalAssignmentEditorSnapshot?
-    @State private var deliveryGoalAssignmentEdits: [TicketID: DeliveryGoalID?] = [:]
+    @State private var deliveryGoalAssignmentSelections: [TicketID: String] = [:]
+    @State private var deliveryGoalAssignmentEditorMessage: String?
+    @State private var isSavingDeliveryGoalAssignments = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -570,20 +585,67 @@ struct ProjectPlanView: View {
             if let editor = deliveryGoalAssignmentEditor {
                 Section { Text("Plan revision \(editor.planRevision)"); Text("Covered and uncovered work") }
                 Section("Eligible tickets") { ForEach(editor.tickets) { ticket in
-                    Picker(ticket.id.rawValue, selection: Binding(get: { deliveryGoalAssignmentEdits[ticket.id] ?? currentGoal(ticket.id, editor: editor) }, set: { deliveryGoalAssignmentEdits[ticket.id] = $0 })) {
-                        Text("Unassigned").tag(Optional<DeliveryGoalID>.none)
-                        ForEach(editor.goals.filter { $0.lifecycle != .accepted && $0.lifecycle != .superseded }) { Text($0.title).tag(Optional($0.goalID)) }
+                    Picker(ticket.id.rawValue, selection: Binding(get: { deliveryGoalAssignmentSelections[ticket.id] ?? currentGoal(ticket.id, editor: editor)?.rawValue ?? "" }, set: { deliveryGoalAssignmentSelections[ticket.id] = $0 })) {
+                        Text("Unassigned").tag("")
+                        ForEach(editor.goals.filter { $0.lifecycle != .accepted && $0.lifecycle != .superseded }) { Text($0.title).tag($0.goalID.rawValue) }
                     }
                 }}
+                if let message = deliveryGoalAssignmentEditorMessage {
+                    Text(message).foregroundStyle(RekonTheme.danger)
+                        .accessibilityIdentifier("delivery-goal-assignment-editor-message")
+                }
+                if let recovery = deliveryGoalAssignmentDraftSaveRecovery?(editor.phaseID) {
+                    Button("Reconcile saved attempt") { reconcileDeliveryGoalAssignments(recovery.attemptID) }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .disabled(isSavingDeliveryGoalAssignments)
+                        .accessibilityIdentifier("reconcile-delivery-goal-assignment-save")
+                }
             } else { ProgressView("Loading ticket assignments") }
         }.navigationTitle("Assign Delivery Goal Tickets").toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showsDeliveryGoalAssignmentEditor = false } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { saveDeliveryGoalAssignments() }.disabled(deliveryGoalAssignmentEditor == nil) }
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showsDeliveryGoalAssignmentEditor = false }.disabled(isSavingDeliveryGoalAssignments) }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { saveDeliveryGoalAssignments() }.disabled(deliveryGoalAssignmentEditor == nil || isSavingDeliveryGoalAssignments) }
         }}.frame(minWidth: 520, minHeight: 400)
     }
     private func currentGoal(_ ticketID: TicketID, editor: DeliveryGoalAssignmentEditorSnapshot) -> DeliveryGoalID? { editor.assignments.first { $0.ticketID == ticketID }?.goalID }
-    private func openDeliveryGoalAssignmentEditor(_ phaseID: PhaseID) { guard let loadDeliveryGoalAssignmentEditor else { return }; deliveryGoalAssignmentEditor = nil; deliveryGoalAssignmentEdits = [:]; showsDeliveryGoalAssignmentEditor = true; Task { if case let .loaded(editor) = await loadDeliveryGoalAssignmentEditor(phaseID) { deliveryGoalAssignmentEditor = editor } } }
-    private func saveDeliveryGoalAssignments() { guard let editor = deliveryGoalAssignmentEditor, let saveDeliveryGoalAssignmentDraft else { return }; let edits = editor.tickets.compactMap { ticket -> DeliveryGoalAssignmentEdit? in let goal = deliveryGoalAssignmentEdits[ticket.id] ?? currentGoal(ticket.id, editor: editor); return goal == currentGoal(ticket.id, editor: editor) ? nil : .init(ticketID: ticket.id, goalID: goal) }; Task { let outcome = await saveDeliveryGoalAssignmentDraft(editor.phaseID, editor.planRevision, edits); if case .confirmed = outcome.status { showsDeliveryGoalAssignmentEditor = false } } }
+    private func openDeliveryGoalAssignmentEditor(_ phaseID: PhaseID) {
+        guard let loadDeliveryGoalAssignmentEditor else { return }
+        deliveryGoalAssignmentEditor = nil
+        deliveryGoalAssignmentSelections = [:]
+        deliveryGoalAssignmentEditorMessage = nil
+        showsDeliveryGoalAssignmentEditor = true
+        Task {
+            switch await loadDeliveryGoalAssignmentEditor(phaseID) {
+            case let .loaded(editor): deliveryGoalAssignmentEditor = editor
+            case let .failed(error): deliveryGoalAssignmentEditorMessage = deliveryGoalAssignmentDraftErrorMessage(error)
+            }
+        }
+    }
+    private func saveDeliveryGoalAssignments() {
+        guard let editor = deliveryGoalAssignmentEditor, let saveDeliveryGoalAssignmentDraft else { return }
+        let edits = editor.tickets.compactMap { ticket -> DeliveryGoalAssignmentEdit? in
+            let raw = deliveryGoalAssignmentSelections[ticket.id] ?? currentGoal(ticket.id, editor: editor)?.rawValue ?? ""
+            let goal = raw.isEmpty ? nil : DeliveryGoalID(rawValue: raw)
+            return goal == currentGoal(ticket.id, editor: editor) ? nil : .init(ticketID: ticket.id, goalID: goal)
+        }
+        isSavingDeliveryGoalAssignments = true
+        Task { handleDeliveryGoalAssignmentOutcome(await saveDeliveryGoalAssignmentDraft(editor.phaseID, editor.planRevision, edits)) }
+    }
+    private func reconcileDeliveryGoalAssignments(_ attemptID: UUID) {
+        guard let reconcileDeliveryGoalAssignmentDraftSave else { return }
+        isSavingDeliveryGoalAssignments = true
+        Task { handleDeliveryGoalAssignmentOutcome(await reconcileDeliveryGoalAssignmentDraftSave(attemptID)) }
+    }
+    private func handleDeliveryGoalAssignmentOutcome(_ outcome: DeliveryGoalAssignmentSaveOutcome) {
+        isSavingDeliveryGoalAssignments = false
+        switch outcome.status {
+        case .confirmed: showsDeliveryGoalAssignmentEditor = false
+        case .savedNeedsReload: deliveryGoalAssignmentEditorMessage = "Saved. Reload the project plan before editing assignments again."
+        case let .rejected(error, refreshedEditor):
+            deliveryGoalAssignmentEditorMessage = deliveryGoalAssignmentDraftErrorMessage(error)
+            if let refreshedEditor { deliveryGoalAssignmentEditor = refreshedEditor }
+        case .unconfirmed: deliveryGoalAssignmentEditorMessage = "Save outcome is uncertain. Reconcile the same saved attempt before editing assignments again."
+        }
+    }
 
     private func saveCurrentDeliveryGoal() {
         guard let editor = deliveryGoalEditor, let saveDeliveryGoalDraft else { return }
