@@ -87,6 +87,11 @@ final class DocumentationObservationTests: XCTestCase {
             currentWorkCount: 1,
             attentionCount: 1
         )
+        let settings = ProjectSettingsSnapshot(
+            registration: registration,
+            projectName: project.name,
+            excludedTaskIDs: []
+        )
         let recoveryResult = NativeFolderAccessResult()
         let view = ProjectOverviewView(
             project: project,
@@ -107,6 +112,7 @@ final class DocumentationObservationTests: XCTestCase {
             selectActivePhase: { _ in },
             reloadActivePhase: {},
             reauthorizeActivePhase: { _ in },
+            loadProjectSettings: { settings },
             reauthorizeProjectHealth: { _, _ in
                 XCTFail("Cancelling the native picker must not invoke folder renewal.")
                 throw CancellationError()
@@ -141,6 +147,12 @@ final class DocumentationObservationTests: XCTestCase {
 
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         let ownWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let manageProject = try XCTUnwrap(
+            accessibilityButton(ownWindow, title: "Manage Project"),
+            "The native-picker journey must begin from the current Manage Project surface."
+        )
+        XCTAssertEqual(AXUIElementPerformAction(manageProject, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(300))
         let button = try XCTUnwrap(
             accessibilityButton(ownWindow, title: "Restore folder access"),
             "The documentation recovery action must be exposed as an accessibility button."
@@ -172,11 +184,13 @@ final class DocumentationObservationTests: XCTestCase {
 
     @MainActor
     func testUserAssistedSignedNativeFolderPickerKeyboardSelectionRenewsBookmarkWithoutChangingIdentityOrCatalog() async throws {
-        guard let expectedPath = ProcessInfo.processInfo.environment["PHASE3A_SIGNED_PICKER_SUCCESS_FOLDER"] else {
+        guard let fixtureParentPath = ProcessInfo.processInfo.environment["PHASE3A_SIGNED_PICKER_SUCCESS_FIXTURE_PARENT"] else {
             throw XCTSkip("Run only for the coordinated user-assisted signed native picker verification.")
         }
-        let expectedRoot = URL(fileURLWithPath: expectedPath, isDirectory: true)
+        let fixtureParent = URL(fileURLWithPath: fixtureParentPath, isDirectory: true)
             .standardizedFileURL.resolvingSymlinksInPath()
+        let expectedRoot = try makeNativePickerSuccessFixture(in: fixtureParent)
+        addTeardownBlock { try? FileManager.default.removeItem(at: expectedRoot) }
 
         let database = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-Phase3A-SignedPicker-Success-\(UUID().uuidString).sqlite")
@@ -264,6 +278,11 @@ final class DocumentationObservationTests: XCTestCase {
             currentWorkCount: 1,
             attentionCount: 1
         )
+        let settings = ProjectSettingsSnapshot(
+            registration: registration,
+            projectName: project.name,
+            excludedTaskIDs: []
+        )
         let model = AppModel(store: store, databaseURL: database, externalServicesSuppressed: true)
         let recoveryResult = NativeFolderAccessResult()
         let view = ProjectOverviewView(
@@ -285,6 +304,7 @@ final class DocumentationObservationTests: XCTestCase {
             selectActivePhase: { _ in },
             reloadActivePhase: {},
             reauthorizeActivePhase: { _ in },
+            loadProjectSettings: { settings },
             reauthorizeProjectHealth: { folder, identity in
                 recoveryResult.selectedFolderPath = folder.path
                 recoveryResult.selectedFolderCanonicalPath = folder.standardizedFileURL
@@ -325,6 +345,12 @@ final class DocumentationObservationTests: XCTestCase {
 
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         let ownWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let manageProject = try XCTUnwrap(
+            accessibilityButton(ownWindow, title: "Manage Project"),
+            "The native-picker journey must begin from the current Manage Project surface."
+        )
+        XCTAssertEqual(AXUIElementPerformAction(manageProject, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(300))
         let button = try XCTUnwrap(
             accessibilityButton(ownWindow, title: "Restore folder access"),
             "The documentation recovery action must be exposed as an accessibility button."
@@ -943,6 +969,22 @@ private actor ObservationBookmarkStore: ProjectBookmarkStoring {
 }
 
 private extension DocumentationObservationTests {
+    func makeNativePickerSuccessFixture(in parent: URL) throws -> URL {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: parent.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw XCTSkip("PHASE3A_SIGNED_PICKER_SUCCESS_FIXTURE_PARENT must name an existing disposable directory.")
+        }
+        let root = parent.appendingPathComponent("ReleaseRadar-Phase3A-SignedPicker-\(UUID().uuidString)", isDirectory: true)
+        let docs = root.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        try FileManager.default.createDirectory(at: docs, withIntermediateDirectories: false)
+        try Data(Self.nativePickerAcceptedCatalog.utf8)
+            .write(to: docs.appendingPathComponent("catalog.json"))
+        try Data("# Documentation\n".utf8)
+            .write(to: docs.appendingPathComponent("README.md"))
+        return root
+    }
+
     static let nativePickerAcceptedCatalog = #"""
     {
       "version": 1,
