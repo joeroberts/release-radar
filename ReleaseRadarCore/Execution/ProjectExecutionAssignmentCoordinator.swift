@@ -580,7 +580,9 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             throw ProjectExecutionError.assignmentNotAuthorized
         }
         try await configuration.useCodexContext(policy.codexContextID)
-        let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
+        let sharedExecutionSkill = try await configuration.sharedExecutionSkill()
+        let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy,
+            paths: paths, sharedExecutionSkill: sharedExecutionSkill)
         let definition = try profile.definition
         if let prior = assignment.permissionProfileDefinition {
             try withProjectExecutionPreparationStage(.preparedAssignmentConfiguration) {

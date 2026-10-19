@@ -10,6 +10,7 @@ public protocol ProjectExecutionConfiguring: Sendable {
     func selectedCodexContextID() async throws -> UUID?
     func useCodexContext(_ expected: UUID?) async throws
     func validateInstallation(handlerPath: String) async throws
+    func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill
     func validateHandlerIdentity(handlerPath: String) async throws
     func hookStorage(primaryRoot: String) async throws -> ProjectExecutionHookStorage
     func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws
