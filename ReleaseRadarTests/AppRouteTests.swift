@@ -4289,6 +4289,7 @@ final class AppRouteTests: XCTestCase {
 
     }
 
+    @MainActor
     private func taskViewCapture(_ view: NSView, name: String) throws {
         let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: bitmap)
@@ -4353,6 +4354,7 @@ final class AppRouteTests: XCTestCase {
         }
     }
 
+    @MainActor
     private func assignmentEditorPresentationDiagnostic(host: NSWindow, application: AXUIElement) -> String {
         let sheets = host.sheets.map { sheet in
             let ax = accessibilityWindow(application, title: sheet.title)
