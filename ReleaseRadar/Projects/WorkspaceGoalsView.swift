@@ -141,6 +141,44 @@ struct WorkspaceGoalsView: View {
     @AccessibilityFocusState private var accessibilityFocusedGoalID: Data?
     @AccessibilityFocusState private var accessibilityFilterFocused: Bool
 
+    init(
+        goals: WorkspaceGoalsProjection,
+        freshness: CodexObservationFreshness,
+        openDeliveryGoal: @escaping (WorkspaceDeliveryGoalProjection) -> Void,
+        openDeliveryGoalPlanning: @escaping (WorkspaceDeliveryGoalProjection) -> Void = { _ in },
+        openProjectPlanning: @escaping (ProjectID) -> Void = { _ in },
+        openUnassignedWork: @escaping (WorkspaceUnassignedDeliveryWorkProjection) -> Void,
+        openExecutionGoal: @escaping (WorkspaceExecutionGoalProjection) -> Void,
+        domain: Binding<WorkspaceGoalsDomain>,
+        projectID: Binding<ProjectID?>,
+        deliveryLifecycle: Binding<DeliveryGoalLifecycle?>,
+        executionStatus: Binding<String?>,
+        executionScope: Binding<WorkspaceExecutionScope>,
+        selectedDeliveryID: Binding<Data?>,
+        selectedExecutionID: Binding<Data?>,
+        viewportOffset: Binding<Double?>,
+        requestedFocus: NavigationFocus? = nil,
+        focusChanged: @escaping (NavigationFocus?) -> Void = { _ in }
+    ) {
+        self.goals = goals
+        self.freshness = freshness
+        self.openDeliveryGoal = openDeliveryGoal
+        self.openDeliveryGoalPlanning = openDeliveryGoalPlanning
+        self.openProjectPlanning = openProjectPlanning
+        self.openUnassignedWork = openUnassignedWork
+        self.openExecutionGoal = openExecutionGoal
+        _domain = domain
+        _projectID = projectID
+        _deliveryLifecycle = deliveryLifecycle
+        _executionStatus = executionStatus
+        _executionScope = executionScope
+        _selectedDeliveryID = selectedDeliveryID
+        _selectedExecutionID = selectedExecutionID
+        _viewportOffset = viewportOffset
+        self.requestedFocus = requestedFocus
+        self.focusChanged = focusChanged
+    }
+
     private var projects: [ProjectDashboardProjection] {
         let delivery = goals.delivery.map(\.project)
         let execution = goals.execution.map(\.project)
