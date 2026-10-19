@@ -14,10 +14,21 @@ final class ProjectExecutionProducerTests: XCTestCase {
         var afterProfile: (@Sendable () throws -> Void)?
         var afterHook: (@Sendable () throws -> Void)?
         var profileError: ProjectExecutionError?
+        var sharedSkillUnavailable = false
+        var sharedSkillContextChanged = false
         var finishes = 0
         var profiles: [ProjectExecutionPermissionProfile] = []
         var seededProfileIDs: Set<String> = []
         func validateInstallation(handlerPath: String) {}
+        func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
+            if sharedSkillContextChanged { throw CodexExecutionContextError.changed }
+            if sharedSkillUnavailable { throw ProjectExecutionError.unavailable }
+            return try ProjectExecutionSharedExecutionSkill(
+                skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
+                pluginVersion: "0.1.12",
+                packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+            )
+        }
         func hookStorage(primaryRoot: String) -> ProjectExecutionHookStorage { .projectFile }
         func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws { try await beforeWrite() }
         func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
@@ -44,6 +55,8 @@ final class ProjectExecutionProducerTests: XCTestCase {
         func seedProfile(_ id: String) { seededProfileIDs.insert(id) }
         func setFailure(_ value: Bool) { failProfile = value }
         func setProfileError(_ value: ProjectExecutionError?) { profileError = value }
+        func setSharedSkillUnavailable(_ value: Bool) { sharedSkillUnavailable = value }
+        func setSharedSkillContextChanged(_ value: Bool) { sharedSkillContextChanged = value }
         func onProfile(_ action: @escaping @Sendable () throws -> Void) { afterProfile = action }
         func onHook(_ action: @escaping @Sendable () throws -> Void) { afterHook = action }
     }
@@ -213,6 +226,13 @@ final class ProjectExecutionProducerTests: XCTestCase {
         func setConflict(_ value: Bool) { conflict = value }
         func setCloseFailure(_ value: Bool) { closeFails = value }
         func validateInstallation(handlerPath: String) {}
+        func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
+            return try ProjectExecutionSharedExecutionSkill(
+                skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
+                pluginVersion: "0.1.12",
+                packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+            )
+        }
         func hookStorage(primaryRoot: String) -> ProjectExecutionHookStorage { .projectFile }
         func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws { try await beforeWrite() }
         func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws { try await beforeWrite() }
@@ -1667,6 +1687,47 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
         let finishes = await configuration.finishes; XCTAssertEqual(finishes, 2)
         await producer.finishPreparation(work: work, requestID: request)
+    }
+
+    func testUnavailableSharedExecutionSkillUsesBaseOnlyProfileFallback() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let configuration = Configuration(); await configuration.setSharedSkillUnavailable(true)
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+        let request = UUID()
+
+        let prepared = try await producer.prepare(project: project, work: work, requestID: request,
+            reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+
+        let profiles = await configuration.profiles
+        XCTAssertEqual(profiles.count, 1)
+        let profile = try XCTUnwrap(profiles.first)
+        XCTAssertNil(profile.absolute["/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md"])
+        let definition = try XCTUnwrap(prepared.permissionProfileDefinition)
+        XCTAssertFalse(try XCTUnwrap(String(data: definition, encoding: .utf8)).contains("shared-execution"))
+        XCTAssertEqual(profile.workspace["."], "write")
+        XCTAssertEqual(profile.absolute[project.canonicalRoot.path], "deny")
+        await producer.finishPreparation(work: work, requestID: request)
+    }
+
+    func testChangedContextWhileResolvingSharedExecutionSkillDoesNotFallback() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let configuration = Configuration(); await configuration.setSharedSkillContextChanged(true)
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+
+        do {
+            _ = try await producer.prepare(project: project, work: work, requestID: UUID(),
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+            XCTFail("A changed selected context must not use the optional-skill fallback")
+        } catch let error as CodexExecutionContextError {
+            XCTAssertEqual(error, CodexExecutionContextError.changed)
+        }
+        let profiles = await configuration.profiles
+        let hookChecks = await configuration.hookChecks
+        XCTAssertTrue(profiles.isEmpty)
+        XCTAssertEqual(hookChecks, 0)
+        XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
     }
 
     func testIndependentReviewUsesClosedDeliveryCandidateNotPrimaryHeadOrTaskCompletion() async throws {

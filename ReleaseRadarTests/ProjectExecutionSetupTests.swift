@@ -32,6 +32,13 @@ final class ProjectExecutionSetupTests: XCTestCase {
         var beforeInline: Gate?
         init(inline: Data? = nil) { self.inline = inline }
         func validateInstallation(handlerPath: String) {}
+        func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
+            try .init(
+                skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
+                pluginVersion: "0.1.12",
+                packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+            )
+        }
         func hookStorage(primaryRoot: String) -> ProjectExecutionHookStorage { inline.map(ProjectExecutionHookStorage.inline) ?? .projectFile }
         func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws {
             if let beforeInline { self.beforeInline = nil; await beforeInline.pause() }

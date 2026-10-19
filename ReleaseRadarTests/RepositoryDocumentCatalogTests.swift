@@ -469,12 +469,79 @@ final class RepositoryDocumentCatalogTests: XCTestCase {
         XCTAssertNoThrow(try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root))
     }
 
+    func testReadExactFilesReturnsOnlyTheFixedHiddenPluginInventory() throws {
+        let fixture = try exactFilesFixture()
+        let reader = try RepositoryDocumentReader(rootURL: fixture.root, limits: .init(), afterRead: nil)
+
+        XCTAssertEqual(try reader.readExactFiles(fixture.paths), fixture.contents)
+        XCTAssertNoThrow(try reader.verifyStable())
+    }
+
+    func testReadExactFilesRejectsPackageInventoryDriftAndUnsafeEntries() throws {
+        for mutate in [
+            { (root: URL, _: Set<String>) in try Data("extra".utf8).write(to: root.appendingPathComponent("unexpected")) },
+            { (root: URL, _: Set<String>) in try Data("extra".utf8).write(to: root.appendingPathComponent("skills/unexpected")) },
+            { (root: URL, _: Set<String>) in try FileManager.default.removeItem(at: root.appendingPathComponent(".mcp.json")) },
+        ] {
+            let fixture = try exactFilesFixture()
+            try mutate(fixture.root, fixture.paths)
+            let reader = try RepositoryDocumentReader(rootURL: fixture.root, limits: .init(), afterRead: nil)
+            reject("changedDuringRead") { try reader.readExactFiles(fixture.paths) }
+        }
+
+        for makeUnsafe in [
+            { (root: URL) in
+                let skill = root.appendingPathComponent("skills/shared-execution/SKILL.md")
+                try FileManager.default.removeItem(at: skill)
+                try FileManager.default.createSymbolicLink(at: skill, withDestinationURL: root.appendingPathComponent(".mcp.json"))
+            },
+            { (root: URL) in
+                let skill = root.appendingPathComponent("skills/shared-execution/SKILL.md")
+                try FileManager.default.removeItem(at: skill)
+                XCTAssertEqual(mkfifo(skill.path, 0o600), 0)
+            },
+        ] {
+            let fixture = try exactFilesFixture()
+            try makeUnsafe(fixture.root)
+            let reader = try RepositoryDocumentReader(rootURL: fixture.root, limits: .init(), afterRead: nil)
+            reject("unsafeFileType") { try reader.readExactFiles(fixture.paths) }
+        }
+
+        let collision = try exactFilesFixture()
+        let collisionReader = try RepositoryDocumentReader(rootURL: collision.root, limits: .init(), afterRead: nil)
+        reject("unsafeFileType") { try collisionReader.readExactFiles(collision.paths.union([".mcp.json/child"])) }
+
+        let changed = try exactFilesFixture()
+        let changedReader = try RepositoryDocumentReader(rootURL: changed.root, limits: .init(), afterRead: { path in
+            guard path == ".mcp.json" else { return }
+            try! Data("replaced".utf8).write(to: changed.root.appendingPathComponent(path))
+        })
+        reject("changedDuringRead") { try changedReader.readExactFiles(changed.paths) }
+    }
+
     private func fixture() throws -> URL {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("ReleaseRadar-Catalog-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: source, to: root)
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         return root
+    }
+
+    private func exactFilesFixture() throws -> (root: URL, paths: Set<String>, contents: [String: Data]) {
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("ReleaseRadar-ExactFiles-\(UUID().uuidString)", isDirectory: true)
+        let contents: [String: Data] = [
+            ".mcp.json": Data("mcp".utf8),
+            ".codex-plugin/plugin.json": Data("manifest".utf8),
+            "skills/shared-execution/SKILL.md": Data("skill".utf8),
+        ]
+        for (path, bytes) in contents {
+            let file = root.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try bytes.write(to: file)
+        }
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        return (root, Set(contents.keys), contents)
     }
 
     private func edit(_ root: URL, _ mutation: (inout [String: Any]) -> Void) throws {

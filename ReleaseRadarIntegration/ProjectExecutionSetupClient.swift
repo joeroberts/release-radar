@@ -419,6 +419,25 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     func validateInstallation(handlerPath: String) async throws {
         try await validateHandlerIdentity(handlerPath: handlerPath)
+    }
+
+    func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
+        guard let context = boundContext, let lease = contextAccess else {
+            throw CodexExecutionContextError.accessRequired
+        }
+        try lease.validate()
+        let package = try await validatedShippedPlugin()
+        try lease.validate()
+        guard boundContext == context else { throw CodexExecutionContextError.changed }
+        let skill = try ProjectExecutionSharedExecutionSkill.verifyingInstalledPackage(
+            in: context, expected: package
+        )
+        try lease.validate()
+        guard boundContext == context else { throw CodexExecutionContextError.changed }
+        return skill
+    }
+
+    private func validatedShippedPlugin() async throws -> CodexPluginPackage {
         guard let plugin else { throw ProjectExecutionError.unavailable }
         let package = try CodexPluginPackage(rootURL: bundle.appendingPathComponent("Contents/Resources/CodexPluginMarketplace"))
         let observation = await plugin.recoveryStatus()
@@ -429,6 +448,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               receipt.managedVersion == version, receipt.managedDigest == digest else {
             throw ProjectExecutionError.unavailable
         }
+        return package
     }
 
     func validateHandlerIdentity(handlerPath: String) async throws {

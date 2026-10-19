@@ -102,11 +102,56 @@ struct WorkerPolicy {
               let network = profile["network"] as? [String: Any], Self.disabledNetwork(network),
               let fs = profile["filesystem"] as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
         let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
-        let expected = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
+        let legacy = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
+        let expectedFilesystem: [String: Any]
+        if let definition = assignment.permissionProfileDefinition {
+            guard let recorded = try JSONSerialization.jsonObject(with: definition) as? [String: Any],
+                  Set(recorded.keys) == ["filesystem", "network"],
+                  let recordedFilesystem = recorded["filesystem"] as? [String: Any],
+                  let recordedNetwork = recorded["network"] as? [String: Any],
+                  Set(recordedNetwork.keys) == ["enabled"], recordedNetwork["enabled"] as? Bool == false else {
+                throw ProjectExecutionError.invalidAssignment
+            }
+            try Self.validateRecordedFilesystem(recordedFilesystem, legacy: legacy.filesystemObject,
+                codexHome: codexContext.homePath)
+            expectedFilesystem = recordedFilesystem
+        } else {
+            expectedFilesystem = legacy.filesystemObject
+        }
         // config/read serializes the unset optional scan depth as null, separate from grants.
         guard fs["glob_scan_max_depth"] == nil || fs["glob_scan_max_depth"] is NSNull else { throw ProjectExecutionError.invalidAssignment }
         var entries = fs; entries.removeValue(forKey: "glob_scan_max_depth")
-        guard NSDictionary(dictionary: entries).isEqual(to: expected.filesystemObject) else { throw ProjectExecutionError.invalidAssignment }
+        guard NSDictionary(dictionary: entries).isEqual(to: expectedFilesystem) else { throw ProjectExecutionError.invalidAssignment }
+    }
+
+    private static func validateRecordedFilesystem(_ recorded: [String: Any], legacy: [String: Any],
+                                                   codexHome: String) throws {
+        var additions = recorded
+        for (key, expected) in legacy {
+            guard let actual = additions.removeValue(forKey: key), valuesEqual(actual, expected) else {
+                throw ProjectExecutionError.invalidAssignment
+            }
+        }
+        if additions.isEmpty { return }
+        guard additions.count == 1, let (skillFile, access) = additions.first,
+              access as? String == "read" else { throw ProjectExecutionError.invalidAssignment }
+        let prefix = codexHome + "/"
+        guard skillFile.hasPrefix(prefix) else { throw ProjectExecutionError.invalidAssignment }
+        let relative = String(skillFile.dropFirst(prefix.count))
+        let components = relative.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        guard components.count == 8,
+              components[0...3].elementsEqual(["plugins", "cache", CodexPluginPackage.pluginID,
+                                                CodexPluginPackage.pluginID]),
+              components[5...7].elementsEqual(["skills", "shared-execution", "SKILL.md"]),
+              CodexPluginPackage.isStrictSemVer(components[4]),
+              RecognizedPluginCapability.known.contains(where: {
+                $0.manifestVersion == components[4]
+                    && $0.sharedExecutionStandardVersions.contains(ProjectExecutionSharedExecutionSkill.standardVersion)
+              }) else { throw ProjectExecutionError.invalidAssignment }
+    }
+
+    private static func valuesEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+        NSDictionary(dictionary: ["value": lhs]).isEqual(to: ["value": rhs])
     }
 
     private static func disabledNetwork(_ network: [String: Any]) -> Bool {
