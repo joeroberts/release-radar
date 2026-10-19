@@ -1,20 +1,24 @@
-# Project Plan roadmap-first proposal
+# Project Plan roadmap-first design
 
-Status: **Proposed for owner review; not approved for implementation**
+Status: **Approved design; implementation pending**
 
 Owning issue: [#121](https://github.com/joeroberts/release-radar/issues/121)
 
 Selected direction: [#273 owner choice](https://github.com/joeroberts/release-radar/issues/273#issuecomment-6269695502)
 
+Concrete design approval: [#121 owner approval](https://github.com/joeroberts/release-radar/issues/121#issuecomment-6270397944)
+
+Approval baseline: `e0ff15a4` (the exact eight reviewed design and evidence files)
+
 Recovered scope and evidence state: [#121 current handoff](https://github.com/joeroberts/release-radar/issues/121#issuecomment-6269722669)
 
 Source baseline: `2d6a974c5d636632fa4e1cf989399a46ed58749e` (application source unchanged from `61a4dabb35a41c0417d4a591148f0df673c0fc66`)
 
-This proposal develops the owner's selected direction—**Roadmap first: show
+This approved design develops the owner's selected direction—**Roadmap first: show
 phases and open details on selection**—into an implementation-ready interaction
-design. It is a design artifact, not evidence that the proposed interface is
-running. Current-runtime captures, when produced by QA from the pinned synthetic
-fixture, belong in [`before/`](before/).
+design. It is a design artifact, not evidence that the approved interface is
+running. Current-runtime captures from the pinned synthetic fixture are retained
+in [`before/`](before/).
 
 ## Outcome and boundary
 
@@ -244,10 +248,10 @@ sizes without clipping; long phase and goal names wrap before truncation.
   Upcoming or Unassessed. `Ready` and `Accepted` always retain their explicit
   labels even when they share a success color. Never use color alone.
 
-## Acceptance scenarios for the proposed design
+## Acceptance scenarios for the approved design
 
-These are design acceptance scenarios. They become implementation acceptance
-criteria only after the owner approves the concrete proposal on #121.
+These owner-approved design scenarios define the later implementation and QA
+acceptance boundary. They do not claim that implementation has occurred.
 
 | ID | Given / When | Observable result | Evidence status |
 | --- | --- | --- | --- |
@@ -266,10 +270,10 @@ criteria only after the owner approves the concrete proposal on #121.
 
 | Item | Impact | Owner / next action |
 | --- | --- | --- |
-| Current hosted baseline | The pinned populated wide/compact captures are now present; they establish the current density but not the proposed behavior | Coordinator links the captures and their qualification in #121; implementation QA still owns empty/large/accessibility evidence |
+| Current hosted baseline | The pinned populated wide/compact captures are now present; they establish the current density but not the approved behavior | Coordinator links the captures and their qualification in #121; implementation QA still owns empty/large/accessibility evidence |
 | #192 delivery | The selected-detail placement is specified, but the assignment feature must not be represented as present until its candidate is delivered and verified | #192 owners complete their existing work; #121 later integrates only the delivered contract |
 | #193 delivery | Finalize placement and recovery are specified, but the feature is not implemented in the baseline | #193 owners deliver under their own issue; #121 does not absorb that implementation |
-| Concrete design approval | #273 approved the roadmap-first direction, not every detail in this proposal | After independent review and current-baseline comparison, the #121 coordinator obtains explicit owner approval before application implementation |
+| Implementation sequencing | The exact design is approved at baseline `e0ff15a4`; application implementation remains pending | Native implementation proceeds serially after its current prerequisite ownership handoff; QA verifies against this approved baseline |
 | Visual tokens and final copy | Mockup colors, spacing, and illustrative labels communicate hierarchy but are not independently approved design-system tokens or final localized copy | Implementation uses existing app/RDS conventions; QA verifies meaning, contrast, scaling, and labels without expanding #121 into shared-library work |
 
 ## Visual proposals
@@ -299,24 +303,22 @@ prerequisite build produced the matching test bundle and xctestrun, but its
 wrapper did not retain the numeric build exit; that limitation does not change
 the directly observed selector result and is not represented as a clean build.
 
-## Evidence and approval gates
+## Evidence and delivery status
 
 The current hosted baseline is the existing synthetic Project Plan fixture
 captured at 1500×900 and 760×900 from the pinned candidate, with source revision
 and test selector recorded. Those two captures establish only the current
 populated wide/compact presentation. They do **not** verify empty or large plans,
-the complete keyboard journey, VoiceOver output, or the proposed design.
+the complete keyboard journey, VoiceOver output, or the approved design.
 
-Before implementation begins:
-
-1. An independent reviewer checks this exact proposal against #121, #101, #120,
-   #191, the current #192 candidate boundary, and the prepared #193 contract.
-2. Required findings are corrected; optional suggestions do not expand scope.
-3. The coordinator records the reviewed proposal and before/after comparison on
-   #121 and obtains explicit owner approval of this concrete design.
+Independent review passed after the required lifecycle/readiness/acceptance
+correction. The owner then approved the exact eight-file design baseline at
+`e0ff15a4` in the linked #121 approval record. That approval clears the design
+gate for implementation; it is not an implementation or runtime-verification
+claim.
 
 After implementation, QA must separately verify populated, empty, and large
 plans; wide and compact layouts; keyboard/focus restoration; VoiceOver names,
 roles, values, and announcements; failure/recovery behavior; and preservation of
-the #101/#191/#192/#193 entry points. Proposed SVGs and compilation alone are not
+the #101/#191/#192/#193 entry points. Approved SVGs and compilation alone are not
 runtime evidence.
