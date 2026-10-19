@@ -363,15 +363,25 @@ struct DashboardProjection: Equatable, Sendable {
 
                 let phasePlans = phases.compactMap { phase -> ProjectPlanPhaseProjection? in
                     guard let board = projectBoardsByKey[PhaseBoardKey(projectID: projectID, phaseID: phase.id)] else { return nil }
+                    let deliveredOrAcceptedTicketCount =
+                        (board.lane(.needsReview)?.count ?? 0) + (board.lane(.accepted)?.count ?? 0)
                     return ProjectPlanPhaseProjection(
                         id: phase.id, name: phase.name, readiness: board.phasePlan,
                         lifecycle: board.phaseLifecycle!,
                         completionAssessment: board.completionAssessment!,
                         deliveryGoals: board.deliveryGoals,
                         tickets: board.lanes.flatMap(\.cards),
-                        ticketCount: board.lanes.reduce(0) { $0 + $1.count }
+                        ticketCount: board.lanes.reduce(0) { $0 + $1.count },
+                        deliveredOrAcceptedTicketCount: deliveredOrAcceptedTicketCount,
+                        acceptedTicketCount: board.lane(.accepted)?.count ?? 0
                     )
                 }
+                let phaseDetails = projectBoardsByKey
+                    .filter { $0.key.projectID == projectID }
+                    .values
+                    .reduce(into: [TicketID: TicketDetailProjection]()) { result, board in
+                        result.merge(board.details) { current, _ in current }
+                    }
                 let unassignedRows = try connection.dashboardRows(
                     "SELECT id, outcome FROM tickets WHERE project_id = ? AND phase_id IS NULL AND lane IS NULL AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY id COLLATE BINARY",
                     bindings: [.text(projectID.rawValue)]
@@ -481,7 +491,7 @@ struct DashboardProjection: Equatable, Sendable {
                 }
                 let projectPlan = ProjectPlanProjection(
                     project: project, phases: phasePlans, unassignedTickets: unassignedCards,
-                    unassignedDetails: unassignedDetails,
+                    unassignedDetails: unassignedDetails, phaseDetails: phaseDetails,
                     proposals: try PlanChangeProposalQuery.load(from: connection, projectID: projectID),
                     retiredTickets: retiredTickets, retiredDetails: retiredDetails
                 )
@@ -605,11 +615,15 @@ struct DashboardProjection: Equatable, Sendable {
             let details = plan.unassignedDetails.mapValues { detail in
                 detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
             }
+            let phaseDetails = plan.phaseDetails.mapValues { detail in
+                detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
+            }
             let retiredDetails = plan.retiredDetails.mapValues { detail in
                 detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
             }
             return ProjectPlanProjection(project: project, phases: plan.phases,
                                          unassignedTickets: plan.unassignedTickets, unassignedDetails: details,
+                                         phaseDetails: phaseDetails,
                                          proposals: plan.proposals, retiredTickets: plan.retiredTickets,
                                          retiredDetails: retiredDetails)
         }
@@ -696,6 +710,8 @@ struct ProjectPlanPhaseProjection: Equatable, Sendable, Identifiable {
     let deliveryGoals: [DeliveryGoalSummaryProjection]
     var tickets: [TicketCardProjection] = []
     let ticketCount: Int
+    var deliveredOrAcceptedTicketCount: Int = 0
+    var acceptedTicketCount: Int = 0
 }
 
 struct ProjectPlanProjection: Equatable, Sendable {
@@ -703,6 +719,7 @@ struct ProjectPlanProjection: Equatable, Sendable {
     let phases: [ProjectPlanPhaseProjection]
     let unassignedTickets: [TicketCardProjection]
     let unassignedDetails: [TicketID: TicketDetailProjection]
+    let phaseDetails: [TicketID: TicketDetailProjection]
     let proposals: [PlanChangeProposalRecord]
     let retiredTickets: [RetiredTicketProjection]
     let retiredDetails: [TicketID: TicketDetailProjection]
@@ -712,6 +729,7 @@ struct ProjectPlanProjection: Equatable, Sendable {
         phases: [ProjectPlanPhaseProjection],
         unassignedTickets: [TicketCardProjection],
         unassignedDetails: [TicketID: TicketDetailProjection],
+        phaseDetails: [TicketID: TicketDetailProjection] = [:],
         proposals: [PlanChangeProposalRecord] = [],
         retiredTickets: [RetiredTicketProjection] = [],
         retiredDetails: [TicketID: TicketDetailProjection] = [:]
@@ -720,6 +738,7 @@ struct ProjectPlanProjection: Equatable, Sendable {
         self.phases = phases
         self.unassignedTickets = unassignedTickets
         self.unassignedDetails = unassignedDetails
+        self.phaseDetails = phaseDetails
         self.proposals = proposals
         self.retiredTickets = retiredTickets
         self.retiredDetails = retiredDetails
@@ -729,7 +748,7 @@ struct ProjectPlanProjection: Equatable, Sendable {
         phases.reduce(0) { $0 + $1.ticketCount } + unassignedTickets.count + retiredTickets.count
     }
     func detail(for ticketID: TicketID) -> TicketDetailProjection? {
-        unassignedDetails[ticketID] ?? retiredDetails[ticketID]
+        phaseDetails[ticketID] ?? unassignedDetails[ticketID] ?? retiredDetails[ticketID]
     }
 }
 

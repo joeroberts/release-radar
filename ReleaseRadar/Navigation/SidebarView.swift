@@ -229,7 +229,9 @@ struct SidebarView: View {
             WorkspaceHelpView { destination in
                 Task { await model.openWorkspaceHelpDestination(destination) }
             }
-        } else if let error = model.dashboardError, !hasLastSuccessfulDependencyGraph {
+        } else if let error = model.dashboardError,
+                  !hasLastSuccessfulDependencyGraph,
+                  !hasLastSuccessfulProjectPlan {
             FailureStateView(
                 presentation: .init(
                     title: model.permanentPurgeNeedsRefresh ? "History permanently purged; refresh needed" : "Delivery data unavailable",
@@ -519,6 +521,18 @@ struct SidebarView: View {
                         },
                         phasePlanFinalizationRecovery: {
                             model.phasePlanFinalizationRecovery(projectID: projectID, phaseID: $0)
+                        },
+                        roadmapLoadError: model.dashboardError,
+                        reloadRoadmap: {
+                            await model.reloadPhaseLifecycle()
+                        },
+                        openDependencies: { ticketID in
+                            if let ticketID {
+                                model.selectDependencyTicket(ticketID, projectID: projectID)
+                            } else {
+                                model.selectDependencyTicket(TicketID(rawValue: ""), projectID: projectID)
+                            }
+                            Task { await model.navigate(to: .dependencies(projectID)) }
                         },
                         repositoryPlanReconstruction: model.repositoryPlanReconstruction(
                             for: projectID
@@ -989,6 +1003,11 @@ struct SidebarView: View {
         guard case let .dependencies(projectID) = model.selection,
               model.dashboard != nil else { return false }
         return model.dependencyGraph(for: projectID) != nil
+    }
+
+    private var hasLastSuccessfulProjectPlan: Bool {
+        guard case let .projectPlan(projectID) = model.selection else { return false }
+        return model.dashboard?.plan(for: projectID) != nil
     }
 
 }

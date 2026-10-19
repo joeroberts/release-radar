@@ -163,6 +163,9 @@ struct ProjectPlanView: View {
     var finalizePhasePlan: ((PhaseID, Int64) async -> PhasePlanFinalizationOutcome)? = nil
     var reconcilePhasePlanFinalization: ((UUID) async -> PhasePlanFinalizationOutcome)? = nil
     var phasePlanFinalizationRecovery: ((PhaseID) -> PhasePlanFinalizationRecovery?)? = nil
+    var roadmapLoadError: String? = nil
+    var reloadRoadmap: (() async -> Void)? = nil
+    var openDependencies: ((TicketID?) -> Void)? = nil
     var repositoryPlanReconstruction: RepositoryPlanReconstructionPresentation? = nil
     var openRepositoryPlanReconstruction: (() -> Void)? = nil
     var setRepositoryPlanSourceSelected: ((String, Bool) -> Void)? = nil
@@ -199,6 +202,10 @@ struct ProjectPlanView: View {
     @AccessibilityFocusState private var accessibilityFocusedProposal: ProposalFocus?
     @FocusState private var focusedTicketID: TicketID?
     @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
+    @FocusState private var focusedPhaseID: PhaseID?
+    @AccessibilityFocusState private var accessibilityFocusedPhaseID: PhaseID?
+    @FocusState private var phaseDetailHeadingFocused: Bool
+    @AccessibilityFocusState private var accessibilityPhaseDetailHeadingFocused: Bool
     @State private var showsRepositoryPlanReconstruction = false
     @State private var showsDeliveryGoalEditor = false
     @State private var deliveryGoalEditor: DeliveryGoalEditorSnapshot?
@@ -218,24 +225,51 @@ struct ProjectPlanView: View {
     @State private var phasePlanFinalizationFailure: PhasePlanReadinessFailure?
     @State private var phasePlanFinalizationNeedsReload = false
     @State private var isFinalizingPhasePlan = false
+    @State private var selectedPhaseID: PhaseID?
+    @State private var selectedPlanTicketID: TicketID?
+    @State private var showsCompactPhaseDetail = false
+    @State private var showsUnplacedWork = false
+    @State private var showsRetiredOriginals = false
+    @State private var showsPlanChanges = false
+    @State private var showsTechnicalRecord = false
+    @State private var usesCompactLayout = false
 
     var body: some View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        header
+                        if ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width),
+                           showsCompactPhaseDetail,
+                           let phase = selectedPhase {
+                            compactPhaseDetail(phase)
+                        } else {
+                            header
+                            roadmapFreshness
+                        }
                         if !ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width) {
                             HStack(alignment: .top, spacing: 18) {
                                 planContent.frame(maxWidth: .infinity, alignment: .topLeading)
                                 RekonSeparator(.vertical)
-                                inspector.frame(width: 340, alignment: .top).frame(minHeight: 500, alignment: .top)
+                                inspector
+                                    .frame(
+                                        width: min(520, max(440, geometry.size.width * 0.38)),
+                                        alignment: .top
+                                    )
+                                    .frame(minHeight: 500, alignment: .top)
                             }
-                        } else {
+                        } else if !showsCompactPhaseDetail {
                             planContent
-                            RekonSeparator()
-                            inspector.frame(minHeight: 420, alignment: .top)
                         }
+                    }
+                    .onAppear {
+                        usesCompactLayout = ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width)
+                        applyRequestedFocus()
+                    }
+                    .onChange(of: geometry.size.width) { _, width in
+                        usesCompactLayout = ProjectPlanLayout.usesStackedInspector(forWidth: width)
+                        if !usesCompactLayout { showsCompactPhaseDetail = false }
+                        applyRequestedFocus()
                     }
                     .padding(24)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -245,14 +279,25 @@ struct ProjectPlanView: View {
                     proxy.scrollTo(targetID, anchor: .center)
                     applyRequestedFocus()
                 }
+                .onChange(of: showsCompactPhaseDetail) { _, showsDetail in
+                    guard !showsDetail, let selectedPhaseID else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        proxy.scrollTo(phaseScrollID(selectedPhaseID), anchor: .center)
+                        focusedPhaseID = selectedPhaseID
+                        accessibilityFocusedPhaseID = selectedPhaseID
+                    }
+                }
             }
         }
         .background(RekonTheme.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-plan")
         .onChange(of: plan.proposals) { _, _ in reconcileProposalSelection() }
+        .onChange(of: plan.phases) { _, _ in reconcilePhaseSelection() }
         .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
         .task {
+            reconcilePhaseSelection()
             reconcileProposalSelection()
             applyRequestedFocus()
             if let target = requestedDeliveryGoalEditor {
@@ -332,6 +377,7 @@ struct ProjectPlanView: View {
                     openRepositoryPlanReconstruction?()
                 }
                 .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(roadmapLoadError != nil)
                 .accessibilityIdentifier("prepare-repository-plan")
             }
             allPhasesButton
@@ -345,7 +391,7 @@ struct ProjectPlanView: View {
                 .foregroundStyle(RekonTheme.secondaryText)
             Text("Project Plan")
                 .font(RekonTypography.screenTitle)
-            Text("\(plan.recordedTicketCount) recorded tickets · \(plan.phases.count) phases · \(plan.unassignedTickets.count) not placed")
+            Text("\(plan.phases.count) phase\(plan.phases.count == 1 ? "" : "s")")
                 .font(.subheadline)
                 .foregroundStyle(RekonTheme.secondaryText)
                 .accessibilityIdentifier("project-plan-counts")
@@ -358,79 +404,167 @@ struct ProjectPlanView: View {
             .accessibilityIdentifier("open-all-phase-board")
     }
 
+    @ViewBuilder private var roadmapFreshness: some View {
+        if let roadmapLoadError {
+            FailureStateView(
+                presentation: .init(
+                    title: "Project plan may be out of date",
+                    detail: "The last successful roadmap is still shown. Editing and finalization are paused until refresh succeeds. \(roadmapLoadError)",
+                    systemImage: "arrow.clockwise.circle",
+                    tone: .warning,
+                    accessibilityID: "project-plan-data-stale"
+                ),
+                style: .inline,
+                actionTitle: "Retry",
+                action: { Task { await reloadRoadmap?() } }
+            )
+        }
+    }
+
     private var planContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionHeading("Plan-change proposals", count: plan.proposals.count)
-            Text("Review a saved version before deciding. Approval never changes the plan; Apply is a separate deliberate action.")
-                .font(.caption)
-                .foregroundStyle(RekonTheme.secondaryText)
-            if plan.proposals.isEmpty {
-                Text("No saved proposals")
-                    .foregroundStyle(RekonTheme.secondaryText)
-                    .padding(.vertical, 8)
+            if !plan.unassignedTickets.isEmpty { unplacedWork }
+
+            if plan.phases.isEmpty {
+                ContentUnavailableView(
+                    "No phases recorded",
+                    systemImage: "list.bullet.rectangle",
+                    description: Text("Prepare the repository plan to create a roadmap from recorded planning evidence.")
+                )
             } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(plan.proposals) { proposal in
-                        proposalRow(proposal)
+                ForEach(phaseLifecycleOrder, id: \.rawValue) { lifecycle in
+                    let phases = orderedPhases.filter { $0.lifecycle.lifecycle == lifecycle }
+                    if !phases.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            sectionHeading(lifecycle.displayName, count: phases.count)
+                            LazyVStack(spacing: 8) {
+                                ForEach(phases) { phase in phaseRow(phase) }
+                            }
+                        }
                     }
                 }
             }
 
-            RekonSeparator()
-            sectionHeading("Recorded phases", count: plan.phases.count)
-            if plan.phases.isEmpty {
-                ContentUnavailableView("No phases recorded", systemImage: "list.bullet.rectangle")
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(plan.phases) { phase in phaseCard(phase) }
-                }
-            }
-            sectionHeading("Retired originals", count: plan.retiredTickets.count)
-            Text("Retired tickets remain read-only with their disposition, rationale, and successor lineage. They do not appear on active boards.")
-                .font(.caption)
-                .foregroundStyle(RekonTheme.secondaryText)
-            if plan.retiredTickets.isEmpty {
-                Text("No retired tickets")
-                    .foregroundStyle(RekonTheme.secondaryText)
-                    .padding(.vertical, 8)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(plan.retiredTickets) { ticket in
-                        retiredTicketRow(ticket)
-                    }
-                }
-            }
-            sectionHeading("Not placed", count: plan.unassignedTickets.count)
-            Text("Planning content is retained here. Execution and completion begin only after first placement into a phase Backlog.")
-                .font(.caption)
-                .foregroundStyle(RekonTheme.secondaryText)
-            if plan.unassignedTickets.isEmpty {
-                Text("No unassigned recorded tickets")
-                    .foregroundStyle(RekonTheme.secondaryText)
-                    .padding(.vertical, 8)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(plan.unassignedTickets) { card in
-                        TicketCardView(card: card, presentation: .fullOutcome,
-                                       isSelected: selectedTicketID == card.id) {
-                            selectedProposalID = nil
-                            selectedProposalVersion = nil
-                            selectedTicketID = card.id
-                            focusChanged(.ticket(card.id))
-                        }
-                        .focusable()
-                        .focused($focusedTicketID, equals: card.id)
-                        .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
-                        .id("project-plan-ticket-scroll-\(card.id.rawValue)")
-                        .onAppear {
-                            guard requestedFocus == .ticket(card.id) else { return }
-                            focusedTicketID = card.id
-                            accessibilityFocusedTicketID = card.id
-                        }
-                    }
-                }
-            }
+            if !plan.retiredTickets.isEmpty { retiredWork }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("project-plan-roadmap")
+    }
+
+    private var unplacedWork: some View {
+        DisclosureGroup(isExpanded: $showsUnplacedWork) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Planning content remains here until its first placement into a phase backlog.")
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                ForEach(plan.unassignedTickets) { card in
+                    TicketCardView(
+                        card: card,
+                        presentation: .fullOutcome,
+                        isSelected: selectedPlanTicketID == card.id
+                    ) { selectTicket(card.id) }
+                    .focusable()
+                    .focused($focusedTicketID, equals: card.id)
+                    .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
+                    .id("project-plan-ticket-scroll-\(card.id.rawValue)")
+                }
+                if let selectedPlanTicketID,
+                   plan.unassignedTickets.contains(where: { $0.id == selectedPlanTicketID }),
+                   let detail = plan.detail(for: selectedPlanTicketID) {
+                    ticketDetail(detail)
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            sectionHeading("Not placed", count: plan.unassignedTickets.count)
+        }
+        .accessibilityIdentifier("project-plan-unplaced-work")
+    }
+
+    private var retiredWork: some View {
+        DisclosureGroup(isExpanded: $showsRetiredOriginals) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Retired originals remain read-only with their disposition, rationale, and successor lineage.")
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                ForEach(plan.retiredTickets) { ticket in retiredTicketRow(ticket) }
+                if let selectedPlanTicketID,
+                   plan.retiredTickets.contains(where: { $0.id == selectedPlanTicketID }),
+                   let detail = plan.detail(for: selectedPlanTicketID) {
+                    ticketDetail(detail)
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            sectionHeading("Retired originals", count: plan.retiredTickets.count)
+        }
+        .accessibilityIdentifier("project-plan-retired-work")
+    }
+
+    private func phaseRow(_ phase: ProjectPlanPhaseProjection) -> some View {
+        let selected = selectedPhaseID == phase.id
+        return Button { selectPhase(phase.id) } label: {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(phase.name)
+                            .font(.headline)
+                            .foregroundStyle(RekonTheme.primaryText)
+                        Text(readinessName(phase.readiness.state))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(phase.readiness.state == .ready ? RekonTheme.success : RekonTheme.warning)
+                    }
+                    Text(phaseProgressText(phase))
+                        .font(.subheadline)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .accessibilityLabel("Phase progress")
+                        .accessibilityValue(phaseProgressAccessibilityValue(phase))
+                        .accessibilityIdentifier("project-plan-phase-progress-\(phase.id.rawValue)")
+                    if let gap = phaseGap(phase) {
+                        Text(gap)
+                            .font(.caption)
+                            .foregroundStyle(RekonTheme.warning)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(phase.lifecycle.lifecycle.displayName)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(RekonTheme.secondaryText)
+                    if let action = recommendedAction(for: phase) {
+                        Text(action)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(RekonTheme.accent)
+                            .lineLimit(1)
+                    }
+                }
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(RekonTheme.secondaryText)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
+            .background(selected ? RekonTheme.elevatedSurface : RekonTheme.surface,
+                        in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(selected ? RekonTheme.accent : RekonTheme.border,
+                            lineWidth: selected ? 2 : RekonBorder.hairline)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .focused($focusedPhaseID, equals: phase.id)
+        .accessibilityFocused($accessibilityFocusedPhaseID, equals: phase.id)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(phase.name), \(phase.lifecycle.lifecycle.displayName) phase, \(readinessName(phase.readiness.state)) plan")
+        .accessibilityValue(phaseRowAccessibilityValue(phase))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityRemoveTraits(selected ? [] : .isSelected)
+        .accessibilityIdentifier("project-plan-phase-row-\(phase.id.rawValue)")
+        .id(phaseScrollID(phase.id))
+        .onMoveCommand { direction in movePhaseSelection(from: phase.id, direction: direction) }
     }
 
     private func proposalRow(_ proposal: PlanChangeProposalRecord) -> some View {
@@ -486,94 +620,68 @@ struct ProjectPlanView: View {
         .accessibilityIdentifier("plan-change-proposal-\(proposal.id.rawValue)")
     }
 
-    private func phaseCard(_ phase: ProjectPlanPhaseProjection) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(phase.name).font(.headline)
-                    Text(phase.id.rawValue).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Open board") { openPhase(phase.id) }
-                    .accessibilityLabel("Open \(phase.name) phase board")
-                if phase.lifecycle.lifecycle != .completed, loadDeliveryGoalEditor != nil {
-                    Button("Create Delivery Goal") { openDeliveryGoalEditor(phase.id, goalID: nil) }
-                        .buttonStyle(RekonSecondaryButtonStyle())
-                        .accessibilityIdentifier("create-delivery-goal-\(phase.id.rawValue)")
-                }
-                if phase.lifecycle.lifecycle != .completed, loadDeliveryGoalAssignmentEditor != nil {
-                    Button("Edit assignments") { openDeliveryGoalAssignmentEditor(phase.id) }
-                        .buttonStyle(RekonSecondaryButtonStyle())
-                        .accessibilityIdentifier("edit-delivery-goal-assignments-\(phase.id.rawValue)")
-                }
-                if let finalizePhasePlan {
-                    let eligible = phase.lifecycle.lifecycle != .completed && phase.readiness.state == .draft
-                    Button("Finalize plan") { beginPhasePlanFinalization(phase) }
-                        .buttonStyle(RekonSecondaryButtonStyle())
-                        .disabled(!eligible || isFinalizingPhasePlan)
-                        .accessibilityLabel(eligible
-                            ? "Finalize \(phase.name) plan at revision \(phase.readiness.revision)"
-                            : "Finalize \(phase.name) plan unavailable: \(phase.lifecycle.lifecycle == .completed ? "the phase is completed" : "the plan is already Ready")")
-                        .accessibilityIdentifier("finalize-phase-plan-\(phase.id.rawValue)")
-                }
+    private func compactPhaseDetail(_ phase: ProjectPlanPhaseProjection) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                showsCompactPhaseDetail = false
+            } label: {
+                Label("Back to roadmap", systemImage: "chevron.left")
             }
-            Text(readinessSummary(phase.readiness))
-                .font(.subheadline)
-                .foregroundStyle(phase.readiness.state == .ready ? RekonTheme.success : RekonTheme.warning)
-            Text("Lifecycle: \(phase.lifecycle.lifecycle.displayName) · revision \(phase.lifecycle.revision)")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(RekonTheme.primaryText)
-                .accessibilityIdentifier("project-plan-phase-lifecycle-\(phase.id.rawValue)")
-            Text("\(phase.ticketCount) tickets · \(phase.deliveryGoals.count) Delivery Goals")
-                .font(.caption)
-                .foregroundStyle(RekonTheme.secondaryText)
-            if phasePlanFinalizationPhaseID == phase.id,
-               let message = phasePlanFinalizationMessage {
-                phasePlanFinalizationFeedback(phase: phase, message: message)
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityLabel("Back to roadmap")
+            .accessibilityIdentifier("back-to-project-plan-roadmap")
+
+            roadmapFreshness
+            phaseDetail(phase)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("project-plan-phase-detail-\(phase.id.rawValue)")
+    }
+
+    private func phaseDetail(_ phase: ProjectPlanPhaseProjection) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(phase.name)
+                    .font(RekonTypography.sectionTitle)
+                Text("\(phase.lifecycle.lifecycle.displayName) · \(readinessName(phase.readiness.state)) plan")
+                    .font(.subheadline)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
-            if phase.deliveryGoals.isEmpty {
-                Text("No Delivery Goals recorded").font(.caption).foregroundStyle(.tertiary)
-            } else {
-                ForEach(phase.deliveryGoals) { goal in
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "target").foregroundStyle(RekonTheme.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(goal.title).font(.subheadline.weight(.medium))
-                            Text("\(goal.lifecycle.displayName) · \(goal.ticketIDs.count) tickets")
-                                .font(.caption).foregroundStyle(.secondary)
-                            if let coverage = goal.coverage {
-                                Text(coverageSummary(coverage))
-                                    .font(.caption)
-                                    .foregroundStyle(coverage.isAcceptanceEligible ? RekonTheme.success : RekonTheme.secondaryText)
-                                    .accessibilityIdentifier("delivery-goal-coverage-\(goal.goalID.rawValue)")
-                                ForEach(coverage.obligations) { obligation in
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text("\(obligation.key.ticketID.rawValue) · \(coverageStateName(obligation.state))")
-                                            .font(.caption.weight(.medium))
-                                        Text(obligation.scope)
-                                            .font(.caption2)
-                                            .foregroundStyle(RekonTheme.secondaryText)
-                                        if let reason = obligation.reason {
-                                            Text(reason)
-                                                .font(.caption2)
-                                                .foregroundStyle(RekonTheme.secondaryText)
-                                        }
-                                    }
-                                    .accessibilityIdentifier("goal-obligation-\(obligation.key.ticketID.rawValue)")
-                                }
-                            }
-                        }
-                        Spacer(minLength: 8)
-                        if goal.lifecycle != .accepted, goal.lifecycle != .superseded,
-                           phase.lifecycle.lifecycle != .completed, loadDeliveryGoalEditor != nil {
-                            Button("Edit") { openDeliveryGoalEditor(phase.id, goalID: goal.goalID) }
-                                .buttonStyle(RekonSecondaryButtonStyle())
-                                .accessibilityIdentifier("edit-delivery-goal-\(goal.goalID.rawValue)")
-                        }
-                    }
-                }
+            .focusable()
+            .focused($phaseDetailHeadingFocused)
+            .accessibilityFocused($accessibilityPhaseDetailHeadingFocused)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("project-plan-phase-detail-heading-\(phase.id.rawValue)")
+
+            Text(phaseProgressText(phase))
+                .font(.subheadline.weight(.medium))
+                .accessibilityLabel("Phase progress")
+                .accessibilityValue(phaseProgressAccessibilityValue(phase))
+                .accessibilityIdentifier("project-plan-phase-progress-\(phase.id.rawValue)")
+
+            if let gap = phaseGap(phase) {
+                Label(gap, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.warning)
             }
-            if let transitionPhaseLifecycle, let reloadPhaseLifecycle {
+            if let action = recommendedAction(for: phase) {
+                Text("Next action: \(action)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(RekonTheme.accent)
+            }
+
+            phasePlanActions(phase)
+            deliveryGoals(for: phase)
+            phaseTickets(phase)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { phaseNavigationActions(phase) }
+                VStack(alignment: .leading, spacing: 8) { phaseNavigationActions(phase) }
+            }
+
+            if roadmapLoadError == nil,
+               let transitionPhaseLifecycle,
+               let reloadPhaseLifecycle {
                 PhaseLifecycleControls(
                     phase: phase,
                     transition: { action, baseline, reason in
@@ -582,13 +690,225 @@ struct ProjectPlanView: View {
                     },
                     reload: reloadPhaseLifecycle
                 )
+            } else if roadmapLoadError != nil {
+                Text("Refresh the roadmap before changing this phase lifecycle.")
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.warning)
+            }
+
+            if !plan.proposals.isEmpty { planChanges }
+            technicalRecord(for: phase)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(RekonTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(RekonTheme.border, lineWidth: RekonBorder.hairline)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func phasePlanActions(_ phase: ProjectPlanPhaseProjection) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Plan actions").font(.headline)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { phasePlanActionButtons(phase) }
+                VStack(alignment: .leading, spacing: 8) { phasePlanActionButtons(phase) }
+            }
+            if phasePlanFinalizationPhaseID == phase.id,
+               let message = phasePlanFinalizationMessage {
+                phasePlanFinalizationFeedback(phase: phase, message: message)
+            } else if let recovery = phasePlanFinalizationRecovery?(phase.id) {
+                Button("Reconcile saved finalization") {
+                    reconcilePhasePlanFinalization(recovery.attemptID)
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(isFinalizingPhasePlan)
+                .accessibilityIdentifier("reconcile-phase-plan-finalization")
             }
         }
-        .padding(14)
-        .background(RekonTheme.surface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(RekonTheme.border, lineWidth: RekonBorder.hairline) }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("project-plan-phase-\(phase.id.rawValue)")
+    }
+
+    @ViewBuilder
+    private func phasePlanActionButtons(_ phase: ProjectPlanPhaseProjection) -> some View {
+        let editable = phase.lifecycle.lifecycle != .completed && roadmapLoadError == nil
+        if loadDeliveryGoalEditor != nil {
+            Button("Create Delivery Goal") { openDeliveryGoalEditor(phase.id, goalID: nil) }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(!editable)
+                .accessibilityIdentifier("create-delivery-goal-\(phase.id.rawValue)")
+        }
+        if loadDeliveryGoalAssignmentEditor != nil {
+            Button("Edit assignments") { openDeliveryGoalAssignmentEditor(phase.id) }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(!editable)
+                .accessibilityIdentifier("edit-delivery-goal-assignments-\(phase.id.rawValue)")
+        }
+        if finalizePhasePlan != nil {
+            let eligible = editable && phase.readiness.state == .draft
+            Button("Finalize plan") { beginPhasePlanFinalization(phase) }
+                .buttonStyle(RekonPrimaryButtonStyle())
+                .disabled(!eligible || isFinalizingPhasePlan)
+                .accessibilityLabel(eligible
+                    ? "Finalize \(phase.name) plan at revision \(phase.readiness.revision)"
+                    : "Finalize \(phase.name) plan unavailable: \(finalizationUnavailableReason(phase))")
+                .accessibilityIdentifier("finalize-phase-plan-\(phase.id.rawValue)")
+        }
+    }
+
+    private func deliveryGoals(for phase: ProjectPlanPhaseProjection) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeading("Delivery Goals", count: phase.deliveryGoals.count)
+            if phase.deliveryGoals.isEmpty {
+                Text("No Delivery Goals recorded")
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.secondaryText)
+            } else {
+                ForEach(phase.deliveryGoals) { goal in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "target").foregroundStyle(RekonTheme.accent)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(goal.title).font(.subheadline.weight(.medium))
+                            Text(goal.outcome)
+                                .font(.caption)
+                                .foregroundStyle(RekonTheme.secondaryText)
+                                .lineLimit(2)
+                            Text("\(goal.lifecycle.displayName) · \(goal.ticketIDs.count) assigned · \(goal.doneCriteria.count) done criteria")
+                                .font(.caption2)
+                                .foregroundStyle(RekonTheme.secondaryText)
+                            if let coverage = goal.coverage {
+                                Text(coverageSummary(coverage))
+                                    .font(.caption)
+                                    .foregroundStyle(coverage.isAcceptanceEligible ? RekonTheme.success : RekonTheme.secondaryText)
+                                    .accessibilityIdentifier("delivery-goal-coverage-\(goal.goalID.rawValue)")
+                            }
+                        }
+                        Spacer(minLength: 8)
+                        if goal.lifecycle != .accepted,
+                           goal.lifecycle != .superseded,
+                           phase.lifecycle.lifecycle != .completed,
+                           loadDeliveryGoalEditor != nil {
+                            Button("Edit") { openDeliveryGoalEditor(phase.id, goalID: goal.goalID) }
+                                .buttonStyle(.link)
+                                .disabled(roadmapLoadError != nil)
+                                .accessibilityIdentifier("edit-delivery-goal-\(goal.goalID.rawValue)")
+                        }
+                    }
+                    .padding(.vertical, 3)
+                }
+            }
+        }
+    }
+
+    private func phaseTickets(_ phase: ProjectPlanPhaseProjection) -> some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 8) {
+                if phase.tickets.isEmpty {
+                    Text("No tickets are placed in this phase.")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                } else {
+                    ForEach(phase.tickets) { ticket in
+                        TicketCardView(
+                            card: ticket,
+                            presentation: .fullOutcome,
+                            isSelected: selectedPlanTicketID == ticket.id
+                        ) { selectTicket(ticket.id, phaseID: phase.id) }
+                        .focusable()
+                        .focused($focusedTicketID, equals: ticket.id)
+                        .accessibilityFocused($accessibilityFocusedTicketID, equals: ticket.id)
+                        .id("project-plan-ticket-scroll-\(ticket.id.rawValue)")
+                    }
+                }
+                if let selectedPlanTicketID,
+                   phase.tickets.contains(where: { $0.id == selectedPlanTicketID }),
+                   let detail = plan.detail(for: selectedPlanTicketID) {
+                    ticketDetail(detail)
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            Text("Ticket assignments · \(phase.ticketCount)")
+                .font(.headline)
+        }
+        .accessibilityIdentifier("project-plan-phase-tickets-\(phase.id.rawValue)")
+    }
+
+    @ViewBuilder
+    private func phaseNavigationActions(_ phase: ProjectPlanPhaseProjection) -> some View {
+        Button("Open phase board") { openPhase(phase.id) }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityLabel("Open \(phase.name) phase board")
+        if let openDependencies {
+            Button("View dependencies") {
+                let ticket = selectedPlanTicketID.flatMap { selected in
+                    phase.tickets.contains(where: { $0.id == selected }) ? selected : nil
+                }
+                openDependencies(ticket)
+            }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityIdentifier("open-phase-dependencies-\(phase.id.rawValue)")
+        }
+    }
+
+    private var planChanges: some View {
+        DisclosureGroup(isExpanded: $showsPlanChanges) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Review a saved version before deciding. Approval does not change the plan; Apply is separate.")
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                ForEach(plan.proposals) { proposal in proposalRow(proposal) }
+                if let selectedProposal { proposalInspector(proposal: selectedProposal.proposal, version: selectedProposal.version) }
+            }
+            .padding(.top, 8)
+        } label: {
+            sectionHeading("Plan changes", count: plan.proposals.count)
+        }
+    }
+
+    private func technicalRecord(for phase: ProjectPlanPhaseProjection) -> some View {
+        DisclosureGroup(isExpanded: $showsTechnicalRecord) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Phase ID: \(phase.id.rawValue)")
+                Text("Plan revision: \(phase.readiness.revision)")
+                Text("Lifecycle revision: \(phase.lifecycle.revision)")
+                Text(readinessSummary(phase.readiness))
+                if phase.completionAssessment.blockers.isEmpty {
+                    Text("No completion blockers recorded.")
+                } else {
+                    ForEach(phase.completionAssessment.blockers) { blocker in
+                        Text("• \(blocker.message)")
+                    }
+                }
+                ForEach(phase.deliveryGoals) { goal in
+                    if let coverage = goal.coverage {
+                        ForEach(coverage.obligations) { obligation in
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("\(obligation.key.ticketID.rawValue) · \(coverageStateName(obligation.state))")
+                                    .font(.caption.weight(.medium))
+                                Text(obligation.scope)
+                                    .font(.caption2)
+                                    .foregroundStyle(RekonTheme.secondaryText)
+                                if let reason = obligation.reason {
+                                    Text(reason)
+                                        .font(.caption2)
+                                        .foregroundStyle(RekonTheme.secondaryText)
+                                }
+                            }
+                            .accessibilityIdentifier("goal-obligation-\(obligation.key.ticketID.rawValue)")
+                        }
+                    }
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(RekonTheme.secondaryText)
+            .padding(.top, 8)
+        } label: {
+            Text("Technical record").font(.headline)
+        }
+        .accessibilityIdentifier("project-plan-phase-technical-record-\(phase.id.rawValue)")
     }
 
     private func beginPhasePlanFinalization(_ phase: ProjectPlanPhaseProjection) {
@@ -643,6 +963,7 @@ struct ProjectPlanView: View {
     }
 
     private func focusFinalizationTicket(_ ticketID: TicketID) {
+        selectedPlanTicketID = ticketID
         selectedTicketID = ticketID
         focusChanged(.ticket(ticketID))
         focusedTicketID = ticketID
@@ -671,6 +992,7 @@ struct ProjectPlanView: View {
                    failure.conflictingTicketIDs.isEmpty {
                     Button("Create a Delivery Goal") { openDeliveryGoalEditor(phase.id, goalID: nil) }
                         .buttonStyle(RekonSecondaryButtonStyle())
+                        .disabled(roadmapLoadError != nil)
                         .accessibilityIdentifier("create-delivery-goal-for-finalization-\(phase.id.rawValue)")
                 }
                 ForEach(failure.incompleteGoalIDs, id: \.self) { goalID in
@@ -678,6 +1000,7 @@ struct ProjectPlanView: View {
                         openDeliveryGoalEditor(phase.id, goalID: goalID)
                     }
                     .buttonStyle(.link)
+                    .disabled(roadmapLoadError != nil)
                     .accessibilityIdentifier("phase-plan-incomplete-goal-\(goalID.rawValue)")
                 }
                 ForEach(failure.unassignedTicketIDs, id: \.self) { ticketID in
@@ -894,10 +1217,7 @@ struct ProjectPlanView: View {
 
     private func retiredTicketRow(_ ticket: RetiredTicketProjection) -> some View {
         Button {
-            selectedProposalID = nil
-            selectedProposalVersion = nil
-            selectedTicketID = ticket.id
-            focusChanged(.ticket(ticket.id))
+            selectTicket(ticket.id)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -929,10 +1249,10 @@ struct ProjectPlanView: View {
                 }
             }
             .padding(12)
-            .background(selectedTicketID == ticket.id ? RekonTheme.elevatedSurface : RekonTheme.surface,
+            .background(selectedPlanTicketID == ticket.id ? RekonTheme.elevatedSurface : RekonTheme.surface,
                         in: RoundedRectangle(cornerRadius: 10))
             .overlay { RoundedRectangle(cornerRadius: 10).stroke(
-                selectedTicketID == ticket.id ? RekonTheme.accent : RekonTheme.border,
+                selectedPlanTicketID == ticket.id ? RekonTheme.accent : RekonTheme.border,
                 lineWidth: RekonBorder.hairline
             ) }
             .contentShape(Rectangle())
@@ -980,27 +1300,35 @@ struct ProjectPlanView: View {
     @ViewBuilder private var inspector: some View {
         if let selection = selectedProposal {
             proposalInspector(proposal: selection.proposal, version: selection.version)
-        } else if let detail = plan.detail(for: selectedTicketID) ?? plan.unassignedDetails.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
-            TicketDetailView(
-                detail: detail,
-                documentationStatus: documentationStatus,
-                loadEvidencePreview: loadEvidencePreview,
-                loadReferences: loadTicketReferences.map { loader in
-                    { await loader(detail.id) }
-                },
-                loadDeliveryEvidence: loadTicketDeliveryEvidence.map { loader in
-                    { await loader(detail.id) }
-                },
-                openReferenceSource: openReferenceSource.map { opener in
-                    { linkID, version in opener(detail.id, linkID, version) }
-                },
-                referenceQueryContextIdentity: referenceQueryContextIdentity,
-                isReferenceQueryReady: isReferenceQueryReady
-            )
+        } else if let selectedPlanTicketID,
+                  let detail = plan.detail(for: selectedPlanTicketID) {
+            ticketDetail(detail)
                 .accessibilityIdentifier("project-plan-inspector")
+        } else if let phase = selectedPhase {
+            phaseDetail(phase)
+                .accessibilityIdentifier("project-plan-phase-inspector-\(phase.id.rawValue)")
         } else {
-            ContentUnavailableView("Select an unassigned ticket", systemImage: "rectangle.on.rectangle")
+            ContentUnavailableView("Select a phase", systemImage: "rectangle.on.rectangle")
         }
+    }
+
+    private func ticketDetail(_ detail: TicketDetailProjection) -> some View {
+        TicketDetailView(
+            detail: detail,
+            documentationStatus: documentationStatus,
+            loadEvidencePreview: loadEvidencePreview,
+            loadReferences: loadTicketReferences.map { loader in
+                { await loader(detail.id) }
+            },
+            loadDeliveryEvidence: loadTicketDeliveryEvidence.map { loader in
+                { await loader(detail.id) }
+            },
+            openReferenceSource: openReferenceSource.map { opener in
+                { linkID, version in opener(detail.id, linkID, version) }
+            },
+            referenceQueryContextIdentity: referenceQueryContextIdentity,
+            isReferenceQueryReady: isReferenceQueryReady
+        )
     }
 
     private var selectedProposal: (proposal: PlanChangeProposalRecord, version: PlanChangeProposalVersionRecord)? {
@@ -1173,7 +1501,7 @@ struct ProjectPlanView: View {
                 .buttonStyle(RekonPrimaryButtonStyle())
                 .accessibilityIdentifier("approve-plan-change-proposal")
             }
-            .disabled(isPerformingProposalAction)
+            .disabled(isPerformingProposalAction || roadmapLoadError != nil)
         }
         if version.application == nil,
            version.decision?.disposition == .approved,
@@ -1186,7 +1514,7 @@ struct ProjectPlanView: View {
                 }
             }
             .buttonStyle(RekonPrimaryButtonStyle())
-            .disabled(isPerformingProposalAction)
+            .disabled(isPerformingProposalAction || roadmapLoadError != nil)
             .accessibilityIdentifier("apply-plan-change-proposal")
         }
         if version.application == nil, isCurrent, let refreshProposal {
@@ -1209,7 +1537,7 @@ struct ProjectPlanView: View {
                 )
             }
             .buttonStyle(RekonSecondaryButtonStyle())
-            .disabled(isPerformingProposalAction)
+            .disabled(isPerformingProposalAction || roadmapLoadError != nil)
             .accessibilityIdentifier("refresh-plan-change-proposal")
         }
     }
@@ -1242,12 +1570,163 @@ struct ProjectPlanView: View {
         return "\(state) · revision \(readiness.revision) · \(readiness.coveredUpcomingCount)/\(readiness.upcomingCount) covered"
     }
 
+    private var phaseLifecycleOrder: [PhaseLifecycle] {
+        [.inDelivery, .upcoming, .unassessed, .completed]
+    }
+
+    private var orderedPhases: [ProjectPlanPhaseProjection] {
+        phaseLifecycleOrder.flatMap { lifecycle in
+            plan.phases.filter { $0.lifecycle.lifecycle == lifecycle }
+        }
+    }
+
+    private var selectedPhase: ProjectPlanPhaseProjection? {
+        guard let selectedPhaseID else { return nil }
+        return plan.phases.first { $0.id == selectedPhaseID }
+    }
+
+    private func readinessName(_ state: PhasePlanState) -> String {
+        switch state {
+        case .legacyUnassessed: "Unassessed"
+        case .draft: "Draft"
+        case .ready: "Ready"
+        }
+    }
+
+    private func phaseProgressText(_ phase: ProjectPlanPhaseProjection) -> String {
+        return "\(phase.deliveredOrAcceptedTicketCount) of \(phase.ticketCount) tickets delivered or accepted"
+    }
+
+    private func phaseProgressAccessibilityValue(_ phase: ProjectPlanPhaseProjection) -> String {
+        return "\(phase.deliveredOrAcceptedTicketCount) of \(phase.ticketCount) tickets delivered or accepted; \(phase.acceptedTicketCount) accepted"
+    }
+
+    private func phaseRowAccessibilityValue(_ phase: ProjectPlanPhaseProjection) -> String {
+        var parts = [phaseProgressText(phase)]
+        if let gap = phaseGap(phase) { parts.append(gap) }
+        if let action = recommendedAction(for: phase) { parts.append("action available: \(action)") }
+        return parts.joined(separator: "; ")
+    }
+
+    private func phaseGap(_ phase: ProjectPlanPhaseProjection) -> String? {
+        if phasePlanFinalizationRecovery?(phase.id) != nil {
+            return "A finalization attempt still needs reconciliation"
+        }
+        let actionableGoals = phase.deliveryGoals.filter { $0.lifecycle != .superseded }
+        if actionableGoals.isEmpty { return "No actionable Delivery Goal" }
+        if actionableGoals.contains(where: goalNeedsCompletion) {
+            return "A Delivery Goal is incomplete"
+        }
+        if phase.readiness.unassignedUpcomingCount > 0 {
+            return "\(phase.readiness.unassignedUpcomingCount) upcoming ticket\(phase.readiness.unassignedUpcomingCount == 1 ? " is" : "s are") unassigned"
+        }
+        if !phase.completionAssessment.blockers.isEmpty,
+           phase.lifecycle.lifecycle == .inDelivery {
+            return "\(phase.completionAssessment.blockers.count) completion blocker\(phase.completionAssessment.blockers.count == 1 ? "" : "s")"
+        }
+        return nil
+    }
+
+    private func recommendedAction(for phase: ProjectPlanPhaseProjection) -> String? {
+        if phasePlanFinalizationRecovery?(phase.id) != nil { return "Reconcile finalization" }
+        if phase.lifecycle.lifecycle == .completed { return nil }
+        let actionableGoals = phase.deliveryGoals.filter { $0.lifecycle != .superseded }
+        if actionableGoals.isEmpty { return "Create Delivery Goal" }
+        if actionableGoals.contains(where: goalNeedsCompletion) { return "Complete Delivery Goal" }
+        if phase.readiness.unassignedUpcomingCount > 0 { return "Edit assignments" }
+        if phase.readiness.state == .draft { return "Finalize plan" }
+        return "Review lifecycle"
+    }
+
+    private func goalNeedsCompletion(_ goal: DeliveryGoalSummaryProjection) -> Bool {
+        goal.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || goal.outcome.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || goal.doneCriteria.allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private func finalizationUnavailableReason(_ phase: ProjectPlanPhaseProjection) -> String {
+        if roadmapLoadError != nil { return "the roadmap must be refreshed" }
+        if phase.lifecycle.lifecycle == .completed { return "the phase is completed" }
+        if phase.readiness.state == .legacyUnassessed { return "plan readiness is unassessed" }
+        return "the plan is already Ready"
+    }
+
+    private func phaseScrollID(_ phaseID: PhaseID) -> String {
+        "project-plan-phase-scroll-\(phaseID.rawValue)"
+    }
+
+    private func selectPhase(_ phaseID: PhaseID) {
+        selectedPhaseID = phaseID
+        selectedPlanTicketID = nil
+        selectedProposalID = nil
+        selectedProposalVersion = nil
+        showsTechnicalRecord = false
+        showsPlanChanges = false
+        focusedPhaseID = phaseID
+        accessibilityFocusedPhaseID = phaseID
+        if usesCompactLayout {
+            showsCompactPhaseDetail = true
+            Task { @MainActor in
+                await Task.yield()
+                phaseDetailHeadingFocused = true
+                accessibilityPhaseDetailHeadingFocused = true
+            }
+        }
+    }
+
+    private func selectTicket(_ ticketID: TicketID, phaseID: PhaseID? = nil) {
+        selectedPlanTicketID = ticketID
+        selectedTicketID = ticketID
+        selectedProposalID = nil
+        selectedProposalVersion = nil
+        if let phaseID { selectedPhaseID = phaseID }
+        focusChanged(.ticket(ticketID))
+    }
+
+    private func movePhaseSelection(from phaseID: PhaseID, direction: MoveCommandDirection) {
+        guard let index = orderedPhases.firstIndex(where: { $0.id == phaseID }) else { return }
+        let targetIndex: Int
+        switch direction {
+        case .up, .left: targetIndex = max(orderedPhases.startIndex, index - 1)
+        case .down, .right: targetIndex = min(orderedPhases.index(before: orderedPhases.endIndex), index + 1)
+        @unknown default: return
+        }
+        let target = orderedPhases[targetIndex]
+        selectedPhaseID = target.id
+        selectedPlanTicketID = nil
+        selectedProposalID = nil
+        selectedProposalVersion = nil
+        focusedPhaseID = target.id
+        accessibilityFocusedPhaseID = target.id
+    }
+
+    private func reconcilePhaseSelection() {
+        if selectedPlanTicketID.flatMap({ plan.detail(for: $0) }) == nil {
+            selectedPlanTicketID = nil
+        }
+        if let selectedPhaseID,
+           plan.phases.contains(where: { $0.id == selectedPhaseID }) {
+            return
+        }
+        selectedPhaseID = plan.project.activePhaseID.flatMap { activeID in
+            plan.phases.first(where: { $0.id == activeID })?.id
+        } ?? orderedPhases.first?.id
+        if selectedPhaseID == nil { showsCompactPhaseDetail = false }
+    }
+
     private func applyRequestedFocus() {
         switch requestedFocus {
         case let .ticket(ticketID):
             guard plan.detail(for: ticketID) != nil else { return }
             selectedProposalID = nil
             selectedProposalVersion = nil
+            selectedPlanTicketID = ticketID
+            if let phase = plan.phases.first(where: { phase in
+                phase.tickets.contains(where: { $0.id == ticketID })
+            }) {
+                selectedPhaseID = phase.id
+                if usesCompactLayout { showsCompactPhaseDetail = true }
+            }
             focusedProposal = nil
             accessibilityFocusedProposal = nil
             focusedTicketID = ticketID
@@ -1258,6 +1737,8 @@ struct ProjectPlanView: View {
             }), let selectedVersion = proposal.versions.first(where: { $0.version == version }) else { return }
             selectedProposalID = Data(proposalID.utf8)
             selectedProposalVersion = version
+            showsPlanChanges = true
+            if usesCompactLayout, selectedPhaseID != nil { showsCompactPhaseDetail = true }
             proposalActionFailure = nil
             proposalNeedsRefresh = false
             let impactID = ticketID.flatMap { selectedTicketID in
@@ -1282,14 +1763,8 @@ struct ProjectPlanView: View {
            proposal.versions.contains(where: { $0.version == selectedProposalVersion }) {
             return
         }
-        guard let proposal = plan.proposals.first,
-              let version = proposal.versions.first(where: { $0.version == proposal.currentVersion }) else {
-            selectedProposalID = nil
-            selectedProposalVersion = nil
-            return
-        }
-        selectedProposalID = Data(proposal.id.rawValue.utf8)
-        selectedProposalVersion = version.version
+        selectedProposalID = nil
+        selectedProposalVersion = nil
         proposalActionFailure = nil
         proposalNeedsRefresh = false
     }
@@ -1306,8 +1781,14 @@ struct ProjectPlanView: View {
 
     private func navigationScrollTargetID(forWidth width: CGFloat) -> String? {
         if case let .ticket(ticketID)? = requestedFocus,
-           plan.retiredTickets.contains(where: { $0.id == ticketID })
-            || plan.unassignedTickets.contains(where: { $0.id == ticketID }) {
+           plan.detail(for: ticketID) != nil {
+            if let phase = plan.phases.first(where: { phase in
+                phase.tickets.contains(where: { $0.id == ticketID })
+            }) {
+                return ProjectPlanLayout.usesStackedInspector(forWidth: width)
+                    ? nil
+                    : phaseScrollID(phase.id)
+            }
             return "project-plan-ticket-scroll-\(ticketID.rawValue)"
         }
         guard ProjectPlanLayout.usesStackedInspector(forWidth: width) else { return nil }
