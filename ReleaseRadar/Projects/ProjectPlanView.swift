@@ -240,47 +240,62 @@ struct ProjectPlanView: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        if ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width),
-                           showsCompactPhaseDetail,
-                           let phase = selectedPhase {
-                            compactPhaseDetail(phase)
-                        } else {
+                Group {
+                    if ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width) {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 20) {
+                                if showsCompactPhaseDetail, let phase = selectedPhase {
+                                    compactPhaseDetail(phase)
+                                } else {
+                                    header
+                                    roadmapFreshness
+                                    planContent
+                                }
+                            }
+                        }
+                        .scrollPosition(id: $roadmapScrollPosition)
+                    } else {
+                        VStack(alignment: .leading, spacing: 20) {
                             header
                             roadmapFreshness
-                        }
-                        if !ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width) {
                             HStack(alignment: .top, spacing: 18) {
-                                planContent.frame(maxWidth: .infinity, alignment: .topLeading)
+                                ScrollView {
+                                    planContent
+                                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                                }
+                                .scrollPosition(id: $roadmapScrollPosition)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 RekonSeparator(.vertical)
-                                inspector
-                                    .frame(
-                                        width: min(520, max(440, geometry.size.width * 0.38)),
-                                        alignment: .top
-                                    )
-                                    .frame(minHeight: 500, alignment: .top)
+                                ScrollView {
+                                    inspector
+                                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                                }
+                                .frame(
+                                    width: min(520, max(440, geometry.size.width * 0.38)),
+                                    maxHeight: .infinity,
+                                    alignment: .top
+                                )
                             }
-                        } else if !showsCompactPhaseDetail {
-                            planContent
+                            .frame(maxHeight: .infinity)
                         }
                     }
-                    .onAppear {
-                        usesCompactLayout = ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width)
-                        applyRequestedFocus()
-                    }
-                    .onChange(of: geometry.size.width) { _, width in
-                        usesCompactLayout = ProjectPlanLayout.usesStackedInspector(forWidth: width)
-                        if !usesCompactLayout { showsCompactPhaseDetail = false }
-                        applyRequestedFocus()
-                    }
-                    .padding(24)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .scrollPosition(id: $roadmapScrollPosition)
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .onAppear {
+                    usesCompactLayout = ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width)
+                }
+                .onChange(of: geometry.size.width) { _, width in
+                    usesCompactLayout = ProjectPlanLayout.usesStackedInspector(forWidth: width)
+                    if !usesCompactLayout { showsCompactPhaseDetail = false }
+                }
+                .onChange(of: requestedFocus, initial: true) { _, _ in
+                    applyRequestedFocus(
+                        usesCompactLayout: ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width)
+                    )
+                }
                 .onChange(of: navigationScrollTargetID(forWidth: geometry.size.width), initial: true) { _, targetID in
                     guard let targetID else { return }
-                    applyRequestedFocus()
                     Task { @MainActor in
                         await Task.yield()
                         proxy.scrollTo(targetID, anchor: .center)
@@ -303,11 +318,9 @@ struct ProjectPlanView: View {
         .accessibilityIdentifier("project-plan")
         .onChange(of: plan.proposals) { _, _ in reconcileProposalSelection() }
         .onChange(of: plan.phases) { _, _ in reconcilePhaseSelection() }
-        .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
         .task {
             reconcilePhaseSelection()
             reconcileProposalSelection()
-            applyRequestedFocus()
             if let target = requestedDeliveryGoalEditor {
                 openDeliveryGoalEditor(target.phaseID, goalID: target.goalID)
             }
@@ -1598,7 +1611,7 @@ struct ProjectPlanView: View {
 
     private func readinessName(_ state: PhasePlanState) -> String {
         switch state {
-        case .legacyUnassessed: "Unassessed"
+        case .legacyUnassessed: "Legacy unassessed"
         case .draft: "Draft"
         case .ready: "Ready"
         }
@@ -1623,13 +1636,22 @@ struct ProjectPlanView: View {
         if phasePlanFinalizationRecovery?(phase.id) != nil {
             return "A finalization attempt still needs reconciliation"
         }
-        let actionableGoals = phase.deliveryGoals.filter { $0.lifecycle != .superseded }
-        if actionableGoals.isEmpty { return "No actionable Delivery Goal" }
-        if actionableGoals.contains(where: goalNeedsCompletion) {
-            return "A Delivery Goal is incomplete"
+        if phasePlanFinalizationPhaseID == phase.id,
+           let failure = phasePlanFinalizationFailure {
+            if failure.incompleteGoalIDs.isEmpty,
+               failure.unassignedTicketIDs.isEmpty,
+               failure.conflictingTicketIDs.isEmpty {
+                return "Finalization needs an actionable Delivery Goal"
+            }
+            return "Finalization validation found incomplete planning work"
         }
-        if phase.readiness.unassignedUpcomingCount > 0 {
-            return "\(phase.readiness.unassignedUpcomingCount) upcoming ticket\(phase.readiness.unassignedUpcomingCount == 1 ? " is" : "s are") unassigned"
+        switch phase.readiness.state {
+        case .legacyUnassessed:
+            return "Plan readiness has not been assessed"
+        case .draft:
+            return "Draft plan needs readiness review"
+        case .ready:
+            break
         }
         if !phase.completionAssessment.blockers.isEmpty,
            phase.lifecycle.lifecycle == .inDelivery {
@@ -1641,18 +1663,22 @@ struct ProjectPlanView: View {
     private func recommendedAction(for phase: ProjectPlanPhaseProjection) -> String? {
         if phasePlanFinalizationRecovery?(phase.id) != nil { return "Reconcile finalization" }
         if phase.lifecycle.lifecycle == .completed { return nil }
-        let actionableGoals = phase.deliveryGoals.filter { $0.lifecycle != .superseded }
-        if actionableGoals.isEmpty { return "Create Delivery Goal" }
-        if actionableGoals.contains(where: goalNeedsCompletion) { return "Complete Delivery Goal" }
-        if phase.readiness.unassignedUpcomingCount > 0 { return "Edit assignments" }
-        if phase.readiness.state == .draft { return "Finalize plan" }
-        return "Review lifecycle"
-    }
-
-    private func goalNeedsCompletion(_ goal: DeliveryGoalSummaryProjection) -> Bool {
-        goal.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || goal.outcome.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || goal.doneCriteria.allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if phasePlanFinalizationPhaseID == phase.id,
+           let failure = phasePlanFinalizationFailure {
+            if failure.incompleteGoalIDs.isEmpty,
+               failure.unassignedTicketIDs.isEmpty,
+               failure.conflictingTicketIDs.isEmpty {
+                return "Create Delivery Goal"
+            }
+            if !failure.incompleteGoalIDs.isEmpty { return "Complete Delivery Goal" }
+            if !failure.unassignedTicketIDs.isEmpty { return "Edit assignments" }
+            if !failure.conflictingTicketIDs.isEmpty { return "Resolve assignment conflicts" }
+        }
+        switch phase.readiness.state {
+        case .legacyUnassessed: return "Assess plan readiness"
+        case .draft: return "Review plan"
+        case .ready: return "Review lifecycle"
+        }
     }
 
     private func finalizationUnavailableReason(_ phase: ProjectPlanPhaseProjection) -> String {
@@ -1727,7 +1753,7 @@ struct ProjectPlanView: View {
         if selectedPhaseID == nil { showsCompactPhaseDetail = false }
     }
 
-    private func applyRequestedFocus() {
+    private func applyRequestedFocus(usesCompactLayout: Bool) {
         switch requestedFocus {
         case let .ticket(ticketID):
             guard plan.detail(for: ticketID) != nil else { return }
