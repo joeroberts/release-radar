@@ -580,9 +580,17 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             throw ProjectExecutionError.assignmentNotAuthorized
         }
         try await configuration.useCodexContext(policy.codexContextID)
-        let sharedExecutionSkill = try await configuration.sharedExecutionSkill()
-        let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy,
-            paths: paths, sharedExecutionSkill: sharedExecutionSkill)
+        let profile: ProjectExecutionPermissionProfile
+        do {
+            let sharedExecutionSkill = try await configuration.sharedExecutionSkill()
+            profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy,
+                paths: paths, sharedExecutionSkill: sharedExecutionSkill)
+        } catch let error as ProjectExecutionError where error == .unavailable {
+            // Missing, incompatible or unstable optional skill input retains the
+            // existing local fallback without widening the worker filesystem.
+            profile = try ProjectExecutionPermissionProfile(assignment: assignment,
+                policy: policy, paths: paths)
+        }
         let definition = try profile.definition
         if let prior = assignment.permissionProfileDefinition {
             try withProjectExecutionPreparationStage(.preparedAssignmentConfiguration) {
