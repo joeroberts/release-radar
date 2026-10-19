@@ -577,6 +577,35 @@ final class DocumentationObservationTests: XCTestCase {
         await appModel.loadDashboard()
         let initialFailure = appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.failure
         XCTAssertNil(initialFailure)
+
+        appModel.startDocumentationMonitoring()
+        try Data("changed while monitoring".utf8).write(to: evidenceFile)
+        let monitorDetectedInvalidation = await waitUntil {
+            guard case .managedUnavailable(_, .catalogInvalid, .checksumMismatch) = appModel.projectDocumentationState(for: projectID) else {
+                return false
+            }
+            return appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.failure == .checksumInvalid
+        }
+        XCTAssertTrue(monitorDetectedInvalidation, "The active monitor must withdraw a prior success after an external change")
+        XCTAssertEqual(
+            appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.failure,
+            .checksumInvalid
+        )
+
+        try original.write(to: evidenceFile)
+        let monitorRecoveredAfterRepair = await waitUntil {
+            guard case .managed = appModel.projectDocumentationState(for: projectID) else { return false }
+            return appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.isAvailable == true
+        }
+        appModel.stopDocumentationMonitoring()
+        XCTAssertTrue(monitorRecoveredAfterRepair, "The active monitor must recover after a valid repair without restarting")
+
+        await appModel.recheckDocumentationAfterActivation()
+        guard case .managed = appModel.projectDocumentationState(for: projectID) else {
+            return XCTFail("Activation must recover a repaired accepted catalog")
+        }
+        XCTAssertTrue(appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.isAvailable == true)
+
         try Data("changed while the app is open".utf8).write(to: evidenceFile)
         await appModel.recheckDocumentationAfterActivation()
         let activatedState = appModel.projectDocumentationState(for: projectID)
@@ -591,13 +620,11 @@ final class DocumentationObservationTests: XCTestCase {
         XCTAssertEqual(health.checkedAt, healthObservationTime)
 
         try original.write(to: evidenceFile)
-        appModel.startDocumentationMonitoring()
-        let recovered = await waitUntil {
-            guard case .managed = appModel.projectDocumentationState(for: projectID) else { return false }
-            return appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.isAvailable == true
+        await appModel.recheckDocumentationAfterActivation()
+        guard case .managed = appModel.projectDocumentationState(for: projectID) else {
+            return XCTFail("Activation must recover a valid repair after an observation-inactive change")
         }
-        appModel.stopDocumentationMonitoring()
-        XCTAssertTrue(recovered, "The active monitor must recover after an external repair")
+        XCTAssertTrue(appModel.dashboard?.projects.first?.evidence.first?.managedDocument?.isAvailable == true)
 
         try await store.transact(actor: .init(id: "fixture"), reason: "Replace registration") { connection in
             try connection.execute(
