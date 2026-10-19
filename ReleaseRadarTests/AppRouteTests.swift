@@ -6478,6 +6478,100 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testNativeWorkspaceGoalsDefaultCurrentExcludesCompletedExecutionObservationsAndHistoryRemainsAccessible() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-CurrentGoals-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let currentTitle = "Current #122 execution observation"
+        let completedTitle = "Completed #122 execution observation"
+        try await store.transact(actor: .init(id: "issue-122-native-fixture"), reason: "Create current and completed execution observations") { connection in
+            try connection.execute(
+                "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('issue-122-current-thread', ?, 'active', '2026-10-19T12:00:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('issue-122-current-goal', ?, 'issue-122-current-thread', 'active', ?, '2026-10-19T12:00:00Z')",
+                bindings: [.text(projectID.rawValue), .text(currentTitle)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('issue-122-completed-thread', ?, 'completed', '2026-10-19T12:01:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('issue-122-completed-goal', ?, 'issue-122-completed-thread', 'Completed', ?, '2026-10-19T12:01:00Z')",
+                bindings: [.text(projectID.rawValue), .text(completedTitle)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .goals)
+        model.setWorkspaceGoalsDomain(.execution)
+        let currentGoals = try XCTUnwrap(model.dashboard?.workspaceGoals.execution)
+        let currentGoal = try XCTUnwrap(currentGoals.first { $0.goalID == "issue-122-current-goal" })
+        let currentIdentifier = "workspace-goal-\(currentGoal.id.base64EncodedString())"
+        let completedIdentity = Data(projectID.rawValue.utf8) + [0]
+            + Data("issue-122-completed-thread".utf8) + [0] + Data("issue-122-completed-goal".utf8)
+        let completedIdentifier = "workspace-goal-\(completedIdentity.base64EncodedString())"
+        XCTAssertFalse(currentGoals.contains { $0.goalID == "issue-122-completed-goal" })
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 940),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Issue 122 current Goals"
+        let hosting = NSHostingView(rootView: SidebarView(model: model))
+        hosting.frame = window.contentView?.bounds ?? .zero
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+
+        for size in [NSSize(width: 1_500, height: 940), NSSize(width: 760, height: 900)] {
+            window.setContentSize(size)
+            try await Task.sleep(for: .milliseconds(350))
+            hosting.layoutSubtreeIfNeeded()
+            let nativeApplication = AXUIElementCreateApplication(getpid())
+            let nativeWindow = try XCTUnwrap(accessibilityWindow(nativeApplication, title: window.title))
+            let scrolledCurrentElement = await scrollToAccessibilityElement(
+                nativeWindow, identifier: currentIdentifier
+            )
+            let currentElement = try XCTUnwrap(scrolledCurrentElement)
+            XCTAssertTrue(try accessibilityFrame(nativeWindow).intersects(try accessibilityFrame(currentElement)))
+            XCTAssertNil(accessibilityElement(nativeWindow, identifier: completedIdentifier))
+            XCTAssertTrue(accessibilityText(nativeWindow).contains(currentTitle))
+            XCTAssertFalse(accessibilityText(nativeWindow).contains(completedTitle))
+        }
+
+        await model.navigate(to: .activity(projectID))
+        try await Task.sleep(for: .milliseconds(350))
+        hosting.layoutSubtreeIfNeeded()
+        let activity = try XCTUnwrap(model.activity(for: projectID))
+        XCTAssertTrue(activity.items.contains {
+            $0.identity.source == .runtime && $0.identity.sourceID == "issue-122-completed-thread|issue-122-completed-goal"
+        })
+        let nativeApplication = AXUIElementCreateApplication(getpid())
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(nativeApplication, title: window.title))
+        let completedHistoryIdentifier = "history-event-runtime-issue-122-completed-thread|issue-122-completed-goal"
+        let scrolledCompletedHistoryElement = await scrollToAccessibilityElement(
+            nativeWindow, identifier: completedHistoryIdentifier
+        )
+        let completedHistoryElement = try XCTUnwrap(scrolledCompletedHistoryElement)
+        XCTAssertTrue(try accessibilityFrame(nativeWindow).intersects(try accessibilityFrame(completedHistoryElement)))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains(completedTitle))
+    }
+
+    @MainActor
     func testLiveWorkspaceGoalsJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext() async throws {
         guard let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6B_NATIVE_SESSION"] else {
             throw XCTSkip("The external controller must supply a unique Phase 6B native session.")
