@@ -3496,83 +3496,285 @@ final class AppRouteTests: XCTestCase {
         defer { NSApp.setActivationPolicy(previousPolicy) }
 
         for (windowWidth, isCompact) in [(1_600.0, false), (760.0, true)] {
-            let fixture = try await makeTask10PlanningFixture()
-            let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
-            await model.loadDashboard()
-            await model.navigate(to: .projectPlan(fixture.projectID))
-            let ticketID = TicketID(rawValue: "ROAD-1")
-            model.selectTicket(ticketID)
+            do {
+                let fixture = try await makeTask10PlanningFixture()
+                let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+                await model.loadDashboard()
+                await model.navigate(to: .projectPlan(fixture.projectID))
+                model.selectTicket(.init(rawValue: ""))
 
-            let window = NSWindow(
-                contentRect: .init(x: 30, y: 30, width: windowWidth, height: 850),
-                styleMask: [.titled, .closable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.isReleasedWhenClosed = false
-            window.title = "Project Plan roadmap selection \(Int(windowWidth))"
-            let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
-            window.contentView = hosting
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            defer { window.close() }
-
-            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-            for _ in 0..<20 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(100)) }
-            hosting.layoutSubtreeIfNeeded()
-            let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
-            XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "prepare-repository-plan"))
-            let rowIdentifier = "project-plan-phase-row-\(fixture.roadmapPhaseID.rawValue)"
-            let row = try XCTUnwrap(
-                accessibilityElement(nativeWindow, identifier: rowIdentifier),
-                "The roadmap phase must be a single accessible selection control at \(Int(windowWidth))pt"
-            )
-            if !isCompact {
-                XCTAssertEqual(
-                    AXUIElementSetAttributeValue(row, kAXFocusedAttribute as CFString, kCFBooleanTrue),
-                    .success
+                let window = NSWindow(
+                    contentRect: .init(x: 30, y: 30, width: windowWidth, height: 850),
+                    styleMask: [.titled, .closable, .resizable],
+                    backing: .buffered,
+                    defer: false
                 )
-                XCTAssertEqual(accessibilityFocusedIdentifier(application), rowIdentifier)
-            }
-            XCTAssertEqual(AXUIElementPerformAction(row, kAXPressAction as CFString), .success)
+                window.isReleasedWhenClosed = false
+                window.title = "Project Plan roadmap selection \(Int(windowWidth))"
+                let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+                window.contentView = hosting
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                defer { window.close() }
 
-            if isCompact {
-                let detailIdentifier = "project-plan-phase-detail-\(fixture.roadmapPhaseID.rawValue)"
-                for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: detailIdentifier) == nil {
-                    try await Task.sleep(for: .milliseconds(100))
+                let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+                for _ in 0..<20 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(100)) }
+                hosting.layoutSubtreeIfNeeded()
+                let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+                XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "prepare-repository-plan"))
+                let phase = try XCTUnwrap(
+                    model.dashboard?.plan(for: fixture.projectID)?.phases.first { $0.id == fixture.roadmapPhaseID }
+                )
+                let progressIdentifier = "project-plan-phase-progress-\(fixture.roadmapPhaseID.rawValue)"
+                XCTAssertEqual(
+                    accessibilityRouteState(nativeWindow, identifier: progressIdentifier)?.value,
+                    "\(phase.deliveredOrAcceptedTicketCount) of \(phase.ticketCount) tickets delivered or accepted; \(phase.acceptedTicketCount) accepted"
+                )
+                let rowIdentifier = "project-plan-phase-row-\(fixture.roadmapPhaseID.rawValue)"
+                let row = try XCTUnwrap(
+                    accessibilityElement(nativeWindow, identifier: rowIdentifier),
+                    "The roadmap phase must be a single accessible selection control at \(Int(windowWidth))pt"
+                )
+                if !isCompact {
+                    XCTAssertEqual(
+                        AXUIElementSetAttributeValue(row, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                        .success
+                    )
+                    var rowFocused: CFTypeRef?
+                    XCTAssertEqual(AXUIElementCopyAttributeValue(row, kAXFocusedAttribute as CFString, &rowFocused), .success)
+                    XCTAssertEqual(rowFocused as? Bool, true)
                 }
-                XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: detailIdentifier))
-                let back = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "back-to-project-plan-roadmap"))
-                XCTAssertEqual(AXUIElementPerformAction(back, kAXPressAction as CFString), .success)
-                for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: detailIdentifier) != nil {
-                    try await Task.sleep(for: .milliseconds(100))
-                }
-                XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: rowIdentifier))
-                for _ in 0..<20 where accessibilityRouteState(nativeWindow, identifier: rowIdentifier)?.isSelected != true {
-                    try await Task.sleep(for: .milliseconds(100))
-                }
-                XCTAssertTrue(accessibilityRouteState(nativeWindow, identifier: rowIdentifier)?.isSelected == true)
-                XCTAssertEqual(accessibilityFocusedIdentifier(application), rowIdentifier)
-                XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
-                XCTAssertEqual(model.selectedTicketID, ticketID)
-            } else {
-                let inspectorIdentifier = "project-plan-phase-inspector-\(fixture.roadmapPhaseID.rawValue)"
-                for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: inspectorIdentifier) == nil {
-                    try await Task.sleep(for: .milliseconds(100))
-                }
-                XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: inspectorIdentifier))
-                XCTAssertTrue(accessibilityRouteState(nativeWindow, identifier: rowIdentifier)?.isSelected == true)
-                XCTAssertEqual(accessibilityFocusedIdentifier(application), rowIdentifier)
-            }
+                XCTAssertEqual(AXUIElementPerformAction(row, kAXPressAction as CFString), .success)
 
-            let openAllPhases = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "open-all-phase-board"))
-            XCTAssertEqual(AXUIElementPerformAction(openAllPhases, kAXPressAction as CFString), .success)
-            for _ in 0..<20 where model.selection != .phaseBoard(fixture.projectID) {
-                try await Task.sleep(for: .milliseconds(100))
+                if isCompact {
+                    let detailIdentifier = "project-plan-phase-detail-\(fixture.roadmapPhaseID.rawValue)"
+                    for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: detailIdentifier) == nil {
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: detailIdentifier))
+                    try taskCapture(hosting, name: "project-plan-roadmap-phase-detail-\(Int(windowWidth))")
+                    let back = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "back-to-project-plan-roadmap"))
+                    XCTAssertEqual(AXUIElementPerformAction(back, kAXPressAction as CFString), .success)
+                    for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: detailIdentifier) != nil {
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: rowIdentifier))
+                    for _ in 0..<20 where accessibilityRouteState(nativeWindow, identifier: rowIdentifier)?.isSelected != true {
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    XCTAssertTrue(accessibilityRouteState(nativeWindow, identifier: rowIdentifier)?.isSelected == true)
+                    XCTAssertEqual(accessibilityFocusedIdentifier(application), rowIdentifier)
+                    XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
+                    XCTAssertEqual(model.selectedTicketID, .init(rawValue: ""))
+                } else {
+                    let inspectorIdentifier = "project-plan-phase-inspector-\(fixture.roadmapPhaseID.rawValue)"
+                    for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: inspectorIdentifier) == nil {
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: inspectorIdentifier))
+                    XCTAssertTrue(accessibilityRouteState(nativeWindow, identifier: rowIdentifier)?.isSelected == true)
+                    var rowFocused: CFTypeRef?
+                    XCTAssertEqual(AXUIElementCopyAttributeValue(row, kAXFocusedAttribute as CFString, &rowFocused), .success)
+                    XCTAssertEqual(rowFocused as? Bool, true)
+                }
+
+                try taskCapture(hosting, name: "project-plan-roadmap-selection-\(Int(windowWidth))")
+                let openAllPhases = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "open-all-phase-board"))
+                XCTAssertEqual(AXUIElementPerformAction(openAllPhases, kAXPressAction as CFString), .success)
+                for _ in 0..<20 where model.selection != .phaseBoard(fixture.projectID) {
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+                XCTAssertEqual(model.selectedTicketID, .init(rawValue: ""))
             }
-            XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
-            XCTAssertEqual(model.selectedTicketID, ticketID)
         }
+    }
+
+    @MainActor
+    func testNativeProjectPlanLongRoadmapKeepsWideInspectorFixedAndRestoresCompactScroll() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(projectID: fixture.projectID, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+            ])
+        )
+        let latePhaseID = PhaseID(rawValue: "roadmap-scroll-20")
+        for index in 1...20 {
+            let result = await dispatcher.dispatch(.init(
+                version: 1,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                reason: "Add a roadmap phase for native scroll coverage",
+                command: .upsertPhase(phaseID: "roadmap-scroll-\(index)", name: "Roadmap scroll \(index)")
+            ))
+            XCTAssertNil(result.error)
+        }
+
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.selectTicket(.init(rawValue: ""))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: .init(x: 30, y: 30, width: 1_600, height: 850),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Project Plan long roadmap"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        for _ in 0..<20 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(100)) }
+        hosting.layoutSubtreeIfNeeded()
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let firstRowID = "project-plan-phase-row-\(fixture.roadmapPhaseID.rawValue)"
+        let firstRow = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: firstRowID))
+        XCTAssertEqual(AXUIElementPerformAction(firstRow, kAXPressAction as CFString), .success)
+        let firstInspectorID = "project-plan-phase-inspector-\(fixture.roadmapPhaseID.rawValue)"
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: firstInspectorID) == nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let firstInspector = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: firstInspectorID))
+        let inspectorFrameBeforeScroll = try accessibilityFrame(firstInspector)
+
+        let lateRowID = "project-plan-phase-row-\(latePhaseID.rawValue)"
+        let roadmapScrollArea = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "project-plan-roadmap-scroll"))
+        let roadmapScrollBefore = try XCTUnwrap(accessibilityVerticalScrollValue(roadmapScrollArea))
+        let scrolledLateRow = await scrollToAccessibilityElement(roadmapScrollArea, identifier: lateRowID)
+        let lateRow = try XCTUnwrap(scrolledLateRow)
+        let roadmapScrollAfter = try XCTUnwrap(accessibilityVerticalScrollValue(roadmapScrollArea))
+        XCTAssertGreaterThan(roadmapScrollAfter, roadmapScrollBefore)
+        let lateRowFrame = try accessibilityFrame(lateRow)
+        let roadmapScrollFrame = try accessibilityFrame(roadmapScrollArea)
+        XCTAssertGreaterThan(lateRowFrame.midY, roadmapScrollFrame.minY)
+        XCTAssertLessThan(lateRowFrame.midY, roadmapScrollFrame.maxY)
+        let inspectorFrameAfterScroll = try accessibilityFrame(firstInspector)
+        XCTAssertEqual(inspectorFrameAfterScroll.minY, inspectorFrameBeforeScroll.minY, accuracy: 1)
+
+        XCTAssertEqual(AXUIElementPerformAction(lateRow, kAXPressAction as CFString), .success)
+        let lateInspectorID = "project-plan-phase-inspector-\(latePhaseID.rawValue)"
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: lateInspectorID) == nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: lateInspectorID))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Next action: Create Delivery Goal"))
+
+        window.setContentSize(.init(width: 760, height: 850))
+        try await Task.sleep(for: .milliseconds(250))
+        hosting.layoutSubtreeIfNeeded()
+        let compactRoadmapScrollArea = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "project-plan-roadmap-scroll"))
+        let scrolledCompactLateRow = await scrollToAccessibilityElement(compactRoadmapScrollArea, identifier: lateRowID)
+        let compactLateRow = try XCTUnwrap(scrolledCompactLateRow)
+        let compactScrollBeforeSelection = try XCTUnwrap(accessibilityVerticalScrollValue(compactRoadmapScrollArea))
+        XCTAssertEqual(AXUIElementPerformAction(compactLateRow, kAXPressAction as CFString), .success)
+        let compactDetailID = "project-plan-phase-detail-\(latePhaseID.rawValue)"
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: compactDetailID) == nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: compactDetailID))
+        let back = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "back-to-project-plan-roadmap"))
+        XCTAssertEqual(AXUIElementPerformAction(back, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: compactDetailID) != nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertTrue(accessibilityRouteState(nativeWindow, identifier: lateRowID)?.isSelected == true)
+        let restoredRoadmapScrollArea = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "project-plan-roadmap-scroll"))
+        XCTAssertEqual(
+            try XCTUnwrap(accessibilityVerticalScrollValue(restoredRoadmapScrollArea)),
+            compactScrollBeforeSelection,
+            accuracy: 0.05
+        )
+    }
+
+    @MainActor
+    func testNativeProjectPlanStaleRoadmapRetainsLastGoodRowsAndGatesPreparationUntilRetry() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let fault = TaskPlanQueryFault()
+        let model = AppModel(
+            store: fixture.store,
+            dashboardLoader: { store in
+                try await DashboardProjection.load(from: store, taskRows: { connection, project, phase, ticket in
+                    if fault.isFailing && ticket == nil {
+                        return try connection.rows("SELECT * FROM missing_project_plan_task_table")
+                    }
+                    return try TicketTaskPlanProjection.queryRows(
+                        connection, projectID: project, phaseID: phase, ticketID: ticket
+                    )
+                })
+            },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.selectTicket(.init(rawValue: ""))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: .init(x: 30, y: 30, width: 1_400, height: 850),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Project Plan stale roadmap"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        for _ in 0..<20 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(100)) }
+        hosting.layoutSubtreeIfNeeded()
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let rowID = "project-plan-phase-row-\(fixture.roadmapPhaseID.rawValue)"
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: rowID))
+
+        fault.isFailing = true
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: rowID))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "project-plan-data-stale"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("last successful roadmap is still shown"))
+        let prepare = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "prepare-repository-plan"))
+        var enabled: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(prepare, kAXEnabledAttribute as CFString, &enabled), .success)
+        XCTAssertEqual((enabled as? NSNumber)?.boolValue, false)
+
+        fault.isFailing = false
+        let staleRoadmap = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "project-plan-data-stale"))
+        let retry = try XCTUnwrap(accessibilityElements(staleRoadmap, role: kAXButtonRole).first { button in
+            var title: CFTypeRef?
+            return AXUIElementCopyAttributeValue(button, kAXTitleAttribute as CFString, &title) == .success
+                && (title as? String) == "Retry"
+        })
+        XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: "project-plan-data-stale") != nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "project-plan-data-stale"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: rowID))
+        let recoveredPrepare = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "prepare-repository-plan"))
+        var recoveredEnabled: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(recoveredPrepare, kAXEnabledAttribute as CFString, &recoveredEnabled), .success)
+        XCTAssertEqual((recoveredEnabled as? NSNumber)?.boolValue, true)
     }
 
     @MainActor
