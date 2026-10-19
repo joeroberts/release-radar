@@ -290,7 +290,7 @@ final class WorkerAdapterTests: XCTestCase {
                     try afterProjectListReturn?()
                     return response
                 }
-                let response = try RPCObject(["data": [["id": "codex-project-one", "roots": [["path": policy.policy.primaryRoot]]]]])
+                let response = try RPCObject(["data": [["id": "codex-project-one", "roots": [["path": try CodexExecutionContext.canonicalPath(policy.policy.primaryRoot)]]]]])
                 try afterProjectListReturn?()
                 return response
             }
@@ -298,7 +298,7 @@ final class WorkerAdapterTests: XCTestCase {
                 if let projectReadFailure { throw projectReadFailure }
                 if let projectReadResponse { return try RPCObject(projectReadResponse) }
                 let params = try parameters.object()
-                return try RPCObject(["project": ["id": params["projectId"] ?? NSNull(), "roots": [["path": policy.policy.primaryRoot]]]])
+                return try RPCObject(["project": ["id": params["projectId"] ?? NSNull(), "roots": [["path": try CodexExecutionContext.canonicalPath(policy.policy.primaryRoot)]]]])
             }
             if method == "thread/read" {
                 if let threadReadFailure { throw threadReadFailure }
