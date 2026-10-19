@@ -8241,6 +8241,10 @@ final class AppRouteTests: XCTestCase {
             sortOrder: 7
         )
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed editable delivery goal") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'delivery-goal-draft-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
             _ = try DeliveryPlanningPolicy.applyRevision(
                 projectID: fixture.projectID,
                 phaseID: fixture.roadmapPhaseID,
