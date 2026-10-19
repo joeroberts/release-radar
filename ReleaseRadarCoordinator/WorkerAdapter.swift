@@ -246,12 +246,28 @@ actor WorkerAdapter {
         let worker = try worker(workerID)
         guard let thread = worker.threadID, let turn = worker.turnID, let server = worker.server,
               worker.status != "closed" else { throw ProjectExecutionError.identityMismatch }
-        try worker.policy.mark(worker.status == "unknown" ? .unknown : .stopped, sessionID: thread, attemptID: worker.attemptID, from: [.authorized])
+        let persistenceFailure: Error?
+        do {
+            try worker.policy.mark(worker.status == "unknown" ? .unknown : .stopped, sessionID: thread,
+                attemptID: worker.attemptID, from: [.authorized])
+            persistenceFailure = nil
+        } catch {
+            persistenceFailure = error
+        }
         do { _ = try await rpc(server, "turn/interrupt", ["threadId": thread, "turnId": turn]) }
         catch {
             if unknown(error) { workers[workerID]?.status = "unknown" }
-            workers[workerID]?.error = "STOP was requested for the known run; confirmation failed: \(error.localizedDescription)"
+            if let persistenceFailure {
+                workers[workerID]?.error = "STOP was requested for the known run; confirmation failed: \(error.localizedDescription). Durable STOP evidence is also unconfirmed: \(persistenceFailure.localizedDescription)"
+            } else {
+                workers[workerID]?.error = "STOP was requested for the known run; confirmation failed: \(error.localizedDescription)"
+            }
             throw error
+        }
+        if let persistenceFailure {
+            workers[workerID]?.status = "unknown"
+            workers[workerID]?.error = "STOP was sent to the known run, but durable STOP evidence is unconfirmed: \(persistenceFailure.localizedDescription)"
+            throw persistenceFailure
         }
         return try status(workerID: workerID) // Only turn/completed establishes that work stopped.
     }
