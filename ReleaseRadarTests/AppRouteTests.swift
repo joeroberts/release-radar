@@ -3476,6 +3476,7 @@ final class AppRouteTests: XCTestCase {
         let fixture = try await makeRR9OwnerFixture()
         _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
+        let loader = DeliveryGoalAssignmentLoadCapture()
         let model = AppModel(
             store: fixture.store,
             projectOnboarding: fixture.onboarding,
@@ -3497,7 +3498,9 @@ final class AppRouteTests: XCTestCase {
                 openAllPhases: {},
                 openPhase: { _ in },
                 loadDeliveryGoalAssignmentEditor: { phaseID in
-                    await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+                    let outcome = await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+                    await loader.record(phaseID: phaseID, outcome: outcome)
+                    return outcome
                 },
                 saveDeliveryGoalAssignmentDraft: { phaseID, revision, edits in
                     await model.saveDeliveryGoalAssignmentDraft(
@@ -3539,7 +3542,11 @@ final class AppRouteTests: XCTestCase {
                 if editorText.contains("Assign Delivery Goal Tickets") { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
-            XCTAssertTrue(editorText.contains("Assign Delivery Goal Tickets"), "Timed out waiting for the assignment editor: \(editorText)")
+            let loaderRecords = await loader.records()
+            XCTAssertTrue(
+                editorText.contains("Assign Delivery Goal Tickets"),
+                "Timed out waiting for assignment editor; loads=\(loaderRecords), windows=\(accessibilityWindowTitles(application)), loading=\(editorText.contains(\"Loading ticket assignments\")): \(editorText)"
+            )
             XCTAssertTrue(editorText.contains("Covered"), "Assignment editor must explain phase coverage: \(editorText)")
             XCTAssertTrue(editorText.contains("ROAD-1"), "Assignment editor must expose eligible tickets: \(editorText)")
             let cancel = try XCTUnwrap(
@@ -3573,6 +3580,7 @@ final class AppRouteTests: XCTestCase {
         let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
         let attemptID = UUID(uuidString: "19219219-1111-4111-8111-192192192192")!
         let replay = DeliveryGoalAssignmentReconcileCapture()
+        let loader = DeliveryGoalAssignmentLoadCapture()
         let recovery = DeliveryGoalAssignmentSaveRecovery(
             attemptID: attemptID,
             edits: [.init(ticketID: .init(rawValue: "ROAD-1"), goalID: .init(rawValue: "assignment-goal-b"))],
@@ -3585,7 +3593,9 @@ final class AppRouteTests: XCTestCase {
             openAllPhases: {},
             openPhase: { _ in },
             loadDeliveryGoalAssignmentEditor: { phaseID in
-                await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+                let outcome = await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+                await loader.record(phaseID: phaseID, outcome: outcome)
+                return outcome
             },
             saveDeliveryGoalAssignmentDraft: { _, _, _ in
                 .init(attemptID: attemptID, status: .unconfirmed(error: .outcomeUnknown))
@@ -3621,13 +3631,15 @@ final class AppRouteTests: XCTestCase {
         for _ in 0..<20 where !accessibilityText(application).contains("Assign Delivery Goal Tickets") {
             try await Task.sleep(for: .milliseconds(100))
         }
+        let loaderRecords = await loader.records()
+        let assignmentEditorDiagnostic = "Assignment editor save is unavailable; loads=\(loaderRecords), windows=\(accessibilityWindowTitles(application)), loading=\(accessibilityText(application).contains(\"Loading ticket assignments\"))"
         let save = try XCTUnwrap(accessibilityElements(application, role: kAXButtonRole).first { element in
             var description: CFTypeRef?
             var title: CFTypeRef?
             _ = AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &description)
             _ = AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
             return description as? String == "Save" || title as? String == "Save"
-        })
+        }, assignmentEditorDiagnostic)
         XCTAssertEqual(AXUIElementPerformAction(save, kAXPressAction as CFString), .success)
         var message: AXUIElement?
         for _ in 0..<20 {
@@ -4304,6 +4316,20 @@ final class AppRouteTests: XCTestCase {
             if matches(element) { return element }
         }
         return nil
+    }
+
+    private func accessibilityWindowTitles(_ application: AXUIElement) -> [String] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
+              let windows = value as? [AXUIElement]
+        else { return [] }
+        return windows.compactMap { window in
+            var title: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &title) == .success else {
+                return nil
+            }
+            return title as? String
+        }
     }
 
     private func accessibilityFrame(_ element: AXUIElement) throws -> CGRect {
@@ -9310,6 +9336,16 @@ private actor DeliveryGoalAssignmentReconcileCapture {
 
     func record(_ attemptID: UUID) { recorded.append(attemptID) }
     func attempts() -> [UUID] { recorded }
+}
+
+private actor DeliveryGoalAssignmentLoadCapture {
+    private var recorded: [String] = []
+
+    func record(phaseID: PhaseID, outcome: DeliveryGoalAssignmentEditorLoadOutcome) {
+        recorded.append("\(phaseID.rawValue): \(outcome)")
+    }
+
+    func records() -> [String] { recorded }
 }
 
 private actor DeliveryGoalAssignmentDispatchSequence {
