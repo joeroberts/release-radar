@@ -351,9 +351,10 @@ final class WorkerAdapterTests: XCTestCase {
         let global = valid.store.root.appendingPathComponent("AGENTS.md")
         try Data("Owner global guidance".utf8).write(to: global)
         let peer = Peer(policy: valid.policy)
-        peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
-        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
         let selectedGlobalSource = try valid.policy.codexContext.globalInstructionSource() ?? "nil"
+        XCTAssertEqual(selectedGlobalSource, try CodexExecutionContext.canonicalPath(global.path))
+        peer.instructionSources = [selectedGlobalSource, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
         let expectedContextSources = valid.policy.assignment.context.map {
             valid.policy.assignment.checkoutPath + "/" + $0.path
         }.joined(separator: ", ")
@@ -379,9 +380,10 @@ final class WorkerAdapterTests: XCTestCase {
             if let override { try Data(override.utf8).write(to: replacement) }
             let expected = override?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? replacement : base
             let peer = Peer(policy: valid.policy)
-            peer.instructionSources = [expected.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
-            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
             let selectedGlobalSource = try valid.policy.codexContext.globalInstructionSource() ?? "nil"
+            XCTAssertEqual(selectedGlobalSource, try CodexExecutionContext.canonicalPath(expected.path))
+            peer.instructionSources = [selectedGlobalSource, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
             let expectedContextSources = valid.policy.assignment.context.map {
                 valid.policy.assignment.checkoutPath + "/" + $0.path
             }.joined(separator: ", ")
