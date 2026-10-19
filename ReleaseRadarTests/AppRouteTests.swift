@@ -2817,6 +2817,85 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testNativeDeliveryGoalDraftEditorRendersWideAndCompactAndCancelsWithoutDispatch() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await seedEditableDeliveryGoal(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        for width in [1_280.0, 760.0] {
+            let view = ProjectPlanView(
+                plan: plan,
+                selectedTicketID: .constant(.init(rawValue: "ROAD-1")),
+                openAllPhases: {},
+                openPhase: { _ in },
+                loadDeliveryGoalEditor: { phaseID, goalID in
+                    await model.loadDeliveryGoalEditor(projectID: fixture.projectID, phaseID: phaseID, goalID: goalID)
+                },
+                saveDeliveryGoalDraft: { phaseID, revision, draft in
+                    await model.saveDeliveryGoalDraft(
+                        projectID: fixture.projectID, phaseID: phaseID, expectedRevision: revision, draft: draft
+                    )
+                },
+                reconcileDeliveryGoalDraftSave: { await model.reconcileDeliveryGoalDraftSave(attemptID: $0) },
+                deliveryGoalDraftSaveRecovery: { model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: $0) }
+            )
+            let window = NSWindow(
+                contentRect: .init(x: 30, y: 30, width: width, height: 850),
+                styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+            )
+            window.isReleasedWhenClosed = false
+            window.title = "Delivery Goal draft native \(Int(width))"
+            let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+            window.contentView = hosting
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            defer { window.close() }
+            try await Task.sleep(for: .milliseconds(250))
+            hosting.layoutSubtreeIfNeeded()
+
+            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+            let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+            let create = try XCTUnwrap(
+                accessibilityElement(nativeWindow, identifier: "create-delivery-goal-\(fixture.roadmapPhaseID.rawValue)"),
+                "Create Delivery Goal must be reachable at width \(Int(width))"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(create, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(250))
+            hosting.layoutSubtreeIfNeeded()
+            XCTAssertTrue(accessibilityText(application).contains("New Delivery Goal"))
+            XCTAssertTrue(accessibilityText(application).contains("Done criteria, one per line"))
+            let cancel = try XCTUnwrap(
+                accessibilityElements(application, role: kAXButtonRole).first { element in
+                    var title: CFTypeRef?
+                    return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success
+                        && (title as? String) == "Cancel"
+                },
+                "Delivery Goal editor must expose Cancel through accessibility"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(cancel, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            XCTAssertFalse(accessibilityText(application).contains("New Delivery Goal"))
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(hosting.bounds.width, width, accuracy: 1)
+            try taskCapture(hosting, name: "delivery-goal-draft-\(Int(width))")
+        }
+        XCTAssertTrue((await capture.requests()).isEmpty, "Cancelling an editor must not save a draft")
+    }
+
+    @MainActor
     func testTask10NativePlanningControlsAndInspectorWideCompact() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
