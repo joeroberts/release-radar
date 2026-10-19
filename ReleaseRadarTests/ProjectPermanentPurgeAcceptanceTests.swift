@@ -36,6 +36,40 @@ final class ProjectPermanentPurgeAcceptanceTests: XCTestCase {
         }
     }
 
+    func testPurgeDeletesOnlyTargetCompanionIncarnations() async throws {
+        let fixture = try Fixture(testCase: self)
+        let identities = ProjectCompanionPublicationIdentityStore(store: fixture.store)
+        let target = try await fixture.seedRemovedTarget(includeReplacement: true) { registration in
+            _ = try await identities.ensureActiveIncarnations(
+                registration: registration,
+                itemIDs: ["purge-item"],
+                actor: .init(id: "fixture")
+            )
+        }
+        let replacement = ProjectRegistration(
+            projectID: fixture.replacementProjectID,
+            registrationID: fixture.replacementRegistrationID,
+            requestGeneration: 2
+        )
+        _ = try await identities.ensureActiveIncarnations(
+            registration: replacement,
+            itemIDs: ["replacement-item"],
+            actor: .init(id: "fixture")
+        )
+        try await fixture.store.read { connection in
+            XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM companion_publication_incarnations WHERE registration_id = ?", bindings: [.text(target.registration.registrationID)]), 1)
+            XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM companion_publication_incarnations WHERE registration_id = ?", bindings: [.text(replacement.registrationID)]), 1)
+        }
+
+        _ = try await fixture.manager.apply(try await fixture.manager.preview(removalID: target.id))
+
+        try await fixture.store.read { connection in
+            XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM companion_publication_incarnations WHERE registration_id = ?", bindings: [.text(target.registration.registrationID)]), 0)
+            XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM companion_publication_incarnations WHERE registration_id = ?", bindings: [.text(replacement.registrationID)]), 1)
+        }
+    }
+
+
     func testPurgeErasesExactDatabaseAndExecutionIdentityWhilePreservingReplacementAndFiles() async throws {
         let fixture = try Fixture(testCase: self)
         let target = try await fixture.seedRemovedTarget(includeReplacement: true)
@@ -656,7 +690,10 @@ private extension ProjectPermanentPurgeAcceptanceTests {
             files = try ProjectExecutionFileStore(root: fixtureExecutionRoot, create: true)
         }
 
-        func seedRemovedTarget(includeReplacement: Bool) async throws -> RemovedProjectRecord {
+        func seedRemovedTarget(
+            includeReplacement: Bool,
+            beforeRemoval: ((ProjectRegistration) async throws -> Void)? = nil
+        ) async throws -> RemovedProjectRecord {
             let targetProjectID = targetProjectID
             let replacementProjectID = replacementProjectID
             let replacementBootstrapRoot = replacementBootstrapRoot
@@ -764,6 +801,13 @@ private extension ProjectPermanentPurgeAcceptanceTests {
                 )
             }
 
+            if let beforeRemoval {
+                try await beforeRemoval(.init(
+                    projectID: targetProjectID,
+                    registrationID: targetRegistrationID,
+                    requestGeneration: 7
+                ))
+            }
             let removal = ProjectRemovalManager(store: store)
             let removed = try await removal.apply(try await removal.preview(projectID: targetProjectID))
 

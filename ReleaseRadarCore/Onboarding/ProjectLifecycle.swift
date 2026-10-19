@@ -903,6 +903,7 @@ fileprivate struct ProjectPermanentPurgeSearchMutation: Equatable, Sendable {
 fileprivate struct ProjectPermanentPurgeDatabaseInventory: Equatable, Sendable {
     let record: RemovedProjectRecord
     let retainedCounts: [String: Int64]
+    let companionPublicationIncarnationCount: Int64
     let identifyingAuditIDs: [String]
     let structuredReceiptIDs: [String]
     let hasPendingExecutionReceipt: Bool
@@ -956,7 +957,8 @@ public actor ProjectPermanentPurgeManager {
         } catch {
             throw ProjectPermanentPurgeError.unsupportedOpaqueData
         }
-        let retainedCount = databaseInventory.retainedCounts.values.reduce(0, +) + 1
+        let retainedCount = databaseInventory.retainedCounts.values.reduce(0, +)
+            + databaseInventory.companionPublicationIncarnationCount + 1
         return .init(
             removalID: databaseInventory.record.id,
             projectID: databaseInventory.record.projectID,
@@ -1040,6 +1042,10 @@ public actor ProjectPermanentPurgeManager {
                             bindings: [.text(preview.removalID.rawValue)]
                         )
                     }
+                    try connection.execute(
+                        "DELETE FROM companion_publication_incarnations WHERE project_id = ? AND registration_id = ?",
+                        bindings: [.text(preview.projectID.rawValue), .text(preview.registrationID)]
+                    )
                     for auditID in preview.databaseInventory.identifyingAuditIDs {
                         try connection.execute(
                             "DELETE FROM audit_events WHERE id = ?",
@@ -1148,6 +1154,13 @@ public actor ProjectPermanentPurgeManager {
                 bindings: [.text(removalID.rawValue)]
             ) ?? 0
         }
+        let companionPublicationIncarnationCount = try connection.scalarInt(
+            """
+            SELECT COUNT(*) FROM companion_publication_incarnations
+            WHERE project_id = ? AND registration_id = ?
+            """,
+            bindings: [.text(projectID.rawValue), .text(registrationID)]
+        ) ?? 0
         let auditCandidates = try connection.rows(
             """
             SELECT id, project_id, historical_project_id, historical_registration_id, event_registration_id
@@ -1239,6 +1252,7 @@ public actor ProjectPermanentPurgeManager {
         return .init(
             record: record,
             retainedCounts: retainedCounts,
+            companionPublicationIncarnationCount: companionPublicationIncarnationCount,
             identifyingAuditIDs: audits,
             structuredReceiptIDs: receipts,
             hasPendingExecutionReceipt: hasPendingExecutionReceipt,

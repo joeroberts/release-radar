@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 30
+    static let currentVersion: Int64 = 31
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -127,6 +127,9 @@ enum StoreMigrations {
             }
             if version < 30 {
                 try connection.executeScript(schemaVersion30)
+            }
+            if version < 31 {
+                try connection.executeScript(schemaVersion31)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -435,6 +438,16 @@ enum StoreMigrations {
                 "SELECT sql FROM sqlite_schema WHERE type = 'index' AND name = 'repository_plan_preparation_current_unique'"
             ), normalizedSQL(currentAttemptIndexSQL) == normalizedSQL(
                 "CREATE UNIQUE INDEX repository_plan_preparation_current_unique ON repository_plan_preparation_attempts(project_id, proposal_id) WHERE is_current = 1"
+            ) else { return false }
+        }
+        if version >= 31 {
+            guard let incarnationsSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'companion_publication_incarnations'"
+            ), normalizedSQL(incarnationsSQL) == normalizedSQL(companionPublicationIncarnationsTableSQL),
+            let activeIndexSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'index' AND name = 'companion_publication_incarnations_active_unique'"
+            ), normalizedSQL(activeIndexSQL) == normalizedSQL(
+                "CREATE UNIQUE INDEX companion_publication_incarnations_active_unique ON companion_publication_incarnations(project_id, registration_id, item_id) WHERE withdrawn_at IS NULL"
             ) else { return false }
         }
         return try connection.row("PRAGMA foreign_key_check") == nil
@@ -894,6 +907,10 @@ enum StoreMigrations {
             "application_id", "record_kind", "parent_source_id", "source_id",
             "destination_id", "disposition", "source_fields_data", "source_refs_data",
             "evidence_data", "original_occurred_at", "original_actor_id",
+        ]),
+        (31, "companion_publication_incarnations", [
+            "project_id", "registration_id", "item_id", "publication_incarnation_id",
+            "created_at", "withdrawn_at",
         ]),
     ]
 
@@ -3654,5 +3671,24 @@ enum StoreMigrations {
     \(permanentlyPurgeableRetainedDeleteTrigger(table: "retained_repository_plan_reconstruction_application_attempts"));
     \(immutableRetainedTrigger(table: "retained_repository_plan_reconstruction_provenance", action: "update"));
     \(permanentlyPurgeableRetainedDeleteTrigger(table: "retained_repository_plan_reconstruction_provenance"));
+    """
+
+    private static let companionPublicationIncarnationsTableSQL = """
+    CREATE TABLE companion_publication_incarnations (
+        project_id TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        item_id TEXT NOT NULL CHECK (length(CAST(item_id AS BLOB)) BETWEEN 1 AND 256),
+        publication_incarnation_id TEXT NOT NULL CHECK (length(publication_incarnation_id) = 36),
+        created_at TEXT NOT NULL,
+        withdrawn_at TEXT,
+        PRIMARY KEY(project_id, registration_id, item_id, publication_incarnation_id)
+    )
+    """
+
+    private static let schemaVersion31 = """
+    \(companionPublicationIncarnationsTableSQL);
+    CREATE UNIQUE INDEX companion_publication_incarnations_active_unique
+        ON companion_publication_incarnations(project_id, registration_id, item_id)
+        WHERE withdrawn_at IS NULL;
     """
 }
