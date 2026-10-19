@@ -3381,6 +3381,92 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testNativeDeliveryGoalAssignmentEditorShowsUnknownRecoveryAndReusesExactAttemptID() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let attemptID = UUID(uuidString: "19219219-1111-4111-8111-192192192192")!
+        let replay = DeliveryGoalAssignmentReconcileCapture()
+        let recovery = DeliveryGoalAssignmentSaveRecovery(
+            attemptID: attemptID,
+            edits: [.init(ticketID: .init(rawValue: "ROAD-1"), goalID: .init(rawValue: "assignment-goal-b"))],
+            expectedRevision: 2,
+            error: .outcomeUnknown
+        )
+        let view = ProjectPlanView(
+            plan: plan,
+            selectedTicketID: .constant(.init(rawValue: "ROAD-1")),
+            openAllPhases: {},
+            openPhase: { _ in },
+            loadDeliveryGoalAssignmentEditor: { phaseID in
+                await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+            },
+            saveDeliveryGoalAssignmentDraft: { _, _, _ in
+                .init(attemptID: attemptID, status: .unconfirmed(error: .outcomeUnknown))
+            },
+            reconcileDeliveryGoalAssignmentDraftSave: { receivedAttemptID in
+                await replay.record(receivedAttemptID)
+                return .init(attemptID: receivedAttemptID, status: .unconfirmed(error: .outcomeUnknown))
+            },
+            deliveryGoalAssignmentDraftSaveRecovery: { _ in recovery }
+        )
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: .init(x: 30, y: 30, width: 1_280, height: 850),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Delivery Goal assignment recovery"
+        let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { window.close() }
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        for _ in 0..<20 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(100)) }
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let open = try XCTUnwrap(
+            accessibilityElement(nativeWindow, identifier: "edit-delivery-goal-assignments-\(fixture.roadmapPhaseID.rawValue)")
+        )
+        XCTAssertEqual(AXUIElementPerformAction(open, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where !accessibilityText(application).contains("Assign Delivery Goal Tickets") {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let save = try XCTUnwrap(accessibilityElements(application, role: kAXButtonRole).first { element in
+            var description: CFTypeRef?
+            var title: CFTypeRef?
+            _ = AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &description)
+            _ = AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
+            return description as? String == "Save" || title as? String == "Save"
+        })
+        XCTAssertEqual(AXUIElementPerformAction(save, kAXPressAction as CFString), .success)
+        var message: AXUIElement?
+        for _ in 0..<20 {
+            hosting.layoutSubtreeIfNeeded()
+            message = accessibilityElement(application, identifier: "delivery-goal-assignment-editor-message")
+            if message != nil { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNotNil(message, "Unknown save must give actionable recovery feedback")
+        let reconcile = try XCTUnwrap(
+            accessibilityElement(application, identifier: "reconcile-delivery-goal-assignment-save"),
+            "Unknown save must expose the retained-attempt recovery control"
+        )
+        XCTAssertEqual(AXUIElementPerformAction(reconcile, kAXPressAction as CFString), .success)
+        for _ in 0..<20 {
+            if !(await replay.attempts()).isEmpty { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let replayedAttempts = await replay.attempts()
+        XCTAssertEqual(replayedAttempts, [attemptID], "Reconcile must reuse the exact retained attempt identity")
+    }
+
+    @MainActor
     func testTask10NativePlanningControlsAndInspectorWideCompact() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
@@ -9021,6 +9107,13 @@ private actor DeliveryGoalDraftDispatchCapture {
     }
 
     func requests() -> [Request] { recorded }
+}
+
+private actor DeliveryGoalAssignmentReconcileCapture {
+    private var recorded: [UUID] = []
+
+    func record(_ attemptID: UUID) { recorded.append(attemptID) }
+    func attempts() -> [UUID] { recorded }
 }
 
 private final class RR9DashboardLoadCounter: @unchecked Sendable {
