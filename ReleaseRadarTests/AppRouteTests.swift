@@ -2730,6 +2730,68 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanUnavailableSaveRejectsWithoutRecoveryAndAllowsFreshRetry() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(
+            entityIDs: [], auditEventID: nil, error: .appUnavailable
+        ))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+        let edited = DeliveryGoalDraft(
+            id: existing.id,
+            title: "Retain this unavailable edit",
+            outcome: "A fresh explicit retry remains possible",
+            doneCriteria: ["No synthetic uncertainty"],
+            sortOrder: existing.sortOrder
+        )
+
+        let first = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+        guard case let .rejected(error: .appUnavailable, refreshedEditor: refreshed) = first.status else {
+            return XCTFail("Default unavailable save must be a definite rejection")
+        }
+        XCTAssertEqual(refreshed?.draft, existing)
+        XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+
+        let retry = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+        guard case .rejected(error: .appUnavailable, refreshedEditor: _) = retry.status else {
+            return XCTFail("A new explicit attempt after availability failure must not replay pending state")
+        }
+        XCTAssertNotEqual(retry.attemptID, first.attemptID)
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.count, 2)
+        guard requests.count == 2 else {
+            return XCTFail("Each explicit unavailable attempt must dispatch once")
+        }
+        XCTAssertNotEqual(requests[0].requestID, requests[1].requestID)
+        XCTAssertEqual(requests.map(\.command), [requests[0].command, requests[0].command])
+        assertDeliveryGoalDraftCommand(
+            requests[0].command,
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+    }
+
+    @MainActor
     func testProjectPlanInvalidDraftExplainsCorrectionWithoutDispatching() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await seedEditableDeliveryGoal(in: fixture)
