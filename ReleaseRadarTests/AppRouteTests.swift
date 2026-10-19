@@ -2683,11 +2683,11 @@ final class AppRouteTests: XCTestCase {
                 try connection.rows(
                     "SELECT goal_id,ticket_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? ORDER BY ticket_id",
                     bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
-                ).map { "\(try $0.text(\"goal_id\")):\(try $0.text(\"ticket_id\"))" },
+                ).map { "\(try $0.text("goal_id")):\(try $0.text("ticket_id"))" },
                 try connection.rows(
                     "SELECT goal_id,ticket_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? ORDER BY ticket_id",
                     bindings: [.text(fixture.projectID.rawValue), .text(fixture.emptyPhaseID.rawValue)]
-                ).map { "\(try $0.text(\"goal_id\")):\(try $0.text(\"ticket_id\"))" },
+                ).map { "\(try $0.text("goal_id")):\(try $0.text("ticket_id"))" },
                 try connection.scalarText("SELECT entity_type FROM audit_events WHERE id=?", bindings: [.text(auditEventID.rawValue)]),
                 try connection.scalarText("SELECT project_id FROM evidence WHERE id='assignment-evidence'")
             )
