@@ -4336,6 +4336,8 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     private func taskViewCapture(_ view: NSView, name: String) throws {
+        view.layoutSubtreeIfNeeded()
+        view.displayIfNeeded()
         let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: bitmap)
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
