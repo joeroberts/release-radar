@@ -3385,6 +3385,160 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testTaskPlanReadbackSurvivesHostedRouteReloadRecoveryAndModelRehydration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-TaskReadbackRoute-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let ticketID = TicketID(rawValue: "VD2-07c")
+        let auditEventID = AuditEventID(rawValue: "task-readback-route-audit")
+        let revision = try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Create hosted task readback fixture",
+            auditEventID: auditEventID,
+            auditScope: .init(projectID: projectID, entityType: .ticketTaskPlan, entityID: ticketID.rawValue)
+        ) { connection in
+            return try TicketTaskPlanningPolicy.revisePlan(
+                projectID: projectID,
+                ticketID: ticketID,
+                expectedRevision: nil,
+                additions: [
+                    .init(id: .init(rawValue: "first"), label: "Task 1", title: "Read persisted revision", sortOrder: 0),
+                    .init(id: .init(rawValue: "second"), label: "Task 2", title: "Recover the task projection", sortOrder: 1),
+                ],
+                definitionRevisions: [],
+                supersededTaskIDs: [],
+                connection: connection
+            ).revision
+        }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Record hosted task readback receipt") { connection in
+            let result = AgentCommandResult(
+                entityIDs: [ticketID.rawValue], auditEventID: auditEventID, error: nil,
+                ticketTaskPlanRevision: revision
+            )
+            try connection.execute(
+                "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id) VALUES (?, ?, ?, ?, ?)",
+                bindings: [
+                    .text("task-readback-route-receipt"),
+                    .blob(Data("fixture".utf8)),
+                    .blob(try JSONEncoder().encode(result)),
+                    .text("2026-10-19T00:00:00Z"),
+                    .text(projectID.rawValue),
+                ]
+            )
+        }
+
+        let fault = TaskPlanQueryFault()
+        func makeModel() -> AppModel {
+            AppModel(
+                store: store,
+                dashboardLoader: { store in
+                    try await DashboardProjection.load(from: store, taskRows: { connection, project, phase, ticket in
+                        if fault.isFailing && (ticket == nil || ticket == ticketID) {
+                            return try connection.rows("SELECT * FROM missing_task_readback_table")
+                        }
+                        return try TicketTaskPlanProjection.queryRows(
+                            connection, projectID: project, phaseID: phase, ticketID: ticket
+                        )
+                    })
+                },
+                externalServicesSuppressed: true,
+                seedSampleData: false
+            )
+        }
+        func assertLoadedProjection(_ model: AppModel) throws {
+            let board = try XCTUnwrap(model.dashboard?.board(for: projectID))
+            let detail = try XCTUnwrap(board.detail(for: ticketID))
+            guard case let .loaded(plan) = detail.taskPlan else {
+                return XCTFail("Expected loaded task readback")
+            }
+            XCTAssertEqual(plan.revision, revision)
+            XCTAssertEqual(plan.auditEventID, auditEventID)
+            XCTAssertEqual(plan.tasks.map(\.id.rawValue), ["first", "second"])
+            XCTAssertEqual(plan.tasks.map(\.title), ["Read persisted revision", "Recover the task projection"])
+            XCTAssertEqual(board.lane(.blocked)?.cards.first(where: { $0.id == ticketID })?.activeTaskCount, 2)
+        }
+
+        let model = makeModel()
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(projectID))
+        model.selectTicket(ticketID)
+        try assertLoadedProjection(model)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_400, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let priorActivationPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.isReleasedWhenClosed = false
+        window.title = "Issue 187 task readback route — isolated native acceptance"
+        window.appearance = NSAppearance(named: .darkAqua)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(priorActivationPolicy)
+        }
+        func host(_ renderedModel: AppModel) async throws -> AXUIElement {
+            let hosting = NSHostingView(rootView: SidebarView(model: renderedModel)
+                .environment(\.colorScheme, .dark))
+            hosting.frame = window.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 1_400, height: 900)
+            window.contentView = hosting
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(250))
+            hosting.layoutSubtreeIfNeeded()
+            return try XCTUnwrap(
+                accessibilityWindow(AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier), title: window.title)
+            )
+        }
+
+        let nativeWindow = try await host(model)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Revision \(revision) · Audit \(auditEventID.rawValue)"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-plan-readback"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-row-first"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-row-second"))
+
+        fault.isFailing = true
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-plan-unavailable"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "task-plan-readback"))
+
+        fault.isFailing = false
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        try assertLoadedProjection(model)
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-plan-readback"))
+
+        await model.navigate(to: .activity(projectID))
+        await model.goBack()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        try assertLoadedProjection(model)
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-plan-readback"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Revision \(revision) · Audit \(auditEventID.rawValue)"))
+
+        let rehydratedModel = makeModel()
+        await rehydratedModel.loadDashboard()
+        await rehydratedModel.navigate(to: .phaseBoard(projectID))
+        rehydratedModel.selectTicket(ticketID)
+        try assertLoadedProjection(rehydratedModel)
+        let rehydratedWindow = try await host(rehydratedModel)
+        XCTAssertNotNil(accessibilityElement(rehydratedWindow, identifier: "task-plan-readback"))
+        XCTAssertTrue(accessibilityText(rehydratedWindow).contains("Revision \(revision) · Audit \(auditEventID.rawValue)"))
+    }
+
+    @MainActor
     func testCompactTicketInspectorExposesFirstAndLastTaskRowsForKeyboardTraversal() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-Phase4CompactTasks-\(UUID().uuidString)", isDirectory: true)
