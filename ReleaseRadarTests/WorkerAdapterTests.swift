@@ -353,10 +353,15 @@ final class WorkerAdapterTests: XCTestCase {
         let peer = Peer(policy: valid.policy)
         peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let selectedGlobalSource = try valid.policy.codexContext.globalInstructionSource() ?? "nil"
+        let expectedContextSources = valid.policy.assignment.context.map {
+            valid.policy.assignment.checkoutPath + "/" + $0.path
+        }.joined(separator: ", ")
+        let reportedInstructionSources = (peer.instructionSources ?? []).joined(separator: ", ")
         let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
         let startError = started["error"].map { String(describing: $0) } ?? "nil"
         let startCalls = peer.calls.map(\.0).joined(separator: ", ")
-        let startDiagnostic = "error=\(startError), calls=\(startCalls)"
+        let startDiagnostic = "error=\(startError), global=\(selectedGlobalSource), expected=\(expectedContextSources), reported=\(reportedInstructionSources), calls=\(startCalls)"
         XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
         XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
         _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
@@ -376,10 +381,15 @@ final class WorkerAdapterTests: XCTestCase {
             let peer = Peer(policy: valid.policy)
             peer.instructionSources = [expected.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
             let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let selectedGlobalSource = try valid.policy.codexContext.globalInstructionSource() ?? "nil"
+            let expectedContextSources = valid.policy.assignment.context.map {
+                valid.policy.assignment.checkoutPath + "/" + $0.path
+            }.joined(separator: ", ")
+            let reportedInstructionSources = (peer.instructionSources ?? []).joined(separator: ", ")
             let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
             let startError = started["error"].map { String(describing: $0) } ?? "nil"
             let startCalls = peer.calls.map(\.0).joined(separator: ", ")
-            let startDiagnostic = "error=\(startError), calls=\(startCalls)"
+            let startDiagnostic = "error=\(startError), global=\(selectedGlobalSource), expected=\(expectedContextSources), reported=\(reportedInstructionSources), calls=\(startCalls)"
             XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
             XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
             _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
