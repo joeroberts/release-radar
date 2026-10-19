@@ -2745,7 +2745,9 @@ final class AppRouteTests: XCTestCase {
     func testProjectPlanAssignmentDraftKeepsEditsAcrossStaleUnavailableAndUnknownRecovery() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
-        let edits = [.init(ticketID: TicketID(rawValue: "ROAD-1"), goalID: seeded.second.id)]
+        let edits: [DeliveryGoalAssignmentEdit] = [
+            .init(ticketID: TicketID(rawValue: "ROAD-1"), goalID: seeded.second.id),
+        ]
 
         for error in [
             AgentCommandError.planRevisionConflict(expected: 2, current: 3),
