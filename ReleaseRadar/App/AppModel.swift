@@ -5057,7 +5057,7 @@ final class AppModel {
         goalID: DeliveryGoalID?
     ) async -> DeliveryGoalEditorLoadOutcome {
         do {
-            let generator = requestIDGenerator
+            let newGoalID = goalID == nil ? requestIDGenerator().uuidString.lowercased() : nil
             let snapshot = try await store.read { connection -> DeliveryGoalEditorSnapshot in
                 guard let plan = try DeliveryPlanningPolicy.loadPlan(
                     projectID: projectID, phaseID: phaseID, connection: connection
@@ -5105,7 +5105,7 @@ final class AppModel {
                 return .init(
                     projectID: projectID, phaseID: phaseID, planRevision: plan.revision,
                     phaseLifecycle: phaseLifecycle.lifecycle, goalLifecycle: nil,
-                    draft: .init(id: .init(rawValue: generator().uuidString.lowercased()), title: "", outcome: "",
+                    draft: .init(id: .init(rawValue: newGoalID!), title: "", outcome: "",
                                  doneCriteria: [""], sortOrder: order)
                 )
             }
