@@ -5169,6 +5169,18 @@ final class AppModel {
             removePendingDeliveryGoalDraftSave(attemptID, key: key)
             return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
         }
+        do {
+            let currentRoot = try await projectOnboarding.withAuthorizedProject(projectID: key.projectID) {
+                $0.canonicalRoot.path
+            }
+            guard currentRoot == pending.envelope.projectRoot else {
+                removePendingDeliveryGoalDraftSave(attemptID, key: key)
+                return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
+            }
+        } catch {
+            removePendingDeliveryGoalDraftSave(attemptID, key: key)
+            return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
+        }
         return await resolveDeliveryGoalDraftSave(pending, key: key)
     }
 
