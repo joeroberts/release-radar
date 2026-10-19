@@ -3706,7 +3706,8 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
         for _ in 0..<20 where !accessibilityText(nativeWindow).contains("Assign Delivery Goal Tickets") { try await Task.sleep(for: .milliseconds(100)) }
         XCTAssertTrue(accessibilityText(nativeWindow).contains("ROAD-1"))
-        XCTAssertEqual(await loader.count(), 2)
+        let retryCount = await loader.count()
+        XCTAssertEqual(retryCount, 2)
     }
 
     @MainActor
