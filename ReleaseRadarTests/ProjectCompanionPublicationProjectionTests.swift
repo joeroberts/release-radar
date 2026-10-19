@@ -58,7 +58,7 @@ final class ProjectCompanionPublicationProjectionTests: XCTestCase {
 
         let originalTicket = try XCTUnwrap(active.items.first { $0.identity.itemID == "delivery.ticket:ticket-1" })
         try await store.transact(actor: .init(id: "fixture"), reason: "Change projected ticket") { connection in
-            try connection.execute("UPDATE tickets SET lane = 'done' WHERE id = 'ticket-1'")
+            try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'ticket-1'")
         }
         let changed = try await ProjectCompanionPublicationProjection.load(
             store: store,
@@ -204,7 +204,9 @@ final class ProjectCompanionPublicationProjectionTests: XCTestCase {
             XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'index' AND name = 'companion_publication_incarnations_active_unique'"), 1)
         }
         await migrated.close()
-        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
+        let snapshotURL = DeliveryStore.preMigrationSnapshotURL(for: databaseURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: snapshotURL.path), "Expected pre-migration snapshot missing")
+        let snapshot = try SQLiteConnection(url: snapshotURL, immutableReadOnly: true)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 30)
         XCTAssertEqual(try snapshot.scalarText("SELECT name FROM projects WHERE id = 'v30-project'"), "Preserved")
         XCTAssertEqual(try snapshot.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = 'companion_publication_incarnations'"), 0)
