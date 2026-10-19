@@ -3,6 +3,109 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionStoreTests: XCTestCase {
+    func testProfileProvisioningReceiptRoundTripsWithoutAdoptingLegacyAssignment() throws {
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString)
+        let store = try ProjectExecutionFileStore(root: root, create: true)
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"),
+            registrationID: "registration-one", requestGeneration: 1)
+        var assignment = ProjectExecutionAssignment(id: "delivery-receipt", registration: registration,
+            checkoutPath: "/Worktrees/project-one/delivery-receipt", role: .delivery,
+            permissionProfile: "rr-delivery-receipt", model: "gpt-5.6-terra", effort: "medium",
+            authorization: "Approved work", context: [.init(path: "AGENTS.md",
+                digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .preparing)
+        assignment.permissionProfileDefinition = Data(#"{"filesystem":{},"network":{"enabled":false}}"#.utf8)
+        try store.saveAssignment(assignment, expected: nil)
+        XCTAssertNil(try store.assignment(projectID: "project-one", taskID: assignment.id)
+            .profileProvisioningReceipt, "A legacy assignment without a receipt remains unknown, not verified")
+
+        var pending = assignment
+        let requestedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        pending.profileProvisioningReceipt = .init(state: .pending, provenance: .newlyPrepared,
+            requestedAt: requestedAt, verifiedAt: nil)
+        try store.saveAssignment(pending, expected: assignment)
+
+        let reopened = try ProjectExecutionFileStore(root: root, create: false)
+        let persisted = try reopened.assignment(projectID: "project-one", taskID: pending.id)
+        XCTAssertEqual(persisted.profileProvisioningReceipt?.state, .pending)
+        XCTAssertEqual(persisted.profileProvisioningReceipt?.provenance, .newlyPrepared)
+        XCTAssertEqual(persisted.profileProvisioningReceipt?.requestedAt, requestedAt)
+        XCTAssertNil(persisted.profileProvisioningReceipt?.verifiedAt)
+        XCTAssertEqual(persisted.permissionProfileDefinition, pending.permissionProfileDefinition)
+    }
+
+    func testProfileAssociationRequiresExactProtectedEvidenceAndPreservesOutsideProfiles() throws {
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"),
+            registrationID: "registration-one", requestGeneration: 1)
+        let contextID = UUID()
+        let definition = Data(#"{"filesystem":{},"network":{"enabled":false}}"#.utf8)
+        var assignment = ProjectExecutionAssignment(id: "delivery-association", registration: registration,
+            checkoutPath: "/Worktrees/project-one/delivery-association", role: .delivery,
+            permissionProfile: "rr-delivery-association", model: "gpt-5.6-terra", effort: "medium",
+            authorization: "Approved work", context: [.init(path: "AGENTS.md",
+                digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .preparing)
+        assignment.codexContextID = contextID
+        assignment.permissionProfileDefinition = definition
+        assignment.profileProvisioningReceipt = .init(state: .verified, provenance: .newlyPrepared,
+            requestedAt: Date(timeIntervalSinceReferenceDate: 1_000),
+            verifiedAt: Date(timeIntervalSinceReferenceDate: 1_001))
+
+        let owned = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(owned.category, .owned)
+        XCTAssertEqual(owned.assignmentID, assignment.id)
+        XCTAssertNil(owned.reason)
+
+        let mismatch = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .present(Data("different".utf8)),
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(mismatch.category, .unknown)
+        XCTAssertEqual(mismatch.reason, .definitionMismatch)
+
+        let staleContext = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: UUID(), observation: .present(definition),
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(staleContext.category, .unknown)
+        XCTAssertEqual(staleContext.reason, .selectedContextMismatch)
+
+        let missing = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .missing,
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(missing.category, .unknown)
+        XCTAssertEqual(missing.reason, .profileMissing)
+
+        let unavailable = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .unavailable,
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(unavailable.category, .unknown)
+        XCTAssertEqual(unavailable.reason, .configurationUnavailable)
+
+        let legacy = ProjectExecutionProfileAssociation.classify(assignment: nil,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: "rr-delivery-legacy")
+        XCTAssertEqual(legacy.category, .unknown,
+            "A matching-looking name without a protected assignment must never be adopted")
+
+        for reserved in ["rr-project-ro", "rr-project-restricted", "rr-command-read-probe"] {
+            let result = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+                selectedCodexContextID: contextID, observation: .present(definition),
+                candidateProfileID: reserved)
+            XCTAssertEqual(result.category, .outsideAssignmentCleanup)
+            XCTAssertEqual(result.reason, .reservedProfile)
+        }
+
+        let unrelated = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: "rr-other-assignment")
+        XCTAssertEqual(unrelated.category, .outsideAssignmentCleanup)
+        XCTAssertNil(unrelated.assignmentID)
+    }
+
     func testHookExpectedBytesAndSymlinkCannotOverwriteUnrelatedConfiguration() throws {
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let store = try ProjectExecutionFileStore(root: root, create: true)
