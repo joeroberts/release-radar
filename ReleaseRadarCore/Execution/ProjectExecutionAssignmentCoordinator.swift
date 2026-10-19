@@ -621,8 +621,18 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             var verified = assignment
             verified.profileProvisioningReceipt?.state = .verified
             verified.profileProvisioningReceipt?.verifiedAt = Date()
-            try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
-                try store.saveAssignment(verified, expected: assignment)
+            do {
+                try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
+                    try store.saveAssignment(verified, expected: assignment)
+                }
+            } catch let conflict as ProjectExecutionPreparationConflict {
+                let currentPolicy = try? store.policy(projectID: assignment.registration.projectID.rawValue)
+                let currentAssignment = try? store.assignment(projectID: assignment.registration.projectID.rawValue,
+                    taskID: assignment.id)
+                guard currentPolicy == policy, currentAssignment == assignment else {
+                    throw ProjectExecutionError.assignmentNotAuthorized
+                }
+                throw conflict
             }
             assignment = verified
         }
