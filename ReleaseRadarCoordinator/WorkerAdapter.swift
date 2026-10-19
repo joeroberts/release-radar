@@ -5,7 +5,11 @@ actor WorkerAdapter {
     private struct CodexProjectAssociationError: LocalizedError {
         enum Recovery { case startup, knownThread }
         let detail: String
-        let recovery: Recovery = .startup
+        let recovery: Recovery
+        init(detail: String, recovery: Recovery = .startup) {
+            self.detail = detail
+            self.recovery = recovery
+        }
         var errorDescription: String? {
             let nextStep: String = switch recovery {
             case .startup:
