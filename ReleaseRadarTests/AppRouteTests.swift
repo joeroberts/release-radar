@@ -8231,6 +8231,7 @@ final class AppRouteTests: XCTestCase {
         )
     }
 
+    @MainActor
     private static func seedEditableDeliveryGoal(in fixture: RR9OwnerFixture) async throws -> DeliveryGoalDraft {
         let draft = DeliveryGoalDraft(
             id: .init(rawValue: "existing-goal"),
