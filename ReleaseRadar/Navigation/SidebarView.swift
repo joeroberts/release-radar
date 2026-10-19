@@ -946,7 +946,9 @@ struct ProjectNavigationStatusView: View {
     let isCompact: Bool
 
     var body: some View {
-        if isChecking {
+        if case let .observed(observation) = documentationStatus {
+            observedStatus(observation)
+        } else if isChecking {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
@@ -967,6 +969,30 @@ struct ProjectNavigationStatusView: View {
             .accessibilityIdentifier("project-documentation-checking")
             .padding(.horizontal, isCompact ? 8 : 16)
         }
+    }
+
+    private func observedStatus(_ observation: ProjectDocumentationObservation) -> some View {
+        let presentation = ProjectGuidancePresentation(
+            documentationState: observation.documentationState
+        )
+        return HStack(spacing: 8) {
+            Image(systemName: presentation.systemImage)
+                .accessibilityHidden(true)
+            if !isCompact {
+                Text(presentation.status)
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, isCompact ? 10 : 12)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: isCompact ? .center : .leading)
+        .background(RekonTheme.elevatedSurface, in: RoundedRectangle(cornerRadius: 9))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(presentation.status)
+        .accessibilityIdentifier("project-documentation-status")
+        .padding(.horizontal, isCompact ? 8 : 16)
     }
 
     private var isChecking: Bool {

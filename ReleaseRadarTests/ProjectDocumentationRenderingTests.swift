@@ -2317,6 +2317,65 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testProjectNavigationStatusReplacesPriorSuccessWhileCheckingAndRendersObservedStates() async throws {
+        let identity = DocumentationObservationIdentity(
+            projectID: .init(rawValue: "documentation-freshness-navigation"),
+            registration: nil,
+            rootID: .init(rawValue: "documentation-freshness-navigation-root"),
+            rootPath: "/Synthetic/DocumentationFreshness",
+            binding: nil
+        )
+        let current = "Release Radar managed documentation current · v\(RepositoryDocumentContract.guidanceVersion)"
+        let unavailable = "Release Radar managed documentation unavailable"
+        let observedStates: [(String, ProjectDocumentationState, String)] = [
+            ("current", .managed(hasAuditedHandoff: true, catalogVersion: 1, catalogDigest: "accepted"), current),
+            ("catalog-unaccepted", .managedUnavailable(hasAuditedHandoff: true, reason: .catalogUnaccepted, validationError: nil), unavailable),
+            ("root-unavailable", .managedUnavailable(hasAuditedHandoff: true, reason: .rootUnavailable, validationError: nil), unavailable),
+            ("stale-root", .managedUnavailable(hasAuditedHandoff: true, reason: .staleRoot, validationError: nil), unavailable),
+        ]
+
+        for (name, width, isCompact) in [("wide", 280.0, false), ("compact", 86.0, true)] {
+            try await render(
+                ProjectNavigationStatusView(
+                    documentationStatus: .checking(identity: identity, generation: 2),
+                    isCompact: isCompact
+                )
+                .padding(12),
+                name: "project-navigation-freshness-checking-\(name)",
+                width: width,
+                expected: nil,
+                expectedText: ["Checking project documentation"],
+                absentText: [current],
+                presentIdentifiers: [
+                    "project-documentation-checking",
+                    "project-documentation-checking-progress",
+                ]
+            )
+
+            for (stateName, state, expectedStatus) in observedStates {
+                try await render(
+                    ProjectNavigationStatusView(
+                        documentationStatus: .observed(.init(
+                            identity: identity,
+                            generation: 3,
+                            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+                            documentationState: state,
+                            evidence: []
+                        )),
+                        isCompact: isCompact
+                    )
+                    .padding(12),
+                    name: "project-navigation-freshness-\(stateName)-\(name)",
+                    width: width,
+                    expected: nil,
+                    expectedText: [expectedStatus],
+                    absentText: ["Checking project documentation"],
+                    presentIdentifiers: ["project-documentation-status"]
+                )
+            }
+        }
+    }
+
     private func compatibilityStatus(
         state: SharedExecutionCompatibilityState,
         directResults: [SharedExecutionDirectResult] = []

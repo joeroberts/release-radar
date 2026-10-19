@@ -4335,7 +4335,7 @@ final class AppModel {
                 do { try await Task.sleep(for: .seconds(1)) }
                 catch { return }
                 guard let self else { return }
-                await self.refreshActiveDocumentationObservations(withdrawCurrent: false)
+                await self.refreshActiveDocumentationObservations(withdrawCurrent: true)
             }
         }
     }
