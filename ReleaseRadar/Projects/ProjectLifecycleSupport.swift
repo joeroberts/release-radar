@@ -2,6 +2,66 @@ import RekonDesignSystem
 import ReleaseRadarCore
 import SwiftUI
 
+private func workerResourceLabel(_ assignment: ProjectExecutionAssignment) -> String {
+    guard let work = assignment.work else {
+        return "Task unavailable — \(assignment.role.rawValue) assignment \(assignment.id)"
+    }
+    return "Ticket \(work.ticketID) · task \(work.taskID) · \(work.title) — \(assignment.role.rawValue) assignment \(assignment.id)"
+}
+
+private struct WorkerResourceIdentityDetails: View {
+    let assignment: ProjectExecutionAssignment
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Assignment \(assignment.id)")
+            Text("Role \(assignment.role.rawValue)")
+            if let work = assignment.work {
+                Text("Ticket \(work.ticketID) · task \(work.taskID) · \(work.title)")
+            } else {
+                Text("Ticket and task unavailable")
+            }
+            Text("Checkout \(assignment.checkoutPath)")
+            Text("Permission profile \(assignment.permissionProfile)")
+            Text("Worker connection \(connectionStatus)")
+            Text("Resource retirement \(retirementStatus)")
+            Text("Before retirement, Release Radar will remove this exact checkout and matching permission profile. Committed branches remain.")
+            Text("Worker closure and resource retirement do not complete the ticket or task.")
+        }
+        .font(.caption)
+        .foregroundStyle(RekonTheme.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("project-settings-execution-assignment-detail")
+    }
+
+    private var connectionStatus: String {
+        switch assignment.connectionClosed {
+        case true: "Closed"
+        case false: "Open"
+        case nil: "Unavailable"
+        }
+    }
+
+    private var retirementStatus: String {
+        guard let retirement = assignment.retirement else { return "Not started" }
+        return retirement.completed ? "Retired" : "In progress"
+    }
+}
+
+private struct UnavailableWorkerResourceSelection: View {
+    let assignmentID: String
+
+    var body: some View {
+        Text("Selected worker resource unavailable. Assignment \(assignmentID) is no longer available after refresh. No retirement action will be sent until you deliberately select a current assignment.")
+            .font(.caption)
+            .foregroundStyle(RekonTheme.warning)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("project-settings-execution-assignment-unavailable")
+    }
+}
+
 struct ProjectHealthSnapshot: Equatable, Sendable {
     struct Check: Equatable, Identifiable, Sendable {
         enum State: Equatable, Sendable { case ready, attention, unavailable }
@@ -458,14 +518,20 @@ struct ManageProjectView: View {
                             VStack(alignment: .leading, spacing: 10) { executionButtons }
                         }
                     }
-                    if (retireExecutionAssignment != nil || recoverLostWorker != nil), !executionAssignments.isEmpty {
+                    if (retireExecutionAssignment != nil || recoverLostWorker != nil),
+                       (!executionAssignments.isEmpty || !selectedAssignmentID.isEmpty) {
                         Picker("Worker resources", selection: $selectedAssignmentID) {
                             ForEach(executionAssignments, id: \.id) { assignment in
-                                Text("\(assignment.work?.title ?? assignment.id) — \(assignment.state.rawValue)").tag(assignment.id)
+                                Text(workerResourceLabel(assignment)).tag(assignment.id)
                             }
                         }
                         .disabled(isSaving)
                         .accessibilityIdentifier("project-settings-execution-assignment")
+                        if let selectedExecutionAssignment {
+                            WorkerResourceIdentityDetails(assignment: selectedExecutionAssignment)
+                        } else if !selectedAssignmentID.isEmpty {
+                            UnavailableWorkerResourceSelection(assignmentID: selectedAssignmentID)
+                        }
                         if recoverLostWorker != nil, selectedExecutionAssignmentCanRecover {
                             Text(selectedExecutionAssignmentNeedsRecoveryAudit
                                 ? "The worker connection was recovered and its checkout and committed work were preserved, but the audit record is still pending. Finishing the audit does not complete or review the task."
@@ -584,7 +650,7 @@ struct ManageProjectView: View {
             executionAssignments = try await loadExecutionAssignments().filter {
                 $0.registration == registration && $0.retirement?.completed != true
             }
-            if !executionAssignments.contains(where: { $0.id == selectedAssignmentID }) {
+            if selectedAssignmentID.isEmpty {
                 selectedAssignmentID = executionAssignments.first?.id ?? ""
             }
         } catch {
@@ -777,16 +843,20 @@ struct ProjectSettingsEditor: View {
                                 HStack(spacing: 10) { executionButtons }
                                 VStack(alignment: .leading, spacing: 10) { executionButtons }
                             }
-                            if retireExecutionAssignment != nil, !executionAssignments.isEmpty {
+                            if retireExecutionAssignment != nil,
+                               (!executionAssignments.isEmpty || !selectedAssignmentID.isEmpty) {
                                 Picker("Worker resources", selection: $selectedAssignmentID) {
                                     ForEach(executionAssignments, id: \.id) { assignment in
-                                        Text("\(assignment.work?.title ?? assignment.id) — \(assignment.state.rawValue)").tag(assignment.id)
+                                        Text(workerResourceLabel(assignment)).tag(assignment.id)
                                     }
                                 }
                                 .disabled(isSaving)
                                 .accessibilityIdentifier("project-settings-execution-assignment")
-                                Text("After closing this worker, retire its clean checkout and matching permission profile to allow replacement work. Committed branches remain. Uncertain outcomes stay recorded; retirement does not complete the task.")
-                                    .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                                if let selectedExecutionAssignment {
+                                    WorkerResourceIdentityDetails(assignment: selectedExecutionAssignment)
+                                } else if !selectedAssignmentID.isEmpty {
+                                    UnavailableWorkerResourceSelection(assignmentID: selectedAssignmentID)
+                                }
                                 Button("Retire resources and allow replacement") { performRetirement() }
                                     .buttonStyle(RekonSecondaryButtonStyle())
                                     .disabled(isSaving || selectedExecutionAssignment == nil)
@@ -859,7 +929,7 @@ struct ProjectSettingsEditor: View {
         guard let loadExecutionAssignments else { return }
         do {
             executionAssignments = try await loadExecutionAssignments().filter { $0.retirement?.completed != true }
-            if !executionAssignments.contains(where: { $0.id == selectedAssignmentID }) { selectedAssignmentID = executionAssignments.first?.id ?? "" }
+            if selectedAssignmentID.isEmpty { selectedAssignmentID = executionAssignments.first?.id ?? "" }
         } catch { executionFailed = true; executionMessage = error.localizedDescription }
     }
 

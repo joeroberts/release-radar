@@ -935,6 +935,127 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertEqual(retirementCalls, 0)
     }
 
+    func testManageProjectDisplaysExactWorkerResourceIdentityBeforeRetirementAtWideAndCompactSizes() async throws {
+        let projectID = ProjectID(rawValue: "worker-resource-identity")
+        let registration = ProjectRegistration(projectID: projectID,
+            registrationID: "worker-resource-identity-registration", requestGeneration: 1)
+        let deliveryCheckout = "/Synthetic/Execution/Worktrees/worker-resource-identity/delivery-duplicate"
+        var delivery = ProjectExecutionAssignment(id: "delivery-duplicate",
+            registration: registration, checkoutPath: deliveryCheckout,
+            role: .delivery, permissionProfile: "rr-delivery-duplicate",
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Approved delivery work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .stopped, sessionID: "closed-delivery-session",
+            worktree: .init(checkout: deliveryCheckout, baseline: String(repeating: "a", count: 40),
+                branch: "codex/112-delivery", commonGitDirectory: "/Synthetic/Repository/.git",
+                primaryRoot: "/Synthetic/Repository"),
+            work: .init(projectID: projectID, ticketID: "112", taskID: "task-112",
+                outcome: "Identify worker resources", title: "Duplicate worker title",
+                taskPlanRevision: 1, phaseID: "phase-identity", phaseRevision: 1))
+        delivery.connectionClosed = true
+        let reviewCheckout = "/Synthetic/Execution/Worktrees/worker-resource-identity/review-duplicate"
+        var review = ProjectExecutionAssignment(id: "review-duplicate",
+            registration: registration, checkoutPath: reviewCheckout,
+            role: .review, permissionProfile: "rr-review-duplicate",
+            model: "gpt-5.6-terra", effort: "high", authorization: "Approved review work",
+            context: delivery.context, excludedPaths: delivery.excludedPaths,
+            state: .stopped, sessionID: "closed-review-session",
+            worktree: .init(checkout: reviewCheckout, baseline: String(repeating: "b", count: 40),
+                branch: "codex/112-review", commonGitDirectory: "/Synthetic/Repository/.git",
+                primaryRoot: "/Synthetic/Repository"),
+            work: .init(projectID: projectID, ticketID: "112", taskID: "task-112",
+                outcome: "Identify worker resources", title: "Duplicate worker title",
+                taskPlanRevision: 1, phaseID: "phase-identity", phaseRevision: 1))
+        review.connectionClosed = true
+
+        var retirementCalls = 0
+        for width in [1100.0, 620.0] {
+            var retiredInThisViewport = false
+            let assignmentsAfterRetirement = width == 1100.0 ? [review] : []
+            try await render(
+                ManageProjectView(
+                    registration: registration,
+                    projectName: "Worker resource identity",
+                    tasks: [],
+                    initialSettings: .init(registration: registration,
+                        projectName: "Worker resource identity", excludedTaskIDs: []),
+                    loadSettings: {
+                        .init(registration: registration,
+                            projectName: "Worker resource identity", excludedTaskIDs: [])
+                    },
+                    saveSettings: nil,
+                    manageExecutionHook: nil,
+                    loadExecutionAssignments: { [delivery, review] },
+                    retireExecutionAssignment: { _ in },
+                    reopenCurrentRegistration: { _ in }
+                ),
+                name: "worker-resource-identity-initial-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Assignment delivery-duplicate",
+                    "Role delivery",
+                    "Ticket 112 · task task-112 · Duplicate worker title",
+                    "Checkout \(deliveryCheckout)",
+                    "Permission profile rr-delivery-duplicate",
+                    "Worker connection Closed",
+                    "Resource retirement Not started",
+                    "Worker closure and resource retirement do not complete the ticket or task.",
+                ],
+                presentIdentifiers: [
+                    "project-settings-execution-assignment",
+                    "project-settings-execution-assignment-detail",
+                    "project-settings-execution-retire",
+                ],
+                pressIdentifiers: ["project-settings-execution-assignment"],
+                afterPressMenuText: [[
+                    "Ticket 112 · task task-112 · Duplicate worker title — delivery assignment delivery-duplicate",
+                    "Ticket 112 · task task-112 · Duplicate worker title — review assignment review-duplicate",
+                ]]
+            )
+            try await render(
+                ManageProjectView(
+                    registration: registration,
+                    projectName: "Worker resource identity",
+                    tasks: [],
+                    initialSettings: .init(registration: registration,
+                        projectName: "Worker resource identity", excludedTaskIDs: []),
+                    loadSettings: {
+                        .init(registration: registration,
+                            projectName: "Worker resource identity", excludedTaskIDs: [])
+                    },
+                    saveSettings: nil,
+                    manageExecutionHook: nil,
+                    loadExecutionAssignments: {
+                        retiredInThisViewport ? assignmentsAfterRetirement : [delivery, review]
+                    },
+                    retireExecutionAssignment: { expected in
+                        XCTAssertEqual(expected.id, delivery.id)
+                        XCTAssertEqual(expected.checkoutPath, deliveryCheckout)
+                        XCTAssertEqual(expected.permissionProfile, delivery.permissionProfile)
+                        retirementCalls += 1
+                        retiredInThisViewport = true
+                    },
+                    reopenCurrentRegistration: { _ in }
+                ),
+                name: "worker-resource-identity-\(Int(width))",
+                width: width,
+                expected: nil,
+                postActionIdentifiers: [
+                    "project-settings-execution-assignment-unavailable",
+                    "project-settings-execution-result",
+                ],
+                postActionText: [
+                    "Selected worker resource unavailable. Assignment delivery-duplicate is no longer available after refresh. No retirement action will be sent until you deliberately select a current assignment.",
+                    "Resources retired. Replacement work requires a fresh current assignment; the prior outcome remains recorded.",
+                ],
+                pressIdentifiers: ["project-settings-execution-retire"]
+            )
+        }
+        XCTAssertEqual(retirementCalls, 2)
+    }
+
     func testManageProjectReportsPersistedRecoveryWhenSuccessAuditIsPending() async throws {
         let projectID = ProjectID(rawValue: "manage-project-recovery-audit")
         let registration = ProjectRegistration(projectID: projectID,
@@ -2479,6 +2600,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         afterPressFocusTitles: [[String]] = [],
         afterPressActionableTitles: [[String]] = [],
         afterPressText: [[String]] = [],
+        afterPressMenuText: [[String]] = [],
         pressTitles: [String] = [],
         pressKeyboardShortcuts: [NativeKeyboardShortcut] = [],
         minimumElementSizes: [String: CGSize] = [:],
@@ -2582,6 +2704,103 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         let initialActual = accessibilityText(try XCTUnwrap(ownWindow))
+        func applicationWindowAccessibilityText(fallback: AXUIElement) -> String {
+            var windows: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &windows) == .success,
+                  let windows = windows as? [AXUIElement], !windows.isEmpty else {
+                return accessibilityText(fallback)
+            }
+            return windows.map(accessibilityText).joined(separator: "\n")
+        }
+        func stringAttribute(_ element: AXUIElement, _ attribute: String) -> String? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+            return value as? String
+        }
+        func boolAttribute(_ element: AXUIElement, _ attribute: String) -> Bool? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+            return value as? Bool
+        }
+        func elementAttribute(_ element: AXUIElement, _ attribute: String) -> AXUIElement? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+                  let value,
+                  CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+            return value as! AXUIElement
+        }
+        func menuText(in roots: [AXUIElement]) -> (text: String, roles: [String]) {
+            var pending = roots
+            var menuElements = [AXUIElement]()
+            var roles = [String]()
+            var count = 0
+            while let element = pending.popLast(), count < 1_000 {
+                count += 1
+                if let role = stringAttribute(element, kAXRoleAttribute),
+                   role == kAXMenuRole || role == kAXMenuItemRole {
+                    menuElements.append(element)
+                    roles.append(role)
+                }
+                var children: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+                   let children = children as? [AXUIElement] {
+                    pending.append(contentsOf: children)
+                }
+            }
+            return (menuElements.map(accessibilityText).joined(separator: "\n"), roles)
+        }
+        func assertPickerMenuText(_ picker: AXUIElement, expected: [String]) async throws {
+            var actionValues: CFArray?
+            let actionResult = AXUIElementCopyActionNames(picker, &actionValues)
+            let actions = actionValues as? [String] ?? []
+            let role = stringAttribute(picker, kAXRoleAttribute) ?? "<unavailable>"
+            let subrole = stringAttribute(picker, kAXSubroleAttribute) ?? "<unavailable>"
+            let expandedBefore = boolAttribute(picker, kAXExpandedAttribute)
+            let action: String
+            if actions.contains(kAXShowMenuAction) {
+                action = kAXShowMenuAction
+            } else if actions.contains(kAXPressAction) {
+                action = kAXPressAction
+            } else {
+                XCTFail("Picker exposes no supported menu-opening action; role=\(role), subrole=\(subrole), actions=\(actions), expanded=\(String(describing: expandedBefore)), copyActions=\(actionResult.rawValue)")
+                return
+            }
+            XCTAssertEqual(
+                AXUIElementPerformAction(picker, action as CFString),
+                .success,
+                "Could not invoke advertised picker action \(action); role=\(role), subrole=\(subrole), actions=\(actions), expanded=\(String(describing: expandedBefore))"
+            )
+            try await Task.sleep(for: .milliseconds(300))
+
+            var windowValue: CFTypeRef?
+            let windows: [AXUIElement]
+            if AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &windowValue) == .success {
+                windows = windowValue as? [AXUIElement] ?? []
+            } else {
+                windows = []
+            }
+            let roots = [picker, elementAttribute(picker, kAXTopLevelUIElementAttribute),
+                         elementAttribute(application, kAXFocusedUIElementAttribute)]
+                .compactMap { $0 } + windows
+            let observedMenu = menuText(in: roots)
+            let expandedAfter = boolAttribute(picker, kAXExpandedAttribute)
+            XCTAssertTrue(
+                expandedAfter == true || !observedMenu.roles.isEmpty,
+                "Picker menu was not observable after \(action); role=\(role), subrole=\(subrole), actions=\(actions), expanded-before=\(String(describing: expandedBefore)), expanded-after=\(String(describing: expandedAfter)), observed-menu-roles=\(observedMenu.roles)"
+            )
+            guard !observedMenu.roles.isEmpty else {
+                XCTFail(
+                    "Picker reported expanded without a traversable menu; role=\(role), subrole=\(subrole), actions=\(actions), expanded=\(String(describing: expandedAfter))"
+                )
+                return
+            }
+            for label in expected {
+                XCTAssertTrue(
+                    observedMenu.text.contains(label),
+                    "Opened picker menu is missing option: \(label); role=\(role), subrole=\(subrole), actions=\(actions), expanded=\(String(describing: expandedAfter)), observed-menu-roles=\(observedMenu.roles)"
+                )
+            }
+        }
         try verifyAccessibility(try XCTUnwrap(ownWindow))
         for identifier in presentIdentifiers {
             XCTAssertNotNil(
@@ -2667,8 +2886,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
         for (index, pressIdentifier) in pressIdentifiers.enumerated() {
             let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
-            XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
-            try await Task.sleep(for: .milliseconds(300))
+            if afterPressMenuText.indices.contains(index), !afterPressMenuText[index].isEmpty {
+                try await assertPickerMenuText(button, expected: afterPressMenuText[index])
+            } else {
+                XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
+                try await Task.sleep(for: .milliseconds(300))
+            }
             for identifier in afterPressIdentifiers.indices.contains(index) ? afterPressIdentifiers[index] : [] {
                 let element = try await waitForAccessibilityElement(identifier: identifier)
                 XCTAssertNotNil(
@@ -2723,7 +2946,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
             for text in afterPressText.indices.contains(index) ? afterPressText[index] : [] {
                 XCTAssertTrue(
-                    accessibilityText(try XCTUnwrap(ownWindow)).contains(text),
+                    applicationWindowAccessibilityText(fallback: try XCTUnwrap(ownWindow)).contains(text),
                     "Missing post-press lifecycle content: \(text)"
                 )
             }
