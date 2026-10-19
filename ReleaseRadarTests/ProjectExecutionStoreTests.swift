@@ -64,6 +64,28 @@ final class ProjectExecutionStoreTests: XCTestCase {
         XCTAssertEqual(owned.installationEvidence, .verified)
         XCTAssertFalse(owned.requiresInstallationRecovery)
 
+        let equivalentSerialization = Data(#"{ "network" : { "enabled" : false }, "filesystem" : { } }"#.utf8)
+        let semanticallyOwned = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .present(equivalentSerialization),
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(semanticallyOwned.category, .owned,
+            "Profile ownership compares complete JSON definitions semantically, not by byte layout")
+
+        let extraGrant = Data(#"{"network":{"enabled":false},"filesystem":{"unexpected":"write"}}"#.utf8)
+        let broadened = ProjectExecutionProfileAssociation.classify(assignment: assignment,
+            selectedCodexContextID: contextID, observation: .present(extraGrant),
+            candidateProfileID: assignment.permissionProfile)
+        XCTAssertEqual(broadened.category, .unknown)
+        XCTAssertEqual(broadened.reason, .definitionMismatch)
+
+        var malformedDefinition = assignment
+        malformedDefinition.permissionProfileDefinition = Data("not-json".utf8)
+        let malformed = ProjectExecutionProfileAssociation.classify(assignment: malformedDefinition,
+            selectedCodexContextID: contextID, observation: .present(Data("not-json".utf8)),
+            candidateProfileID: malformedDefinition.permissionProfile)
+        XCTAssertEqual(malformed.category, .unknown)
+        XCTAssertEqual(malformed.reason, .definitionMismatch)
+
         var legacyAssignment = assignment
         legacyAssignment.profileProvisioningReceipt = nil
         let legacyOwned = ProjectExecutionProfileAssociation.classify(assignment: legacyAssignment,

@@ -119,6 +119,11 @@ final class WorkerAdapterTests: XCTestCase {
         XCTAssertEqual(persisted.sessionID, "session-one")
         XCTAssertEqual(persisted.workerAttemptID?.uuidString, workerID,
             "Binding a session must retain the UUID used for the launch attempt")
+        let reopened = try ProjectExecutionFileStore(root: fixture.store.root, create: false)
+        let afterRestart = try reopened.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(afterRestart.workerAttemptID, persisted.workerAttemptID)
+        XCTAssertEqual(afterRestart.sessionID, persisted.sessionID,
+            "A reopened protected store retains the original attempt/session association")
     }
 
     func testWorkerPolicyRejectsDifferentAttemptAfterReservationAndBinding() throws {
