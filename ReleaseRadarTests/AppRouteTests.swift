@@ -2831,10 +2831,12 @@ final class AppRouteTests: XCTestCase {
     func testLoadDeliveryGoalEditorRejectsImmutableAcceptedGoal() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let projectID = fixture.projectID
+        let phaseID = fixture.roadmapPhaseID
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Make Delivery Goal immutable") { connection in
             try connection.execute(
                 "UPDATE delivery_goals SET lifecycle='accepted' WHERE project_id=? AND phase_id=? AND id=?",
-                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue), .text(existing.id.rawValue)]
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue), .text(existing.id.rawValue)]
             )
         }
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
@@ -2852,6 +2854,8 @@ final class AppRouteTests: XCTestCase {
     func testLoadDeliveryGoalEditorRejectsCompletedPhaseWithoutMutation() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let projectID = fixture.projectID
+        let phaseID = fixture.roadmapPhaseID
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed completed phase") { connection in
             try connection.execute(
                 """
@@ -2860,7 +2864,7 @@ final class AppRouteTests: XCTestCase {
                     completed_at='2026-10-19T12:00:00Z', record_origin='reconstruction'
                 WHERE project_id=? AND phase_id=?
                 """,
-                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
             )
         }
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
