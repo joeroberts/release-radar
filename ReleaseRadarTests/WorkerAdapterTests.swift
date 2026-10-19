@@ -212,7 +212,7 @@ final class WorkerAdapterTests: XCTestCase {
             "Persistence mismatch must not suppress STOP for the owned runtime thread")
         XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
             differentAttempt, "The foreign durable attempt remains byte-for-byte unchanged")
-        let status = try adapter.status(workerID: workerID).object()
+        let status = try await adapter.status(workerID: workerID).object()
         XCTAssertEqual(status["status"] as? String, "unknown")
         XCTAssertTrue((status["error"] as? String)?.contains("durable") == true,
             "The returned persistence failure must state that durable STOP evidence is unconfirmed")
