@@ -67,6 +67,7 @@ private struct PendingDeliveryGoalDraftSave: Sendable {
     let expectedRevision: Int64
     var error: AgentCommandError
 }
+private struct PendingDeliveryGoalAssignmentSave: Sendable { let projectID: ProjectID; let phaseID: PhaseID; let registration: ProjectRegistration; let expectedRevision: Int64; let edits: [DeliveryGoalAssignmentEdit]; let command: AgentCommand; var error: AgentCommandError }
 
 private struct PreparedProjectProjections: Sendable {
     let dashboard: DashboardProjection
@@ -247,6 +248,7 @@ final class AppModel {
         AgentCommand
     ) async -> AgentCommandResult
     private let deliveryGoalAssignmentDraftOwnerCommandDispatch: @Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult
+    private var pendingDeliveryGoalAssignmentSaves: [UUID: PendingDeliveryGoalAssignmentSave] = [:]
     private var pendingDeliveryGoalDraftSaves: [UUID: PendingDeliveryGoalDraftSave] = [:]
     private var pendingDeliveryGoalDraftSaveIDs: [DeliveryGoalDraftSaveKey: UUID] = [:]
     private let repositoryPlanReadbackLoader: @Sendable (
@@ -5138,11 +5140,20 @@ final class AppModel {
         let assignments = edits.compactMap { edit in edit.goalID.map { DeliveryGoalAssignment(goalID: $0, ticketID: edit.ticketID) } }
         let command = AgentCommand.applyPhasePlanRevision(projectID: projectID.rawValue, phaseID: phaseID.rawValue, expectedRevision: expectedRevision, assignments: assignments, unassignedTicketIDs: edits.filter { $0.goalID == nil }.map(\.ticketID))
         let result = await deliveryGoalAssignmentDraftOwnerCommandDispatch(projectID, registration, attemptID, command)
-        if let error = result.error { return .init(attemptID: attemptID, status: error == .outcomeUnknown ? .unconfirmed(error: error) : .rejected(error: error, refreshedEditor: nil)) }
+        if let error = result.error {
+            if error == .outcomeUnknown { pendingDeliveryGoalAssignmentSaves[attemptID] = .init(projectID: projectID, phaseID: phaseID, registration: registration, expectedRevision: expectedRevision, edits: edits, command: command, error: error); return .init(attemptID: attemptID, status: .unconfirmed(error: error)) }
+            return .init(attemptID: attemptID, status: .rejected(error: error, refreshedEditor: nil))
+        }
         switch await loadDeliveryGoalAssignmentEditor(projectID: projectID, phaseID: phaseID) { case let .loaded(readback): return .init(attemptID: attemptID, status: .confirmed(savedRevision: readback.planRevision, auditEventID: result.auditEventID ?? .init(rawValue: ""), readback: readback)); case .failed: return .init(attemptID: attemptID, status: .savedNeedsReload(savedRevision: expectedRevision + 1, auditEventID: result.auditEventID ?? .init(rawValue: ""))) }
     }
-    func reconcileDeliveryGoalAssignmentDraftSave(attemptID: UUID) async -> DeliveryGoalAssignmentSaveOutcome { .init(attemptID: attemptID, status: .rejected(error: .outcomeUnknown, refreshedEditor: nil)) }
-    func deliveryGoalAssignmentDraftSaveRecovery(projectID: ProjectID, phaseID: PhaseID) -> DeliveryGoalAssignmentSaveRecovery? { nil }
+    func reconcileDeliveryGoalAssignmentDraftSave(attemptID: UUID) async -> DeliveryGoalAssignmentSaveOutcome {
+        guard let pending = pendingDeliveryGoalAssignmentSaves[attemptID] else { return .init(attemptID: attemptID, status: .rejected(error: .outcomeUnknown, refreshedEditor: nil)) }
+        let result = await deliveryGoalAssignmentDraftOwnerCommandDispatch(pending.projectID, pending.registration, attemptID, pending.command)
+        if let error = result.error { return .init(attemptID: attemptID, status: .unconfirmed(error: error)) }
+        pendingDeliveryGoalAssignmentSaves.removeValue(forKey: attemptID)
+        switch await loadDeliveryGoalAssignmentEditor(projectID: pending.projectID, phaseID: pending.phaseID) { case let .loaded(readback): return .init(attemptID: attemptID, status: .confirmed(savedRevision: readback.planRevision, auditEventID: result.auditEventID ?? .init(rawValue: ""), readback: readback)); case .failed: return .init(attemptID: attemptID, status: .savedNeedsReload(savedRevision: pending.expectedRevision + 1, auditEventID: result.auditEventID ?? .init(rawValue: ""))) }
+    }
+    func deliveryGoalAssignmentDraftSaveRecovery(projectID: ProjectID, phaseID: PhaseID) -> DeliveryGoalAssignmentSaveRecovery? { guard let (id, pending) = pendingDeliveryGoalAssignmentSaves.first(where: { $0.value.projectID == projectID && $0.value.phaseID == phaseID }) else { return nil }; return .init(attemptID: id, edits: pending.edits, expectedRevision: pending.expectedRevision, error: pending.error) }
 
     func saveDeliveryGoalDraft(
         projectID: ProjectID,
