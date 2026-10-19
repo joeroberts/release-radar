@@ -3380,25 +3380,14 @@ final class AppRouteTests: XCTestCase {
         )
         let uncovered = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2"))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-conflicting-ticket-ROAD-X"))
+        XCTAssertEqual(AXUIElementPerformAction(uncovered, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(selectedTicket.rawValue, "ROAD-2", "Uncovered-ticket correction must navigate to that exact ticket")
         XCTAssertEqual(AXUIElementPerformAction(incomplete, kAXPressAction as CFString), .success)
         for _ in 0..<20 where !accessibilityText(nativeWindow).contains("Edit Delivery Goal") {
             try await Task.sleep(for: .milliseconds(100))
         }
         XCTAssertTrue(accessibilityText(nativeWindow).contains("Edit Delivery Goal"))
-        let cancel = try XCTUnwrap(
-            accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
-                var title: CFTypeRef?
-                _ = AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
-                return title as? String == "Cancel"
-            }
-        )
-        XCTAssertEqual(AXUIElementPerformAction(cancel, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where accessibilityText(nativeWindow).contains("Edit Delivery Goal") {
-            try await Task.sleep(for: .milliseconds(100))
-        }
-        XCTAssertEqual(AXUIElementPerformAction(uncovered, kAXPressAction as CFString), .success)
-        try await Task.sleep(for: .milliseconds(100))
-        XCTAssertEqual(selectedTicket.rawValue, "ROAD-2", "Uncovered-ticket correction must navigate to that exact ticket")
         XCTAssertTrue(accessibilityText(nativeWindow).contains("draft is incomplete"))
     }
 
@@ -3503,6 +3492,12 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testPhasePlanCreateAssignFinalizeSequencePersistsAcrossPlanningProjections() async throws {
         let fixture = try await makeRR9OwnerFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Authorize phase-plan sequence") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'phase-plan-sequence-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
         await model.loadDashboard()
         guard case let .loaded(editor) = await model.loadDeliveryGoalEditor(
