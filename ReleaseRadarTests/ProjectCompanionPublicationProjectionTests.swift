@@ -170,4 +170,44 @@ final class ProjectCompanionPublicationProjectionTests: XCTestCase {
             XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM companion_publication_incarnations WHERE project_id = ? AND registration_id = ?", bindings: [.text(readd.registration.projectID.rawValue), .text(readd.registration.registrationID)]), 1)
         }
     }
+
+    func testVersionThirtyMigrationCreatesEmptyCompanionRelationAndPreservesFacts() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-CompanionV30-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("store.sqlite")
+        let current = DeliveryStore(databaseURL: databaseURL)
+        try await current.transact(actor: .init(id: "fixture"), reason: "Seed v30 facts") { connection in
+            try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('v30-project', 'Preserved', 1)")
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('v30-project', 'v30-registration', 1, 'complete')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('v30-phase', 'v30-project', 'Preserved phase')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('v30-ticket', 'v30-project', 'v30-phase', 'Preserved outcome', 'backlog')")
+        }
+        await current.close()
+
+        let prior = try SQLiteConnection(url: databaseURL, createIfMissing: false)
+        try prior.execute("DROP TABLE companion_publication_incarnations")
+        XCTAssertEqual(try prior.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = 'companion_publication_incarnations'"), 0)
+        XCTAssertEqual(try prior.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'index' AND name = 'companion_publication_incarnations_active_unique'"), 0)
+        XCTAssertEqual(try prior.scalarText("SELECT name FROM projects WHERE id = 'v30-project'"), "Preserved")
+        XCTAssertEqual(try prior.scalarText("SELECT lane FROM tickets WHERE id = 'v30-ticket'"), "backlog")
+        try prior.execute("PRAGMA user_version = 30")
+        prior.close()
+
+        let migrated = DeliveryStore(databaseURL: databaseURL)
+        let migratedAvailability = await migrated.availability
+        XCTAssertEqual(migratedAvailability, .available)
+        try await migrated.read { connection in
+            XCTAssertEqual(try connection.scalarText("SELECT name FROM projects WHERE id = 'v30-project'"), "Preserved")
+            XCTAssertEqual(try connection.scalarText("SELECT lane FROM tickets WHERE id = 'v30-ticket'"), "backlog")
+            XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM companion_publication_incarnations"), 0)
+            XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'index' AND name = 'companion_publication_incarnations_active_unique'"), 1)
+        }
+        await migrated.close()
+        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
+        XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 30)
+        XCTAssertEqual(try snapshot.scalarText("SELECT name FROM projects WHERE id = 'v30-project'"), "Preserved")
+        XCTAssertEqual(try snapshot.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = 'companion_publication_incarnations'"), 0)
+        snapshot.close()
+    }
 }
