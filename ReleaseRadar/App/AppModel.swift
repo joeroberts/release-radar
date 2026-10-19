@@ -5205,6 +5205,12 @@ final class AppModel {
         )
         if let error = result.error {
             if error == .outcomeUnknown || error == .appUnavailable {
+                if error == .appUnavailable {
+                    let refreshed = await currentDeliveryGoalEditor(projectID: key.projectID, phaseID: key.phaseID,
+                                                                     goalID: pending.draft.id)
+                    removePendingDeliveryGoalDraftSave(attemptID, key: key)
+                    return .init(attemptID: attemptID, status: .rejected(error: error, refreshedEditor: refreshed))
+                }
                 var retained = pending
                 retained.error = error
                 pendingDeliveryGoalDraftSaves[attemptID] = retained

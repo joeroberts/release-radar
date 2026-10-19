@@ -58,7 +58,7 @@ func deliveryGoalDraftErrorMessage(_ error: AgentCommandError) -> String {
     case .staleProjectRegistration:
         "This project changed. Refresh it before saving the Delivery Goal."
     case .appUnavailable:
-        "Release Radar is temporarily unavailable. Your edits are still here; try the same saved attempt again."
+        "Release Radar is temporarily unavailable. Your edits are still here; save again when it is available."
     case .outcomeUnknown:
         "Release Radar could not confirm that save. Reconcile the same saved attempt before creating another goal."
     case .unauthorizedProjectRoot:
