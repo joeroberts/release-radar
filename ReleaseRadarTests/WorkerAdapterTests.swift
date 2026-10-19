@@ -392,7 +392,7 @@ final class WorkerAdapterTests: XCTestCase {
         let peer = Peer(policy: valid.policy)
         peer.projectListResponses = [
             ["data": [["id": "unrelated", "roots": [["path": valid.store.root.appendingPathComponent("Other").path]]]], "nextCursor": "next-page"],
-            ["data": [["id": "codex-project-one", "roots": [["path": valid.policy.policy.primaryRoot]]]]],
+            ["data": [["id": "codex-project-one", "roots": [["path": try CodexExecutionContext.canonicalPath(valid.policy.policy.primaryRoot)]]]]],
         ]
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
 
@@ -415,14 +415,14 @@ final class WorkerAdapterTests: XCTestCase {
             ]],
         ]
 
-        for response in responses {
+        for (index, response) in responses.enumerated() {
             let valid = try fixture()
             let peer = Peer(policy: valid.policy)
             var configured = response
             if var projects = configured["data"] as? [[String: Any]] {
                 projects = projects.map { project in
                     guard project["id"] as? String != nil else { return project }
-                    return project.merging(["roots": [["path": valid.policy.policy.primaryRoot]]]) { _, replacement in replacement }
+                    return project.merging(["roots": [["path": try CodexExecutionContext.canonicalPath(valid.policy.policy.primaryRoot)]]]) { _, replacement in replacement }
                 }
                 configured["data"] = projects
             }
@@ -433,6 +433,9 @@ final class WorkerAdapterTests: XCTestCase {
 
             XCTAssertEqual(started["status"] as? String, "failed")
             let error = try XCTUnwrap(started["error"] as? String)
+            XCTAssertTrue(error.contains(index == 0
+                ? "No saved Codex project has the registered repository root."
+                : "More than one saved Codex project has the registered repository root."))
             XCTAssertTrue(error.contains("Close or reconcile the existing unknown assignment"), "Association failure must state the durable recovery route")
             XCTAssertTrue(error.contains("fresh authorized assignment"), "Association failure must forbid simple same-assignment retry")
             XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" })
@@ -1032,6 +1035,9 @@ final class WorkerAdapterTests: XCTestCase {
         let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.completesImmediately = true
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
         let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        guard started["status"] as? String == "completed" else {
+            return XCTFail("Follow-up gate requires a completed initial turn, got \(started["status"] ?? "missing")")
+        }
         let id = try XCTUnwrap(started["workerId"] as? String)
         let gate = Gate(); peer.delayedHooks = gate
         let first = Task { try await adapter.followUp(workerID: id, prompt: "Continue") }
