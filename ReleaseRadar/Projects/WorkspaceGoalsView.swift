@@ -120,6 +120,8 @@ struct WorkspaceGoalsView: View {
     let goals: WorkspaceGoalsProjection
     let freshness: CodexObservationFreshness
     let openDeliveryGoal: (WorkspaceDeliveryGoalProjection) -> Void
+    let openDeliveryGoalPlanning: (WorkspaceDeliveryGoalProjection) -> Void = { _ in }
+    let openProjectPlanning: (ProjectID) -> Void = { _ in }
     let openUnassignedWork: (WorkspaceUnassignedDeliveryWorkProjection) -> Void
     let openExecutionGoal: (WorkspaceExecutionGoalProjection) -> Void
     @Binding var domain: WorkspaceGoalsDomain
@@ -213,9 +215,16 @@ struct WorkspaceGoalsView: View {
             title: "Goals",
             subtitle: "Delivery outcomes and persisted Codex execution observations across active projects",
             trailing: AnyView(
-                Button("Help", systemImage: "questionmark.circle") { showsHelp = true }
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .accessibilityIdentifier("goals-help")
+                HStack(spacing: 8) {
+                    if domain == .delivery, let projectID {
+                        Button("Plan Delivery Goals") { openProjectPlanning(projectID) }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .accessibilityIdentifier("goals-open-project-plan")
+                    }
+                    Button("Help", systemImage: "questionmark.circle") { showsHelp = true }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("goals-help")
+                }
             )
         )
     }
@@ -376,6 +385,12 @@ struct WorkspaceGoalsView: View {
             Button("View associated work") { openDeliveryGoal(item) }
                 .buttonStyle(RekonPrimaryButtonStyle())
                 .accessibilityIdentifier("goals-open-associated-work")
+            if item.phaseLifecycle?.lifecycle != .completed,
+               item.goal.lifecycle != .accepted, item.goal.lifecycle != .superseded {
+                Button("Edit planning") { openDeliveryGoalPlanning(item) }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("goals-edit-delivery-goal-planning")
+            }
         }
     }
 
