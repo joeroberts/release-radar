@@ -169,6 +169,7 @@ struct ExecutionProfileCleanupPreviewView: View {
         RekonSectionPanel {
             VStack(alignment: .leading, spacing: 14) {
                 header
+                guidance
                 content
                 recoverableCleanupContent
             }
@@ -227,6 +228,14 @@ struct ExecutionProfileCleanupPreviewView: View {
             .buttonStyle(RekonSecondaryButtonStyle())
             .disabled(loadState == .loading)
             .accessibilityIdentifier("project-execution-profile-cleanup-refresh")
+    }
+
+    private var guidance: some View {
+        RekonCallout(tone: .information, systemImage: "info.circle") {
+            Text("Profiles may remain after a worker is no longer active. Review the classification and evidence before cleanup; supported cleanup preserves project work and unrelated configuration.")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityIdentifier("project-execution-profile-cleanup-guidance")
     }
 
     @ViewBuilder

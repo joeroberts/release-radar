@@ -12,6 +12,109 @@ private enum SyntheticBackupScopeError: Error {
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testGeneratedProfileCleanupGuidanceRendersAccessiblyAtWideAndCompactWidths() async throws {
+        let registration = ProjectRegistration(
+            projectID: .init(rawValue: "profile-guidance"),
+            registrationID: "profile-guidance-registration",
+            requestGeneration: 1
+        )
+        let priorPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(priorPolicy) }
+
+        for width in [1_100.0, 620.0] {
+            let helpHosting = NSHostingView(rootView: WorkspaceHelpView(open: { _ in }))
+            helpHosting.frame = NSRect(x: 0, y: 0, width: width, height: 720)
+            let helpWindow = NSWindow(
+                contentRect: helpHosting.frame,
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            helpWindow.title = "Generated profile Help \(Int(width))"
+            helpWindow.isReleasedWhenClosed = false
+            helpWindow.contentView = helpHosting
+            defer { helpWindow.close() }
+            helpWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(150))
+            helpHosting.layoutSubtreeIfNeeded()
+
+            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+            let helpRoot = try XCTUnwrap(accessibilityWindow(application, title: helpWindow.title))
+            let help = try XCTUnwrap(accessibilityElement(helpRoot, identifier: "workspace-help"))
+            XCTAssertTrue(try accessibilityFrame(helpRoot).contains(try accessibilityFrame(help)))
+            let helpSearch = try XCTUnwrap(accessibilityElement(helpRoot, identifier: "help-search-field"))
+            XCTAssertEqual(AXUIElementSetAttributeValue(
+                helpSearch, kAXFocusedAttribute as CFString, kCFBooleanTrue
+            ), .success)
+            for character in "selected profile filesystem network" {
+                let event = try XCTUnwrap(NSEvent.keyEvent(
+                    with: .keyDown,
+                    location: .zero,
+                    modifierFlags: [],
+                    timestamp: 0,
+                    windowNumber: helpWindow.windowNumber,
+                    context: nil,
+                    characters: String(character),
+                    charactersIgnoringModifiers: String(character),
+                    isARepeat: false,
+                    keyCode: 0
+                ))
+                NSApp.sendEvent(event)
+            }
+            try await Task.sleep(for: .milliseconds(150))
+            helpHosting.layoutSubtreeIfNeeded()
+            let visibleHelp = accessibilityText(helpRoot)
+            XCTAssertTrue(visibleHelp.contains("Generated permission profiles and cleanup"))
+            XCTAssertTrue(visibleHelp.contains("Only the selected profile is active"))
+            XCTAssertFalse(visibleHelp.contains("Set up a project and hand off documentation"))
+            try fullWindowCapture(helpWindow, name: "generated-profile-help-\(Int(width))")
+
+            let cleanupHosting = NSHostingView(rootView: ExecutionProfileCleanupPreviewView(
+                registration: registration,
+                loadPreview: { .init(
+                    observationIdentity: .init(
+                        selectedCodexContextID: UUID(),
+                        configurationVersion: "guidance-fixture",
+                        observedAt: .now
+                    ),
+                    rows: []
+                ) }
+            ))
+            cleanupHosting.frame = NSRect(x: 0, y: 0, width: width, height: 720)
+            let cleanupWindow = NSWindow(
+                contentRect: cleanupHosting.frame,
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            cleanupWindow.title = "Generated profile cleanup \(Int(width))"
+            cleanupWindow.isReleasedWhenClosed = false
+            cleanupWindow.contentView = cleanupHosting
+            defer { cleanupWindow.close() }
+            cleanupWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(150))
+            cleanupHosting.layoutSubtreeIfNeeded()
+
+            let cleanupRoot = try XCTUnwrap(accessibilityWindow(application, title: cleanupWindow.title))
+            let panel = try XCTUnwrap(accessibilityElement(
+                cleanupRoot,
+                identifier: "project-execution-profile-cleanup-preview"
+            ))
+            let guidance = try XCTUnwrap(accessibilityElement(
+                cleanupRoot,
+                identifier: "project-execution-profile-cleanup-guidance"
+            ))
+            let cleanupFrame = try accessibilityFrame(cleanupRoot)
+            XCTAssertTrue(cleanupFrame.contains(try accessibilityFrame(panel)))
+            XCTAssertTrue(cleanupFrame.contains(try accessibilityFrame(guidance)))
+            try fullWindowCapture(cleanupWindow, name: "generated-profile-cleanup-guidance-\(Int(width))")
+        }
+    }
+
+    @MainActor
     func testConnectorHealthKeepsStartupVersionMismatchAndRejectsLateAvailableSnapshot() async throws {
         let databaseURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-ConnectorHealth-\(UUID().uuidString).sqlite")

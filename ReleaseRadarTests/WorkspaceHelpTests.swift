@@ -8,7 +8,8 @@ final class WorkspaceHelpTests: XCTestCase {
         XCTAssertEqual(groups.map(\.title), ["Projects", "Settings", "Goals"])
         XCTAssertEqual(groups[0].topics.map(\.id), [
             "setup-handoff", "active-viewed", "navigation-validation", "planning-unplaced",
-            "task-adoption", "proposal-approval", "search-navigation",
+            "task-adoption", "generated-permission-profiles-cleanup", "proposal-approval",
+            "search-navigation",
         ])
         XCTAssertEqual(groups[1].topics.map(\.id), [
             "recovery", "plugin-helper-restart", "saved-query-recovery",
@@ -26,6 +27,58 @@ final class WorkspaceHelpTests: XCTestCase {
         XCTAssertEqual(groups.first?.topics.map(\.id), ["plugin-helper-restart"])
     }
 
+    func testGeneratedPermissionProfileCleanupGuidanceExplainsScopePreservationAndSafeNextActions() throws {
+        let topic = try XCTUnwrap(WorkspaceHelpContent.topics.first {
+            $0.id == "generated-permission-profiles-cleanup"
+        })
+
+        XCTAssertEqual(topic.title, "Generated permission profiles and cleanup")
+        XCTAssertEqual(topic.group, .projects)
+        XCTAssertNil(topic.destination)
+        XCTAssertTrue(topic.actionTitle.isEmpty)
+
+        XCTAssertEqual(
+            WorkspaceHelpContent.filtered(by: "selected profile filesystem network").map(\.id),
+            ["generated-permission-profiles-cleanup"]
+        )
+
+        let detail = topic.detail.lowercased()
+        for expected in [
+            "only the selected profile is active",
+            "does not prove a worker is running",
+            "filesystem and network",
+            "approvals",
+            "connectors",
+            "mcp",
+            "browser",
+            "computer use",
+            "cloud",
+            "rr-delivery-",
+            "rr-review-",
+            "rr-project-ro",
+            "rr-project-restricted",
+            "rr-command-read-probe",
+            "worktrees",
+            "branches",
+            "commits",
+            "artifacts",
+            "logs",
+            "application data",
+            "unrelated codex configuration",
+            "active",
+            "recovery-retained",
+            "eligible",
+            "unknown",
+            "refresh",
+            "preview",
+            "confirm",
+            "preserve",
+            "only selected eligible",
+        ] {
+            XCTAssertTrue(detail.contains(expected), "Missing guidance claim: \(expected)")
+        }
+    }
+
     func testSharedHelpCatalogCoversEverySelectedJourneyAndHasActionableDestinations() {
         let topics = WorkspaceHelpContent.topics
 
@@ -33,10 +86,10 @@ final class WorkspaceHelpTests: XCTestCase {
             "setup-handoff", "recovery", "active-viewed", "planning-unplaced",
             "task-adoption", "proposal-approval", "readiness-acceptance",
             "saved-query-recovery", "search-navigation", "plugin-helper-restart",
-            "navigation-validation",
+            "navigation-validation", "generated-permission-profiles-cleanup",
         ])
         XCTAssertTrue(topics.allSatisfy { !$0.title.isEmpty && !$0.detail.isEmpty })
-        XCTAssertTrue(topics.allSatisfy { $0.destination != nil })
+        XCTAssertTrue(topics.allSatisfy { $0.destination != nil || $0.id == "generated-permission-profiles-cleanup" })
         XCTAssertEqual(WorkspaceHelpContent.filtered(by: "saved query").map(\.id), ["saved-query-recovery"])
         XCTAssertEqual(WorkspaceHelpContent.filtered(by: "proposal apply").map(\.id), ["proposal-approval"])
 

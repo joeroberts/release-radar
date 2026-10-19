@@ -113,6 +113,15 @@ enum WorkspaceHelpContent {
             group: .projects
         ),
         .init(
+            id: "generated-permission-profiles-cleanup",
+            title: "Generated permission profiles and cleanup",
+            detail: "Release Radar creates assignment-specific permission profiles for delivery and review work. Only the selected profile is active; a profile being present does not prove a worker is running. A profile sets filesystem and network policy only, separately from approvals, connectors, MCP, browser, Computer Use, and cloud permissions. Assignment profiles begin rr-delivery- or rr-review-. Reusable rr-project-ro, rr-project-restricted, and rr-command-read-probe profiles are preserved. Active profiles remain while their assignment is active; finish the assignment and refresh. Recovery-retained profiles need recovery or a refresh before cleanup. Eligible profiles can be selected for a preview, then confirmed. Unknown profiles are preserved: resolve their evidence and refresh. Cleanup removes only selected eligible generated profile sections; it preserves worktrees, branches, commits, artifacts, logs, application data, and unrelated Codex configuration.",
+            keywords: "permission profile cleanup generated delivery review active recovery eligible unknown worktree approval connector mcp browser computer use cloud",
+            actionTitle: "",
+            destination: nil,
+            group: .projects
+        ),
+        .init(
             id: "proposal-approval",
             title: "Proposal approval versus apply",
             detail: "Approval records the owner decision for an exact proposal version and baseline. Apply is a separate audited action; approval alone never mutates the delivery plan.",
