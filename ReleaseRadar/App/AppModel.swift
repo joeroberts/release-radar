@@ -581,11 +581,11 @@ final class AppModel {
                 store: store,
                 dispatcher: PushoverNotificationDispatcher(store: store, credentials: resolvedKeychain)
             )
+        self.deliveryGoalAssignmentDraftOwnerCommandDispatch = deliveryGoalAssignmentDraftOwnerCommandDispatch
+            ?? resolvedDeliveryGoalDraftOwnerCommandDispatch
         recoveryServices?.observeAgentBridgeHealth { [weak self] snapshot in
             self?.applyConnectorHealthSnapshot(snapshot)
         }
-        self.deliveryGoalAssignmentDraftOwnerCommandDispatch = deliveryGoalAssignmentDraftOwnerCommandDispatch
-            ?? resolvedDeliveryGoalDraftOwnerCommandDispatch
     }
 
 #if DEBUG
