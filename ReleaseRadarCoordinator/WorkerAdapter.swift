@@ -3,9 +3,17 @@ import ReleaseRadarCore
 
 actor WorkerAdapter {
     private struct CodexProjectAssociationError: LocalizedError {
+        enum Recovery { case startup, knownThread }
         let detail: String
+        let recovery: Recovery = .startup
         var errorDescription: String? {
-            "Codex project association could not be resolved. \(detail) Close or reconcile the existing unknown assignment in Release Radar, then obtain a fresh authorized assignment."
+            let nextStep: String = switch recovery {
+            case .startup:
+                "Close or reconcile the existing unknown assignment in Release Radar, then obtain a fresh authorized assignment."
+            case .knownThread:
+                "The known assignment and thread are not reusable until reconciled in Release Radar. If reconciliation cannot restore them, obtain a fresh authorized assignment."
+            }
+            return "Codex project association could not be resolved. \(detail) \(nextStep)"
         }
     }
 
@@ -54,7 +62,8 @@ actor WorkerAdapter {
     /// Resolves the saved Codex project from the exact repository root rather
     /// than from a title, checkout prefix, or an RR-persisted cache.
     private func resolveCodexProjectID(
-        server: any ExecutionPeer, selected: WorkerPolicy
+        server: any ExecutionPeer, selected: WorkerPolicy,
+        recovery: CodexProjectAssociationError.Recovery = .startup
     ) async throws -> String {
         let expectedRoot = try ProjectExecutionHookReadiness.canonicalPrimaryRoot(selected.policy.primaryRoot)
         var cursor: String?
@@ -66,13 +75,13 @@ actor WorkerAdapter {
             if let cursor { params["cursor"] = cursor }
             let result = try await rpc(server, "project/list", params)
             guard let projects = result["data"] as? [[String: Any]] else {
-                throw CodexProjectAssociationError(detail: "The saved-project inventory was malformed.")
+                throw CodexProjectAssociationError(detail: "The saved-project inventory was malformed.", recovery: recovery)
             }
             for project in projects {
                 guard let id = project["id"] as? String, !id.isEmpty,
                       let roots = project["roots"] as? [[String: Any]],
                       roots.allSatisfy({ $0["path"] is String }) else {
-                    throw CodexProjectAssociationError(detail: "The saved-project inventory contained an invalid project record.")
+                    throw CodexProjectAssociationError(detail: "The saved-project inventory contained an invalid project record.", recovery: recovery)
                 }
                 if roots.contains(where: { $0["path"] as? String == expectedRoot }) {
                     matchingIDs.insert(id)
@@ -81,7 +90,7 @@ actor WorkerAdapter {
             if let next = result["nextCursor"], !(next is NSNull) {
                 guard let nextCursor = next as? String, !nextCursor.isEmpty,
                       seenCursors.insert(nextCursor).inserted else {
-                    throw CodexProjectAssociationError(detail: "The saved-project inventory pagination was invalid.")
+                    throw CodexProjectAssociationError(detail: "The saved-project inventory pagination was invalid.", recovery: recovery)
                 }
                 cursor = nextCursor
             } else {
@@ -93,7 +102,7 @@ actor WorkerAdapter {
             let detail = matchingIDs.isEmpty
                 ? "No saved Codex project has the registered repository root."
                 : "More than one saved Codex project has the registered repository root."
-            throw CodexProjectAssociationError(detail: detail)
+            throw CodexProjectAssociationError(detail: detail, recovery: recovery)
         }
         return id
     }
@@ -254,7 +263,9 @@ actor WorkerAdapter {
         server: any ExecutionPeer, threadID: String, selected: WorkerPolicy
     ) async throws -> String {
         let expectedRoot = try ProjectExecutionHookReadiness.canonicalPrimaryRoot(selected.policy.primaryRoot)
-        let codexProjectID = try await resolveCodexProjectID(server: server, selected: selected)
+        let codexProjectID = try await resolveCodexProjectID(
+            server: server, selected: selected, recovery: .knownThread
+        )
         try selected.verifyCodexContext()
 
         let projectResult = try await rpc(server, "project/read", ["projectId": codexProjectID])
@@ -263,7 +274,10 @@ actor WorkerAdapter {
               let roots = project["roots"] as? [[String: Any]],
               roots.allSatisfy({ $0["path"] is String }),
               roots.contains(where: { $0["path"] as? String == expectedRoot }) else {
-            throw CodexProjectAssociationError(detail: "The resolved saved Codex project no longer has the registered repository root.")
+            throw CodexProjectAssociationError(
+                detail: "The resolved saved Codex project no longer has the registered repository root.",
+                recovery: .knownThread
+            )
         }
         try selected.verifyCodexContext()
 
@@ -272,7 +286,10 @@ actor WorkerAdapter {
               thread["id"] as? String == threadID,
               thread["projectId"] as? String == codexProjectID,
               thread["cwd"] as? String == selected.assignment.checkoutPath else {
-            throw CodexProjectAssociationError(detail: "The existing Codex thread no longer matches its project association or checkout.")
+            throw CodexProjectAssociationError(
+                detail: "The existing Codex thread no longer matches its project association or checkout.",
+                recovery: .knownThread
+            )
         }
         try selected.verifyCodexContext()
         return codexProjectID
