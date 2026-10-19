@@ -168,6 +168,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let executionRoot: @Sendable () throws -> URL
     private let contextAccessFactory: @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease
     private let planPreparationFactory: @Sendable () -> any PlanPreparationServicing
+    private let workerProfileObservationReadback: (@Sendable (String, Bool) async throws -> [String: Any])?
     private var contextAccess: CodexExecutionContextLease?
     private var boundContext: CodexExecutionContext?
     private var transport: AppServerTransport?
@@ -228,10 +229,12 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
          },
          planPreparationFactory: @escaping @Sendable () -> any PlanPreparationServicing = {
              PlanPreparationAdapter()
-         }) {
+         },
+         workerProfileObservationReadback: (@Sendable (String, Bool) async throws -> [String: Any])? = nil) {
         self.plugin = plugin; self.bundle = bundle; self.executionRoot = executionRoot
         self.contextAccessFactory = contextAccessFactory
         self.planPreparationFactory = planPreparationFactory
+        self.workerProfileObservationReadback = workerProfileObservationReadback
     }
 
     private func contextStore() throws -> ProjectExecutionFileStore {
@@ -598,6 +601,46 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             throw ProjectExecutionError.conflict
         }
         return (config["permissions"] as? [String: Any])?[profileID] != nil
+    }
+
+    /// Observes only candidate Release Radar profiles from the selected context.
+    /// The caller establishes project authorization; this method does not claim
+    /// fresh protected-record provenance beyond its context and config readback.
+    func observeWorkerProfiles(primaryRoot: String) async throws -> ProjectExecutionWorkerProfileObservation {
+        guard let selected = try contextStore().codexContext(), boundContext == selected else {
+            throw CodexExecutionContextError.changed
+        }
+        try await useCodexContext(selected.id)
+        let result: [String: Any]
+        if let workerProfileObservationReadback {
+            result = try await workerProfileObservationReadback(primaryRoot, true)
+        } else {
+            result = try await read(primaryRoot, readback: true)
+        }
+        let layer = try userLayer(result)
+        guard let version = layer["version"] as? String, !version.isEmpty,
+              let config = layer["config"] as? [String: Any],
+              config["permissions"] == nil || config["permissions"] is [String: Any] else {
+            throw ProjectExecutionError.conflict
+        }
+        let permissions = config["permissions"] as? [String: Any] ?? [:]
+        var entries: [ProjectExecutionWorkerProfileObservation.Entry] = []
+        for (profileID, definition) in permissions {
+            guard profileID.hasPrefix("rr-") else { continue }
+            guard entries.count < 256 else { throw ProjectExecutionError.conflict }
+            try ProjectExecutionPaths.component(profileID)
+            guard JSONSerialization.isValidJSONObject(definition) else { throw ProjectExecutionError.conflict }
+            let encoded = try JSONSerialization.data(withJSONObject: definition, options: [.sortedKeys])
+            guard encoded.count <= 32_768 else { throw ProjectExecutionError.conflict }
+            entries.append(.init(profileID: profileID, observedDefinition: encoded))
+        }
+        entries.sort { $0.profileID < $1.profileID }
+        try contextAccess?.validate()
+        guard try contextStore().codexContext() == selected, boundContext == selected else {
+            throw CodexExecutionContextError.changed
+        }
+        return .init(selectedCodexContextID: selected.id, configurationVersion: version,
+                     observedAt: Date(), entries: entries)
     }
 
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws {

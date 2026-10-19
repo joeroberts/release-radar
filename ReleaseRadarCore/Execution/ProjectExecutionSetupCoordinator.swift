@@ -6,6 +6,26 @@ public enum ProjectExecutionHookStorage: Sendable {
     case inline(Data)
 }
 
+public struct ProjectExecutionWorkerProfileObservation: Equatable, Sendable {
+    public struct Entry: Equatable, Sendable {
+        public let profileID: String
+        public let observedDefinition: Data
+        public init(profileID: String, observedDefinition: Data) {
+            self.profileID = profileID; self.observedDefinition = observedDefinition
+        }
+    }
+    public let selectedCodexContextID: UUID
+    public let configurationVersion: String
+    public let observedAt: Date
+    public let entries: [Entry]
+    public init(selectedCodexContextID: UUID, configurationVersion: String, observedAt: Date, entries: [Entry]) {
+        self.selectedCodexContextID = selectedCodexContextID
+        self.configurationVersion = configurationVersion
+        self.observedAt = observedAt
+        self.entries = entries
+    }
+}
+
 public protocol ProjectExecutionConfiguring: Sendable {
     func selectedCodexContextID() async throws -> UUID?
     func useCodexContext(_ expected: UUID?) async throws
@@ -21,6 +41,7 @@ public protocol ProjectExecutionConfiguring: Sendable {
     func workerProfileExists(primaryRoot: String, profileID: String) async throws -> Bool
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws
+    func observeWorkerProfiles(primaryRoot: String) async throws -> ProjectExecutionWorkerProfileObservation
 }
 
 public extension ProjectExecutionConfiguring {
@@ -34,6 +55,7 @@ public extension ProjectExecutionConfiguring {
         try await removeWorkerProfile(primaryRoot: primaryRoot, profileID: profileID, expected: expected)
     }
     func recoverConfigurationConnection() async throws { try await finishConfiguration() }
+    func observeWorkerProfiles(primaryRoot: String) async throws -> ProjectExecutionWorkerProfileObservation { throw ProjectExecutionError.unavailable }
 }
 
 public enum ProjectExecutionHookAction: String, Sendable { case update, remove, resume }
@@ -68,6 +90,46 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         guard let registration = project.registration,
               project.canonicalRoot.resolvingSymlinksInPath().path == project.canonicalRoot.path else { throw ProjectExecutionError.identityMismatch }
         return registration
+    }
+
+    public func observeWorkerProfiles(project: AuthorizedProject) async throws -> ProjectExecutionWorkerProfileObservation {
+        let observation: ProjectExecutionWorkerProfileObservation
+        do { observation = try await observeWorkerProfilesOperation(project: project) }
+        catch {
+            let failure = error
+            try await configuration.finishConfiguration()
+            throw failure
+        }
+        try await configuration.finishConfiguration()
+        return observation
+    }
+
+    private func observeWorkerProfilesOperation(project: AuthorizedProject) async throws -> ProjectExecutionWorkerProfileObservation {
+        let registration = try identity(project)
+        let policy = try store().policy(projectID: registration.projectID.rawValue)
+        guard policy.registration == registration,
+              let context = policy.codexContextID,
+              try await configuration.selectedCodexContextID() == context else {
+            throw ProjectExecutionError.identityMismatch
+        }
+        let observation = try await configuration.observeWorkerProfiles(primaryRoot: policy.primaryRoot)
+        guard observation.selectedCodexContextID == context,
+              try await configuration.selectedCodexContextID() == context,
+              !observation.configurationVersion.isEmpty,
+              observation.entries.count <= 256 else { throw ProjectExecutionError.conflict }
+        let validatedEntries = try observation.entries.map { entry in
+            try ProjectExecutionPaths.component(entry.profileID)
+            guard let value = try? JSONSerialization.jsonObject(with: entry.observedDefinition) as? [String: Any],
+                  Set(value.keys) == ["filesystem", "network"], value["filesystem"] is [String: Any],
+                  let network = value["network"] as? [String: Any], Set(network.keys) == ["enabled"],
+                  network["enabled"] as? Bool == false else { throw ProjectExecutionError.conflict }
+            return entry
+        }
+        let entries = validatedEntries.filter { $0.profileID.hasPrefix("rr-") }
+        guard Set(entries.map(\.profileID)).count == entries.count else { throw ProjectExecutionError.conflict }
+        return .init(selectedCodexContextID: observation.selectedCodexContextID,
+                     configurationVersion: observation.configurationVersion,
+                     observedAt: observation.observedAt, entries: entries)
     }
 
     private func digest(_ data: Data?) -> String? {

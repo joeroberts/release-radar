@@ -375,6 +375,7 @@ struct SidebarView: View {
                             try await model.manageExecutionHook(registration: registration, action: action)
                         },
                         loadExecutionAssignments: { registration in try await model.executionAssignments(registration: registration) },
+                        loadExecutionProfileCleanupPreview: { registration in try await model.executionProfileCleanupPreview(registration: registration) },
                         retireExecutionAssignment: { registration, expected in try await model.retireExecutionAssignment(registration: registration, expected: expected) },
                         recoverLostWorker: { registration, expected in try await model.recoverLostWorker(registration: registration, expected: expected) },
                         availableCodexTasks: model.codexTasks(for: projectID),

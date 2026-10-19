@@ -33,6 +33,28 @@ struct ProjectExecutionPurgeStage: Codable, Equatable, Sendable {
     let updatedFiles: [ProjectExecutionPurgeFileUpdate]
 }
 
+/// A bounded protected-store claim used by the cleanup-preview producer.
+/// The configuration owner remains responsible for the selected-context
+/// observation and for interpreting missing-context claims as unresolved.
+public struct ProjectExecutionProfileOwnershipClaim: Equatable, Sendable {
+    public let candidateProfileID: String
+    public let projectID: String
+    public let registrationID: String
+    public let registrationGeneration: Int
+    public let assignmentID: String
+    public let codexContextID: UUID?
+
+    public init(candidateProfileID: String, projectID: String, registrationID: String,
+                registrationGeneration: Int, assignmentID: String, codexContextID: UUID?) {
+        self.candidateProfileID = candidateProfileID
+        self.projectID = projectID
+        self.registrationID = registrationID
+        self.registrationGeneration = registrationGeneration
+        self.assignmentID = assignmentID
+        self.codexContextID = codexContextID
+    }
+}
+
 /// Owns the exact writer locks and manifest lock until commit/rollback cleanup.
 /// The owner flock also distinguishes a suspended live operation from a crash.
 final class ProjectExecutionPurgeLease: @unchecked Sendable {
@@ -177,6 +199,53 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
             }
             guard errno == 0 else { throw ProjectExecutionError.unavailable }
             return result
+        }
+    }
+
+    /// Reads at most two relevant claims for each candidate profile from every
+    /// protected assignment namespace. Known other-context records cannot
+    /// compete with the selected context; an absent context is retained so the
+    /// caller can fail closed. This is an observation, not a global snapshot.
+    public func profileOwnershipClaims(candidateProfileIDs: Set<String>,
+                                       selectedCodexContextID: UUID) throws -> [ProjectExecutionProfileOwnershipClaim] {
+        guard !candidateProfileIDs.isEmpty else { return [] }
+        let candidates = try Set(candidateProfileIDs.map { try ProjectExecutionPaths.component($0) })
+        return try lock.withLock {
+            var claims = [ProjectExecutionProfileOwnershipClaim]()
+            var retainedCounts = Dictionary(uniqueKeysWithValues: candidates.map { ($0, 0) })
+            for project in try childNames(["Assignments"]) {
+                for task in try childNames(["Assignments", project]) {
+                    let value = try read(ProjectExecutionAssignment.self,
+                                         path: ["Assignments", project, task, "assignment.json"])
+                    try value.validated()
+                    guard value.id == task, value.registration.projectID.rawValue == project else {
+                        throw ProjectExecutionError.identityMismatch
+                    }
+                    guard candidates.contains(value.permissionProfile),
+                          value.codexContextID == nil || value.codexContextID == selectedCodexContextID,
+                          retainedCounts[value.permissionProfile, default: 0] < 2 else { continue }
+                    guard let registrationGeneration = Int(exactly: value.registration.requestGeneration) else {
+                        throw ProjectExecutionError.unavailable
+                    }
+                    claims.append(.init(candidateProfileID: value.permissionProfile, projectID: project,
+                                        registrationID: value.registration.registrationID,
+                                        registrationGeneration: registrationGeneration,
+                                        assignmentID: value.id, codexContextID: value.codexContextID))
+                    retainedCounts[value.permissionProfile, default: 0] += 1
+                }
+            }
+            return claims.sorted { left, right in
+                if left.candidateProfileID != right.candidateProfileID {
+                    return left.candidateProfileID < right.candidateProfileID
+                }
+                if left.projectID != right.projectID { return left.projectID < right.projectID }
+                if left.registrationID != right.registrationID { return left.registrationID < right.registrationID }
+                if left.registrationGeneration != right.registrationGeneration {
+                    return left.registrationGeneration < right.registrationGeneration
+                }
+                if left.assignmentID != right.assignmentID { return left.assignmentID < right.assignmentID }
+                return (left.codexContextID?.uuidString ?? "") < (right.codexContextID?.uuidString ?? "")
+            }
         }
     }
 

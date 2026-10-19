@@ -61,6 +61,7 @@ struct ProjectOverviewView: View {
     var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
     var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
     var loadExecutionAssignments: ((ProjectRegistration) async throws -> [ProjectExecutionAssignment])? = nil
+    var loadExecutionProfileCleanupPreview: ((ProjectRegistration) async throws -> ProjectExecutionProfileCleanupPreview)? = nil
     var retireExecutionAssignment: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var recoverLostWorker: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
@@ -157,6 +158,12 @@ struct ProjectOverviewView: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                }
+                if let registration = project.registration, let loadExecutionProfileCleanupPreview {
+                    ExecutionProfileCleanupPreviewView(registration: registration) {
+                        try await loadExecutionProfileCleanupPreview(registration)
+                    }
+                    .id(registration)
                 }
                 }
                 .padding(horizontalContentPadding)

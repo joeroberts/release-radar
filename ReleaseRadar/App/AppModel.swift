@@ -4542,6 +4542,138 @@ final class AppModel {
         try await projectOnboarding.executionAssignments(registration: registration, resources: executionResourcesForOwner())
     }
 
+    /// Builds a read-only cleanup preview from a newly observed selected Codex
+    /// context. The configuration adapter owns observation provenance; this
+    /// method rereads protected assignment claims for every preview instead of
+    /// persisting eligibility.
+    func executionProfileCleanupPreview(registration: ProjectRegistration) async throws -> ProjectExecutionProfileCleanupPreview {
+        let setup = executionSetupForOnboarding()
+        let initialObservation = try await projectOnboarding.withAuthorizedProject(projectID: registration.projectID) { project in
+            guard project.registration == registration else { throw ProjectExecutionError.identityMismatch }
+            return try await setup.observeWorkerProfiles(project: project)
+        }
+        let assignments = try await executionAssignments(registration: registration)
+        let observation = try await projectOnboarding.withAuthorizedProject(projectID: registration.projectID) { project in
+            guard project.registration == registration else { throw ProjectExecutionError.identityMismatch }
+            let confirmed = try await setup.observeWorkerProfiles(project: project)
+            guard confirmed.selectedCodexContextID == initialObservation.selectedCodexContextID,
+                  confirmed.configurationVersion == initialObservation.configurationVersion else {
+                throw ProjectExecutionError.conflict
+            }
+            return confirmed
+        }
+        return try await projectOnboarding.withAuthorizedProject(projectID: registration.projectID) { project in
+            guard project.registration == registration else { throw ProjectExecutionError.identityMismatch }
+            let store = try ProjectExecutionFileStore(root: ProjectExecutionFileStore.applicationRoot(), create: false)
+            let protectedContext = try store.codexContext()
+            let protectedPolicy = try store.policy(projectID: registration.projectID.rawValue)
+            guard protectedContext?.id == observation.selectedCodexContextID,
+                  protectedPolicy.registration == registration,
+                  protectedPolicy.codexContextID == observation.selectedCodexContextID else {
+                throw ProjectExecutionError.identityMismatch
+            }
+            let refreshedAssignments = try assignments.map { assignment -> ProjectExecutionAssignment in
+                let refreshed = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
+                guard refreshed == assignment else { throw ProjectExecutionError.conflict }
+                return refreshed
+            }
+            let observedDefinitions = Dictionary(uniqueKeysWithValues: observation.entries.map {
+                ($0.profileID, $0.observedDefinition)
+            })
+            let candidateIDs = Set(observedDefinitions.keys).union(refreshedAssignments.map(\.permissionProfile))
+            let claims = try store.profileOwnershipClaims(candidateProfileIDs: candidateIDs,
+                                                          selectedCodexContextID: observation.selectedCodexContextID)
+            let assignmentsByProfile = Dictionary(grouping: refreshedAssignments, by: \.permissionProfile)
+
+            let rows = candidateIDs.sorted().map { profileID -> ProjectExecutionProfileCleanupPreview.Row in
+                let profileClaims = claims.filter { $0.candidateProfileID == profileID }
+                let matchingAssignments = assignmentsByProfile[profileID] ?? []
+                let observationValue: ProjectExecutionProfileObservation = observedDefinitions[profileID]
+                    .map(ProjectExecutionProfileObservation.present) ?? .missing
+
+                if ["rr-project-ro", "rr-project-restricted", "rr-command-read-probe"].contains(profileID) {
+                    return .init(profileID: profileID, assignmentID: nil, role: nil,
+                                 category: .outsideAssignmentCleanup,
+                                 reason: .association(.reservedProfile), configurationBaseline: nil,
+                                 evidence: "This reusable project profile or command-read probe is outside assignment cleanup.")
+                }
+
+                guard matchingAssignments.count == 1 else {
+                    let reason: ProjectExecutionProfileCleanupClassification.Reason =
+                        matchingAssignments.count > 1 || profileClaims.count > 1
+                        ? .association(.duplicateOwnership)
+                        : .association(.missingAssignmentDefinition)
+                    return .init(profileID: profileID, assignmentID: matchingAssignments.first?.id,
+                                 role: matchingAssignments.first?.role.rawValue, category: .unknown,
+                                 reason: reason, configurationBaseline: nil,
+                                 evidence: "The protected assignment association is missing or conflicts with another claim.")
+                }
+
+                let assignment = matchingAssignments[0]
+                let exactClaims = profileClaims.filter {
+                    $0.projectID == assignment.registration.projectID.rawValue
+                        && $0.registrationID == assignment.registration.registrationID
+                        && $0.registrationGeneration == assignment.registration.requestGeneration
+                        && $0.assignmentID == assignment.id
+                        && $0.codexContextID == assignment.codexContextID
+                }
+                guard exactClaims.count == 1, profileClaims.count == 1 else {
+                    let reason: ProjectExecutionProfileCleanupClassification.Reason = profileClaims.count > 1
+                        ? .association(.duplicateOwnership)
+                        : .identityMismatch
+                    return .init(profileID: profileID, assignmentID: assignment.id,
+                                 role: assignment.role.rawValue, category: .unknown,
+                                 reason: reason, configurationBaseline: nil,
+                                 evidence: "The protected assignment association is missing or conflicts with another claim.")
+                }
+                let association = ProjectExecutionProfileAssociation.classify(
+                    assignment: assignment,
+                    selectedCodexContextID: observation.selectedCodexContextID,
+                    observation: observationValue,
+                    candidateProfileID: profileID,
+                    duplicateAssignmentIDs: profileClaims.count > 1 ? Set(profileClaims.map(\.assignmentID)) : []
+                )
+                let baseline = observedDefinitions[profileID].map {
+                    ProjectExecutionProfileCleanupClassification.ConfigurationBaseline(
+                        candidateProfileID: profileID,
+                        selectedCodexContextID: observation.selectedCodexContextID,
+                        observedDefinition: $0
+                    )
+                }
+                let result = ProjectExecutionProfileCleanupClassification.classify(.init(
+                    assignment: assignment,
+                    association: association,
+                    configurationObservation: observationValue,
+                    configurationBaseline: baseline,
+                    liveState: .unavailable
+                ))
+                return .init(profileID: profileID, assignmentID: result.assignmentID,
+                             role: assignment.role.rawValue, category: result.category,
+                             reason: result.reason, configurationBaseline: result.configurationBaseline,
+                             assignmentBaseline: assignment,
+                             evidence: Self.cleanupPreviewEvidence(for: result))
+            }
+            guard try store.codexContext() == protectedContext,
+                  try store.policy(projectID: registration.projectID.rawValue) == protectedPolicy else {
+                throw ProjectExecutionError.conflict
+            }
+            return .init(observationIdentity: .init(selectedCodexContextID: observation.selectedCodexContextID,
+                                                     configurationVersion: observation.configurationVersion,
+                                                     observedAt: observation.observedAt), rows: rows)
+        }
+    }
+
+    nonisolated private static func cleanupPreviewEvidence(for result: ProjectExecutionProfileCleanupClassification.Result) -> String {
+        switch result.category {
+        case .cleanupEligible: "The protected assignment is closed with durable worker-closure evidence and a matching current profile definition."
+        case .active: "The protected assignment remains active in the current preview."
+        case .recoveryRetained: "The protected assignment is retained so recovery evidence and resources remain available."
+        case .alreadyRemoved: "The completed retirement receipt records this profile as already removed."
+        case .outsideAssignmentCleanup: "This profile is outside assignment cleanup."
+        case .unknown: "The available protected and configuration evidence is insufficient for safe cleanup."
+        }
+    }
+
     func retireExecutionAssignment(registration: ProjectRegistration, expected: ProjectExecutionAssignment) async throws {
         let folder: URL?
         if try await projectOnboarding.executionResourcesNeedOriginalFolder(registration: registration, expected: expected) {
