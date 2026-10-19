@@ -2763,6 +2763,60 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanUnconfirmedSaveRejectsRootMismatchWithoutRetargetingEnvelope() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let replacementRoot = fixture.projectRoot.deletingLastPathComponent().appendingPathComponent("replacement", isDirectory: true)
+        try FileManager.default.createDirectory(at: replacementRoot, withIntermediateDirectories: true)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(
+            entityIDs: [], auditEventID: nil, error: .outcomeUnknown
+        ))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+        let edited = DeliveryGoalDraft(
+            id: existing.id,
+            title: "Keep root-bound draft",
+            outcome: "Never retarget replay",
+            doneCriteria: ["Reject changed root"],
+            sortOrder: existing.sortOrder
+        )
+        let first = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+        guard case .unconfirmed(error: .outcomeUnknown) = first.status else {
+            return XCTFail("Fixture must retain an unconfirmed save before root recovery")
+        }
+        fixture.bookmarks.setFailureMode(.mismatchedRoot(replacementRoot))
+
+        let recovery = await model.reconcileDeliveryGoalDraftSave(attemptID: first.attemptID)
+
+        XCTAssertEqual(
+            recovery.status,
+            .rejected(error: .staleProjectRegistration, refreshedEditor: nil)
+        )
+        XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        XCTAssertEqual((await capture.requests()).count, 1, "Root mismatch must not replay or rebuild the original envelope")
+        let persisted = try await fixture.store.read { connection in
+            try DeliveryPlanningPolicy.loadGoal(
+                projectID: fixture.projectID,
+                goalID: existing.id,
+                connection: connection
+            )
+        }
+        XCTAssertEqual(persisted?.title, existing.title)
+    }
+
+    @MainActor
     func testTask10NativePlanningControlsAndInspectorWideCompact() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
