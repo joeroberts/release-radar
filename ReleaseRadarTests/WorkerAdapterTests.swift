@@ -4,6 +4,13 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkerAdapterTests: XCTestCase {
+    final class AttemptProbe: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: UUID?
+        func record(_ attempt: UUID?) { lock.withLock { value = attempt } }
+        var recorded: UUID? { lock.withLock { value } }
+    }
+
     final class StoreProbe: @unchecked Sendable {
         let root: URL
         private let lock = NSLock()
@@ -86,6 +93,48 @@ final class WorkerAdapterTests: XCTestCase {
         try await service.disconnect()
         XCTAssertEqual(peer.closeCount, 1)
         XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one").connectionClosed, true)
+    }
+
+    func testStartPersistsOneOriginalAttemptBeforeTransportAndRetainsItThroughBind() async throws {
+        let fixture = try fixture()
+        let peer = Peer(policy: fixture.policy)
+        let probe = AttemptProbe()
+        let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in
+            let reserved = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+            XCTAssertEqual(reserved.state, .unknown)
+            XCTAssertEqual(reserved.launchReserved, true)
+            XCTAssertEqual(reserved.uncertainOutcome, true)
+            probe.record(reserved.workerAttemptID)
+            XCTAssertNotNil(probe.recorded,
+                "The original worker UUID must be durable before any transport is constructed")
+            return peer
+        })
+
+        let result = try await adapter.start(projectID: "project-one", assignmentID: "task-one",
+            prompt: "Begin the approved work").object()
+        let workerID = try XCTUnwrap(result["workerId"] as? String)
+        let persisted = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(persisted.workerAttemptID, probe.recorded)
+        XCTAssertEqual(persisted.workerAttemptID?.uuidString, workerID)
+        XCTAssertEqual(persisted.sessionID, "session-one")
+        XCTAssertEqual(persisted.workerAttemptID?.uuidString, workerID,
+            "Binding a session must retain the UUID used for the launch attempt")
+    }
+
+    func testWorkerPolicyRejectsDifferentAttemptAfterReservationAndBinding() throws {
+        let fixture = try fixture()
+        let attempt = UUID()
+        try fixture.policy.reserve(attemptID: attempt)
+        let reserved = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(reserved.workerAttemptID, attempt)
+
+        XCTAssertThrowsError(try fixture.policy.bind(sessionID: "session-one", attemptID: UUID()),
+            "A session cannot bind to a different worker attempt")
+        try fixture.policy.bind(sessionID: "session-one", attemptID: attempt)
+        XCTAssertThrowsError(try fixture.policy.current(sessionID: "session-one", attemptID: UUID()),
+            "Subsequent admission must retain the original attempt identity")
+        XCTAssertEqual(try fixture.policy.current(sessionID: "session-one", attemptID: attempt)
+            .workerAttemptID, attempt)
     }
 
     actor Gate {

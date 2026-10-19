@@ -60,6 +60,43 @@ final class ProjectExecutionStoreTests: XCTestCase {
         XCTAssertEqual(owned.category, .owned)
         XCTAssertEqual(owned.assignmentID, assignment.id)
         XCTAssertNil(owned.reason)
+        XCTAssertEqual(owned.ownershipProvenance, .verifiedProvisioningReceipt)
+        XCTAssertEqual(owned.installationEvidence, .verified)
+        XCTAssertFalse(owned.requiresInstallationRecovery)
+
+        var legacyAssignment = assignment
+        legacyAssignment.profileProvisioningReceipt = nil
+        let legacyOwned = ProjectExecutionProfileAssociation.classify(assignment: legacyAssignment,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: legacyAssignment.permissionProfile)
+        XCTAssertEqual(legacyOwned.category, .owned,
+            "An exact protected legacy record is ownership evidence even without a new receipt")
+        XCTAssertEqual(legacyOwned.assignmentID, legacyAssignment.id)
+        XCTAssertEqual(legacyOwned.ownershipProvenance, .legacyProtectedAssignment)
+        XCTAssertEqual(legacyOwned.installationEvidence, .unrecorded)
+        XCTAssertTrue(legacyOwned.requiresInstallationRecovery,
+            "Legacy ownership must not fabricate installation history")
+
+        var pendingAssignment = assignment
+        pendingAssignment.profileProvisioningReceipt = .init(state: .pending, provenance: .newlyPrepared,
+            requestedAt: Date(timeIntervalSinceReferenceDate: 1_002), verifiedAt: nil)
+        let pendingOwned = ProjectExecutionProfileAssociation.classify(assignment: pendingAssignment,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: pendingAssignment.permissionProfile)
+        XCTAssertEqual(pendingOwned.category, .owned)
+        XCTAssertEqual(pendingOwned.ownershipProvenance, .pendingProvisioningReceipt)
+        XCTAssertEqual(pendingOwned.installationEvidence, .pending)
+        XCTAssertTrue(pendingOwned.requiresInstallationRecovery)
+
+        var reservedLegacyAttempt = assignment
+        reservedLegacyAttempt.launchReserved = true
+        reservedLegacyAttempt.uncertainOutcome = true
+        reservedLegacyAttempt.workerAttemptID = nil
+        let unknownAttempt = ProjectExecutionProfileAssociation.classify(assignment: reservedLegacyAttempt,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: reservedLegacyAttempt.permissionProfile)
+        XCTAssertEqual(unknownAttempt.category, .unknown)
+        XCTAssertEqual(unknownAttempt.reason, .legacyWorkerIdentityUnavailable)
 
         let mismatch = ProjectExecutionProfileAssociation.classify(assignment: assignment,
             selectedCodexContextID: contextID, observation: .present(Data("different".utf8)),
