@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Proposed wide Project Plan with a phase roadmap and selected-phase inspector</title>
+  <desc id="desc">A restrained phase roadmap shows four lifecycle-ordered phases. Planning is selected and its inspector explains readiness, progress, goals, assignments, and the single recommended action. Technical metadata is collapsed.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#081522"/><stop offset="1" stop-color="#0d2434"/></linearGradient>
+    <linearGradient id="active" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#123449"/><stop offset="1" stop-color="#0e2b3e"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="9" stdDeviation="15" flood-color="#02070d" flood-opacity=".28"/></filter>
+    <style>
+      .app { fill:url(#bg); }
+      .sidebar { fill:#07111c; }
+      .panel { fill:#0b1d2a; stroke:#28445a; stroke-width:1; }
+      .row { fill:#0c2130; stroke:#29485f; stroke-width:1; }
+      .selected { fill:url(#active); stroke:#50d8f0; stroke-width:2; }
+      .quiet { fill:#0a1a26; stroke:#233b4e; stroke-width:1; }
+      .button { fill:#123449; stroke:#3d708e; stroke-width:1; }
+      .primary { fill:#17b8cf; }
+      .chipBlue { fill:#103a52; stroke:#3694b5; }
+      .chipAmber { fill:#4a3215; stroke:#d59a3a; }
+      .chipGreen { fill:#123b32; stroke:#3aa985; }
+      .chipGray { fill:#182a38; stroke:#4a6579; }
+      .text { fill:#eaf3fa; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      .muted { fill:#9db1c1; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      .h1 { font-size:26px; font-weight:700; }
+      .h2 { font-size:19px; font-weight:700; }
+      .body { font-size:15px; }
+      .small { font-size:13px; }
+      .tiny { font-size:12px; }
+      .label { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:14px; font-weight:650; }
+      .rule { stroke:#254052; stroke-width:1; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" class="app"/>
+  <rect width="216" height="900" class="sidebar"/>
+  <circle cx="34" cy="38" r="12" fill="#17b8cf"/><path d="M28 38h12M34 32v12" stroke="#07111c" stroke-width="2"/>
+  <text x="56" y="44" class="text h2">Release Radar</text>
+  <text x="24" y="94" class="muted tiny">WORKSPACE</text>
+  <rect x="12" y="112" width="192" height="42" rx="8" fill="#123449"/>
+  <text x="28" y="138" class="text label">Project Plan</text>
+  <text x="28" y="183" class="muted body">Goals</text>
+  <text x="28" y="223" class="muted body">Work board</text>
+  <text x="28" y="263" class="muted body">Dependencies</text>
+  <text x="28" y="303" class="muted body">History</text>
+  <line x1="24" y1="336" x2="192" y2="336" class="rule"/>
+  <text x="28" y="374" class="muted body">Settings</text>
+
+  <text x="248" y="51" class="text h1">Project Plan</text>
+  <text x="248" y="77" class="muted body">Signal Station · 4 phases</text>
+  <rect x="1000" y="29" width="184" height="40" rx="9" class="button"/>
+  <text x="1092" y="54" text-anchor="middle" class="text label">Prepare repository plan</text>
+  <rect x="1196" y="29" width="216" height="40" rx="9" class="button"/>
+  <text x="1304" y="54" text-anchor="middle" class="text label">Open all-phase board</text>
+
+  <text x="248" y="125" class="text h2">Roadmap</text>
+  <text x="248" y="148" class="muted small">Lifecycle order · select a phase for details</text>
+  <rect x="248" y="166" width="590" height="126" rx="12" class="quiet"/>
+  <rect x="264" y="185" width="72" height="24" rx="12" class="chipGreen"/>
+  <text x="300" y="202" text-anchor="middle" class="text tiny">COMPLETED</text>
+  <text x="264" y="238" class="text h2">1 · Foundation</text>
+  <text x="264" y="265" class="muted body">Ready · 12 of 12 tickets accepted</text>
+  <circle cx="806" cy="229" r="12" fill="#2d9d7d"/><path d="M800 229l4 4 8-9" fill="none" stroke="#f2fffb" stroke-width="2"/>
+
+  <rect x="248" y="306" width="590" height="154" rx="12" class="selected" filter="url(#shadow)"/>
+  <rect x="264" y="325" width="94" height="24" rx="12" class="chipBlue"/>
+  <text x="311" y="342" text-anchor="middle" class="text tiny">IN DELIVERY</text>
+  <rect x="366" y="325" width="148" height="24" rx="12" class="chipAmber"/>
+  <text x="440" y="342" text-anchor="middle" class="text tiny">2 UNASSIGNED</text>
+  <text x="264" y="380" class="text h2">2 · Planning</text>
+  <text x="264" y="407" class="text body">Draft · 8 of 10 tickets delivered</text>
+  <rect x="264" y="424" width="338" height="8" rx="4" fill="#1d3546"/><rect x="264" y="424" width="270" height="8" rx="4" fill="#35cbe0"/>
+  <text x="800" y="427" text-anchor="end" class="text label" style="fill:#77dfed">Next: Assign 2 tickets  ›</text>
+  <path d="M803 363l8 8 8-8" fill="none" stroke="#8fe9f5" stroke-width="2"/>
+
+  <rect x="248" y="474" width="590" height="126" rx="12" class="row"/>
+  <rect x="264" y="493" width="80" height="24" rx="12" class="chipGray"/>
+  <text x="304" y="510" text-anchor="middle" class="text tiny">UPCOMING</text>
+  <rect x="352" y="493" width="112" height="24" rx="12" class="chipAmber"/>
+  <text x="408" y="510" text-anchor="middle" class="text tiny">NEEDS GOAL</text>
+  <text x="264" y="546" class="text h2">3 · Delivery</text>
+  <text x="264" y="573" class="muted body">Draft · 0 of 8 tickets delivered</text>
+  <text x="800" y="560" text-anchor="end" class="muted label">Next: Create goal  ›</text>
+
+  <rect x="248" y="614" width="590" height="112" rx="12" class="row"/>
+  <rect x="264" y="633" width="92" height="24" rx="12" class="chipGray"/>
+  <text x="310" y="650" text-anchor="middle" class="text tiny">UNASSESSED</text>
+  <text x="264" y="688" class="text h2">4 · Release</text>
+  <text x="800" y="688" text-anchor="end" class="muted body">Legacy unassessed · progress unavailable</text>
+  <rect x="248" y="746" width="590" height="60" rx="10" fill="#0a1a26" stroke="#233b4e"/>
+  <text x="276" y="782" class="muted body">✓ 1 completed phase shown · Collapse completed phases</text>
+
+  <rect x="862" y="104" width="550" height="702" rx="14" class="panel" filter="url(#shadow)"/>
+  <text x="890" y="142" class="muted small">SELECTED PHASE</text>
+  <text x="890" y="177" class="text h1">Planning</text>
+  <rect x="1264" y="137" width="120" height="30" rx="15" class="chipBlue"/>
+  <text x="1324" y="157" text-anchor="middle" class="text small">In delivery</text>
+  <text x="890" y="211" class="text body">Draft plan · 8 of 10 delivered · 2 tickets unassigned.</text>
+  <rect x="890" y="232" width="494" height="74" rx="10" fill="#3b2a16" stroke="#a9772d"/>
+  <text x="910" y="258" class="text label" style="fill:#ffd88f;font-family:Helvetica,sans-serif">Next action</text>
+  <text x="910" y="282" class="text body">Assign the 2 uncovered tickets before finalizing.</text>
+  <rect x="1218" y="249" width="148" height="40" rx="9" class="primary"/>
+  <text x="1292" y="274" text-anchor="middle" class="text label" style="fill:#06131c;font-family:Helvetica,sans-serif">Edit assignments</text>
+
+  <text x="890" y="345" class="text h2">Goals</text>
+  <text x="890" y="372" class="muted body">2 goals · 8 of 10 tickets covered</text>
+  <rect x="890" y="391" width="494" height="78" rx="9" class="quiet"/>
+  <text x="910" y="420" class="text label">Make planning trustworthy</text>
+  <text x="910" y="446" class="muted small">Done when readiness and recovery are explicit.</text>
+  <text x="1346" y="431" text-anchor="end" class="text label" style="fill:#77dfed;font-family:Helvetica,sans-serif">Edit</text>
+  <rect x="890" y="481" width="160" height="36" rx="8" class="button"/>
+  <text x="970" y="504" text-anchor="middle" class="text label">Create Delivery Goal</text>
+
+  <line x1="890" y1="542" x2="1384" y2="542" class="rule"/>
+  <text x="890" y="578" class="text h2">Planning actions</text>
+  <rect x="890" y="595" width="142" height="38" rx="8" class="button"/><text x="961" y="619" text-anchor="middle" class="text label">Open phase board</text>
+  <rect x="1044" y="595" width="148" height="38" rx="8" class="button"/><text x="1118" y="619" text-anchor="middle" class="text label">View dependencies</text>
+  <rect x="1204" y="595" width="180" height="38" rx="8" fill="#10202c" stroke="#344b5d"/><text x="1294" y="619" text-anchor="middle" class="muted label">Finalize after corrections</text>
+
+  <rect x="890" y="655" width="494" height="52" rx="8" class="quiet"/>
+  <text x="910" y="687" class="text label">Plan changes</text><text x="1352" y="687" text-anchor="end" class="muted body">No prepared changes  ›</text>
+  <rect x="890" y="719" width="494" height="52" rx="8" class="quiet"/>
+  <text x="910" y="751" class="text label">Technical record</text><text x="1352" y="751" text-anchor="end" class="muted body">Collapsed  ›</text>
+
+  <text x="248" y="856" class="muted small">PROPOSAL · Synthetic content · Not a runtime capture</text>
+  <text x="1412" y="856" text-anchor="end" class="muted small">Wide layout ≥ 1100 pt</text>
+</svg>
