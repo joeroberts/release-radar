@@ -2724,6 +2724,32 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testLoadDeliveryGoalEditorRejectsCompletedPhaseWithoutMutation() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed completed phase") { connection in
+            try connection.execute(
+                """
+                UPDATE phase_lifecycles
+                SET lifecycle='completed', revision=1, completion_baseline_digest='synthetic-complete',
+                    completed_at='2026-10-19T12:00:00Z', record_origin='reconstruction'
+                WHERE project_id=? AND phase_id=?
+                """,
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+
+        let result = await model.loadDeliveryGoalEditor(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            goalID: existing.id
+        )
+
+        XCTAssertEqual(result, .failed(.completedPhaseReadOnly(fixture.roadmapPhaseID)))
+    }
+
+    @MainActor
     func testProjectPlanSavedNeedsReloadRetainsReceiptWithoutReplayEligibility() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await seedEditableDeliveryGoal(in: fixture)
