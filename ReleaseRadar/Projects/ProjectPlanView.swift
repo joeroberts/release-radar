@@ -86,15 +86,15 @@ func phasePlanFinalizationErrorMessage(_ error: AgentCommandError) -> String {
         }
         return "This draft is incomplete. Complete the linked Delivery Goals, assign the linked tickets, and resolve the linked conflicts before finalizing."
     case .staleProjectRegistration, .planRevisionConflict:
-        "This phase plan changed. Refresh the project plan, then finalize the current revision."
+        return "This phase plan changed. Refresh the project plan, then finalize the current revision."
     case .appUnavailable:
-        "Release Radar is temporarily unavailable. No finalization was sent; try again when it is available."
+        return "Release Radar is temporarily unavailable. No finalization was sent; try again when it is available."
     case .outcomeUnknown:
-        "Release Radar could not confirm finalization. Reconcile the same saved attempt before trying again."
+        return "Release Radar could not confirm finalization. Reconcile the same saved attempt before trying again."
     case .completedPhaseReadOnly:
-        "This completed phase cannot be finalized."
+        return "This completed phase cannot be finalized."
     default:
-        "The phase plan could not be finalized. Refresh the project plan and try again."
+        return "The phase plan could not be finalized. Refresh the project plan and try again."
     }
 }
 func deliveryGoalAssignmentDraftErrorMessage(_ error: AgentCommandError) -> String {
