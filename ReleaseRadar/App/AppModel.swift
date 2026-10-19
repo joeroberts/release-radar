@@ -478,7 +478,7 @@ final class AppModel {
                     )
                 }
             }
-        self.deliveryGoalDraftOwnerCommandDispatch = deliveryGoalDraftOwnerCommandDispatch
+        let resolvedDeliveryGoalDraftOwnerCommandDispatch = deliveryGoalDraftOwnerCommandDispatch
             ?? { projectID, registration, requestID, command in
                 do {
                     return try await resolvedOnboarding.withAuthorizedProject(projectID: projectID) { project in
@@ -504,6 +504,7 @@ final class AppModel {
                     return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
                 }
             }
+        self.deliveryGoalDraftOwnerCommandDispatch = resolvedDeliveryGoalDraftOwnerCommandDispatch
         self.repositoryPlanReadbackLoader = repositoryPlanReadbackLoader
         self.repositoryPlanApplyReconciler = repositoryPlanApplyReconciler
             ?? { attempt in
@@ -583,7 +584,8 @@ final class AppModel {
         recoveryServices?.observeAgentBridgeHealth { [weak self] snapshot in
             self?.applyConnectorHealthSnapshot(snapshot)
         }
-        self.deliveryGoalAssignmentDraftOwnerCommandDispatch = deliveryGoalAssignmentDraftOwnerCommandDispatch ?? self.deliveryGoalDraftOwnerCommandDispatch
+        self.deliveryGoalAssignmentDraftOwnerCommandDispatch = deliveryGoalAssignmentDraftOwnerCommandDispatch
+            ?? resolvedDeliveryGoalDraftOwnerCommandDispatch
     }
 
 #if DEBUG
