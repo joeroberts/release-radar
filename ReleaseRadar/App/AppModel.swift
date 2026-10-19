@@ -212,6 +212,12 @@ final class AppModel {
     private let codexObserver: any CodexObserver
     private var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
     private var executionResourceLifecycle: ProjectExecutionResourceLifecycle?
+    private struct RetainedExecutionProfileCleanupSetup {
+        let registration: ProjectRegistration
+        let confirmation: ProjectExecutionProfileCleanupConfirmation
+        let setup: ProjectExecutionSetupCoordinator
+    }
+    private var retainedExecutionProfileCleanupSetups: [UUID: RetainedExecutionProfileCleanupSetup] = [:]
     let codexPluginShippedVersion: String
     private let codexPluginShippedCapability: RecognizedPluginCapability?
     private let pushoverKeychain: PushoverKeychainStore
@@ -4679,12 +4685,49 @@ final class AppModel {
         }
     }
 
+    /// Performs only the owner-confirmed profile cleanup whose exact preview
+    /// evidence is carried in `confirmation`; assignment retirement remains a
+    /// separate owner action.
+    func removeConfirmedExecutionProfiles(registration: ProjectRegistration,
+                                          confirmation: ProjectExecutionProfileCleanupConfirmation) async throws -> [ProjectExecutionProfileCleanupOutcome] {
+        guard confirmation.registration == registration else {
+            throw ProjectExecutionError.identityMismatch
+        }
+        let setup: ProjectExecutionSetupCoordinator
+        if let retained = retainedExecutionProfileCleanupSetups[confirmation.requestID] {
+            guard retained.registration == registration,
+                  retained.confirmation == confirmation else {
+                throw ProjectExecutionError.conflict
+            }
+            setup = retained.setup
+        } else {
+            let created = executionSetupForOnboarding()
+            retainedExecutionProfileCleanupSetups[confirmation.requestID] = .init(
+                registration: registration, confirmation: confirmation, setup: created)
+            setup = created
+        }
+        let outcomes = try await projectOnboarding.removeConfirmedExecutionProfiles(
+            registration: registration, confirmation: confirmation, setup: setup)
+        if !outcomes.isEmpty, outcomes.allSatisfy({ $0.finalizationStatus == .complete }) {
+            retainedExecutionProfileCleanupSetups.removeValue(forKey: confirmation.requestID)
+        }
+        _ = await reloadProjectProjections()
+        return outcomes
+    }
+
+    func recoverableExecutionProfileCleanupConfirmations(
+        registration: ProjectRegistration
+    ) async throws -> [ProjectExecutionProfileCleanupConfirmation] {
+        try await projectOnboarding.recoverableExecutionProfileCleanupConfirmations(
+            registration: registration, setup: executionSetupForOnboarding())
+    }
+
     nonisolated private static func cleanupPreviewEvidence(for result: ProjectExecutionProfileCleanupClassification.Result) -> String {
         switch result.category {
         case .cleanupEligible: "The protected assignment is closed with durable worker-closure evidence and a matching current profile definition."
         case .active: "The protected assignment remains active in the current preview."
         case .recoveryRetained: "The protected assignment is retained so recovery evidence and resources remain available."
-        case .alreadyRemoved: "The completed retirement receipt records this profile as already removed."
+        case .alreadyRemoved: "A completed profile-cleanup or assignment-retirement receipt records this profile as already removed."
         case .outsideAssignmentCleanup: "This profile is outside assignment cleanup."
         case .unknown: "The available protected and configuration evidence is insufficient for safe cleanup."
         }

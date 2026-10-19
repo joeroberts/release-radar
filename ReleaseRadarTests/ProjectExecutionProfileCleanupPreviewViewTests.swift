@@ -86,6 +86,207 @@ final class ProjectExecutionProfileCleanupPreviewViewTests: XCTestCase {
             ProjectExecutionProfileCleanupPreviewLoadState.failed("Configuration unavailable"))
     }
 
+    func testFreshViewResumesProtectedConfirmationWithoutCreatingNewAuthority() async throws {
+        let snapshot = fixtureSnapshot()
+        let row = snapshot.rows[0]
+        var assignment = try XCTUnwrap(row.assignmentBaseline)
+        let baseline = try XCTUnwrap(row.configurationBaseline)
+        assignment.codexContextID = snapshot.observationIdentity.selectedCodexContextID
+        assignment.permissionProfileDefinition = baseline.observedDefinition
+        let confirmation = ProjectExecutionProfileCleanupConfirmation(
+            requestID: UUID(), registration: assignment.registration,
+            selectedCodexContextID: snapshot.observationIdentity.selectedCodexContextID,
+            configurationVersion: snapshot.observationIdentity.configurationVersion,
+            targets: [.init(profileID: row.profileID, assignmentID: assignment.id,
+                expectedDefinition: baseline.observedDefinition, assignmentBaseline: assignment)])
+        let calls = ConfirmationCalls()
+        try await host(ExecutionProfileCleanupPreviewView(
+            registration: assignment.registration,
+            loadPreview: { snapshot },
+            loadRecoverableConfirmations: { [confirmation] },
+            removeConfirmedProfiles: { submitted in
+                await calls.record(submitted)
+                return [.init(profileID: submitted.targets[0].profileID,
+                    assignmentID: submitted.targets[0].assignmentID, kind: .replayed,
+                    detail: "The protected request resumed and finalized.",
+                    finalizationStatus: .complete)]
+            }), name: "profile-cleanup-restart-resume", width: 620) { [self] window in
+                let resumeID = "project-execution-profile-cleanup-resume-\(confirmation.requestID.uuidString.lowercased())"
+                let root = try await waitForAccessibilityWindow(named: window.title)
+                let resume = try await waitForAccessibilityElement(root, identifier: resumeID)
+                XCTAssertTrue(accessibilityText(resume).contains("Resume confirmed cleanup"))
+                let callsBeforeResume = await calls.values
+                XCTAssertTrue(callsBeforeResume.isEmpty)
+
+                XCTAssertEqual(AXUIElementPerformAction(resume, kAXPressAction as CFString), .success)
+                let confirmationSheet = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                XCTAssertTrue(accessibilityText(confirmationSheet).contains(row.profileID))
+                captureSheetContent(try await waitForSheet(on: window),
+                    name: "profile-cleanup-restart-confirmation-620")
+                try press(confirmationSheet, identifier: "project-execution-profile-cleanup-confirm-submit")
+                _ = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-outcomes-sheet")
+                captureSheetContent(try await waitForSheet(on: window),
+                    name: "profile-cleanup-restart-outcomes-620")
+
+                let submitted = await calls.values
+                XCTAssertEqual(submitted, [confirmation],
+                    "Restart recovery must submit the exact protected confirmation without a new UUID or selection")
+            }
+    }
+
+    func testConfirmationFreezesExactSelectionCancelDoesNotCallAndResultsRemainPerTarget() async throws {
+        for width in [1_100.0, 620.0] {
+            let snapshot = fixtureSnapshot()
+            let calls = ConfirmationCalls()
+            try await host(ExecutionProfileCleanupPreviewView(registration: snapshot.rows[0].assignmentBaseline!.registration,
+            loadPreview: { snapshot }, removeConfirmedProfiles: { confirmation in
+                await calls.record(confirmation)
+                return [
+                    .init(profileID: "rr-delivery-closed", assignmentID: "closed-one",
+                        kind: .removed, detail: "Removed and finalized.", finalizationStatus: .complete),
+                    .init(profileID: "rr-delivery-retained", assignmentID: "retained-one",
+                        kind: .replayed, detail: "Removal verified; finalization remains pending.",
+                        finalizationStatus: .pending),
+                ]
+            }), name: "profile-cleanup-confirmation-\(Int(width))", width: width) { [self] window in
+                let root = try await waitForAccessibilityWindow(named: window.title)
+                try press(root, identifier: "project-execution-profile-cleanup-select-rr-delivery-closed")
+                try await Task.sleep(for: .milliseconds(100))
+                try press(root, identifier: "project-execution-profile-cleanup-preview-selected")
+                let previewRoot = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-sheet")
+                try press(previewRoot, identifier: "project-execution-profile-cleanup-confirm")
+                let confirmationRoot = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                XCTAssertTrue(accessibilityText(confirmationRoot).contains("rr-delivery-closed"))
+                captureSheetContent(try await waitForSheet(on: window),
+                    name: "profile-cleanup-confirmation-cancel-\(Int(width))")
+                try press(confirmationRoot, identifier: "project-execution-profile-cleanup-confirm-cancel")
+                try await Task.sleep(for: .milliseconds(100))
+                let callsAfterCancel = await calls.values
+                XCTAssertTrue(callsAfterCancel.isEmpty, "Cancel must not invoke cleanup")
+
+                try press(root, identifier: "project-execution-profile-cleanup-preview-selected")
+                let secondPreview = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-sheet")
+                try press(secondPreview, identifier: "project-execution-profile-cleanup-confirm")
+                let submitRoot = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                try press(submitRoot, identifier: "project-execution-profile-cleanup-confirm-submit")
+                let outcomes = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-outcomes-sheet")
+                captureSheetContent(try await waitForSheet(on: window),
+                    name: "profile-cleanup-outcomes-resume-\(Int(width))")
+                let callsAfterSubmit = await calls.values
+                let submitted = try XCTUnwrap(callsAfterSubmit.first)
+                XCTAssertEqual(submitted.selectedCodexContextID, snapshot.observationIdentity.selectedCodexContextID)
+                XCTAssertEqual(submitted.configurationVersion, snapshot.observationIdentity.configurationVersion)
+                XCTAssertEqual(submitted.targets.map(\.profileID), ["rr-delivery-closed"])
+                let text = accessibilityText(outcomes)
+                XCTAssertTrue(text.contains("Removed; cleanup complete"))
+                XCTAssertTrue(text.contains("Previously verified removal; finalization pending"))
+                try press(outcomes, identifier: "project-execution-profile-cleanup-outcomes-resume")
+                let resumed = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                try press(resumed, identifier: "project-execution-profile-cleanup-confirm-submit")
+                _ = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-outcomes-sheet")
+                let submittedConfirmations = await calls.values
+                XCTAssertEqual(submittedConfirmations.count, 2)
+                XCTAssertEqual(submittedConfirmations[0], submittedConfirmations[1],
+                    "Resume must retain the complete immutable confirmation instead of generating new authority")
+            }
+        }
+    }
+
+    func testInFlightConfirmationPreventsDuplicateSubmitAndCannotBeDismissedAsCancelled() async throws {
+        let snapshot = fixtureSnapshot()
+        let calls = ConfirmationCalls()
+        let gate = SubmissionGate()
+        try await host(ExecutionProfileCleanupPreviewView(registration: snapshot.rows[0].assignmentBaseline!.registration,
+            loadPreview: { snapshot }, removeConfirmedProfiles: { confirmation in
+                await calls.record(confirmation)
+                await gate.pause()
+                return [.init(profileID: confirmation.targets[0].profileID,
+                    assignmentID: confirmation.targets[0].assignmentID, kind: .removed, detail: "Removed.")]
+            }), name: "profile-cleanup-in-flight", width: 620) { [self] window in
+                let root = try await waitForAccessibilityWindow(named: window.title)
+                try press(root, identifier: "project-execution-profile-cleanup-select-rr-delivery-closed")
+                try await Task.sleep(for: .milliseconds(100))
+                try press(root, identifier: "project-execution-profile-cleanup-preview-selected")
+                let preview = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-sheet")
+                try press(preview, identifier: "project-execution-profile-cleanup-confirm")
+                let confirmation = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                try press(confirmation, identifier: "project-execution-profile-cleanup-confirm-submit")
+                await gate.waitUntilEntered()
+                _ = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirm-progress")
+                captureSheetContent(try await waitForSheet(on: window),
+                    name: "profile-cleanup-confirmation-progress-620")
+                let submit = try XCTUnwrap(accessibilityElement(confirmation,
+                    identifier: "project-execution-profile-cleanup-confirm-submit"))
+                let cancel = try XCTUnwrap(accessibilityElement(confirmation,
+                    identifier: "project-execution-profile-cleanup-confirm-cancel"))
+                var submitEnabled: CFTypeRef?
+                var cancelEnabled: CFTypeRef?
+                XCTAssertEqual(AXUIElementCopyAttributeValue(submit, kAXEnabledAttribute as CFString, &submitEnabled), .success)
+                XCTAssertEqual(AXUIElementCopyAttributeValue(cancel, kAXEnabledAttribute as CFString, &cancelEnabled), .success)
+                XCTAssertEqual(submitEnabled as? Bool, false)
+                XCTAssertEqual(cancelEnabled as? Bool, false)
+                let escape = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                    timestamp: 0, windowNumber: window.sheets.last?.windowNumber ?? window.windowNumber,
+                    context: nil, characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}",
+                    isARepeat: false, keyCode: 53))
+                NSApp.sendEvent(escape)
+                try await Task.sleep(for: .milliseconds(100))
+                XCTAssertNotNil(accessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet"),
+                    "Escape cannot imply cancellation after confirmed work starts")
+                let inFlightCalls = await calls.values
+                XCTAssertEqual(inFlightCalls.count, 1)
+                await gate.resume()
+                _ = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-outcomes-sheet")
+            }
+    }
+
+    func testSubmissionFailureIsVisibleInRetainedConfirmationAndRetryUsesSameRequest() async throws {
+        let snapshot = fixtureSnapshot()
+        let responder = ConfirmationResponder()
+        try await host(ExecutionProfileCleanupPreviewView(registration: snapshot.rows[0].assignmentBaseline!.registration,
+            loadPreview: { snapshot }, removeConfirmedProfiles: { confirmation in
+                try await responder.respond(to: confirmation)
+            }), name: "profile-cleanup-retry", width: 620) { [self] window in
+                let root = try await waitForAccessibilityWindow(named: window.title)
+                try press(root, identifier: "project-execution-profile-cleanup-select-rr-delivery-closed")
+                try await Task.sleep(for: .milliseconds(100))
+                try press(root, identifier: "project-execution-profile-cleanup-preview-selected")
+                let preview = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-sheet")
+                try press(preview, identifier: "project-execution-profile-cleanup-confirm")
+                let confirmation = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                try press(confirmation, identifier: "project-execution-profile-cleanup-confirm-submit")
+                let retained = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-confirmation-sheet")
+                try await Task.sleep(for: .milliseconds(100))
+                XCTAssertTrue(accessibilityText(retained).contains("Cleanup needs attention"),
+                    "A recoverable failure must be visible inside the retained modal")
+                captureSheetContent(try await waitForSheet(on: window),
+                    name: "profile-cleanup-confirmation-error-620")
+                try press(retained, identifier: "project-execution-profile-cleanup-confirm-submit")
+                _ = try await waitForAccessibilityElement(root,
+                    identifier: "project-execution-profile-cleanup-outcomes-sheet")
+                let confirmations = await responder.confirmations
+                XCTAssertEqual(confirmations.count, 2)
+                XCTAssertEqual(confirmations[0], confirmations[1])
+            }
+    }
+
     func testRenderedPreviewSeparatesEligibleAndRetainedProfilesAtWideAndCompactWidths() async throws {
         for width in [1_100.0, 620.0] {
             let snapshot = fixtureSnapshot()
@@ -334,6 +535,38 @@ final class ProjectExecutionProfileCleanupPreviewViewTests: XCTestCase {
         }
     }
 
+    private actor ConfirmationCalls {
+        private(set) var values = [ProjectExecutionProfileCleanupConfirmation]()
+        func record(_ confirmation: ProjectExecutionProfileCleanupConfirmation) { values.append(confirmation) }
+    }
+
+    private actor SubmissionGate {
+        private var entered = false
+        private var arrival: CheckedContinuation<Void, Never>?
+        private var release: CheckedContinuation<Void, Never>?
+        func pause() async {
+            entered = true
+            arrival?.resume(); arrival = nil
+            await withCheckedContinuation { release = $0 }
+        }
+        func waitUntilEntered() async {
+            if !entered { await withCheckedContinuation { arrival = $0 } }
+        }
+        func resume() { release?.resume(); release = nil }
+    }
+
+    private actor ConfirmationResponder {
+        private(set) var confirmations = [ProjectExecutionProfileCleanupConfirmation]()
+        func respond(to confirmation: ProjectExecutionProfileCleanupConfirmation) throws
+        -> [ProjectExecutionProfileCleanupOutcome] {
+            confirmations.append(confirmation)
+            if confirmations.count == 1 { throw ProjectExecutionError.unavailable }
+            return [.init(profileID: confirmation.targets[0].profileID,
+                assignmentID: confirmation.targets[0].assignmentID, kind: .replayed,
+                detail: "The same confirmed request resumed safely.")]
+        }
+    }
+
     private actor RegistrationLoader {
         let first: ProjectExecutionProfileCleanupPreview
         let second: ProjectExecutionProfileCleanupPreview
@@ -387,13 +620,34 @@ final class ProjectExecutionProfileCleanupPreviewViewTests: XCTestCase {
 
     private func accessibilityWindow(named title: String) -> AXUIElement? {
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success else { return nil }
-        return (value as? [AXUIElement])?.first { element in
+        func matches(_ element: AXUIElement) -> Bool {
             var candidate: CFTypeRef?
             return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &candidate) == .success
                 && candidate as? String == title
         }
+        var value: CFTypeRef?
+        if AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
+           let window = (value as? [AXUIElement])?.first(where: matches) {
+            return window
+        }
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            var candidate: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(application, attribute as CFString, &candidate) == .success,
+                  let candidate,
+                  CFGetTypeID(candidate) == AXUIElementGetTypeID() else { continue }
+            let element = candidate as! AXUIElement
+            if matches(element) { return element }
+        }
+        return nil
+    }
+
+    private func waitForAccessibilityWindow(named title: String) async throws -> AXUIElement {
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline {
+            if let window = accessibilityWindow(named: title) { return window }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        throw PreviewError.unavailable
     }
 
     private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {

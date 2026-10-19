@@ -37,10 +37,15 @@ public protocol ProjectExecutionConfiguring: Sendable {
     func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws
     func finishConfiguration() async throws
     func recoverConfigurationConnection() async throws
+    /// Returns true only when this exact adapter closed its retained failed
+    /// connection. A fresh/default adapter must not claim another session's close.
+    func recoverRetainedConfigurationConnection() async throws -> Bool
     func prepareWorkerProfile(primaryRoot: String, profile: ProjectExecutionPermissionProfile) async throws
     func workerProfileExists(primaryRoot: String, profileID: String) async throws -> Bool
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws
+    func removeConfirmedWorkerProfile(primaryRoot: String, request: ProjectExecutionConfirmedProfileRemoval,
+                                      beforeWrite: @Sendable () async throws -> Void) async throws -> ProjectExecutionConfirmedProfileRemovalResult
     func observeWorkerProfiles(primaryRoot: String) async throws -> ProjectExecutionWorkerProfileObservation
 }
 
@@ -54,7 +59,12 @@ public extension ProjectExecutionConfiguring {
         try await beforeWrite()
         try await removeWorkerProfile(primaryRoot: primaryRoot, profileID: profileID, expected: expected)
     }
+    func removeConfirmedWorkerProfile(primaryRoot: String, request: ProjectExecutionConfirmedProfileRemoval,
+                                      beforeWrite: @Sendable () async throws -> Void) async throws -> ProjectExecutionConfirmedProfileRemovalResult {
+        throw ProjectExecutionError.unavailable
+    }
     func recoverConfigurationConnection() async throws { try await finishConfiguration() }
+    func recoverRetainedConfigurationConnection() async throws -> Bool { false }
     func observeWorkerProfiles(primaryRoot: String) async throws -> ProjectExecutionWorkerProfileObservation { throw ProjectExecutionError.unavailable }
 }
 
@@ -73,6 +83,9 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
     private let root: @Sendable () throws -> URL
     private let configuration: any ProjectExecutionConfiguring
     private let handlerPath: String
+    private let profileCleanupConfigurationSessionID = UUID()
+    private var profileCleanupCoordinator: ProjectExecutionProfileCleanupCoordinator?
+    private var profileCleanupConfirmation: ProjectExecutionProfileCleanupConfirmation?
     private var storage: ProjectExecutionFileStore?
 
     public init(root: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
@@ -84,6 +97,23 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         if let storage { return storage }
         let value = try ProjectExecutionFileStore(root: root(), create: true)
         storage = value; return value
+    }
+
+    private func cleanupCoordinator() -> ProjectExecutionProfileCleanupCoordinator {
+        if let profileCleanupCoordinator { return profileCleanupCoordinator }
+        let value = ProjectExecutionProfileCleanupCoordinator(
+            root: root, configuration: configuration,
+            configurationSessionID: profileCleanupConfigurationSessionID)
+        profileCleanupCoordinator = value
+        return value
+    }
+
+    private func bindProfileCleanup(_ confirmation: ProjectExecutionProfileCleanupConfirmation) throws {
+        if let profileCleanupConfirmation {
+            guard profileCleanupConfirmation == confirmation else { throw ProjectExecutionError.conflict }
+        } else {
+            profileCleanupConfirmation = confirmation
+        }
     }
 
     private func identity(_ project: AuthorizedProject) throws -> ProjectRegistration {
@@ -102,6 +132,31 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         }
         try await configuration.finishConfiguration()
         return observation
+    }
+
+    /// Runs the profile-only cleanup through this setup instance's selected
+    /// configuration adapter. The caller retains owner authorization and audit.
+    public func removeConfirmedWorkerProfiles(project: AuthorizedProject,
+                                              confirmation: ProjectExecutionProfileCleanupConfirmation,
+                                              beforeWrite: @escaping @Sendable () async throws -> Void) async throws -> ProjectExecutionProfileCleanupRun {
+        try bindProfileCleanup(confirmation)
+        let cleanup = cleanupCoordinator()
+        return try await cleanup.cleanupRun(project: project, confirmation: confirmation, beforeWrite: beforeWrite)
+    }
+
+    public func recoverableWorkerProfileCleanups(project: AuthorizedProject) async throws -> [ProjectExecutionProfileCleanupConfirmation] {
+        let cleanup = cleanupCoordinator()
+        return try await cleanup.recoverableConfirmations(project: project)
+    }
+
+    public func completeConfirmedWorkerProfileFinalization(
+        project: AuthorizedProject,
+        confirmation: ProjectExecutionProfileCleanupConfirmation,
+        beforeWrite: @escaping @Sendable () async throws -> Void
+    ) async throws {
+        try bindProfileCleanup(confirmation)
+        let cleanup = cleanupCoordinator()
+        try await cleanup.completeFinalization(project: project, confirmation: confirmation, beforeWrite: beforeWrite)
     }
 
     private func observeWorkerProfilesOperation(project: AuthorizedProject) async throws -> ProjectExecutionWorkerProfileObservation {

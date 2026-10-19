@@ -125,6 +125,107 @@ final class ProjectExecutionProfileCleanupClassificationTests: XCTestCase {
             "A completed removal receipt plus a freshly absent profile has no selectable cleanup target")
     }
 
+    func testIntentOrUnknownCleanupReceiptWithPresentProfileRemainsRecoveryRetained() {
+        for state in [ProjectExecutionProfileCleanupReceipt.State.intentRecorded, .outcomeUnknown] {
+            let assignment = assignmentWithCleanupReceipt(state: state,
+                helperClosureState: state == .intentRecorded ? .pending : .unknown,
+                finalizationPending: state == .outcomeUnknown)
+
+            let result = classify(assignment)
+
+            XCTAssertEqual(result.category, .recoveryRetained,
+                "A \(state) effect cannot be offered as new cleanup authority")
+            XCTAssertNil(result.configurationBaseline)
+            XCTAssertNil(result.assignmentBaseline)
+        }
+    }
+
+    func testVerifiedCleanupReceiptWithPresentProfileIsUnknownReappearance() {
+        let assignment = assignmentWithCleanupReceipt(state: .removalVerified,
+            helperClosureState: .verified, finalizationPending: false)
+
+        let result = classify(assignment)
+
+        XCTAssertEqual(result.category, .unknown)
+        XCTAssertEqual(result.reason, .profileReappearedAfterRemoval)
+        XCTAssertNil(result.configurationBaseline)
+        XCTAssertNil(result.assignmentBaseline)
+    }
+
+    func testVerifiedClosedAuditedCleanupReceiptWithMissingProfileIsAlreadyRemoved() {
+        let assignment = assignmentWithCleanupReceipt(state: .removalVerified,
+            helperClosureState: .verified, finalizationPending: false)
+        let missingAssociation = ProjectExecutionProfileAssociation.Result(category: .unknown,
+            assignmentID: assignment.id, reason: .profileMissing)
+
+        let result = ProjectExecutionProfileCleanupClassification.classify(input(assignment: assignment,
+            association: missingAssociation, configurationObservation: .missing))
+
+        XCTAssertEqual(result.category, .alreadyRemoved)
+        XCTAssertNil(result.reason)
+        XCTAssertNil(result.configurationBaseline)
+        XCTAssertNil(result.assignmentBaseline)
+    }
+
+    func testIncompleteVerifiedCleanupReceiptWithMissingProfileRemainsRecoveryRetained() {
+        let cases: [(String, ProjectExecutionProfileCleanupReceipt.HelperClosureState, Bool)] = [
+            ("pending-helper", .pending, false),
+            ("unknown-helper", .unknown, false),
+            ("pending-audit", .verified, true),
+        ]
+        for scenario in cases {
+            let assignment = assignmentWithCleanupReceipt(state: .removalVerified,
+                helperClosureState: scenario.1, finalizationPending: scenario.2)
+            let missingAssociation = ProjectExecutionProfileAssociation.Result(category: .unknown,
+                assignmentID: assignment.id, reason: .profileMissing)
+
+            let result = ProjectExecutionProfileCleanupClassification.classify(input(assignment: assignment,
+                association: missingAssociation, configurationObservation: .missing))
+
+            XCTAssertEqual(result.category, .recoveryRetained,
+                "Incomplete cleanup state \(scenario.0) must remain recoverable")
+            XCTAssertNil(result.configurationBaseline)
+            XCTAssertNil(result.assignmentBaseline)
+        }
+    }
+
+    func testCleanupReceiptDoesNotWeakenAssociationOrLifecycleGuards() {
+        let assignment = assignmentWithCleanupReceipt(state: .outcomeUnknown,
+            helperClosureState: .unknown, finalizationPending: true)
+
+        let active = classify(assignment, liveState: .active)
+        XCTAssertEqual(active.category, .active)
+        XCTAssertEqual(active.reason, .activeAssignment)
+
+        let wrongAssociation = ProjectExecutionProfileAssociation.Result(category: .owned,
+            assignmentID: "other-assignment", ownershipProvenance: .verifiedProvisioningReceipt,
+            installationEvidence: .verified)
+        let wrongIdentity = ProjectExecutionProfileCleanupClassification.classify(input(
+            assignment: assignment, association: wrongAssociation))
+        XCTAssertEqual(wrongIdentity.category, .unknown)
+        XCTAssertEqual(wrongIdentity.reason, .identityMismatch)
+
+        let duplicateAssociation = ProjectExecutionProfileAssociation.Result(category: .unknown,
+            assignmentID: assignment.id, reason: .duplicateOwnership)
+        let duplicate = ProjectExecutionProfileCleanupClassification.classify(input(
+            assignment: assignment, association: duplicateAssociation))
+        XCTAssertEqual(duplicate.category, .unknown)
+        XCTAssertEqual(duplicate.reason, .association(.duplicateOwnership))
+
+        var pendingProvisioning = assignment
+        pendingProvisioning.profileProvisioningReceipt = .init(state: .pending,
+            provenance: .newlyPrepared, requestedAt: Date(timeIntervalSinceReferenceDate: 1), verifiedAt: nil)
+        let provisioning = classify(pendingProvisioning)
+        XCTAssertEqual(provisioning.category, .recoveryRetained)
+        XCTAssertEqual(provisioning.reason, .incompleteProvisioning)
+
+        var uncertain = assignment
+        uncertain.uncertainOutcome = true
+        let uncertainResult = classify(uncertain)
+        XCTAssertEqual(uncertainResult.category, .recoveryRetained)
+        XCTAssertEqual(uncertainResult.reason, .uncertainOutcome)
+    }
+
     func testAssociationAndReusableProfileResultsStayOutsideOrUnknown() {
         let assignment = terminalFixture()
         let reserved = ProjectExecutionProfileAssociation.Result(category: .outsideAssignmentCleanup,
@@ -331,6 +432,31 @@ final class ProjectExecutionProfileCleanupClassificationTests: XCTestCase {
         assignment.launchReserved = true
         assignment.workerAttemptID = UUID()
         assignment.sessionID = "closed-session"
+        return assignment
+    }
+
+    private func assignmentWithCleanupReceipt(
+        state: ProjectExecutionProfileCleanupReceipt.State,
+        helperClosureState: ProjectExecutionProfileCleanupReceipt.HelperClosureState,
+        finalizationPending: Bool
+    ) -> ProjectExecutionAssignment {
+        var assignment = terminalFixture()
+        let acknowledgement: ProjectExecutionProfileCleanupReceipt.Acknowledgement = state == .removalVerified
+            ? .acknowledged : state == .outcomeUnknown ? .unknown : .notAttempted
+        let presence: ProjectExecutionProfileCleanupReceipt.TargetPresence = state == .removalVerified
+            ? .absent : state == .outcomeUnknown ? .unavailable : .present
+        assignment.profileCleanupReceipt = .init(requestID: UUID(),
+            profileID: assignment.permissionProfile,
+            selectedCodexContextID: assignment.codexContextID!,
+            configurationVersion: "before-v1",
+            expectedDefinition: assignment.permissionProfileDefinition!,
+            state: state,
+            acknowledgement: acknowledgement,
+            observedTargetPresence: presence,
+            observedConfigurationVersion: state == .removalVerified ? "after-v2" : nil,
+            helperClosureState: helperClosureState,
+            configurationSessionID: UUID(),
+            finalizationPending: finalizationPending)
         return assignment
     }
 

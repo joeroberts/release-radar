@@ -30,6 +30,8 @@ final class ProjectExecutionSetupTests: XCTestCase {
         var beforeTrust: Gate?
         var afterTrust: Gate?
         var beforeInline: Gate?
+        var cleanupObservations = [ProjectExecutionWorkerProfileObservation]()
+        var cleanupRequests = [ProjectExecutionConfirmedProfileRemoval]()
         init(inline: Data? = nil) { self.inline = inline }
         func validateInstallation(handlerPath: String) {}
         func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
@@ -59,6 +61,20 @@ final class ProjectExecutionSetupTests: XCTestCase {
         func recover() { failReadiness = false }
         func setReadinessFailure(_ value: Bool) { failReadiness = value }
         func result() -> (Data?, Int) { (inline, finishes) }
+        func seedCleanupObservations(_ values: [ProjectExecutionWorkerProfileObservation]) {
+            cleanupObservations = values
+        }
+        func observeWorkerProfiles(primaryRoot: String) throws -> ProjectExecutionWorkerProfileObservation {
+            guard !cleanupObservations.isEmpty else { throw ProjectExecutionError.unavailable }
+            return cleanupObservations.removeFirst()
+        }
+        func removeConfirmedWorkerProfile(primaryRoot: String, request: ProjectExecutionConfirmedProfileRemoval,
+                                          beforeWrite: @Sendable () async throws -> Void) async throws
+        -> ProjectExecutionConfirmedProfileRemovalResult {
+            cleanupRequests.append(request)
+            try await beforeWrite()
+            return .init(configurationVersion: "after-v2")
+        }
     }
 
     private func fixture() throws -> (URL, URL, AuthorizedProject) {
@@ -416,6 +432,99 @@ final class ProjectExecutionSetupTests: XCTestCase {
         for row in auditReasons { XCTAssertEqual(row["actor_id"], .text("release-radar-owner")); XCTAssertEqual(row["project_id"], .text("project-one")) }
     }
 
+    func testOwnerConfirmedCleanupReplayUsesStableDistinctAuditIdentities() async throws {
+        let fixture = try await ownerCleanupFixture(observationCount: 3)
+
+        let first = try await fixture.onboarding.removeConfirmedExecutionProfiles(
+            registration: try XCTUnwrap(fixture.project.registration),
+            confirmation: fixture.confirmation, setup: fixture.setup)
+        let replay = try await fixture.onboarding.removeConfirmedExecutionProfiles(
+            registration: try XCTUnwrap(fixture.project.registration),
+            confirmation: fixture.confirmation, setup: fixture.setup)
+        let repeatedReplay = try await fixture.onboarding.removeConfirmedExecutionProfiles(
+            registration: try XCTUnwrap(fixture.project.registration),
+            confirmation: fixture.confirmation, setup: fixture.setup)
+
+        guard case .removed = try XCTUnwrap(first.first).kind,
+              case .replayed = try XCTUnwrap(replay.first).kind,
+              case .replayed = try XCTUnwrap(repeatedReplay.first).kind else {
+            return XCTFail("Expected one effect and idempotent same-confirmation replays")
+        }
+        XCTAssertEqual(first.first?.finalizationStatus, .complete)
+        XCTAssertFalse(first.first?.detail.localizedCaseInsensitiveContains("pending") == true)
+        let finalized = try fixture.execution.assignment(
+            projectID: fixture.project.projectID.rawValue, taskID: fixture.assignment.id)
+        XCTAssertEqual(finalized.profileCleanupReceipt?.helperClosureState, .verified)
+        XCTAssertEqual(finalized.profileCleanupReceipt?.finalizationPending, false)
+        let rows = try await fixture.store.read { try $0.rows(
+            "SELECT id, reason FROM audit_events WHERE id LIKE 'profile-cleanup-%' ORDER BY id") }
+        XCTAssertTrue((2 ... 3).contains(rows.count),
+            "Safe finalized-result reuse may omit a replay audit; a recorded replay must use a stable distinct identity")
+        let ids = rows.compactMap { row -> String? in
+            guard case let .text(value)? = row["id"] else { return nil }
+            return value
+        }
+        XCTAssertEqual(Set(ids).count, rows.count, "Every retained cleanup audit must have a collision-free identity")
+    }
+
+    func testCleanupAuditFailureRetainsKnownRemovalAndRetryOnlyFinishesOutstandingWork() async throws {
+        let fixture = try await ownerCleanupFixture(observationCount: 2)
+        let request = fixture.confirmation.requestID.uuidString.lowercased()
+        let auditID = "profile-cleanup-removal-\(request)-\(fixture.assignment.id)"
+        let databaseType = try XCTUnwrap(
+            FileManager.default.attributesOfItem(atPath: fixture.store.databaseURL.path)[.type]
+                as? FileAttributeType)
+        guard databaseType == .typeRegular else {
+            return XCTFail("Expected the cleanup fault fixture database to be an existing regular file")
+        }
+        let fault = try SQLiteConnection(url: fixture.store.databaseURL)
+        try fault.execute(
+            """
+            CREATE TRIGGER fail_profile_cleanup_outcome_audit
+            BEFORE INSERT ON audit_events WHEN NEW.id = '\(auditID)'
+            BEGIN SELECT RAISE(ABORT, 'synthetic profile cleanup audit failure'); END
+            """
+        )
+
+        let first = try await fixture.onboarding.removeConfirmedExecutionProfiles(
+            registration: try XCTUnwrap(fixture.project.registration),
+            confirmation: fixture.confirmation, setup: fixture.setup)
+
+        let firstOutcome = try XCTUnwrap(first.first)
+        guard case .removed = firstOutcome.kind else {
+            return XCTFail("A failed outcome audit must not erase the verified configuration effect")
+        }
+        XCTAssertEqual(firstOutcome.finalizationStatus, .pending)
+        let pending = try fixture.execution.assignment(
+            projectID: fixture.project.projectID.rawValue, taskID: fixture.assignment.id)
+        XCTAssertEqual(pending.profileCleanupReceipt?.state, .removalVerified)
+        XCTAssertEqual(pending.profileCleanupReceipt?.helperClosureState, .verified)
+        XCTAssertTrue(pending.profileCleanupReceipt?.finalizationPending == true)
+        let firstRequestCount = await fixture.configuration.cleanupRequests.count
+        XCTAssertEqual(firstRequestCount, 1)
+
+        try fault.execute("DROP TRIGGER fail_profile_cleanup_outcome_audit")
+        let replay = try await fixture.onboarding.removeConfirmedExecutionProfiles(
+            registration: try XCTUnwrap(fixture.project.registration),
+            confirmation: fixture.confirmation, setup: fixture.setup)
+
+        let replayOutcome = try XCTUnwrap(replay.first)
+        guard case .replayed = replayOutcome.kind else {
+            return XCTFail("Retry must reuse the known effect instead of deleting again")
+        }
+        XCTAssertEqual(replayOutcome.finalizationStatus, .complete)
+        let finalRequestCount = await fixture.configuration.cleanupRequests.count
+        XCTAssertEqual(finalRequestCount, 1)
+        let completed = try fixture.execution.assignment(
+            projectID: fixture.project.projectID.rawValue, taskID: fixture.assignment.id)
+        XCTAssertEqual(completed.profileCleanupReceipt?.helperClosureState, .verified)
+        XCTAssertEqual(completed.profileCleanupReceipt?.finalizationPending, false)
+        let auditCount = try await fixture.store.read { connection in
+            try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id = ?", bindings: [.text(auditID)])
+        }
+        XCTAssertEqual(auditCount, 1)
+    }
+
     func testOnlyExplicitOwnerResumeRestoresRemovedHookAndDoesNotReadmitOldAssignment() async throws {
         let (root, repository, project) = try fixture()
         let configuration = Configuration(); await configuration.recover()
@@ -478,6 +587,76 @@ final class ProjectExecutionSetupTests: XCTestCase {
         }
         let bookmarks = ProjectBookmarkStore(resolver: { _ in .init(url: repository, isStale: false) }, startAccessing: { _ in true }, stopAccessing: { _ in })
         return (root, project, store, FolderProjectOnboarding(store: store, bookmarkStore: bookmarks))
+    }
+
+    private struct OwnerCleanupFixture {
+        let project: AuthorizedProject
+        let store: DeliveryStore
+        let onboarding: FolderProjectOnboarding
+        let execution: ProjectExecutionFileStore
+        let assignment: ProjectExecutionAssignment
+        let confirmation: ProjectExecutionProfileCleanupConfirmation
+        let configuration: Configuration
+        let setup: ProjectExecutionSetupCoordinator
+    }
+
+    private func ownerCleanupFixture(observationCount: Int) async throws -> OwnerCleanupFixture {
+        let (root, project, store, onboarding) = try await ownerMutationFixture()
+        let execution = try ProjectExecutionFileStore(root: root, create: true)
+        let context = try CodexExecutionContext(home: root, bookmark: Data([1]))
+        try execution.saveCodexContext(context, expected: nil)
+        var policy = ProjectExecutionPolicy(registration: try XCTUnwrap(project.registration),
+            primaryRoot: project.canonicalRoot.path, appServerExecutable: CodexExecutionIdentity.executable,
+            handlerPath: "/RR/handler")
+        policy.codexContextID = context.id
+        try execution.savePolicy(policy, expected: nil)
+        let paths = try ProjectExecutionPaths(
+            storageRoot: root, projectID: "project-one", taskID: "delivery-cleanup")
+        var assignment = ProjectExecutionAssignment(
+            id: "delivery-cleanup", registration: try XCTUnwrap(project.registration),
+            checkoutPath: paths.checkout.path, role: .delivery, permissionProfile: "rr-delivery-cleanup",
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Approved work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
+            state: .closed, sessionID: "closed-session",
+            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40),
+                branch: "codex/project-one-delivery-cleanup", commonGitDirectory: "/Primary/.git",
+                primaryRoot: "/Primary"))
+        assignment.codexContextID = context.id
+        assignment.permissionProfileDefinition = Data(
+            #"{"filesystem":{},"network":{"enabled":false}}"#.utf8)
+        assignment.profileProvisioningReceipt = .init(
+            state: .verified, provenance: .newlyPrepared,
+            requestedAt: Date(timeIntervalSinceReferenceDate: 1),
+            verifiedAt: Date(timeIntervalSinceReferenceDate: 2))
+        assignment.connectionClosed = true
+        assignment.launchReserved = true
+        assignment.workerAttemptID = UUID()
+        try execution.saveAssignment(assignment, expected: nil)
+        let confirmation = ProjectExecutionProfileCleanupConfirmation(
+            requestID: UUID(), registration: try XCTUnwrap(project.registration),
+            selectedCodexContextID: context.id, configurationVersion: "before-v1",
+            targets: [.init(profileID: assignment.permissionProfile,
+                assignmentID: assignment.id,
+                expectedDefinition: try XCTUnwrap(assignment.permissionProfileDefinition),
+                assignmentBaseline: assignment)])
+        let present = ProjectExecutionWorkerProfileObservation(
+            selectedCodexContextID: context.id, configurationVersion: "before-v1",
+            observedAt: Date(), entries: [.init(
+                profileID: assignment.permissionProfile,
+                observedDefinition: try XCTUnwrap(assignment.permissionProfileDefinition))])
+        let absent = ProjectExecutionWorkerProfileObservation(
+            selectedCodexContextID: context.id, configurationVersion: "after-v2",
+            observedAt: Date(), entries: [])
+        let configuration = Configuration()
+        await configuration.selectContext(context.id)
+        await configuration.seedCleanupObservations(
+            [present] + Array(repeating: absent, count: max(0, observationCount - 1)))
+        let setup = ProjectExecutionSetupCoordinator(
+            root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        return .init(project: project, store: store, onboarding: onboarding,
+            execution: execution, assignment: assignment, confirmation: confirmation,
+            configuration: configuration, setup: setup)
     }
 
     func testRegistrationChangeDuringTrustReadPreventsTrustWriteAndInstalledReceipt() async throws {

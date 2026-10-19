@@ -376,6 +376,12 @@ struct SidebarView: View {
                         },
                         loadExecutionAssignments: { registration in try await model.executionAssignments(registration: registration) },
                         loadExecutionProfileCleanupPreview: { registration in try await model.executionProfileCleanupPreview(registration: registration) },
+                        loadRecoverableExecutionProfileCleanupConfirmations: { registration in
+                            try await model.recoverableExecutionProfileCleanupConfirmations(registration: registration)
+                        },
+                        removeConfirmedExecutionProfiles: { registration, confirmation in
+                            try await model.removeConfirmedExecutionProfiles(registration: registration, confirmation: confirmation)
+                        },
                         retireExecutionAssignment: { registration, expected in try await model.retireExecutionAssignment(registration: registration, expected: expected) },
                         recoverLostWorker: { registration, expected in try await model.recoverLostWorker(registration: registration, expected: expected) },
                         availableCodexTasks: model.codexTasks(for: projectID),

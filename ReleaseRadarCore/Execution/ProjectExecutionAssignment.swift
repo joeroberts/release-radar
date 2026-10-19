@@ -60,6 +60,8 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public var uncertainOutcome: Bool? = nil
     public var permissionProfileDefinition: Data? = nil
     public var profileProvisioningReceipt: ProfileProvisioningReceipt? = nil
+    /// A profile-only cleanup receipt; it never changes retirement or worker state.
+    public var profileCleanupReceipt: ProjectExecutionProfileCleanupReceipt? = nil
     /// The original runtime worker UUID. This is populated only by the launch
     /// path; readers must not manufacture a replacement for legacy records.
     public var workerAttemptID: UUID? = nil
@@ -200,6 +202,9 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
                     || (receipt.state == .verified && receipt.verifiedAt != nil) else {
                 throw ProjectExecutionError.invalidAssignment
             }
+        }
+        if let receipt = profileCleanupReceipt, !receipt.validates(for: self) {
+            throw ProjectExecutionError.invalidAssignment
         }
         if let retirement {
             guard state != .authorized, state != .preparing,

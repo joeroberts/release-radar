@@ -512,6 +512,11 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
             || assignment.uncertainOutcome == true
             || assignment.finalizationFailed == true
             || assignment.retirement.map { !$0.completed } == true
+            || assignment.profileCleanupReceipt.map {
+                $0.state != .removalVerified
+                    || $0.helperClosureState != .verified
+                    || $0.finalizationPending
+            } == true
             || ((assignment.sessionID != nil || assignment.launchReserved == true)
                 && assignment.connectionClosed != true && assignment.state != .closed)
     }

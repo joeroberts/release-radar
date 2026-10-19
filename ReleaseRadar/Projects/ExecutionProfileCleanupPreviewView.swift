@@ -119,20 +119,58 @@ struct ProjectExecutionProfileCleanupPreviewPresentation: Equatable {
     }
 }
 
+private struct ProjectExecutionProfileCleanupConfirmationPresentation: Identifiable {
+    let confirmation: ProjectExecutionProfileCleanupConfirmation
+    let selectedRows: [ProjectExecutionProfileCleanupPreview.Row]
+    let exclusionRows: [ProjectExecutionProfileCleanupPreview.Row]
+
+    var id: UUID { confirmation.requestID }
+}
+
+private struct ProjectExecutionProfileCleanupOutcomePresentation: Identifiable {
+    let confirmation: ProjectExecutionProfileCleanupConfirmation
+    let selectedRows: [ProjectExecutionProfileCleanupPreview.Row]
+    let exclusionRows: [ProjectExecutionProfileCleanupPreview.Row]
+    let outcomes: [ProjectExecutionProfileCleanupOutcome]
+
+    var id: UUID { confirmation.requestID }
+}
+
 struct ExecutionProfileCleanupPreviewView: View {
     let registration: ProjectRegistration
     let loadPreview: () async throws -> ProjectExecutionProfileCleanupPreview
+    let loadRecoverableConfirmations: () async throws -> [ProjectExecutionProfileCleanupConfirmation]
+    let removeConfirmedProfiles: (ProjectExecutionProfileCleanupConfirmation) async throws -> [ProjectExecutionProfileCleanupOutcome]
 
     @State private var loadState: ProjectExecutionProfileCleanupPreviewLoadState = .idle
     @State private var selection: Set<ProjectExecutionProfileCleanupPreviewPresentation.Selection> = []
     @State private var previewPresentation: ProjectExecutionProfileCleanupPreviewPresentation?
+    @State private var confirmationPresentation: ProjectExecutionProfileCleanupConfirmationPresentation?
+    @State private var outcomePresentation: ProjectExecutionProfileCleanupOutcomePresentation?
     @State private var selectionChangedMessage: String?
+    @State private var confirmationErrorMessage: String?
+    @State private var isSubmitting = false
+    @State private var recoverableConfirmations: [ProjectExecutionProfileCleanupConfirmation] = []
+    @State private var recoverableConfirmationError: String?
+
+    init(registration: ProjectRegistration,
+         loadPreview: @escaping () async throws -> ProjectExecutionProfileCleanupPreview,
+         loadRecoverableConfirmations: @escaping () async throws -> [ProjectExecutionProfileCleanupConfirmation] = { [] },
+         removeConfirmedProfiles: @escaping (ProjectExecutionProfileCleanupConfirmation) async throws -> [ProjectExecutionProfileCleanupOutcome] = { _ in
+             throw ProjectExecutionError.unavailable
+         }) {
+        self.registration = registration
+        self.loadPreview = loadPreview
+        self.loadRecoverableConfirmations = loadRecoverableConfirmations
+        self.removeConfirmedProfiles = removeConfirmedProfiles
+    }
 
     var body: some View {
         RekonSectionPanel {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 content
+                recoverableCleanupContent
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("project-execution-profile-cleanup-preview")
@@ -140,11 +178,24 @@ struct ExecutionProfileCleanupPreviewView: View {
         .task(id: registration) {
             selection = []
             previewPresentation = nil
+            confirmationPresentation = nil
+            outcomePresentation = nil
+            isSubmitting = false
             selectionChangedMessage = nil
+            confirmationErrorMessage = nil
+            recoverableConfirmations = []
+            recoverableConfirmationError = nil
             await refresh()
+            await refreshRecoverableConfirmations()
         }
         .sheet(item: $previewPresentation) { presentation in
             selectedPreview(presentation)
+        }
+        .sheet(item: $confirmationPresentation) { presentation in
+            confirmationSheet(presentation)
+        }
+        .sheet(item: $outcomePresentation) { presentation in
+            outcomeSheet(presentation)
         }
     }
 
@@ -167,10 +218,38 @@ struct ExecutionProfileCleanupPreviewView: View {
     }
 
     private var refreshButton: some View {
-        Button("Refresh profile evidence") { Task { await refresh() } }
+        Button("Refresh profile evidence") {
+            Task {
+                await refresh()
+                await refreshRecoverableConfirmations()
+            }
+        }
             .buttonStyle(RekonSecondaryButtonStyle())
             .disabled(loadState == .loading)
             .accessibilityIdentifier("project-execution-profile-cleanup-refresh")
+    }
+
+    @ViewBuilder
+    private var recoverableCleanupContent: some View {
+        if !recoverableConfirmations.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Confirmed cleanup recovery").font(.subheadline.weight(.semibold))
+                ForEach(recoverableConfirmations, id: \.requestID) { confirmation in
+                    Button("Resume confirmed cleanup") {
+                        presentRecoveredConfirmation(confirmation)
+                    }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("project-execution-profile-cleanup-resume-\(confirmation.requestID.uuidString.lowercased())")
+                }
+            }
+        }
+        if let recoverableConfirmationError {
+            Text(recoverableConfirmationError)
+                .font(.caption)
+                .foregroundStyle(RekonTheme.warning)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("project-execution-profile-cleanup-recovery-error")
+        }
     }
 
     @ViewBuilder
@@ -309,15 +388,126 @@ struct ExecutionProfileCleanupPreviewView: View {
                 }
             }
             .frame(maxHeight: 420)
-            Button("Done") { previewPresentation = nil }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .accessibilityIdentifier("project-execution-profile-cleanup-sheet-done")
+            HStack {
+                Button("Cancel") { previewPresentation = nil }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("project-execution-profile-cleanup-sheet-done")
+                Spacer()
+                Button("Continue to confirmation") {
+                    guard case let .loaded(snapshot) = loadState,
+                          let confirmation = confirmation(for: presentation, snapshot: snapshot) else { return }
+                    previewPresentation = nil
+                    confirmationErrorMessage = nil
+                    confirmationPresentation = confirmation
+                }
+                .buttonStyle(RekonPrimaryButtonStyle())
+                .accessibilityIdentifier("project-execution-profile-cleanup-confirm")
+            }
         }
         .padding(24)
         .frame(minWidth: 440)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-execution-profile-cleanup-sheet")
         .onExitCommand { previewPresentation = nil }
+    }
+
+    private func confirmationSheet(_ presentation: ProjectExecutionProfileCleanupConfirmationPresentation) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Confirm profile cleanup").font(.title2.weight(.semibold))
+            Text("Only the exact profile sections below will be removed after Core rechecks the frozen assignment, selected context, definition, and configuration version. This does not remove worktrees, branches, commits, artifacts, logs, app data, reusable profiles, or task records.")
+                .foregroundStyle(RekonTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(presentation.selectedRows) { row in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(row.profileID).font(.body.monospaced()).textSelection(.enabled)
+                            Text(row.evidence).font(.caption).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    if !presentation.exclusionRows.isEmpty {
+                        Text("Excluded or skipped profiles").font(.headline)
+                        ForEach(presentation.exclusionRows) { row in
+                            Text("\(row.profileID): \(row.reason.map(reasonText) ?? categoryTitle(row.category))")
+                                .font(.caption).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: 420)
+            HStack {
+                Button("Cancel") { confirmationPresentation = nil }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(isSubmitting)
+                    .accessibilityIdentifier("project-execution-profile-cleanup-confirm-cancel")
+                Spacer()
+                Button("Confirm cleanup") { beginSubmit(presentation) }
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .disabled(isSubmitting)
+                    .accessibilityIdentifier("project-execution-profile-cleanup-confirm-submit")
+            }
+            if isSubmitting {
+                ProgressView("Completing the confirmed cleanup…")
+                    .accessibilityIdentifier("project-execution-profile-cleanup-confirm-progress")
+            }
+            if let confirmationErrorMessage {
+                Text(confirmationErrorMessage)
+                    .foregroundStyle(RekonTheme.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("project-execution-profile-cleanup-confirm-error")
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 480)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("project-execution-profile-cleanup-confirmation-sheet")
+        .interactiveDismissDisabled(isSubmitting)
+        .onExitCommand {
+            guard !isSubmitting else { return }
+            confirmationPresentation = nil
+        }
+    }
+
+    private func outcomeSheet(_ presentation: ProjectExecutionProfileCleanupOutcomePresentation) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Cleanup results").font(.title2.weight(.semibold))
+            Text("Each result is reported from the cleanup coordinator. A partial, skipped, uncertain, or finalization-pending result is not treated as complete.")
+                .foregroundStyle(RekonTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(presentation.outcomes, id: \.profileID) { outcome in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(outcome.profileID).font(.body.monospaced()).textSelection(.enabled)
+                            Text(outcomeTitle(outcome)).font(.headline)
+                            Text(outcome.detail).font(.caption).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: 420)
+            HStack {
+                Button("Done") { outcomePresentation = nil }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("project-execution-profile-cleanup-outcomes-done")
+                Spacer()
+                Button("Resume confirmed cleanup") {
+                    let confirmation = presentation.confirmation
+                    outcomePresentation = nil
+                    confirmationErrorMessage = nil
+                    confirmationPresentation = .init(confirmation: confirmation,
+                                                     selectedRows: presentation.selectedRows,
+                                                     exclusionRows: presentation.exclusionRows)
+                }
+                .buttonStyle(RekonPrimaryButtonStyle())
+                .accessibilityIdentifier("project-execution-profile-cleanup-outcomes-resume")
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 480)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("project-execution-profile-cleanup-outcomes-sheet")
+        .onExitCommand { outcomePresentation = nil }
     }
 
     private func refresh() async {
@@ -347,7 +537,104 @@ struct ExecutionProfileCleanupPreviewView: View {
 
     private func updateSelection(_ candidate: ProjectExecutionProfileCleanupPreviewPresentation.Selection, isSelected: Bool) {
         if isSelected { selection.insert(candidate) } else { selection.remove(candidate) }
+        confirmationPresentation = nil
         selectionChangedMessage = nil
+    }
+
+    private func confirmation(for presentation: ProjectExecutionProfileCleanupPreviewPresentation,
+                              snapshot: ProjectExecutionProfileCleanupPreview) -> ProjectExecutionProfileCleanupConfirmationPresentation? {
+        let targets = presentation.selectedEligibleRows.compactMap { row -> ProjectExecutionProfileCleanupConfirmation.Target? in
+            guard let assignmentID = row.assignmentID,
+                  let baseline = row.configurationBaseline,
+                  let assignment = row.assignmentBaseline,
+                  baseline.candidateProfileID == row.profileID,
+                  baseline.selectedCodexContextID == snapshot.observationIdentity.selectedCodexContextID else { return nil }
+            return .init(profileID: row.profileID, assignmentID: assignmentID,
+                         expectedDefinition: baseline.observedDefinition, assignmentBaseline: assignment)
+        }
+        guard targets.count == presentation.selectedEligibleRows.count, !targets.isEmpty else { return nil }
+        return .init(confirmation: .init(requestID: UUID(), registration: registration,
+                                         selectedCodexContextID: snapshot.observationIdentity.selectedCodexContextID,
+                                         configurationVersion: snapshot.observationIdentity.configurationVersion,
+                                         targets: targets), selectedRows: presentation.selectedEligibleRows,
+                     exclusionRows: presentation.exclusionRows)
+    }
+
+    private func beginSubmit(_ presentation: ProjectExecutionProfileCleanupConfirmationPresentation) {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        confirmationErrorMessage = nil
+        Task { await submit(presentation) }
+    }
+
+    private func submit(_ presentation: ProjectExecutionProfileCleanupConfirmationPresentation) async {
+        defer { isSubmitting = false }
+        do {
+            let outcomes = try await removeConfirmedProfiles(presentation.confirmation)
+            confirmationPresentation = nil
+            outcomePresentation = .init(confirmation: presentation.confirmation,
+                                        selectedRows: presentation.selectedRows,
+                                        exclusionRows: presentation.exclusionRows,
+                                        outcomes: outcomes)
+            await refresh()
+            await refreshRecoverableConfirmations()
+        } catch {
+            confirmationPresentation = presentation
+            confirmationErrorMessage = "Cleanup needs attention: \(error.localizedDescription). The original confirmed request is preserved for a safe retry."
+        }
+    }
+
+    private func refreshRecoverableConfirmations() async {
+        do {
+            recoverableConfirmations = try await loadRecoverableConfirmations()
+            recoverableConfirmationError = nil
+        } catch {
+            recoverableConfirmationError = "Confirmed cleanup recovery could not be read: \(error.localizedDescription)"
+        }
+    }
+
+    private func presentRecoveredConfirmation(_ confirmation: ProjectExecutionProfileCleanupConfirmation) {
+        guard confirmation.registration == registration else {
+            recoverableConfirmationError = "The protected cleanup request no longer matches this project registration."
+            return
+        }
+        let rows = confirmation.targets.map { target in
+            ProjectExecutionProfileCleanupPreview.Row(
+                profileID: target.profileID,
+                assignmentID: target.assignmentID,
+                role: target.assignmentBaseline.role.rawValue,
+                category: .cleanupEligible,
+                reason: nil,
+                configurationBaseline: .init(
+                    candidateProfileID: target.profileID,
+                    selectedCodexContextID: confirmation.selectedCodexContextID,
+                    observedDefinition: target.expectedDefinition),
+                assignmentBaseline: target.assignmentBaseline,
+                evidence: "This exact profile belongs to the protected confirmed cleanup request.")
+        }
+        confirmationErrorMessage = nil
+        confirmationPresentation = .init(confirmation: confirmation, selectedRows: rows, exclusionRows: [])
+    }
+
+    private func outcomeTitle(_ outcome: ProjectExecutionProfileCleanupOutcome) -> String {
+        switch outcome.kind {
+        case .removed:
+            switch outcome.finalizationStatus {
+            case .complete: "Removed; cleanup complete"
+            case .pending: "Removed; finalization pending"
+            case .notApplicable: "Removed"
+            }
+        case .observedAbsentUnattributed: "Absent without attribution"
+        case .replayed:
+            switch outcome.finalizationStatus {
+            case .complete: "Previously verified removal; cleanup complete"
+            case .pending: "Previously verified removal; finalization pending"
+            case .notApplicable: "Previously verified removal"
+            }
+        case .skipped: "Skipped"
+        case .conflict: "Conflict; refresh and reconfirm"
+        case .unresolved: "Unresolved; recovery is needed"
+        }
     }
 
     private func connectionLabel(_ value: Bool?) -> String {

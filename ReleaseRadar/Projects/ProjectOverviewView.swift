@@ -62,6 +62,8 @@ struct ProjectOverviewView: View {
     var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
     var loadExecutionAssignments: ((ProjectRegistration) async throws -> [ProjectExecutionAssignment])? = nil
     var loadExecutionProfileCleanupPreview: ((ProjectRegistration) async throws -> ProjectExecutionProfileCleanupPreview)? = nil
+    var loadRecoverableExecutionProfileCleanupConfirmations: ((ProjectRegistration) async throws -> [ProjectExecutionProfileCleanupConfirmation])? = nil
+    var removeConfirmedExecutionProfiles: ((ProjectRegistration, ProjectExecutionProfileCleanupConfirmation) async throws -> [ProjectExecutionProfileCleanupOutcome])? = nil
     var retireExecutionAssignment: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var recoverLostWorker: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
@@ -160,9 +162,20 @@ struct ProjectOverviewView: View {
                         .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
                 }
                 if let registration = project.registration, let loadExecutionProfileCleanupPreview {
-                    ExecutionProfileCleanupPreviewView(registration: registration) {
-                        try await loadExecutionProfileCleanupPreview(registration)
-                    }
+                    ExecutionProfileCleanupPreviewView(registration: registration,
+                                                       loadPreview: {
+                                                           try await loadExecutionProfileCleanupPreview(registration)
+                                                       }, loadRecoverableConfirmations: {
+                                                           guard let loadRecoverableExecutionProfileCleanupConfirmations else {
+                                                               return []
+                                                           }
+                                                           return try await loadRecoverableExecutionProfileCleanupConfirmations(registration)
+                                                       }, removeConfirmedProfiles: { confirmation in
+                                                           guard let removeConfirmedExecutionProfiles else {
+                                                               throw ProjectExecutionError.unavailable
+                                                           }
+                                                           return try await removeConfirmedExecutionProfiles(registration, confirmation)
+                                                       })
                     .id(registration)
                 }
                 }

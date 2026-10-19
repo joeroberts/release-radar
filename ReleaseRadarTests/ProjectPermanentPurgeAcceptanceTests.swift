@@ -252,6 +252,53 @@ final class ProjectPermanentPurgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(auditIDsAfter, auditIDsBefore)
     }
 
+    func testIncompleteProfileCleanupReceiptsBlockPermanentPurge() async throws {
+        let cases: [(String, ProjectExecutionProfileCleanupReceipt.State,
+            ProjectExecutionProfileCleanupReceipt.HelperClosureState?, Bool)] = [
+            ("intent", .intentRecorded, .pending, true),
+            ("unknown-effect", .outcomeUnknown, .unknown, true),
+            ("audit-pending", .removalVerified, .verified, true),
+            ("missing-helper-evidence", .removalVerified, nil, false),
+            ("unknown-helper", .removalVerified, .unknown, false),
+            ("pending-helper", .removalVerified, .pending, false),
+        ]
+
+        for scenario in cases {
+            let fixture = try Fixture(testCase: self)
+            let target = try await fixture.seedRemovedTarget(includeReplacement: true)
+            try fixture.seedRetiredExecutionMetadata(for: target)
+            try fixture.seedCleanupReceipt(for: target, state: scenario.1,
+                helperClosureState: scenario.2, finalizationPending: scenario.3)
+            let preview = try await fixture.manager.preview(removalID: target.id)
+
+            do {
+                _ = try await fixture.manager.apply(preview)
+                XCTFail("Incomplete cleanup state \(scenario.0) must block permanent purge")
+            } catch {
+                XCTAssertEqual(error as? ProjectPermanentPurgeError, .activeExecutionResources,
+                    "Unexpected error for \(scenario.0)")
+            }
+
+            XCTAssertNotNil(try fixture.files.assignmentIfPresent(
+                projectID: target.projectID.rawValue, taskID: "retired-target"))
+        }
+    }
+
+    func testVerifiedClosedAndAuditedProfileCleanupReceiptAllowsExistingPurgePath() async throws {
+        let fixture = try Fixture(testCase: self)
+        let target = try await fixture.seedRemovedTarget(includeReplacement: true)
+        try fixture.seedRetiredExecutionMetadata(for: target)
+        try fixture.seedCleanupReceipt(for: target, state: .removalVerified,
+            helperClosureState: .verified, finalizationPending: false)
+
+        let preview = try await fixture.manager.preview(removalID: target.id)
+        _ = try await fixture.manager.apply(preview)
+
+        try await fixture.assertTargetAbsent(target)
+        XCTAssertNil(try fixture.files.assignmentIfPresent(
+            projectID: target.projectID.rawValue, taskID: "retired-target"))
+    }
+
     func testMissingRepositoryDoesNotPreventPurgingRetainedRecords() async throws {
         let fixture = try Fixture(testCase: self)
         let target = try await fixture.seedRemovedTarget(includeReplacement: false)
@@ -828,6 +875,49 @@ private extension ProjectPermanentPurgeAcceptanceTests {
             )
             replacementPolicy.previousProjectIDs = [target.projectID.rawValue]
             try files.savePolicy(replacementPolicy, expected: nil)
+        }
+
+        func seedCleanupReceipt(
+            for target: RemovedProjectRecord,
+            state: ProjectExecutionProfileCleanupReceipt.State,
+            helperClosureState: ProjectExecutionProfileCleanupReceipt.HelperClosureState?,
+            finalizationPending: Bool
+        ) throws {
+            let existing = try files.assignment(
+                projectID: target.projectID.rawValue, taskID: "retired-target")
+            var assignment = existing
+            let contextID = UUID(uuidString: "19600000-0000-0000-0000-000000000001")!
+            let definition = Data(#"{"filesystem":{},"network":{"enabled":false}}"#.utf8)
+            assignment.codexContextID = contextID
+            assignment.permissionProfileDefinition = definition
+            let acknowledgement: ProjectExecutionProfileCleanupReceipt.Acknowledgement
+            let presence: ProjectExecutionProfileCleanupReceipt.TargetPresence
+            let observedVersion: String?
+            switch state {
+            case .intentRecorded:
+                acknowledgement = .notAttempted
+                presence = .present
+                observedVersion = nil
+            case .outcomeUnknown:
+                acknowledgement = .unknown
+                presence = .unavailable
+                observedVersion = nil
+            case .removalVerified:
+                acknowledgement = .acknowledged
+                presence = .absent
+                observedVersion = "after-v2"
+            }
+            assignment.profileCleanupReceipt = .init(
+                requestID: UUID(), profileID: assignment.permissionProfile,
+                selectedCodexContextID: contextID, configurationVersion: "before-v1",
+                expectedDefinition: definition, state: state,
+                acknowledgement: acknowledgement, observedTargetPresence: presence,
+                observedConfigurationVersion: observedVersion,
+                helperClosureState: helperClosureState,
+                configurationSessionID: helperClosureState == nil ? nil
+                    : UUID(uuidString: "19600000-0000-0000-0000-000000000002")!,
+                finalizationPending: finalizationPending)
+            try files.saveAssignment(assignment, expected: existing)
         }
 
         func seedUnknownExecutionMetadata(for target: RemovedProjectRecord) throws {

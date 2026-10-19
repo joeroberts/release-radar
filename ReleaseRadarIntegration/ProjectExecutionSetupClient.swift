@@ -169,6 +169,9 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let contextAccessFactory: @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease
     private let planPreparationFactory: @Sendable () -> any PlanPreparationServicing
     private let workerProfileObservationReadback: (@Sendable (String, Bool) async throws -> [String: Any])?
+    /// Synthetic-only seam for configuration protocol tests. Production leaves
+    /// this nil and uses the authenticated App Server transport below.
+    private let configurationRPC: (@Sendable (String, RPCObject, Bool) async throws -> RPCObject)?
     private var contextAccess: CodexExecutionContextLease?
     private var boundContext: CodexExecutionContext?
     private var transport: AppServerTransport?
@@ -230,11 +233,13 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
          planPreparationFactory: @escaping @Sendable () -> any PlanPreparationServicing = {
              PlanPreparationAdapter()
          },
-         workerProfileObservationReadback: (@Sendable (String, Bool) async throws -> [String: Any])? = nil) {
+         workerProfileObservationReadback: (@Sendable (String, Bool) async throws -> [String: Any])? = nil,
+         configurationRPC: (@Sendable (String, RPCObject, Bool) async throws -> RPCObject)? = nil) {
         self.plugin = plugin; self.bundle = bundle; self.executionRoot = executionRoot
         self.contextAccessFactory = contextAccessFactory
         self.planPreparationFactory = planPreparationFactory
         self.workerProfileObservationReadback = workerProfileObservationReadback
+        self.configurationRPC = configurationRPC
     }
 
     private func contextStore() throws -> ProjectExecutionFileStore {
@@ -477,6 +482,10 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     private func rpc(_ method: String, _ params: RPCObject, readback: Bool = false, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
         if let cleanupFailure { throw cleanupFailure }
+        if let configurationRPC {
+            try await beforeWrite()
+            return try await configurationRPC(method, params, readback)
+        }
         guard planPreparation == nil else { throw ProjectExecutionError.conflict }
         if transport == nil {
             guard let context = boundContext else { throw CodexExecutionContextError.selectionRequired }
@@ -668,6 +677,68 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         try await beforeWrite()
     }
 
+    /// Removes one owner-confirmed profile table. Unlike the legacy retirement
+    /// helper above, this never replaces the enclosing permissions map.
+    func removeConfirmedWorkerProfile(primaryRoot: String,
+                                      request: ProjectExecutionConfirmedProfileRemoval,
+                                      beforeWrite: @Sendable () async throws -> Void) async throws -> ProjectExecutionConfirmedProfileRemovalResult {
+        try ProjectExecutionPaths.component(request.profileID)
+        guard let selected = try contextStore().codexContext(), selected.id == request.selectedCodexContextID else {
+            throw CodexExecutionContextError.changed
+        }
+        try await useCodexContext(request.selectedCodexContextID)
+        guard boundContext == selected else { throw CodexExecutionContextError.changed }
+
+        let layer = try userLayer(await read(primaryRoot))
+        guard let version = layer["version"] as? String, version == request.configurationVersion,
+              let raw = layer["config"] as? [String: Any],
+              raw["permissions"] == nil || raw["permissions"] is [String: Any] else {
+            throw ProjectExecutionError.conflict
+        }
+        let permissions = raw["permissions"] as? [String: Any] ?? [:]
+        guard let current = permissions[request.profileID], Self.sameJSON(current, request.expectedDefinition) else {
+            throw ProjectExecutionError.conflict
+        }
+        var expectedAfter = raw
+        var expectedPermissions = permissions
+        expectedPermissions.removeValue(forKey: request.profileID)
+        if expectedPermissions.isEmpty { expectedAfter.removeValue(forKey: "permissions") }
+        else { expectedAfter["permissions"] = expectedPermissions }
+
+        guard let name = layer["name"] as? [String: Any], let file = name["file"] as? String else {
+            throw ProjectExecutionError.unavailable
+        }
+        _ = try await rpc("config/batchWrite", RPCObject([
+            "filePath": file,
+            "expectedVersion": request.configurationVersion,
+            "edits": [["keyPath": "permissions." + (try quoted(request.profileID)),
+                       "value": NSNull(), "mergeStrategy": "replace"]],
+            "reloadUserConfig": true,
+        ]), beforeWrite: beforeWrite)
+
+        let readback = try userLayer(await read(primaryRoot, readback: true))
+        guard let resultingVersion = readback["version"] as? String, !resultingVersion.isEmpty,
+              let actual = readback["config"] as? [String: Any],
+              actual["permissions"] == nil || actual["permissions"] is [String: Any],
+              NSDictionary(dictionary: actual).isEqual(to: expectedAfter) else {
+            throw ProjectExecutionError.conflict
+        }
+        try contextAccess?.validate()
+        guard try contextStore().codexContext() == selected, boundContext == selected else {
+            throw CodexExecutionContextError.changed
+        }
+        return .init(configurationVersion: resultingVersion)
+    }
+
+    private static func sameJSON(_ value: Any, _ expected: Data) -> Bool {
+        guard JSONSerialization.isValidJSONObject(value),
+              let expectedValue = try? JSONSerialization.jsonObject(with: expected),
+              JSONSerialization.isValidJSONObject(expectedValue) else { return false }
+        let actual = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
+        let desired = try? JSONSerialization.data(withJSONObject: expectedValue, options: [.sortedKeys])
+        return actual == desired
+    }
+
     func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
             let canonicalPrimaryRoot = try Self.canonicalProjectTrustKey(primaryRoot: primaryRoot)
             let discoveryCheckout = Self.hookDiscoveryCheckout(primaryRoot: primaryRoot,
@@ -798,5 +869,11 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             let failure = AppServerTransportError(message: "Execution setup connection recovery remains incomplete: \(error.localizedDescription)", outcomeUnknown: true)
             self.cleanupFailure = failure; throw failure
         }
+    }
+
+    func recoverRetainedConfigurationConnection() async throws -> Bool {
+        guard cleanupFailure != nil else { return false }
+        try await recoverConfigurationConnection()
+        return true
     }
 }

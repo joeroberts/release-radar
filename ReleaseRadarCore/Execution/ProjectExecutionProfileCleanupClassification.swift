@@ -128,6 +128,11 @@ public enum ProjectExecutionProfileCleanupClassification {
 
         switch association.category {
         case .unknown:
+            if assignment.profileCleanupReceipt != nil,
+               association.reason == .profileMissing,
+               input.configurationObservation == .missing {
+                break
+            }
             return .init(category: .unknown, assignmentID: assignment.id,
                 reason: association.reason.map(Reason.association))
         case .owned:
@@ -180,6 +185,26 @@ public enum ProjectExecutionProfileCleanupClassification {
                     reason: .missingTerminalClosure)
             }
             return .init(category: .unknown, assignmentID: assignment.id, reason: .missingTerminalClosure)
+        }
+        if let receipt = assignment.profileCleanupReceipt {
+            switch receipt.state {
+            case .intentRecorded, .outcomeUnknown:
+                return .init(category: .recoveryRetained, assignmentID: assignment.id)
+            case .removalVerified:
+                if hasPresentConfiguration {
+                    return .init(category: .unknown, assignmentID: assignment.id,
+                                 reason: .profileReappearedAfterRemoval)
+                }
+                if input.configurationObservation == .missing,
+                   association.category == .unknown,
+                   association.reason == .profileMissing {
+                    if receipt.helperClosureState == .verified, !receipt.finalizationPending {
+                        return .init(category: .alreadyRemoved, assignmentID: assignment.id)
+                    }
+                    return .init(category: .recoveryRetained, assignmentID: assignment.id)
+                }
+                return .init(category: .recoveryRetained, assignmentID: assignment.id)
+            }
         }
         return .init(category: .cleanupEligible, assignmentID: assignment.id,
             configurationBaseline: input.configurationBaseline, assignmentBaseline: assignment)

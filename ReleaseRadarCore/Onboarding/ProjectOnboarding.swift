@@ -920,6 +920,118 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         }
     }
 
+    /// Owner-authorized, profile-only cleanup. It records the request before
+    /// configuration mutation and never retires assignments or resources.
+    public func removeConfirmedExecutionProfiles(registration: ProjectRegistration,
+                                                 confirmation: ProjectExecutionProfileCleanupConfirmation,
+                                                 setup: ProjectExecutionSetupCoordinator) async throws -> [ProjectExecutionProfileCleanupOutcome] {
+        guard confirmation.registration == registration else { throw ProjectExecutionError.identityMismatch }
+        let context = try await executionOwnerContext(registration: registration)
+        let validate: @Sendable () async throws -> Void = { [store] in
+            try await store.documentationRead {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID,
+                    registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+        return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { [store] resolved in
+            try context.verifyAuthorization(resolved)
+            let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url])
+            for target in confirmation.targets {
+                let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: target.assignmentID)
+                try await self.recordLostWorkerAudit(
+                    id: .init(rawValue: "profile-cleanup-request-\(confirmation.requestID.uuidString.lowercased())-\(target.assignmentID)"),
+                    reason: "Execution profile cleanup requested: \(target.profileID), request \(confirmation.requestID.uuidString)",
+                    scope: scope, registration: registration, context: context)
+            }
+            let run = try await setup.removeConfirmedWorkerProfiles(project: project, confirmation: confirmation, beforeWrite: validate)
+            do {
+                for outcome in run.outcomes {
+                    let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: outcome.assignmentID)
+                    let audit = self.profileCleanupAudit(outcome: outcome, requestID: confirmation.requestID)
+                    try await self.recordLostWorkerAudit(
+                        id: .init(rawValue: audit.id), reason: audit.reason,
+                        scope: scope, registration: registration, context: context)
+                }
+                if run.configurationFinalized {
+                    try await setup.completeConfirmedWorkerProfileFinalization(
+                        project: project, confirmation: confirmation, beforeWrite: validate)
+                    return self.profileCleanupOutcomes(run.outcomes, finalized: true)
+                }
+            } catch {
+                // The exact configuration effects remain authoritative and
+                // replay-safe. Audit/finalization is retried by the same request.
+                return self.profileCleanupOutcomes(run.outcomes, finalized: false)
+            }
+            return self.profileCleanupOutcomes(run.outcomes, finalized: false)
+        }
+    }
+
+    /// Returns only protected, complete cleanup requests that can be resumed
+    /// through `removeConfirmedExecutionProfiles` with the same request ID.
+    public func recoverableExecutionProfileCleanupConfirmations(
+        registration: ProjectRegistration,
+        setup: ProjectExecutionSetupCoordinator
+    ) async throws -> [ProjectExecutionProfileCleanupConfirmation] {
+        let context = try await executionOwnerContext(registration: registration)
+        return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+            try context.verifyAuthorization(resolved)
+            let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url,
+                                            authorizedRoots: [resolved.url])
+            return try await setup.recoverableWorkerProfileCleanups(project: project)
+        }
+    }
+
+    nonisolated private func profileCleanupAudit(
+        outcome: ProjectExecutionProfileCleanupOutcome,
+        requestID: UUID
+    ) -> (id: String, reason: String) {
+        let request = requestID.uuidString.lowercased()
+        switch outcome.kind {
+        case .removed, .replayed:
+            return ("profile-cleanup-removal-\(request)-\(outcome.assignmentID)",
+                    "Execution profile cleanup removal verified: \(outcome.profileID), request \(requestID.uuidString)")
+        case .observedAbsentUnattributed:
+            return ("profile-cleanup-outcome-absent-unattributed-\(request)-\(outcome.assignmentID)",
+                    "Execution profile cleanup observed unattributed absence: \(outcome.profileID), request \(requestID.uuidString)")
+        case .skipped:
+            return ("profile-cleanup-outcome-skipped-\(request)-\(outcome.assignmentID)",
+                    "Execution profile cleanup skipped: \(outcome.profileID), request \(requestID.uuidString)")
+        case .conflict:
+            return ("profile-cleanup-outcome-conflict-\(request)-\(outcome.assignmentID)",
+                    "Execution profile cleanup conflict: \(outcome.profileID), request \(requestID.uuidString)")
+        case .unresolved:
+            return ("profile-cleanup-outcome-unresolved-\(request)-\(outcome.assignmentID)",
+                    "Execution profile cleanup unresolved: \(outcome.profileID), request \(requestID.uuidString)")
+        }
+    }
+
+    nonisolated private func profileCleanupOutcomes(
+        _ outcomes: [ProjectExecutionProfileCleanupOutcome],
+        finalized: Bool
+    ) -> [ProjectExecutionProfileCleanupOutcome] {
+        outcomes.map { outcome in
+            switch outcome.kind {
+            case .removed:
+                return .init(profileID: outcome.profileID, assignmentID: outcome.assignmentID,
+                             kind: .removed,
+                             detail: finalized
+                                ? "The confirmed profile section was removed and cleanup finalization completed."
+                                : "The confirmed profile section was removed; cleanup finalization remains pending.",
+                             finalizationStatus: finalized ? .complete : .pending)
+            case .replayed:
+                return .init(profileID: outcome.profileID, assignmentID: outcome.assignmentID,
+                             kind: .replayed,
+                             detail: finalized
+                                ? "The previously verified removal and cleanup finalization are complete; no configuration write was attempted."
+                                : "The previously verified removal remains final; cleanup finalization is pending and no configuration write was attempted.",
+                             finalizationStatus: finalized ? .complete : .pending)
+            case .observedAbsentUnattributed, .skipped, .conflict, .unresolved:
+                return outcome
+            }
+        }
+    }
+
     public func executionResourcesNeedOriginalFolder(registration: ProjectRegistration, expected: ProjectExecutionAssignment) async throws -> Bool {
         let context = try await executionOwnerContext(registration: registration)
         return expected.worktree?.primaryRoot != context.root.path
