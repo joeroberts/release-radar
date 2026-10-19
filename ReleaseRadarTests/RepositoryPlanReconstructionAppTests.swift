@@ -622,6 +622,7 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
             preview(for: draft.originalProjection),
             preview(for: draft.originalProjection),
             preview(for: draft.originalProjection),
+            preview(for: draft.originalProjection),
         ])
         let service = RepositoryPlanPreparationServiceSpy(
             startResponses: [readback(
@@ -695,6 +696,18 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
         XCTAssertTrue(invocations[2].reviewedProjection.tickets.contains {
             $0.sourceID == historicalSubject.sourceID
         })
+
+        await model.removeRepositoryPlanExclusion(
+            projectID: projectID,
+            subject: historicalSubject
+        )
+        review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertTrue(review.exclusions.isEmpty)
+        XCTAssertEqual(
+            review.comparisons.first { $0.subject == historicalSubject }?.disposition,
+            .blocked
+        )
+        XCTAssertFalse(review.authorityConfirmed)
     }
 
     func testParentExclusionKeepsRowsVisibleAndBlocksIncludedChildUntilExplicitlyExcluded() async throws {
@@ -1105,6 +1118,14 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
         XCTAssertEqual(
             model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback,
             saved
+        )
+
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+        let dispatchCountAfterBlockedApproval = await dispatchSpy.invocationCount()
+        XCTAssertEqual(
+            dispatchCountAfterBlockedApproval,
+            1,
+            "A structurally valid blocked Save must remain review-only and never dispatch approval."
         )
     }
 
@@ -2044,6 +2065,350 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
         XCTAssertEqual(cancellations, [identity])
     }
 
+    func testProductionServiceRelaunchRecoversQueuedRunningUnknownAndReadyWithoutReplacementStart() async throws {
+        let recoverableStates: [RepositoryPlanPreparationState] = [
+            .queued,
+            .running,
+            .outcomeUnknown,
+            .readyForReview,
+        ]
+
+        for (index, state) in recoverableStates.enumerated() {
+            let fixture = try await ReconstructionFixture.make()
+            addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+            let projectID = fixture.registration.projectID
+            let manifest = fixture.payload.source.capturedSourceManifest
+            let inventory = sourceInventory(for: fixture)
+            let consent = RepositoryPlanPreparationConsent(
+                inventory: inventory,
+                selectedSources: inventory.sources,
+                target: target
+            )
+            let attemptID = uuid(UInt8(140 + index))
+            let projectionID = try XCTUnwrap(UUID(uuidString: fixture.projection.projectionID))
+            let identity = RepositoryPlanPreparationIdentity(
+                registration: fixture.registration,
+                rootID: manifest.rootID,
+                proposalID: .init(rawValue: "proposal-\(projectID.rawValue)"),
+                attemptID: attemptID
+            )
+            let draftBytes = state == .readyForReview
+                ? fixture.payload.source.projectionBytes
+                : nil
+            let expected = readback(
+                identity: identity,
+                state: state,
+                draftBytes: draftBytes,
+                error: state == .outcomeUnknown ? "Preparation outcome is unknown." : nil
+            )
+            let snapshotRoot = fixture.root.appendingPathComponent("preparation-snapshots")
+            let firstPersistenceRequestID = uuid(UInt8(160 + index))
+            let relaunchPersistenceRequestID = uuid(UInt8(190 + index))
+            let firstClient = RepositoryPlanPreparationClientSpy(
+                target: target,
+                prepareResponses: [expected]
+            )
+            let firstService = RepositoryPlanPreparationService(
+                client: firstClient,
+                sourceCapture: { _ in manifest },
+                snapshotRoot: { snapshotRoot },
+                identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                    attemptID,
+                    projectionID,
+                ]).next,
+                persistenceStore: fixture.store,
+                persistenceRequestIDGenerator: { firstPersistenceRequestID }
+            )
+
+            let started = try await firstService.start(consent: consent)
+            XCTAssertEqual(started, expected)
+
+            let relaunchedClient = RepositoryPlanPreparationClientSpy(
+                target: target,
+                prepareResponses: []
+            )
+            let relaunchedService = RepositoryPlanPreparationService(
+                client: relaunchedClient,
+                sourceCapture: { _ in manifest },
+                snapshotRoot: { snapshotRoot },
+                identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                    uuid(UInt8(170 + index)),
+                    uuid(UInt8(180 + index)),
+                ]).next,
+                persistenceStore: fixture.store,
+                persistenceRequestIDGenerator: { relaunchPersistenceRequestID }
+            )
+
+            let recovered = try await relaunchedService.recover(projectID: projectID)
+            XCTAssertEqual(recovered, [expected], "\(state) must survive service recreation exactly.")
+
+            if state == .readyForReview {
+                let recoveredDraft = try await relaunchedService.reviewDraft(identity: identity)
+                XCTAssertEqual(recoveredDraft.source, fixture.payload.source)
+                XCTAssertEqual(recoveredDraft.originalProjection, fixture.projection)
+            } else {
+                await XCTAssertThrowsErrorAsync {
+                    try await relaunchedService.start(consent: consent)
+                }
+                let replacementPrepareCount = await relaunchedClient.prepareInvocationCount()
+                XCTAssertEqual(replacementPrepareCount, 0)
+            }
+
+            let inventoryLoader = RepositoryPlanSourceInventoryLoaderSpy(
+                responses: [inventory]
+            )
+            let store = fixture.store
+            let model = try makeModel(
+                projectID: projectID,
+                service: relaunchedService,
+                store: store,
+                inventoryLoader: inventoryLoader,
+                previewer: { source, reviewedProjection, corrections, explicitMappings in
+                    try await RepositoryPlanReconstructionPreviewQuery.preview(
+                        source: source,
+                        reviewedProjection: reviewedProjection,
+                        corrections: corrections,
+                        explicitMappings: explicitMappings,
+                        from: store
+                    )
+                }
+            )
+
+            await model.openRepositoryPlanReconstruction(projectID: projectID)
+
+            let presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+            switch state {
+            case .queued, .running, .awaitingResolution:
+                XCTAssertEqual(presentation.stage, .preparing(state))
+                XCTAssertEqual(presentation.preparation, expected)
+            case .outcomeUnknown:
+                XCTAssertEqual(presentation.stage, .outcomeUnknown)
+                XCTAssertEqual(presentation.preparation, expected)
+            case .readyForReview:
+                XCTAssertEqual(presentation.stage, .reviewing)
+                XCTAssertEqual(presentation.preparation, expected)
+                XCTAssertEqual(presentation.review?.source, fixture.payload.source)
+            case .failed, .cancelled:
+                XCTFail("Terminal non-review state \(state) is not part of this recovery fixture.")
+            }
+            let inventoryLoadCount = await inventoryLoader.invocationCount()
+            XCTAssertEqual(inventoryLoadCount, 0)
+            await model.startRepositoryPlanPreparation(projectID: projectID)
+            let relaunchedPrepareCount = await relaunchedClient.prepareInvocationCount()
+            XCTAssertEqual(relaunchedPrepareCount, 0)
+        }
+    }
+
+    func testProductionServicePersistsLearnedThreadAndTurnBeforeRelaunchRecovery() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let manifest = fixture.payload.source.capturedSourceManifest
+        let inventory = sourceInventory(for: fixture)
+        let consent = RepositoryPlanPreparationConsent(
+            inventory: inventory,
+            selectedSources: inventory.sources,
+            target: target
+        )
+        let attemptID = uuid(230)
+        let projectionID = try XCTUnwrap(UUID(uuidString: fixture.projection.projectionID))
+        let identity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: manifest.rootID,
+            proposalID: .init(rawValue: "proposal-\(projectID.rawValue)"),
+            attemptID: attemptID
+        )
+        let threadProgress = RepositoryPlanPreparationReadback(
+            identity: identity,
+            state: .queued,
+            threadID: "thread-durable-101",
+            turnID: nil,
+            draftBytes: nil,
+            error: nil
+        )
+        let turnProgress = RepositoryPlanPreparationReadback(
+            identity: identity,
+            state: .running,
+            threadID: "thread-durable-101",
+            turnID: "turn-durable-101",
+            draftBytes: nil,
+            error: nil
+        )
+        let progressRecords = RepositoryPlanPreparationProgressRecordSpy()
+        let persistenceRequestID = uuid(231)
+        let client = RepositoryPlanPreparationClientSpy(
+            target: target,
+            prepareResponses: [turnProgress],
+            progressResponses: [threadProgress, turnProgress],
+            progressObservation: { _ in
+                let records = try await RepositoryPlanPreparationPersistence.load(
+                    projectID: projectID,
+                    from: fixture.store
+                )
+                guard let record = records.first(where: {
+                    $0.request.identity == identity && $0.isCurrent
+                }) else {
+                    throw RepositoryPlanPreparationError(code: .identityMismatch)
+                }
+                await progressRecords.append(record)
+            }
+        )
+        let snapshotRoot = fixture.root.appendingPathComponent("preparation-snapshots")
+        let service = RepositoryPlanPreparationService(
+            client: client,
+            sourceCapture: { _ in manifest },
+            snapshotRoot: { snapshotRoot },
+            identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                attemptID,
+                projectionID,
+            ]).next,
+            persistenceStore: fixture.store,
+            persistenceRequestIDGenerator: { persistenceRequestID }
+        )
+
+        let started = try await service.start(consent: consent)
+
+        XCTAssertEqual(started, turnProgress)
+        let recordedProgress = await progressRecords.values
+        XCTAssertEqual(recordedProgress.count, 2)
+        if recordedProgress.count == 2 {
+            XCTAssertEqual(recordedProgress[0].revision, 2)
+            XCTAssertEqual(recordedProgress[0].state, .queued)
+            XCTAssertEqual(recordedProgress[0].threadID, "thread-durable-101")
+            XCTAssertNil(recordedProgress[0].turnID)
+            XCTAssertEqual(recordedProgress[1].revision, 3)
+            XCTAssertEqual(recordedProgress[1].state, .running)
+            XCTAssertEqual(recordedProgress[1].threadID, "thread-durable-101")
+            XCTAssertEqual(recordedProgress[1].turnID, "turn-durable-101")
+        }
+
+        let relaunchedClient = RepositoryPlanPreparationClientSpy(
+            target: target,
+            prepareResponses: [],
+            statusResponses: [turnProgress]
+        )
+        let relaunchPersistenceRequestID = uuid(234)
+        let relaunched = RepositoryPlanPreparationService(
+            client: relaunchedClient,
+            sourceCapture: { _ in manifest },
+            snapshotRoot: { snapshotRoot },
+            identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                uuid(232),
+                uuid(233),
+            ]).next,
+            persistenceStore: fixture.store,
+            persistenceRequestIDGenerator: { relaunchPersistenceRequestID }
+        )
+
+        let recovered = try await relaunched.recover(projectID: projectID)
+        let restores = await relaunchedClient.restoreInvocations()
+        let replacementPrepareCount = await relaunchedClient.prepareInvocationCount()
+
+        XCTAssertEqual(recovered, [turnProgress])
+        XCTAssertEqual(restores.count, 1)
+        XCTAssertEqual(restores.first?.request.identity, identity)
+        XCTAssertEqual(restores.first?.readback, turnProgress)
+        XCTAssertEqual(replacementPrepareCount, 0)
+    }
+
+    func testProductionServiceRetriesExactRestoreAfterRecoverySetupReturns() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let manifest = fixture.payload.source.capturedSourceManifest
+        let inventory = sourceInventory(for: fixture)
+        let consent = RepositoryPlanPreparationConsent(
+            inventory: inventory,
+            selectedSources: inventory.sources,
+            target: target
+        )
+        let attemptID = uuid(235)
+        let projectionID = try XCTUnwrap(UUID(uuidString: fixture.projection.projectionID))
+        let identity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: manifest.rootID,
+            proposalID: .init(rawValue: "proposal-\(projectID.rawValue)"),
+            attemptID: attemptID
+        )
+        let storedUnknown = RepositoryPlanPreparationReadback(
+            identity: identity,
+            state: .outcomeUnknown,
+            threadID: "thread-retry-101",
+            turnID: "turn-retry-101",
+            draftBytes: nil,
+            error: "The exact stored attempt still needs reconciliation."
+        )
+        let terminalFailure = RepositoryPlanPreparationReadback(
+            identity: identity,
+            state: .failed,
+            threadID: "thread-retry-101",
+            turnID: "turn-retry-101",
+            draftBytes: nil,
+            error: "The exact stored turn failed."
+        )
+        let snapshotRoot = fixture.root.appendingPathComponent("preparation-snapshots")
+        let firstPersistenceRequestID = uuid(236)
+        let firstService = RepositoryPlanPreparationService(
+            client: RepositoryPlanPreparationClientSpy(
+                target: target,
+                prepareResponses: [storedUnknown]
+            ),
+            sourceCapture: { _ in manifest },
+            snapshotRoot: { snapshotRoot },
+            identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                attemptID,
+                projectionID,
+            ]).next,
+            persistenceStore: fixture.store,
+            persistenceRequestIDGenerator: { firstPersistenceRequestID }
+        )
+        let started = try await firstService.start(consent: consent)
+        XCTAssertEqual(started, storedUnknown)
+
+        let retryClient = RepositoryPlanPreparationClientSpy(
+            target: target,
+            prepareResponses: [],
+            statusResponses: [terminalFailure],
+            restoreErrorCodes: [.outcomeUnknown],
+            requireSuccessfulRestoreBeforeStatus: true
+        )
+        let relaunchPersistenceRequestID = uuid(237)
+        let relaunched = RepositoryPlanPreparationService(
+            client: retryClient,
+            sourceCapture: { _ in manifest },
+            snapshotRoot: { snapshotRoot },
+            identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                uuid(238),
+                uuid(239),
+            ]).next,
+            persistenceStore: fixture.store,
+            persistenceRequestIDGenerator: { relaunchPersistenceRequestID }
+        )
+
+        let initiallyRecovered = try await relaunched.recover(projectID: projectID)
+        XCTAssertEqual(initiallyRecovered.count, 1)
+        XCTAssertEqual(initiallyRecovered.first?.state, .outcomeUnknown)
+        XCTAssertEqual(initiallyRecovered.first?.threadID, "thread-retry-101")
+        XCTAssertEqual(initiallyRecovered.first?.turnID, "turn-retry-101")
+
+        let reconciled = try await relaunched.reconcile(identity: identity)
+        let restores = await retryClient.restoreInvocations()
+        let statuses = await retryClient.statusInvocations()
+        let closes = await retryClient.closeInvocations()
+        let replacementPrepareCount = await retryClient.prepareInvocationCount()
+
+        XCTAssertEqual(reconciled, terminalFailure)
+        XCTAssertEqual(restores.count, 2)
+        XCTAssertTrue(restores.allSatisfy { $0.request.identity == identity })
+        XCTAssertTrue(restores.allSatisfy {
+            $0.readback.threadID == "thread-retry-101"
+                && $0.readback.turnID == "turn-retry-101"
+        })
+        XCTAssertEqual(statuses, [identity])
+        XCTAssertEqual(closes, [identity])
+        XCTAssertEqual(replacementPrepareCount, 0)
+    }
+
     func testProductionServiceReconcilesUnknownOnlyAfterExactClose() async throws {
         let fixture = try serviceFixture(projectID: .init(rawValue: "service-reconcile"))
         let identity = preparationIdentity(
@@ -2152,6 +2517,179 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
         XCTAssertEqual(closes, [identity, identity])
     }
 
+    func testProductionServiceRelaunchKeepsTerminalCloseFailureNonreplaceable() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let inventory = sourceInventory(for: fixture)
+        let consent = RepositoryPlanPreparationConsent(
+            inventory: inventory,
+            selectedSources: inventory.sources,
+            target: target
+        )
+        let attemptID = uuid(215)
+        let projectionID = try XCTUnwrap(UUID(uuidString: fixture.projection.projectionID))
+        let identity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: fixture.payload.source.rootID,
+            proposalID: .init(rawValue: "proposal-\(projectID.rawValue)"),
+            attemptID: attemptID
+        )
+        let firstClient = RepositoryPlanPreparationClientSpy(
+            target: target,
+            prepareResponses: [readback(identity: identity, state: .running)],
+            statusResponses: [readback(
+                identity: identity,
+                state: .readyForReview,
+                draftBytes: fixture.payload.source.projectionBytes
+            )],
+            closeErrorCodes: [.outcomeUnknown]
+        )
+        let snapshotRoot = fixture.root.appendingPathComponent("preparation-close-failure")
+        let firstPersistenceID = uuid(216)
+        let firstService = RepositoryPlanPreparationService(
+            client: firstClient,
+            sourceCapture: { _ in fixture.payload.source.capturedSourceManifest },
+            snapshotRoot: { snapshotRoot },
+            identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                attemptID,
+                projectionID,
+            ]).next,
+            persistenceStore: fixture.store,
+            persistenceRequestIDGenerator: { firstPersistenceID }
+        )
+        _ = try await firstService.start(consent: consent)
+        await XCTAssertThrowsErrorAsync {
+            try await firstService.status(identity: identity)
+        }
+
+        let replacement = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: fixture.payload.source.rootID,
+            proposalID: identity.proposalID,
+            attemptID: uuid(217)
+        )
+        let relaunchedClient = RepositoryPlanPreparationClientSpy(
+            target: target,
+            prepareResponses: [readback(identity: replacement, state: .queued)]
+        )
+        let relaunchPersistenceID = uuid(219)
+        let relaunched = RepositoryPlanPreparationService(
+            client: relaunchedClient,
+            sourceCapture: { _ in fixture.payload.source.capturedSourceManifest },
+            snapshotRoot: { snapshotRoot },
+            identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                replacement.attemptID,
+                uuid(218),
+            ]).next,
+            persistenceStore: fixture.store,
+            persistenceRequestIDGenerator: { relaunchPersistenceID }
+        )
+
+        let recovered = try await relaunched.recover(projectID: projectID)
+        XCTAssertEqual(recovered.count, 1)
+        XCTAssertEqual(recovered.first?.identity, identity)
+        XCTAssertEqual(recovered.first?.state, .outcomeUnknown)
+        await XCTAssertThrowsErrorAsync {
+            try await relaunched.start(consent: consent)
+        }
+        let replacementPrepareCount = await relaunchedClient.prepareInvocationCount()
+        XCTAssertEqual(replacementPrepareCount, 0)
+    }
+
+    func testProductionServicePrepareFailureRetainedTerminalStillRequiresPhysicalClose() async throws {
+        for (index, retainedState) in [
+            RepositoryPlanPreparationState.readyForReview,
+            .failed,
+            .cancelled,
+        ].enumerated() {
+            let fixture = try await ReconstructionFixture.make()
+            addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+            let projectID = fixture.registration.projectID
+            let inventory = sourceInventory(for: fixture)
+            let consent = RepositoryPlanPreparationConsent(
+                inventory: inventory,
+                selectedSources: inventory.sources,
+                target: target
+            )
+            let attemptID = uuid(UInt8(220 + index * 4))
+            let projectionID = try XCTUnwrap(UUID(uuidString: fixture.projection.projectionID))
+            let identity = RepositoryPlanPreparationIdentity(
+                registration: fixture.registration,
+                rootID: fixture.payload.source.rootID,
+                proposalID: .init(rawValue: "proposal-\(projectID.rawValue)"),
+                attemptID: attemptID
+            )
+            let retained = readback(
+                identity: identity,
+                state: retainedState,
+                draftBytes: retainedState == .readyForReview
+                    ? fixture.payload.source.projectionBytes
+                    : nil
+            )
+            let client = RepositoryPlanPreparationClientSpy(
+                target: target,
+                prepareResponses: [],
+                statusResponses: [retained],
+                closeErrorCodes: [.outcomeUnknown],
+                prepareErrorCodes: [.outcomeUnknown]
+            )
+            let snapshotRoot = fixture.root.appendingPathComponent(
+                "prepare-retained-terminal-\(retainedState.rawValue)"
+            )
+            let persistenceID = uuid(UInt8(221 + index * 4))
+            let service = RepositoryPlanPreparationService(
+                client: client,
+                sourceCapture: { _ in fixture.payload.source.capturedSourceManifest },
+                snapshotRoot: { snapshotRoot },
+                identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                    attemptID,
+                    projectionID,
+                ]).next,
+                persistenceStore: fixture.store,
+                persistenceRequestIDGenerator: { persistenceID }
+            )
+
+            await XCTAssertThrowsErrorAsync {
+                try await service.start(consent: consent)
+            }
+            let closes = await client.closeInvocations()
+            XCTAssertEqual(closes, [identity], "\(retainedState) must require exact physical close.")
+
+            let replacement = RepositoryPlanPreparationIdentity(
+                registration: fixture.registration,
+                rootID: fixture.payload.source.rootID,
+                proposalID: identity.proposalID,
+                attemptID: uuid(UInt8(222 + index * 4))
+            )
+            let relaunchedClient = RepositoryPlanPreparationClientSpy(
+                target: target,
+                prepareResponses: [readback(identity: replacement, state: .queued)]
+            )
+            let relaunchPersistenceID = uuid(UInt8(223 + index * 4))
+            let relaunched = RepositoryPlanPreparationService(
+                client: relaunchedClient,
+                sourceCapture: { _ in fixture.payload.source.capturedSourceManifest },
+                snapshotRoot: { snapshotRoot },
+                identityGenerator: RepositoryPlanPreparationIdentityGenerator(values: [
+                    replacement.attemptID,
+                    uuid(UInt8(224 + index * 4)),
+                ]).next,
+                persistenceStore: fixture.store,
+                persistenceRequestIDGenerator: { relaunchPersistenceID }
+            )
+
+            let recovered = try await relaunched.recover(projectID: projectID)
+            XCTAssertEqual(recovered.first?.identity, identity)
+            XCTAssertEqual(recovered.first?.state, .outcomeUnknown)
+            await XCTAssertThrowsErrorAsync {
+                try await relaunched.start(consent: consent)
+            }
+            let replacementPrepareCount = await relaunchedClient.prepareInvocationCount()
+            XCTAssertEqual(replacementPrepareCount, 0)
+        }
+    }
+
     func testProductionServiceDefinitiveCancelErrorReconcilesRunningIdentityWithoutClose() async throws {
         let fixture = try serviceFixture(projectID: .init(rawValue: "service-cancel-reconcile"))
         let identity = preparationIdentity(
@@ -2254,11 +2792,1261 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
         XCTAssertEqual(changedTargetPrepares, 0)
     }
 
+    func testRealStoreApprovesAndAppliesExactSavedReconstructionIntoPlanBoardAndHistory() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let proposalID = PlanChangeProposalID(rawValue: "proposal-app-final-journey")
+        let model = try makeRealReviewModel(fixture: fixture, proposalID: proposalID)
+
+        await model.openRepositoryPlanReconstruction(projectID: fixture.registration.projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: fixture.registration.projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: fixture.registration.projectID)
+        model.setRepositoryPlanAuthorityConfirmed(
+            projectID: fixture.registration.projectID,
+            confirmed: true
+        )
+        await model.saveRepositoryPlanReconstruction(
+            projectID: fixture.registration.projectID,
+            rationale: "Save the owner-reviewed repository plan before approval."
+        )
+
+        let saved = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)?.review?.savedReadback
+        )
+        let decisionID = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)?.review?.decisionID
+        )
+        XCTAssertNil(saved.version.decision)
+        XCTAssertNil(saved.applicationAttempt)
+        let phaseCountBeforeApproval = try await fixture.phaseCount(id: "phase-101")
+        XCTAssertEqual(phaseCountBeforeApproval, 0)
+
+        await model.approveRepositoryPlanReconstruction(projectID: fixture.registration.projectID)
+
+        let approved = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)?.review?.savedReadback
+        )
+        XCTAssertEqual(approved.version.version, saved.version.version)
+        XCTAssertEqual(approved.version.baselineDigest, saved.version.baselineDigest)
+        XCTAssertEqual(approved.version.decision?.id, decisionID)
+        XCTAssertEqual(approved.version.decision?.disposition, .approved)
+        XCTAssertNil(approved.applicationAttempt)
+        let phaseCountBeforeApply = try await fixture.phaseCount(id: "phase-101")
+        XCTAssertEqual(phaseCountBeforeApply, 0)
+
+        await model.applyRepositoryPlanReconstruction(projectID: fixture.registration.projectID)
+
+        let presentation = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)
+        )
+        XCTAssertEqual(presentation.stage, .applied)
+        let applied = try XCTUnwrap(presentation.review?.savedReadback)
+        XCTAssertEqual(applied.proposalID, proposalID)
+        XCTAssertEqual(applied.version.version, saved.version.version)
+        XCTAssertEqual(applied.version.baselineDigest, saved.version.baselineDigest)
+        XCTAssertEqual(applied.version.decision?.id, decisionID)
+        XCTAssertNotNil(applied.version.application)
+        XCTAssertEqual(applied.applicationAttempt?.state, .applied)
+        XCTAssertEqual(applied.provenance.count, 1)
+        XCTAssertTrue(applied.remainingSetup.isEmpty)
+
+        let exactReadbacks = try await RepositoryPlanReconstructionQuery.load(
+            from: fixture.store,
+            projectID: fixture.registration.projectID,
+            proposalID: proposalID
+        )
+        let exactReadback = try XCTUnwrap(exactReadbacks.first)
+        XCTAssertEqual(applied, exactReadback)
+        let destinationPhaseID = try XCTUnwrap(applied.provenance.first?.comparison.destinationID)
+        let phaseCountAfterApply = try await fixture.phaseCount(id: destinationPhaseID)
+        XCTAssertEqual(phaseCountAfterApply, 1)
+
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.registration.projectID))
+        XCTAssertEqual(plan.phases.map(\.id), [.init(rawValue: destinationPhaseID)])
+        XCTAssertEqual(plan.proposals.first?.id, proposalID)
+        XCTAssertNotNil(model.dashboard?.allPhaseBoard(for: fixture.registration.projectID))
+        let history = try XCTUnwrap(model.activity(for: fixture.registration.projectID))
+        XCTAssertTrue(history.items.contains {
+            $0.source == .audit
+                && $0.detail == "Exercise the complete repository plan owner journey."
+        })
+
+        await model.navigate(to: .projectPlan(fixture.registration.projectID))
+        XCTAssertEqual(model.selection, .projectPlan(fixture.registration.projectID))
+        XCTAssertEqual(
+            model.dashboard?.plan(for: fixture.registration.projectID)?.phases.map(\.id),
+            [.init(rawValue: destinationPhaseID)]
+        )
+
+        model.viewAllPhases(projectID: fixture.registration.projectID)
+        await model.navigate(to: .phaseBoard(fixture.registration.projectID))
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.registration.projectID))
+        XCTAssertNotNil(model.dashboard?.allPhaseBoard(for: fixture.registration.projectID))
+
+        await model.navigate(to: .activity(fixture.registration.projectID))
+        XCTAssertEqual(model.selection, .activity(fixture.registration.projectID))
+        XCTAssertTrue(model.activity(for: fixture.registration.projectID)?.items.contains {
+            $0.source == .audit
+                && $0.detail == "Exercise the complete repository plan owner journey."
+        } == true)
+    }
+
+    func testPolicyBEvidenceEditsRetainDecisionIdentityInvalidateSaveAndRejectMixedAttestations() async throws {
+        let projectID = ProjectID(rawValue: "project-policy-b-evidence")
+        let identity = preparationIdentity(projectID: projectID, attemptID: uuid(111))
+        let draft = preparedDraft(projectID: projectID)
+        let initialPreview = preview(for: draft.originalProjection)
+        let previewSpy = RepositoryPlanPreviewSpy(responses: [
+            initialPreview,
+            initialPreview,
+            initialPreview,
+        ])
+        let service = RepositoryPlanPreparationServiceSpy(
+            startResponses: [readback(
+                identity: identity,
+                state: .readyForReview,
+                draftBytes: draft.source.projectionBytes
+            )],
+            reviewDraftResponses: [draft]
+        )
+        let model = try makeModel(
+            projectID: projectID,
+            service: service,
+            previewSpy: previewSpy
+        )
+        await openReadyReview(model, projectID: projectID)
+        let initial = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        let decisionID = initial.decisionID
+        let evidence = RepositoryPlanTerminalEvidence.ownerAttestation(.init(
+            id: "attestation-policy-b-owner",
+            subject: .ticket(.init(
+                sourceID: "ticket-historical",
+                outcome: "Historical ticket",
+                phaseSourceID: "phase-historical",
+                taskPlan: nil
+            )),
+            state: .accepted,
+            phaseCompletion: nil,
+            decisionID: decisionID,
+            attestedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            originalOccurredAt: nil,
+            originalActorID: nil
+        ))
+
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.setRepositoryPlanTerminalEvidence(projectID: projectID, evidence: [evidence])
+
+        var review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.decisionID, decisionID)
+        XCTAssertEqual(review.terminalEvidence, [evidence])
+        XCTAssertFalse(review.authorityConfirmed)
+        XCTAssertNil(review.savedReadback)
+        XCTAssertEqual(review.revision, initial.revision + 1)
+
+        let mismatched = RepositoryPlanTerminalEvidence.ownerAttestation(.init(
+            id: "attestation-policy-b-wrong-decision",
+            subject: .ticket(.init(
+                sourceID: "ticket-historical",
+                outcome: "Historical ticket",
+                phaseSourceID: "phase-historical",
+                taskPlan: nil
+            )),
+            state: .accepted,
+            phaseCompletion: nil,
+            decisionID: "decision-from-another-review",
+            attestedAt: Date(timeIntervalSince1970: 1_700_000_001),
+            originalOccurredAt: nil,
+            originalActorID: nil
+        ))
+        await model.setRepositoryPlanTerminalEvidence(
+            projectID: projectID,
+            evidence: [evidence, mismatched]
+        )
+
+        review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.terminalEvidence, [evidence])
+        XCTAssertEqual(review.revision, initial.revision + 1)
+        XCTAssertNotNil(model.repositoryPlanReconstruction(for: projectID)?.message)
+        let previewCountAfterMismatch = await previewSpy.invocationCount()
+        XCTAssertEqual(previewCountAfterMismatch, 2)
+
+        await model.setRepositoryPlanTerminalEvidence(projectID: projectID, evidence: [])
+        review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.decisionID, decisionID)
+        XCTAssertTrue(review.terminalEvidence.isEmpty)
+        XCTAssertEqual(review.revision, initial.revision + 2)
+        let finalPreviewCount = await previewSpy.invocationCount()
+        XCTAssertEqual(finalPreviewCount, 3)
+    }
+
+    func testCompletedAndSupersededAttestationsForOneTaskSurviveIndependentRemoval() async throws {
+        let projectID = ProjectID(rawValue: "project-policy-b-task-states")
+        let identity = preparationIdentity(projectID: projectID, attemptID: uuid(227))
+        let draft = preparedDraft(
+            projectID: projectID,
+            includeTask: true,
+            includeHistorical: false
+        )
+        let basePreview = preview(for: draft.originalProjection)
+        let previewSpy = RepositoryPlanPreviewSpy(responses: [
+            basePreview,
+            basePreview,
+            basePreview,
+        ])
+        let service = RepositoryPlanPreparationServiceSpy(
+            startResponses: [readback(
+                identity: identity,
+                state: .readyForReview,
+                draftBytes: draft.source.projectionBytes
+            )],
+            reviewDraftResponses: [draft]
+        )
+        let model = try makeModel(
+            projectID: projectID,
+            service: service,
+            previewSpy: previewSpy
+        )
+        await openReadyReview(model, projectID: projectID)
+        let decisionID = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.decisionID
+        )
+        let taskSubject = RepositoryPlanStateSubject.task(.init(
+            ticketSourceID: "ticket-current",
+            sourceID: "task-current",
+            label: "Task 1",
+            title: "Implement the approved work",
+            sortOrder: 0
+        ))
+        let completed = RepositoryPlanTerminalEvidence.ownerAttestation(.init(
+            id: "attestation-task-completed",
+            subject: taskSubject,
+            state: .completed,
+            phaseCompletion: nil,
+            decisionID: decisionID,
+            attestedAt: Date(timeIntervalSince1970: 1_700_000_010),
+            originalOccurredAt: nil,
+            originalActorID: nil
+        ))
+        let superseded = RepositoryPlanTerminalEvidence.ownerAttestation(.init(
+            id: "attestation-task-superseded",
+            subject: taskSubject,
+            state: .superseded,
+            phaseCompletion: nil,
+            decisionID: decisionID,
+            attestedAt: Date(timeIntervalSince1970: 1_700_000_011),
+            originalOccurredAt: nil,
+            originalActorID: nil
+        ))
+
+        await model.setRepositoryPlanTerminalEvidence(
+            projectID: projectID,
+            evidence: [completed, superseded]
+        )
+        var review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.terminalEvidence, [completed, superseded])
+
+        await model.setRepositoryPlanTerminalEvidence(
+            projectID: projectID,
+            evidence: [superseded]
+        )
+        review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.terminalEvidence, [superseded])
+        XCTAssertEqual(review.decisionID, decisionID)
+        XCTAssertFalse(review.authorityConfirmed)
+    }
+
+    func testTypedTaskOrderAndNullableTicketCorrectionsReachTheReviewedProjection() async throws {
+        let projectID = ProjectID(rawValue: "project-typed-corrections")
+        let identity = preparationIdentity(projectID: projectID, attemptID: uuid(228))
+        let draft = preparedDraft(
+            projectID: projectID,
+            includeTask: true,
+            includeHistorical: false
+        )
+        let basePreview = preview(for: draft.originalProjection)
+        let previewSpy = RepositoryPlanPreviewSpy(responses: [
+            basePreview,
+            basePreview,
+            basePreview,
+            basePreview,
+        ])
+        let service = RepositoryPlanPreparationServiceSpy(
+            startResponses: [readback(
+                identity: identity,
+                state: .readyForReview,
+                draftBytes: draft.source.projectionBytes
+            )],
+            reviewDraftResponses: [draft]
+        )
+        let model = try makeModel(
+            projectID: projectID,
+            service: service,
+            previewSpy: previewSpy
+        )
+        await openReadyReview(model, projectID: projectID)
+        let taskSubject = RepositoryPlanReconstructionSubject(
+            kind: .task,
+            parentSourceID: "ticket-current",
+            sourceID: "task-current"
+        )
+        let ticketSubject = RepositoryPlanReconstructionSubject(
+            kind: .ticket,
+            parentSourceID: nil,
+            sourceID: "ticket-current"
+        )
+        let encoder = JSONEncoder()
+
+        await model.setRepositoryPlanCorrection(
+            projectID: projectID,
+            subject: taskSubject,
+            field: "sortOrder",
+            chosenValue: try encoder.encode(7)
+        )
+        await model.setRepositoryPlanCorrection(
+            projectID: projectID,
+            subject: ticketSubject,
+            field: "phaseSourceID",
+            chosenValue: try encoder.encode(Optional<String>.none)
+        )
+        await model.setRepositoryPlanCorrection(
+            projectID: projectID,
+            subject: ticketSubject,
+            field: "lane",
+            chosenValue: try encoder.encode(Optional<String>.none)
+        )
+
+        let review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        let ticket = try XCTUnwrap(review.reviewedProjection.tickets.first)
+        XCTAssertEqual(ticket.taskPlan?.tasks.first?.sortOrder, 7)
+        XCTAssertNil(ticket.phaseSourceID)
+        XCTAssertNil(ticket.lane)
+        XCTAssertEqual(review.corrections.count, 3)
+    }
+
+    func testRelaunchHydratesUnknownApplyAndRecoversByReplayingExactRecordedEnvelopeOnce() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let proposalID = "proposal-app-unknown-recovery"
+        let approved = try await fixture.saveAndApprove(proposalID: proposalID)
+        let envelope = fixture.applyEnvelope(
+            proposalID: approved.proposalID,
+            baselineDigest: approved.baselineDigest,
+            decisionID: approved.decisionID,
+            applicationID: "application-app-unknown-recovery",
+            requestID: uuid(113)
+        )
+        try await fixture.insertPendingAttempt(envelope)
+        let pendingReadbacks = try await RepositoryPlanReconstructionQuery.load(
+            from: fixture.store,
+            projectID: fixture.registration.projectID,
+            proposalID: .init(rawValue: proposalID)
+        )
+        let recordedBytes = try XCTUnwrap(pendingReadbacks.first?.applicationAttempt?.envelopeBytes)
+        let replayer = RepositoryPlanApplyReplaySpy(dispatcher: fixture.dispatcher)
+        let service = RepositoryPlanPreparationServiceSpy(startResponses: [])
+        let model = try makeModel(
+            projectID: fixture.registration.projectID,
+            service: service,
+            store: fixture.store,
+            inventoryLoader: .init(responses: [sourceInventory(for: fixture)]),
+            readbackLoader: { store, projectID, proposalID in
+                try await RepositoryPlanReconstructionQuery.load(
+                    from: store,
+                    projectID: projectID,
+                    proposalID: proposalID
+                )
+            },
+            applyReconciler: { attempt in
+                try await fixture.dispatcher.reconcileReconstructionApply(
+                    projectID: attempt.projectID,
+                    proposalID: attempt.proposalID,
+                    version: attempt.version,
+                    applicationID: attempt.applicationID,
+                    requestID: attempt.requestID
+                )
+            },
+            applyReplayer: { attempt in
+                await replayer.replay(attempt)
+            }
+        )
+
+        await model.openRepositoryPlanReconstruction(projectID: fixture.registration.projectID)
+
+        var presentation = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)
+        )
+        XCTAssertEqual(presentation.stage, .outcomeUnknown)
+        XCTAssertEqual(presentation.review?.savedReadback?.applicationAttempt?.state, .pending)
+        XCTAssertEqual(presentation.review?.savedReadback?.applicationAttempt?.envelopeBytes, recordedBytes)
+        let preparationStartsAfterRelaunch = await service.startInvocations()
+        XCTAssertTrue(preparationStartsAfterRelaunch.isEmpty)
+
+        await model.recoverRepositoryPlanReconstructionApply(
+            projectID: fixture.registration.projectID
+        )
+
+        presentation = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)
+        )
+        XCTAssertEqual(presentation.stage, .applied)
+        XCTAssertEqual(presentation.review?.savedReadback?.applicationAttempt?.state, .applied)
+        let replayedAttempts = await replayer.invocations()
+        XCTAssertEqual(replayedAttempts.count, 1)
+        XCTAssertEqual(replayedAttempts.first?.envelopeBytes, recordedBytes)
+        XCTAssertEqual(replayedAttempts.first?.applicationID, "application-app-unknown-recovery")
+        XCTAssertEqual(replayedAttempts.first?.requestID, envelope.requestID)
+
+        await model.recoverRepositoryPlanReconstructionApply(
+            projectID: fixture.registration.projectID
+        )
+        let finalReplayCount = await replayer.invocationCount()
+        XCTAssertEqual(finalReplayCount, 1)
+    }
+
+    func testOverlappingApproveAndApplyEachDispatchOnceWithStableExactIdentities() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let approvalGate = RepositoryPlanPreparationStartGate()
+        let applyGate = RepositoryPlanPreparationStartGate()
+        let dispatch = RepositoryPlanJourneyDispatchSpy(
+            dispatcher: fixture.dispatcher,
+            projectRoot: fixture.root.path,
+            approvalGate: approvalGate,
+            applyGate: applyGate
+        )
+        let model = try makeRealReviewModel(
+            fixture: fixture,
+            proposalID: .init(rawValue: "proposal-app-overlap"),
+            commandDispatch: { projectID, registration, requestID, command in
+                await dispatch.dispatch(
+                    projectID: projectID,
+                    registration: registration,
+                    requestID: requestID,
+                    command: command
+                )
+            }
+        )
+        let projectID = fixture.registration.projectID
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Save before exercising duplicate owner actions."
+        )
+        let decisionID = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.decisionID
+        )
+
+        let firstApproval = Task {
+            await model.approveRepositoryPlanReconstruction(projectID: projectID)
+        }
+        await approvalGate.waitUntilEntered()
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+        let approvalsWhilePending = await dispatch.approvalInvocations()
+        XCTAssertEqual(approvalsWhilePending.count, 1)
+        await approvalGate.release()
+        await firstApproval.value
+        let approvedReadback = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback
+        )
+        XCTAssertEqual(approvedReadback.version.decision?.id, decisionID)
+
+        let firstApply = Task {
+            await model.applyRepositoryPlanReconstruction(projectID: projectID)
+        }
+        await applyGate.waitUntilEntered()
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+        let appliesWhilePending = await dispatch.applyInvocations()
+        XCTAssertEqual(appliesWhilePending.count, 1)
+        await applyGate.release()
+        await firstApply.value
+
+        let approvalCommands = await dispatch.approvalInvocations()
+        let applyCommands = await dispatch.applyInvocations()
+        XCTAssertEqual(approvalCommands.count, 1)
+        XCTAssertEqual(applyCommands.count, 1)
+        guard case let .decidePlanChangeProposal(
+            approvedProposalID,
+            approvedVersion,
+            approvedBaseline,
+            approvedDecisionID,
+            .approved
+        ) = approvalCommands[0] else {
+            return XCTFail("Expected one exact approval command.")
+        }
+        guard case let .applyPlanChangeProposal(
+            appliedProposalID,
+            appliedVersion,
+            appliedBaseline,
+            appliedDecisionID,
+            _
+        ) = applyCommands[0] else {
+            return XCTFail("Expected one exact Apply command.")
+        }
+        XCTAssertEqual(appliedProposalID, approvedProposalID)
+        XCTAssertEqual(appliedVersion, approvedVersion)
+        XCTAssertEqual(appliedBaseline, approvedBaseline)
+        XCTAssertEqual(approvedDecisionID, decisionID)
+        XCTAssertEqual(appliedDecisionID, decisionID)
+        XCTAssertEqual(model.repositoryPlanReconstruction(for: projectID)?.stage, .applied)
+    }
+
+    func testStaleApplyPreservesExactApprovedReadbackAndDoesNotCreateAnotherAttempt() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let proposalID = PlanChangeProposalID(rawValue: "proposal-app-stale")
+        let model = try makeRealReviewModel(fixture: fixture, proposalID: proposalID)
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Save before exercising stale Apply recovery."
+        )
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+        let approved = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback
+        )
+        try await fixture.seedPhase(id: "later-destination-phase", name: "Later destination state")
+
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+
+        var presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        XCTAssertEqual(presentation.stage, .reviewing)
+        let refused = try XCTUnwrap(presentation.review?.savedReadback)
+        XCTAssertEqual(refused.proposalID, approved.proposalID)
+        XCTAssertEqual(refused.version.version, approved.version.version)
+        XCTAssertEqual(refused.version.baselineDigest, approved.version.baselineDigest)
+        XCTAssertEqual(refused.version.decision, approved.version.decision)
+        XCTAssertEqual(refused.applicationAttempt?.state, .refused)
+        XCTAssertNotNil(presentation.message)
+        let expectedDestinationID = RepositoryPlanReconstructionIdentity.destinationID(
+            source: refused.payload.source,
+            subject: refused.payload.comparisons[0].subject
+        )
+        let refusedDestinationCount = try await fixture.phaseCount(id: expectedDestinationID)
+        XCTAssertEqual(refusedDestinationCount, 0)
+        let firstAttempt = try XCTUnwrap(refused.applicationAttempt)
+
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+
+        presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        let retainedAttempt = try XCTUnwrap(
+            presentation.review?.savedReadback?.applicationAttempt
+        )
+        XCTAssertEqual(retainedAttempt, firstAttempt)
+        XCTAssertEqual(presentation.stage, .reviewing)
+
+        await model.beginFreshRepositoryPlanPreparation(projectID: projectID)
+
+        presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        XCTAssertEqual(presentation.stage, .selectingSources)
+        XCTAssertTrue(presentation.selectedArtifactIDs.isEmpty)
+        XCTAssertNil(presentation.preparation)
+        XCTAssertNil(presentation.review)
+    }
+
+    func testAppliedReconstructionReportsProjectionRefreshFailureWithoutClaimingRefreshedSuccess() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let dashboardLoads = RepositoryPlanDashboardLoadGate(failures: 1)
+        let model = try makeRealReviewModel(
+            fixture: fixture,
+            proposalID: .init(rawValue: "proposal-app-refresh-failure"),
+            dashboardLoader: { store in
+                try await dashboardLoads.load(from: store)
+            }
+        )
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Apply while the post-commit projection refresh fails."
+        )
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+
+        let presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        XCTAssertEqual(presentation.stage, .applied)
+        let message = try XCTUnwrap(presentation.message)
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("applied"))
+        XCTAssertTrue(
+            message.localizedCaseInsensitiveContains("could not refresh")
+                || message.localizedCaseInsensitiveContains("reload")
+        )
+        XCTAssertFalse(message.localizedCaseInsensitiveContains("have been refreshed"))
+
+        await model.retryRepositoryPlanProjectionRefresh(projectID: projectID)
+
+        let refreshed = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        XCTAssertEqual(refreshed.stage, .applied)
+        let refreshedMessage = try XCTUnwrap(refreshed.message)
+        XCTAssertTrue(refreshedMessage.localizedCaseInsensitiveContains("reloaded successfully"))
+        let dashboardLoadCount = await dashboardLoads.invocationCount()
+        XCTAssertEqual(dashboardLoadCount, 2)
+    }
+
+    func testRelaunchHydratedSavedReviewCanEditAndSaveTheExactProposalAsVersionTwo() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let proposalID = PlanChangeProposalID(rawValue: "proposal-app-relaunch-resave")
+        let firstModel = try makeRealReviewModel(fixture: fixture, proposalID: proposalID)
+        await firstModel.openRepositoryPlanReconstruction(projectID: projectID)
+        firstModel.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await firstModel.startRepositoryPlanPreparation(projectID: projectID)
+        firstModel.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await firstModel.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Persist the first exact version before relaunch."
+        )
+        XCTAssertEqual(
+            firstModel.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback?.version.version,
+            1
+        )
+
+        let store = fixture.store
+        let dispatcher = fixture.dispatcher
+        let registration = fixture.registration
+        let projectRoot = fixture.root.path
+        let relaunchedService = RepositoryPlanPreparationServiceSpy(startResponses: [])
+        let relaunched = try makeModel(
+            projectID: projectID,
+            service: relaunchedService,
+            store: store,
+            inventoryLoader: .init(responses: [sourceInventory(for: fixture)]),
+            previewer: { source, reviewedProjection, corrections, explicitMappings in
+                try await RepositoryPlanReconstructionPreviewQuery.preview(
+                    source: source,
+                    reviewedProjection: reviewedProjection,
+                    corrections: corrections,
+                    explicitMappings: explicitMappings,
+                    from: store
+                )
+            },
+            commandDispatch: { _, _, requestID, command in
+                await dispatcher.dispatch(.init(
+                    version: AgentCommandDispatcher.commandEnvelopeVersion,
+                    requestID: requestID,
+                    projectRoot: projectRoot,
+                    expectedRegistration: registration,
+                    reason: "Resave the exact persisted reconstruction after relaunch.",
+                    command: command
+                ), origin: .ownerApp)
+            },
+            requestIDs: [uuid(133)]
+        )
+        await relaunched.openRepositoryPlanReconstruction(projectID: projectID)
+
+        let subject = RepositoryPlanReconstructionSubject(
+            kind: .phase,
+            parentSourceID: nil,
+            sourceID: "phase-101"
+        )
+        await relaunched.setRepositoryPlanCorrection(
+            projectID: projectID,
+            subject: subject,
+            field: "name",
+            chosenValue: try JSONEncoder().encode("Reviewed after relaunch")
+        )
+        relaunched.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await relaunched.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Persist the reviewed relaunch edit."
+        )
+
+        let saved = try XCTUnwrap(
+            relaunched.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback
+        )
+        XCTAssertEqual(saved.proposalID, proposalID)
+        XCTAssertEqual(saved.version.version, 2)
+        XCTAssertEqual(saved.payload.corrections.map(\.subject), [subject])
+        let relaunchStarts = await relaunchedService.startInvocations()
+        XCTAssertEqual(relaunchStarts.count, 0)
+    }
+
+    func testRelaunchPrioritizesNewerActivePreparationOverOlderSavedProposal() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let first = try makeRealReviewModel(
+            fixture: fixture,
+            proposalID: .init(rawValue: "proposal-app-older-saved")
+        )
+        await first.openRepositoryPlanReconstruction(projectID: projectID)
+        first.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await first.startRepositoryPlanPreparation(projectID: projectID)
+        first.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await first.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Persist the older proposal before a newer preparation begins."
+        )
+
+        let activeIdentity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: fixture.payload.source.rootID,
+            proposalID: .init(rawValue: "proposal-app-newer-active"),
+            attemptID: uuid(214)
+        )
+        let activeDraft = RepositoryPlanPreparedDraft(
+            source: fixture.payload.source,
+            originalProjection: fixture.projection
+        )
+        let active = readback(
+            identity: activeIdentity,
+            state: .readyForReview,
+            draftBytes: activeDraft.source.projectionBytes
+        )
+        let recoveringService = RepositoryPlanPreparationServiceSpy(
+            startResponses: [],
+            recoverResponses: [[active]],
+            reviewDraftResponses: [activeDraft]
+        )
+        let relaunched = try makeModel(
+            projectID: projectID,
+            service: recoveringService,
+            store: fixture.store,
+            inventoryLoader: .init(responses: [sourceInventory(for: fixture)]),
+            previewSpy: .init(responses: [preview(for: activeDraft.originalProjection)])
+        )
+
+        await relaunched.openRepositoryPlanReconstruction(projectID: projectID)
+
+        let presentation = try XCTUnwrap(
+            relaunched.repositoryPlanReconstruction(for: projectID)
+        )
+        XCTAssertEqual(presentation.stage, .reviewing)
+        XCTAssertEqual(presentation.preparation, active)
+        XCTAssertEqual(presentation.review?.source, activeDraft.source)
+        XCTAssertNil(presentation.review?.savedReadback)
+        let recoveryProjects = await recoveringService.recoverInvocations()
+        XCTAssertEqual(recoveryProjects, [projectID])
+    }
+
+    func testApplyReadbackFailureRetainsOneExactAttemptAndRecoveryUsesItAfterReadbackReturns() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let proposalID = PlanChangeProposalID(rawValue: "proposal-app-apply-readback-unavailable")
+        let store = fixture.store
+        let dispatcher = fixture.dispatcher
+        let registration = fixture.registration
+        let projectRoot = fixture.root.path
+        let applyCounter = RepositoryPlanApplyDispatchCounter()
+        let readbacks = RepositoryPlanReadbackAvailabilityGate(failExactLoads: 0)
+        let model = try makeRealReviewModel(
+            fixture: fixture,
+            proposalID: proposalID,
+            commandDispatch: { _, _, requestID, command in
+                let envelope = AgentCommandEnvelope(
+                    version: AgentCommandDispatcher.commandEnvelopeVersion,
+                    requestID: requestID,
+                    projectRoot: projectRoot,
+                    expectedRegistration: registration,
+                    reason: "Exercise unavailable authoritative Apply readback.",
+                    command: command
+                )
+                if case .applyPlanChangeProposal = command {
+                    await applyCounter.record(envelope)
+                    do {
+                        try await fixture.insertPendingAttempt(envelope)
+                    } catch {
+                        return .init(
+                            entityIDs: [],
+                            auditEventID: nil,
+                            error: .internalFailure("The pending Apply fixture could not be recorded.")
+                        )
+                    }
+                    return .init(
+                        entityIDs: [],
+                        auditEventID: nil,
+                        error: .internalFailure("The committed Apply result could not be read back.")
+                    )
+                }
+                return await dispatcher.dispatch(envelope, origin: .ownerApp)
+            },
+            readbackLoader: { loadedStore, loadedProjectID, loadedProposalID in
+                try await readbacks.load(
+                    store: loadedStore,
+                    projectID: loadedProjectID,
+                    proposalID: loadedProposalID
+                )
+            }
+        )
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Save before exact Apply recovery."
+        )
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+
+        await readbacks.failNextExactLoad()
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+
+        XCTAssertEqual(model.repositoryPlanReconstruction(for: projectID)?.stage, .outcomeUnknown)
+        let persistedAfterDispatch = try await RepositoryPlanReconstructionQuery.load(
+            from: store,
+            projectID: projectID,
+            proposalID: proposalID
+        )
+        let recorded = try XCTUnwrap(
+            persistedAfterDispatch.first?.applicationAttempt
+        )
+        let retainedPreparation = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.preparation
+        )
+        XCTAssertEqual(retainedPreparation.state, .readyForReview)
+        var applyInvocationCount = await applyCounter.invocationCount()
+        XCTAssertEqual(applyInvocationCount, 1)
+
+        let retainedDraft = RepositoryPlanPreparedDraft(
+            source: fixture.payload.source,
+            originalProjection: fixture.projection
+        )
+        let relaunched = try makeModel(
+            projectID: projectID,
+            service: RepositoryPlanPreparationServiceSpy(
+                startResponses: [],
+                recoverResponses: [[retainedPreparation]],
+                reviewDraftResponses: [retainedDraft]
+            ),
+            store: store,
+            inventoryLoader: .init(responses: [sourceInventory(for: fixture)]),
+            previewSpy: .init(responses: [], failureCodes: [.sourceChanged])
+        )
+        await relaunched.openRepositoryPlanReconstruction(projectID: projectID)
+
+        let relaunchedPresentation = try XCTUnwrap(
+            relaunched.repositoryPlanReconstruction(for: projectID)
+        )
+        XCTAssertEqual(relaunchedPresentation.stage, .outcomeUnknown)
+        let relaunchedAttempt = try XCTUnwrap(
+            relaunchedPresentation.review?.savedReadback?.applicationAttempt
+        )
+        XCTAssertEqual(relaunchedAttempt, recorded)
+        XCTAssertEqual(
+            relaunchedPresentation.review?.pendingApplyIdentity?.applicationID,
+            recorded.applicationID
+        )
+        XCTAssertTrue(
+            relaunchedPresentation.message?.localizedCaseInsensitiveContains("source") == true
+                || relaunchedPresentation.message?.localizedCaseInsensitiveContains("review") == true
+        )
+
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+        applyInvocationCount = await applyCounter.invocationCount()
+        XCTAssertEqual(applyInvocationCount, 1)
+
+        let recordedEnvelope = try JSONDecoder().decode(
+            AgentCommandEnvelope.self,
+            from: recorded.envelopeBytes
+        )
+        let completed = await dispatcher.dispatchReconstructionApply(
+            recordedEnvelope,
+            origin: .ownerApp
+        )
+        XCTAssertNil(completed.error)
+        await model.recoverRepositoryPlanReconstructionApply(projectID: projectID)
+
+        let recovered = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback?.applicationAttempt
+        )
+        XCTAssertEqual(recovered.applicationID, recorded.applicationID)
+        XCTAssertEqual(recovered.requestID, recorded.requestID)
+        XCTAssertEqual(recovered.state, .applied)
+        XCTAssertEqual(model.repositoryPlanReconstruction(for: projectID)?.stage, .applied)
+        applyInvocationCount = await applyCounter.invocationCount()
+        XCTAssertEqual(applyInvocationCount, 1)
+    }
+
+    func testStartupReadbackFailureDoesNotFallThroughToSourceSelectionOrPreparation() async throws {
+        let projectID = ProjectID(rawValue: "project-readback-unavailable")
+        let inventoryLoader = RepositoryPlanSourceInventoryLoaderSpy(
+            responses: [inventory(projectID: projectID)]
+        )
+        let service = RepositoryPlanPreparationServiceSpy(startResponses: [])
+        let model = try makeModel(
+            projectID: projectID,
+            service: service,
+            inventoryLoader: inventoryLoader,
+            readbackLoader: { _, _, _ in
+                throw RepositoryPlanReadbackTestError.unavailable
+            }
+        )
+
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+
+        XCTAssertEqual(model.repositoryPlanReconstruction(for: projectID)?.stage, .failed)
+        XCTAssertNotNil(model.repositoryPlanReconstruction(for: projectID)?.message)
+        let inventoryLoadCount = await inventoryLoader.invocationCount()
+        let preparationStarts = await service.startInvocations()
+        XCTAssertEqual(inventoryLoadCount, 0)
+        XCTAssertEqual(preparationStarts.count, 0)
+    }
+
+    func testExactPartialPlanMappingClearsRawIDBlockerPersistsThroughHydrationAndCanBeRemoved() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        try await fixture.seedPhase(id: "phase-101", name: "Imported phase")
+        let projectID = fixture.registration.projectID
+        let proposalID = PlanChangeProposalID(rawValue: "proposal-app-partial-mapping")
+        let model = try makeRealReviewModel(fixture: fixture, proposalID: proposalID)
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+
+        let subject = RepositoryPlanReconstructionSubject(
+            kind: .phase,
+            parentSourceID: nil,
+            sourceID: "phase-101"
+        )
+        var review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.blockers.map(\.code), ["raw_source_id_candidate"])
+
+        await model.setRepositoryPlanMapping(
+            projectID: projectID,
+            subject: subject,
+            destinationID: "phase-101"
+        )
+
+        review = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.explicitMappings, [.init(subject: subject, destinationID: "phase-101")])
+        XCTAssertEqual(review.comparisons.first?.disposition, .unchanged)
+        XCTAssertTrue(review.blockers.isEmpty)
+        XCTAssertFalse(review.authorityConfirmed)
+        XCTAssertNil(review.savedReadback)
+
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Persist the exact owner-selected partial-plan mapping."
+        )
+        XCTAssertEqual(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback?.version.version,
+            1
+        )
+
+        let store = fixture.store
+        let relaunched = try makeModel(
+            projectID: projectID,
+            service: RepositoryPlanPreparationServiceSpy(startResponses: []),
+            store: store,
+            inventoryLoader: .init(responses: [sourceInventory(for: fixture)]),
+            previewer: { source, reviewedProjection, corrections, explicitMappings in
+                try await RepositoryPlanReconstructionPreviewQuery.preview(
+                    source: source,
+                    reviewedProjection: reviewedProjection,
+                    corrections: corrections,
+                    explicitMappings: explicitMappings,
+                    from: store
+                )
+            }
+        )
+        await relaunched.openRepositoryPlanReconstruction(projectID: projectID)
+
+        review = try XCTUnwrap(relaunched.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertEqual(review.explicitMappings, [.init(subject: subject, destinationID: "phase-101")])
+        XCTAssertEqual(review.comparisons.first?.disposition, .unchanged)
+        XCTAssertTrue(review.blockers.isEmpty)
+
+        await relaunched.setRepositoryPlanMapping(
+            projectID: projectID,
+            subject: subject,
+            destinationID: nil
+        )
+
+        review = try XCTUnwrap(relaunched.repositoryPlanReconstruction(for: projectID)?.review)
+        XCTAssertTrue(review.explicitMappings.isEmpty)
+        XCTAssertEqual(review.comparisons.first?.disposition, .blocked)
+        XCTAssertEqual(review.blockers.map(\.code), ["raw_source_id_candidate"])
+        XCTAssertNil(review.savedReadback)
+    }
+
+    func testAppliedPlanRequiresExplicitFreshDisclosureAndRepeatPreparationReusesExactDestination() async throws {
+        let fixture = try await ReconstructionFixture.make()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projectID = fixture.registration.projectID
+        let draft = RepositoryPlanPreparedDraft(
+            source: fixture.payload.source,
+            originalProjection: fixture.projection
+        )
+        let firstIdentity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: draft.source.rootID,
+            proposalID: .init(rawValue: "proposal-app-repeat-1"),
+            attemptID: uuid(210)
+        )
+        let secondIdentity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: draft.source.rootID,
+            proposalID: firstIdentity.proposalID,
+            attemptID: uuid(211)
+        )
+        let service = RepositoryPlanPreparationServiceSpy(
+            startResponses: [
+                readback(
+                    identity: firstIdentity,
+                    state: .readyForReview,
+                    draftBytes: draft.source.projectionBytes
+                ),
+                readback(
+                    identity: secondIdentity,
+                    state: .readyForReview,
+                    draftBytes: draft.source.projectionBytes
+                ),
+            ],
+            reviewDraftResponses: [draft, draft]
+        )
+        let store = fixture.store
+        let dispatcher = fixture.dispatcher
+        let registration = fixture.registration
+        let projectRoot = fixture.root.path
+        let inventory = sourceInventory(for: fixture)
+        let model = try makeModel(
+            projectID: projectID,
+            service: service,
+            store: store,
+            inventoryLoader: .init(responses: [inventory, inventory]),
+            previewer: { source, reviewedProjection, corrections, explicitMappings in
+                try await RepositoryPlanReconstructionPreviewQuery.preview(
+                    source: source,
+                    reviewedProjection: reviewedProjection,
+                    corrections: corrections,
+                    explicitMappings: explicitMappings,
+                    from: store
+                )
+            },
+            commandDispatch: { _, _, requestID, command in
+                let envelope = AgentCommandEnvelope(
+                    version: AgentCommandDispatcher.commandEnvelopeVersion,
+                    requestID: requestID,
+                    projectRoot: projectRoot,
+                    expectedRegistration: registration,
+                    reason: "Exercise explicit repeat repository-plan preparation.",
+                    command: command
+                )
+                if case .applyPlanChangeProposal = command {
+                    return await dispatcher.dispatchReconstructionApply(envelope, origin: .ownerApp)
+                }
+                return await dispatcher.dispatch(envelope, origin: .ownerApp)
+            },
+            requestIDs: (212...225).map { uuid(UInt8($0)) }
+        )
+        await model.openRepositoryPlanReconstruction(projectID: projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Persist the first reconstruction."
+        )
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+        XCTAssertEqual(model.repositoryPlanReconstruction(for: projectID)?.stage, .applied)
+        let applied = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback
+        )
+        let exactDestinationID = try XCTUnwrap(applied.payload.comparisons.first?.destinationID)
+        var destinationPhaseCount = try await fixture.phaseCount(id: exactDestinationID)
+        XCTAssertEqual(destinationPhaseCount, 1)
+
+        await model.beginFreshRepositoryPlanPreparation(projectID: projectID)
+
+        var presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        XCTAssertEqual(presentation.stage, .selectingSources)
+        XCTAssertTrue(presentation.selectedArtifactIDs.isEmpty)
+        var starts = await service.startInvocations()
+        XCTAssertEqual(starts.count, 1)
+
+        model.setRepositoryPlanSourceSelected(
+            projectID: projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: projectID)
+
+        presentation = try XCTUnwrap(model.repositoryPlanReconstruction(for: projectID))
+        let repeatedReview = try XCTUnwrap(presentation.review)
+        let subject = try XCTUnwrap(repeatedReview.comparisons.first?.subject)
+        XCTAssertEqual(presentation.stage, .reviewing)
+        XCTAssertEqual(repeatedReview.comparisons.first?.disposition, .unchanged)
+        XCTAssertEqual(
+            repeatedReview.explicitMappings,
+            [.init(subject: subject, destinationID: exactDestinationID)]
+        )
+        XCTAssertTrue(repeatedReview.blockers.isEmpty)
+        starts = await service.startInvocations()
+        XCTAssertEqual(starts.count, 2)
+
+        model.setRepositoryPlanAuthorityConfirmed(projectID: projectID, confirmed: true)
+        await model.saveRepositoryPlanReconstruction(
+            projectID: projectID,
+            rationale: "Persist the repeat reconstruction without duplicating the graph."
+        )
+        XCTAssertEqual(
+            model.repositoryPlanReconstruction(for: projectID)?.review?.savedReadback?.version.version,
+            2
+        )
+        await model.approveRepositoryPlanReconstruction(projectID: projectID)
+        await model.applyRepositoryPlanReconstruction(projectID: projectID)
+
+        XCTAssertEqual(model.repositoryPlanReconstruction(for: projectID)?.stage, .applied)
+        destinationPhaseCount = try await fixture.phaseCount(id: exactDestinationID)
+        XCTAssertEqual(destinationPhaseCount, 1)
+    }
+
+    func testOriginalEvidenceImportResolvesCapturedStructuredRecordAndDeduplicatesExactReference() async throws {
+        let repositoryID = "9141d1ea-3342-4462-9e06-6934d816c03f"
+        let sourceRef = RepositoryPlanSourceReference.document(
+            documentID: "state-document",
+            locator: "/records/0"
+        )
+        let certificate = RepositoryPlanPhaseCompletionCertificate(
+            membershipComplete: true,
+            tickets: [],
+            goals: [],
+            obligations: [],
+            deliveredBy: []
+        )
+        let record = RepositoryPlanStateRecord(
+            recordID: "phase-completed-app-import",
+            repositoryID: repositoryID,
+            kind: .phaseLifecycle,
+            subject: .phase(.init(sourceID: "phase-101", name: "Imported phase")),
+            state: .completed,
+            occurredAt: Date(timeIntervalSince1970: 1_700_000_000),
+            actorID: "historical-owner",
+            phaseCompletion: certificate
+        )
+        let documentBytes = try stateRecordDocument([record])
+        let fixture = try await ReconstructionFixture.make(capturedSourceBytes: documentBytes)
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let projection = fixture.projection(
+            lifecycle: .completed,
+            stateEvidence: [sourceRef],
+            documentID: "state-document",
+            documentDigest: sha256(documentBytes)
+        )
+        let source = try fixture.source(for: projection)
+        let draft = RepositoryPlanPreparedDraft(
+            source: source,
+            originalProjection: projection
+        )
+        let identity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: source.rootID,
+            proposalID: .init(rawValue: "proposal-app-original-evidence"),
+            attemptID: uuid(226)
+        )
+        let service = RepositoryPlanPreparationServiceSpy(
+            startResponses: [readback(
+                identity: identity,
+                state: .readyForReview,
+                draftBytes: source.projectionBytes
+            )],
+            reviewDraftResponses: [draft]
+        )
+        let store = fixture.store
+        let model = try makeModel(
+            projectID: fixture.registration.projectID,
+            service: service,
+            store: store,
+            inventoryLoader: .init(responses: [sourceInventory(for: fixture)]),
+            previewer: { source, reviewedProjection, corrections, explicitMappings in
+                try await RepositoryPlanReconstructionPreviewQuery.preview(
+                    source: source,
+                    reviewedProjection: reviewedProjection,
+                    corrections: corrections,
+                    explicitMappings: explicitMappings,
+                    from: store
+                )
+            }
+        )
+        await model.openRepositoryPlanReconstruction(projectID: fixture.registration.projectID)
+        model.setRepositoryPlanSourceSelected(
+            projectID: fixture.registration.projectID,
+            artifactID: "current",
+            selected: true
+        )
+        await model.startRepositoryPlanPreparation(projectID: fixture.registration.projectID)
+        let expected = try RepositoryPlanTerminalEvidenceResolver.original(
+            sourceRef: sourceRef,
+            source: source
+        )
+
+        await model.addRepositoryPlanOriginalEvidence(
+            projectID: fixture.registration.projectID,
+            sourceRef: sourceRef
+        )
+        await model.addRepositoryPlanOriginalEvidence(
+            projectID: fixture.registration.projectID,
+            sourceRef: sourceRef
+        )
+
+        let review = try XCTUnwrap(
+            model.repositoryPlanReconstruction(for: fixture.registration.projectID)?.review
+        )
+        XCTAssertEqual(review.terminalEvidence, [expected])
+        XCTAssertFalse(review.authorityConfirmed)
+        XCTAssertNil(review.savedReadback)
+    }
+
     private func makeModel(
         projectID: ProjectID,
-        service: RepositoryPlanPreparationServiceSpy,
+        service: any RepositoryPlanPreparationServicing,
         store providedStore: DeliveryStore? = nil,
         inventoryLoader: RepositoryPlanSourceInventoryLoaderSpy? = nil,
+        dashboardLoader providedDashboardLoader: (@Sendable (
+            DeliveryStore
+        ) async throws -> DashboardProjection)? = nil,
         previewSpy: RepositoryPlanPreviewSpy? = nil,
         commandDispatchSpy: RepositoryPlanOwnerCommandDispatchSpy? = nil,
         previewer providedPreviewer: (@Sendable (
@@ -2272,6 +4060,17 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
             ProjectRegistration,
             UUID,
             AgentCommand
+        ) async -> AgentCommandResult)? = nil,
+        readbackLoader providedReadbackLoader: (@Sendable (
+            DeliveryStore,
+            ProjectID,
+            PlanChangeProposalID?
+        ) async throws -> [RepositoryPlanReconstructionReadback])? = nil,
+        applyReconciler providedApplyReconciler: (@Sendable (
+            RepositoryPlanReconstructionApplicationAttemptRecord
+        ) async throws -> RepositoryPlanReconstructionApplicationAttemptRecord)? = nil,
+        applyReplayer providedApplyReplayer: (@Sendable (
+            RepositoryPlanReconstructionApplicationAttemptRecord
         ) async -> AgentCommandResult)? = nil,
         requestIDs: [UUID] = []
     ) throws -> AppModel {
@@ -2307,8 +4106,24 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
                 command: command
             )
         }
+        let readbackLoader = providedReadbackLoader ?? { store, projectID, proposalID in
+            try await RepositoryPlanReconstructionQuery.load(
+                from: store,
+                projectID: projectID,
+                proposalID: proposalID
+            )
+        }
+        let applyReconciler = providedApplyReconciler ?? { $0 }
+        let applyReplayer = providedApplyReplayer ?? { attempt in
+            .init(
+                entityIDs: [attempt.proposalID.rawValue],
+                auditEventID: nil,
+                error: .internalFailure("Unexpected reconstruction Apply replay.")
+            )
+        }
         return AppModel(
             store: store,
+            dashboardLoader: providedDashboardLoader,
             requestIDGenerator: requestIDGenerator.next,
             externalServicesSuppressed: true,
             repositoryPlanSourceLoader: { _, _, loadedProjectID in
@@ -2317,7 +4132,108 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
             },
             repositoryPlanPreparationService: service,
             repositoryPlanPreviewer: previewer,
-            repositoryPlanOwnerCommandDispatch: commandDispatch
+            repositoryPlanOwnerCommandDispatch: commandDispatch,
+            repositoryPlanReadbackLoader: readbackLoader,
+            repositoryPlanApplyReconciler: applyReconciler,
+            repositoryPlanApplyReplayer: applyReplayer
+        )
+    }
+
+    private func makeRealReviewModel(
+        fixture: ReconstructionFixture,
+        proposalID: PlanChangeProposalID,
+        commandDispatch providedCommandDispatch: (@Sendable (
+            ProjectID,
+            ProjectRegistration,
+            UUID,
+            AgentCommand
+        ) async -> AgentCommandResult)? = nil,
+        dashboardLoader providedDashboardLoader: (@Sendable (
+            DeliveryStore
+        ) async throws -> DashboardProjection)? = nil,
+        readbackLoader providedReadbackLoader: (@Sendable (
+            DeliveryStore,
+            ProjectID,
+            PlanChangeProposalID?
+        ) async throws -> [RepositoryPlanReconstructionReadback])? = nil
+    ) throws -> AppModel {
+        let projectID = fixture.registration.projectID
+        let identity = RepositoryPlanPreparationIdentity(
+            registration: fixture.registration,
+            rootID: fixture.payload.source.rootID,
+            proposalID: proposalID,
+            attemptID: uuid(112)
+        )
+        let draft = RepositoryPlanPreparedDraft(
+            source: fixture.payload.source,
+            originalProjection: fixture.projection
+        )
+        let sourceInventory = sourceInventory(for: fixture)
+        let service = RepositoryPlanPreparationServiceSpy(
+            startResponses: [readback(
+                identity: identity,
+                state: .readyForReview,
+                draftBytes: draft.source.projectionBytes
+            )],
+            reviewDraftResponses: [draft]
+        )
+        let store = fixture.store
+        let dispatcher = fixture.dispatcher
+        let projectRoot = fixture.root.path
+        let registration = fixture.registration
+        let commandDispatch = providedCommandDispatch ?? { _, _, requestID, command in
+            let envelope = AgentCommandEnvelope(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: requestID,
+                projectRoot: projectRoot,
+                expectedRegistration: registration,
+                reason: "Exercise the complete repository plan owner journey.",
+                command: command
+            )
+            if case .applyPlanChangeProposal = command {
+                return await dispatcher.dispatchReconstructionApply(envelope, origin: .ownerApp)
+            }
+            return await dispatcher.dispatch(envelope, origin: .ownerApp)
+        }
+        return try makeModel(
+            projectID: projectID,
+            service: service,
+            store: store,
+            inventoryLoader: .init(responses: [sourceInventory, sourceInventory]),
+            dashboardLoader: providedDashboardLoader,
+            previewer: { source, reviewedProjection, corrections, explicitMappings in
+                try await RepositoryPlanReconstructionPreviewQuery.preview(
+                    source: source,
+                    reviewedProjection: reviewedProjection,
+                    corrections: corrections,
+                    explicitMappings: explicitMappings,
+                    from: store
+                )
+            },
+            commandDispatch: commandDispatch,
+            readbackLoader: providedReadbackLoader,
+            requestIDs: (120...132).map { uuid(UInt8($0)) }
+        )
+    }
+
+    private func sourceInventory(for fixture: ReconstructionFixture) -> RepositoryPlanSourceInventory {
+        let manifest = fixture.payload.source.capturedSourceManifest
+        return .init(
+            projectID: fixture.registration.projectID,
+            rootID: manifest.rootID,
+            registration: fixture.registration,
+            repositoryID: manifest.repositoryID,
+            acceptedCatalogVersion: manifest.acceptedCatalogVersion,
+            acceptedCatalogDigest: manifest.acceptedCatalogDigest,
+            sources: manifest.sources.map {
+                RepositoryPlanSourceOption(
+                    artifactID: $0.artifactID,
+                    path: $0.path,
+                    contentSHA256: $0.contentSHA256,
+                    lifecycle: $0.lifecycle,
+                    authority: $0.authority
+                )
+            }
         )
     }
 
@@ -2727,6 +4643,34 @@ final class RepositoryPlanReconstructionAppTests: XCTestCase {
     private func uuid(_ value: UInt8) -> UUID {
         UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, value))
     }
+
+    private func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func stateRecordDocument(
+        _ records: [RepositoryPlanStateRecord]
+    ) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let objects = try records.map { record -> [String: Any] in
+            guard var object = try JSONSerialization.jsonObject(with: encoder.encode(record))
+                as? [String: Any] else {
+                throw RepositoryPlanReconstructionError.invalidPayload(
+                    "The test state record did not encode as an object."
+                )
+            }
+            if object["phaseCompletion"] == nil {
+                object["phaseCompletion"] = NSNull()
+            }
+            return object
+        }
+        return try JSONSerialization.data(
+            withJSONObject: ["records": objects],
+            options: [.sortedKeys]
+        )
+    }
 }
 
 private struct RepositoryPlanLiveGraphCounts: Equatable {
@@ -2837,6 +4781,89 @@ private actor RepositoryPlanOwnerCommandDispatchSpy {
     func invocationCount() -> Int { calls.count }
 }
 
+private actor RepositoryPlanApplyReplaySpy {
+    private var calls: [RepositoryPlanReconstructionApplicationAttemptRecord] = []
+    private let dispatcher: AgentCommandDispatcher
+
+    init(dispatcher: AgentCommandDispatcher) {
+        self.dispatcher = dispatcher
+    }
+
+    func replay(
+        _ attempt: RepositoryPlanReconstructionApplicationAttemptRecord
+    ) async -> AgentCommandResult {
+        calls.append(attempt)
+        do {
+            let envelope = try JSONDecoder().decode(
+                AgentCommandEnvelope.self,
+                from: attempt.envelopeBytes
+            )
+            return await dispatcher.dispatchReconstructionApply(envelope, origin: .ownerApp)
+        } catch {
+            return .init(
+                entityIDs: [attempt.proposalID.rawValue],
+                auditEventID: nil,
+                error: .internalFailure(error.localizedDescription)
+            )
+        }
+    }
+
+    func invocations() -> [RepositoryPlanReconstructionApplicationAttemptRecord] { calls }
+    func invocationCount() -> Int { calls.count }
+}
+
+private actor RepositoryPlanJourneyDispatchSpy {
+    private let dispatcher: AgentCommandDispatcher
+    private let projectRoot: String
+    private let approvalGate: RepositoryPlanPreparationStartGate
+    private let applyGate: RepositoryPlanPreparationStartGate
+    private var approvals: [AgentCommand] = []
+    private var applies: [AgentCommand] = []
+
+    init(
+        dispatcher: AgentCommandDispatcher,
+        projectRoot: String,
+        approvalGate: RepositoryPlanPreparationStartGate,
+        applyGate: RepositoryPlanPreparationStartGate
+    ) {
+        self.dispatcher = dispatcher
+        self.projectRoot = projectRoot
+        self.approvalGate = approvalGate
+        self.applyGate = applyGate
+    }
+
+    func dispatch(
+        projectID: ProjectID,
+        registration: ProjectRegistration,
+        requestID: UUID,
+        command: AgentCommand
+    ) async -> AgentCommandResult {
+        let envelope = AgentCommandEnvelope(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: requestID,
+            projectRoot: projectRoot,
+            expectedRegistration: registration,
+            reason: "Exercise duplicate owner-action suppression.",
+            command: command
+        )
+        switch command {
+        case .decidePlanChangeProposal:
+            approvals.append(command)
+            await approvalGate.suspend()
+            return await dispatcher.dispatch(envelope, origin: .ownerApp)
+        case .applyPlanChangeProposal:
+            applies.append(command)
+            await applyGate.suspend()
+            return await dispatcher.dispatchReconstructionApply(envelope, origin: .ownerApp)
+        default:
+            return await dispatcher.dispatch(envelope, origin: .ownerApp)
+        }
+    }
+
+    func approvalInvocations() -> [AgentCommand] { approvals }
+    func applyInvocations() -> [AgentCommand] { applies }
+}
+
 private final class RepositoryPlanRequestIDGenerator: @unchecked Sendable {
     private let lock = NSLock()
     private var values: [UUID]
@@ -2866,10 +4893,12 @@ private actor RepositoryPlanPreparationServiceSpy: RepositoryPlanPreparationServ
     private var statusResponses: [RepositoryPlanPreparationReadback]
     private var cancelResponses: [RepositoryPlanPreparationReadback]
     private var reconcileResponses: [RepositoryPlanPreparationReadback]
+    private var recoverResponses: [[RepositoryPlanPreparationReadback]]
     private var reviewDraftResponses: [RepositoryPlanPreparedDraft]
     private var startErrorCodes: [RepositoryPlanPreparationError.Code]
     private var reconcileErrorCodes: [RepositoryPlanPreparationError.Code]
     private var reviewDrafts: [RepositoryPlanPreparationIdentity] = []
+    private var recoveredProjects: [ProjectID] = []
     private let startGate: RepositoryPlanPreparationStartGate?
     private let targetUnavailable: Bool
 
@@ -2878,6 +4907,7 @@ private actor RepositoryPlanPreparationServiceSpy: RepositoryPlanPreparationServ
         statusResponses: [RepositoryPlanPreparationReadback] = [],
         cancelResponses: [RepositoryPlanPreparationReadback] = [],
         reconcileResponses: [RepositoryPlanPreparationReadback] = [],
+        recoverResponses: [[RepositoryPlanPreparationReadback]] = [],
         reviewDraftResponses: [RepositoryPlanPreparedDraft] = [],
         startErrorCodes: [RepositoryPlanPreparationError.Code] = [],
         reconcileErrorCodes: [RepositoryPlanPreparationError.Code] = [],
@@ -2888,6 +4918,7 @@ private actor RepositoryPlanPreparationServiceSpy: RepositoryPlanPreparationServ
         self.statusResponses = statusResponses
         self.cancelResponses = cancelResponses
         self.reconcileResponses = reconcileResponses
+        self.recoverResponses = recoverResponses
         self.reviewDraftResponses = reviewDraftResponses
         self.startErrorCodes = startErrorCodes
         self.reconcileErrorCodes = reconcileErrorCodes
@@ -2941,6 +4972,11 @@ private actor RepositoryPlanPreparationServiceSpy: RepositoryPlanPreparationServ
         return reconcileResponses.removeFirst()
     }
 
+    func recover(projectID: ProjectID) async throws -> [RepositoryPlanPreparationReadback] {
+        recoveredProjects.append(projectID)
+        return recoverResponses.isEmpty ? [] : recoverResponses.removeFirst()
+    }
+
     func reviewDraft(
         identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparedDraft {
@@ -2955,6 +4991,7 @@ private actor RepositoryPlanPreparationServiceSpy: RepositoryPlanPreparationServ
     func statusInvocations() -> [RepositoryPlanPreparationIdentity] { statuses }
     func cancelInvocations() -> [RepositoryPlanPreparationIdentity] { cancellations }
     func reconcileInvocations() -> [RepositoryPlanPreparationIdentity] { reconciliations }
+    func recoverInvocations() -> [ProjectID] { recoveredProjects }
     func reviewDraftInvocations() -> [RepositoryPlanPreparationIdentity] { reviewDrafts }
     func targetInvocationCount() -> Int { targetCalls }
 
@@ -3013,6 +5050,68 @@ private actor RepositoryPlanPreparationStartGate {
     }
 }
 
+private enum RepositoryPlanReadbackTestError: Error {
+    case unavailable
+}
+
+private actor RepositoryPlanDashboardLoadGate {
+    private var remainingFailures: Int
+    private var calls = 0
+
+    init(failures: Int) {
+        remainingFailures = failures
+    }
+
+    func load(from store: DeliveryStore) async throws -> DashboardProjection {
+        calls += 1
+        if remainingFailures > 0 {
+            remainingFailures -= 1
+            throw RepositoryPlanReadbackTestError.unavailable
+        }
+        return try await DashboardProjection.load(from: store)
+    }
+
+    func invocationCount() -> Int { calls }
+}
+
+private actor RepositoryPlanApplyDispatchCounter {
+    private var envelopes: [AgentCommandEnvelope] = []
+
+    func record(_ envelope: AgentCommandEnvelope) {
+        envelopes.append(envelope)
+    }
+
+    func invocationCount() -> Int { envelopes.count }
+}
+
+private actor RepositoryPlanReadbackAvailabilityGate {
+    private var remainingExactLoadFailures: Int
+
+    init(failExactLoads: Int) {
+        remainingExactLoadFailures = failExactLoads
+    }
+
+    func failNextExactLoad() {
+        remainingExactLoadFailures += 1
+    }
+
+    func load(
+        store: DeliveryStore,
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID?
+    ) async throws -> [RepositoryPlanReconstructionReadback] {
+        if proposalID != nil, remainingExactLoadFailures > 0 {
+            remainingExactLoadFailures -= 1
+            throw RepositoryPlanReadbackTestError.unavailable
+        }
+        return try await RepositoryPlanReconstructionQuery.load(
+            from: store,
+            projectID: projectID,
+            proposalID: proposalID
+        )
+    }
+}
+
 private actor RepositoryPlanSourceCaptureSpy {
     private let manifest: RepositoryPlanSourceManifest
     private let gate: RepositoryPlanPreparationStartGate?
@@ -3041,32 +5140,54 @@ private actor RepositoryPlanSourceCaptureSpy {
 }
 
 private actor RepositoryPlanPreparationClientSpy: RepositoryPlanPreparationClienting {
+    struct RestoreInvocation: Equatable {
+        let request: RepositoryPlanPreparationRequest
+        let readback: RepositoryPlanPreparationReadback
+    }
+
     private let selectedTarget: RepositoryPlanPreparationTarget
     private var prepareResponses: [RepositoryPlanPreparationReadback]
+    private var progressResponses: [RepositoryPlanPreparationReadback]
+    private let progressObservation: @Sendable (Int) async throws -> Void
     private var statusResponses: [RepositoryPlanPreparationReadback]
     private var cancelResponses: [RepositoryPlanPreparationReadback]
+    private var prepareErrorCodes: [RepositoryPlanPreparationError.Code]
     private var cancelErrorCodes: [RepositoryPlanPreparationError.Code]
     private var closeErrorCodes: [RepositoryPlanPreparationError.Code]
+    private var restoreErrorCodes: [RepositoryPlanPreparationError.Code]
+    private let requireSuccessfulRestoreBeforeStatus: Bool
+    private var hasSuccessfulRestore = false
     private var prepares: [RepositoryPlanPreparationRequest] = []
     private var statuses: [RepositoryPlanPreparationIdentity] = []
     private var cancellations: [RepositoryPlanPreparationIdentity] = []
     private var closes: [RepositoryPlanPreparationIdentity] = []
+    private var restores: [RestoreInvocation] = []
 
     init(
         target: RepositoryPlanPreparationTarget,
         prepareResponses: [RepositoryPlanPreparationReadback],
+        progressResponses: [RepositoryPlanPreparationReadback] = [],
+        progressObservation: @escaping @Sendable (Int) async throws -> Void = { _ in },
         statusResponses: [RepositoryPlanPreparationReadback] = [],
         cancelResponses: [RepositoryPlanPreparationReadback] = [],
         cancelErrorCodes: [RepositoryPlanPreparationError.Code] = [],
         closeError: RepositoryPlanPreparationError? = nil,
-        closeErrorCodes: [RepositoryPlanPreparationError.Code] = []
+        closeErrorCodes: [RepositoryPlanPreparationError.Code] = [],
+        prepareErrorCodes: [RepositoryPlanPreparationError.Code] = [],
+        restoreErrorCodes: [RepositoryPlanPreparationError.Code] = [],
+        requireSuccessfulRestoreBeforeStatus: Bool = false
     ) {
         selectedTarget = target
         self.prepareResponses = prepareResponses
+        self.progressResponses = progressResponses
+        self.progressObservation = progressObservation
         self.statusResponses = statusResponses
         self.cancelResponses = cancelResponses
         self.cancelErrorCodes = cancelErrorCodes
         self.closeErrorCodes = closeError.map { [$0.code] } ?? closeErrorCodes
+        self.prepareErrorCodes = prepareErrorCodes
+        self.restoreErrorCodes = restoreErrorCodes
+        self.requireSuccessfulRestoreBeforeStatus = requireSuccessfulRestoreBeforeStatus
     }
 
     func target(model: String, effort: String) async throws -> RepositoryPlanPreparationTarget {
@@ -3080,13 +5201,47 @@ private actor RepositoryPlanPreparationClientSpy: RepositoryPlanPreparationClien
         _ request: RepositoryPlanPreparationRequest
     ) async throws -> RepositoryPlanPreparationReadback {
         prepares.append(request)
+        if !prepareErrorCodes.isEmpty {
+            throw RepositoryPlanPreparationError(code: prepareErrorCodes.removeFirst())
+        }
         return prepareResponses.removeFirst()
+    }
+
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback {
+        prepares.append(request)
+        if !prepareErrorCodes.isEmpty {
+            throw RepositoryPlanPreparationError(code: prepareErrorCodes.removeFirst())
+        }
+        for (index, progress) in progressResponses.enumerated() {
+            try await onProgress(progress)
+            try await progressObservation(index)
+        }
+        return prepareResponses.removeFirst()
+    }
+
+    func restore(
+        request: RepositoryPlanPreparationRequest,
+        readback: RepositoryPlanPreparationReadback
+    ) async throws {
+        restores.append(.init(request: request, readback: readback))
+        if !restoreErrorCodes.isEmpty {
+            throw RepositoryPlanPreparationError(code: restoreErrorCodes.removeFirst())
+        }
+        hasSuccessfulRestore = true
     }
 
     func status(
         _ identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback {
         statuses.append(identity)
+        if requireSuccessfulRestoreBeforeStatus, !hasSuccessfulRestore {
+            throw RepositoryPlanPreparationError(code: .outcomeUnknown)
+        }
         return statusResponses.removeFirst()
     }
 
@@ -3111,6 +5266,15 @@ private actor RepositoryPlanPreparationClientSpy: RepositoryPlanPreparationClien
     func statusInvocations() -> [RepositoryPlanPreparationIdentity] { statuses }
     func cancelInvocations() -> [RepositoryPlanPreparationIdentity] { cancellations }
     func closeInvocations() -> [RepositoryPlanPreparationIdentity] { closes }
+    func restoreInvocations() -> [RestoreInvocation] { restores }
+}
+
+private actor RepositoryPlanPreparationProgressRecordSpy {
+    private(set) var values: [RepositoryPlanPreparationRecord] = []
+
+    func append(_ value: RepositoryPlanPreparationRecord) {
+        values.append(value)
+    }
 }
 
 private final class RepositoryPlanPreparationIdentityGenerator: @unchecked Sendable {

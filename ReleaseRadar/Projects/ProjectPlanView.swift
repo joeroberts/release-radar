@@ -28,6 +28,22 @@ struct ProjectPlanView: View {
     var refreshRepositoryPlanPreparation: (() -> Void)? = nil
     var cancelRepositoryPlanPreparation: (() -> Void)? = nil
     var reconcileRepositoryPlanPreparation: (() -> Void)? = nil
+    var restartRepositoryPlanPreparation: (() -> Void)? = nil
+    var setRepositoryPlanCorrection: ((RepositoryPlanReconstructionSubject, String, Data) -> Void)? = nil
+    var setRepositoryPlanExclusion: ((RepositoryPlanReconstructionSubject, String) -> Void)? = nil
+    var setRepositoryPlanTerminalEvidence: (([RepositoryPlanTerminalEvidence]) -> Void)? = nil
+    var setRepositoryPlanMapping: ((RepositoryPlanReconstructionSubject, String?) -> Void)? = nil
+    var removeRepositoryPlanExclusion: ((RepositoryPlanReconstructionSubject) -> Void)? = nil
+    var addRepositoryPlanOriginalEvidence: ((RepositoryPlanSourceReference) -> Void)? = nil
+    var beginFreshRepositoryPlanPreparation: (() -> Void)? = nil
+    var retryRepositoryPlanProjectionRefresh: (() -> Void)? = nil
+    var setRepositoryPlanAuthorityConfirmed: ((Bool) -> Void)? = nil
+    var saveRepositoryPlanReconstruction: ((String) -> Void)? = nil
+    var approveRepositoryPlanReconstruction: (() -> Void)? = nil
+    var applyRepositoryPlanReconstruction: (() -> Void)? = nil
+    var recoverRepositoryPlanReconstructionApply: (() -> Void)? = nil
+    var openRepositoryPlanBoard: (() -> Void)? = nil
+    var openRepositoryPlanHistory: (() -> Void)? = nil
     var referenceQueryContextIdentity: String? = nil
     var isReferenceQueryReady = false
     var requestedFocus: NavigationFocus? = nil
@@ -90,7 +106,48 @@ struct ProjectPlanView: View {
                 startPreparation: { startRepositoryPlanPreparation?() },
                 refreshPreparation: { refreshRepositoryPlanPreparation?() },
                 cancelPreparation: { cancelRepositoryPlanPreparation?() },
-                reconcilePreparation: { reconcileRepositoryPlanPreparation?() }
+                reconcilePreparation: { reconcileRepositoryPlanPreparation?() },
+                restartPreparation: { restartRepositoryPlanPreparation?() },
+                setCorrection: { subject, field, value in
+                    setRepositoryPlanCorrection?(subject, field, value)
+                },
+                setExclusion: { subject, reason in
+                    setRepositoryPlanExclusion?(subject, reason)
+                },
+                setTerminalEvidence: { evidence in
+                    setRepositoryPlanTerminalEvidence?(evidence)
+                },
+                setMapping: { subject, destinationID in
+                    setRepositoryPlanMapping?(subject, destinationID)
+                },
+                removeExclusion: { subject in
+                    removeRepositoryPlanExclusion?(subject)
+                },
+                addOriginalEvidence: { sourceRef in
+                    addRepositoryPlanOriginalEvidence?(sourceRef)
+                },
+                beginFreshPreparation: {
+                    beginFreshRepositoryPlanPreparation?()
+                },
+                retryAppliedRefresh: {
+                    retryRepositoryPlanProjectionRefresh?()
+                },
+                setAuthorityConfirmed: { confirmed in
+                    setRepositoryPlanAuthorityConfirmed?(confirmed)
+                },
+                save: { rationale in saveRepositoryPlanReconstruction?(rationale) },
+                approve: { approveRepositoryPlanReconstruction?() },
+                apply: { applyRepositoryPlanReconstruction?() },
+                recoverApply: { recoverRepositoryPlanReconstructionApply?() },
+                openPlan: { showsRepositoryPlanReconstruction = false },
+                openBoard: {
+                    showsRepositoryPlanReconstruction = false
+                    openRepositoryPlanBoard?()
+                },
+                openHistory: {
+                    showsRepositoryPlanReconstruction = false
+                    openRepositoryPlanHistory?()
+                }
             )
         }
     }

@@ -220,7 +220,119 @@ public enum RepositoryPlanReconstructionPreviewQuery {
             ))
         }
 
-        return .init(comparisons: comparisons, blockers: blockers)
+        let destinationSnapshots = try comparisons.compactMap { comparison in
+            try destinationSnapshot(
+                comparison,
+                projectID: source.projectID,
+                comparisons: comparisons,
+                connection: connection
+            )
+        }
+        return .init(
+            comparisons: comparisons,
+            blockers: blockers,
+            destinationSnapshots: destinationSnapshots
+        )
+    }
+
+    private static func destinationSnapshot(
+        _ comparison: RepositoryPlanReconstructionComparison,
+        projectID: ProjectID,
+        comparisons: [RepositoryPlanReconstructionComparison],
+        connection: SQLiteConnection
+    ) throws -> RepositoryPlanReconstructionDestinationSnapshot? {
+        guard let destinationID = comparison.destinationID else { return nil }
+        let bindings: [SQLiteValue] = [.text(projectID.rawValue), .text(destinationID)]
+        let fields: [String: Any]
+        switch comparison.kind {
+        case .phase:
+            guard let row = try connection.row(
+                """
+                SELECT phases.name,phase_lifecycles.lifecycle,
+                       phase_lifecycles.revision AS lifecycle_revision,
+                       phase_lifecycles.completion_baseline_digest,
+                       phase_plans.state AS plan_state,
+                       phase_plans.revision AS plan_revision,
+                       phase_plans.ready_revision
+                FROM phases
+                JOIN phase_lifecycles
+                  ON phase_lifecycles.project_id=phases.project_id
+                 AND phase_lifecycles.phase_id=phases.id
+                LEFT JOIN phase_plans
+                  ON phase_plans.project_id=phases.project_id
+                 AND phase_plans.phase_id=phases.id
+                WHERE phases.project_id=? AND phases.id=?
+                """,
+                bindings: bindings
+            ) else { return nil }
+            fields = jsonObject(row)
+        case .ticket:
+            guard let row = try connection.row(
+                "SELECT outcome,phase_id,lane,plan_legacy_continuation FROM tickets WHERE project_id=? AND id=?",
+                bindings: bindings
+            ) else { return nil }
+            var object = jsonObject(row)
+            if let plan = try connection.row(
+                "SELECT revision,created_at,updated_at FROM ticket_task_plans WHERE project_id=? AND ticket_id=?",
+                bindings: bindings
+            ) {
+                object["task_plan"] = jsonObject(plan)
+                object["tasks"] = try connection.rows(
+                    """
+                    SELECT id,label,title,sort_order,completion,lifecycle,completed_at,superseded_at
+                    FROM ticket_tasks WHERE project_id=? AND ticket_id=?
+                    ORDER BY sort_order,id COLLATE BINARY
+                    """,
+                    bindings: bindings,
+                    maximum: 5_000
+                ).map(jsonObject)
+            }
+            fields = object
+        case .task:
+            guard let parent = comparison.parentSourceID,
+                  let destinationTicketID = comparisons.first(where: {
+                      $0.kind == .ticket && exact($0.sourceID, parent)
+                  }).flatMap({ $0.destinationID }),
+                  let row = try connection.row(
+                    """
+                    SELECT label,title,sort_order,completion,lifecycle,completed_at,superseded_at
+                    FROM ticket_tasks WHERE project_id=? AND ticket_id=? AND id=?
+                    """,
+                    bindings: [
+                        .text(projectID.rawValue), .text(destinationTicketID), .text(destinationID),
+                    ]
+                  ) else { return nil }
+            fields = jsonObject(row)
+        case .phaseDependency:
+            guard let row = try connection.row(
+                "SELECT phase_id,depends_on_phase_id FROM phase_dependencies WHERE project_id=? AND id=?",
+                bindings: bindings
+            ) else { return nil }
+            fields = jsonObject(row)
+        case .ticketDependency:
+            guard let row = try connection.row(
+                "SELECT ticket_id,depends_on_ticket_id FROM ticket_dependencies WHERE project_id=? AND id=?",
+                bindings: bindings
+            ) else { return nil }
+            fields = jsonObject(row)
+        }
+        return .init(
+            subject: comparison.subject,
+            destinationID: destinationID,
+            fields: try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])
+        )
+    }
+
+    private static func jsonObject(_ row: [String: SQLiteValue]) -> [String: Any] {
+        row.reduce(into: [:]) { result, item in
+            switch item.value {
+            case let .integer(value): result[item.key] = value
+            case let .real(value): result[item.key] = value
+            case let .text(value): result[item.key] = value
+            case let .blob(value): result[item.key] = value.base64EncodedString()
+            case .null: result[item.key] = NSNull()
+            }
+        }
     }
 
     private static func mappedComparison(

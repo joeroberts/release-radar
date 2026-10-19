@@ -224,6 +224,17 @@ final class AppModel {
         UUID,
         AgentCommand
     ) async -> AgentCommandResult
+    private let repositoryPlanReadbackLoader: @Sendable (
+        DeliveryStore,
+        ProjectID,
+        PlanChangeProposalID?
+    ) async throws -> [RepositoryPlanReconstructionReadback]
+    private let repositoryPlanApplyReconciler: @Sendable (
+        RepositoryPlanReconstructionApplicationAttemptRecord
+    ) async throws -> RepositoryPlanReconstructionApplicationAttemptRecord
+    private let repositoryPlanApplyReplayer: @Sendable (
+        RepositoryPlanReconstructionApplicationAttemptRecord
+    ) async -> AgentCommandResult
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
@@ -322,6 +333,23 @@ final class AppModel {
             ProjectRegistration,
             UUID,
             AgentCommand
+        ) async -> AgentCommandResult)? = nil,
+        repositoryPlanReadbackLoader: @escaping @Sendable (
+            DeliveryStore,
+            ProjectID,
+            PlanChangeProposalID?
+        ) async throws -> [RepositoryPlanReconstructionReadback] = {
+            try await RepositoryPlanReconstructionQuery.load(
+                from: $0,
+                projectID: $1,
+                proposalID: $2
+            )
+        },
+        repositoryPlanApplyReconciler: (@Sendable (
+            RepositoryPlanReconstructionApplicationAttemptRecord
+        ) async throws -> RepositoryPlanReconstructionApplicationAttemptRecord)? = nil,
+        repositoryPlanApplyReplayer: (@Sendable (
+            RepositoryPlanReconstructionApplicationAttemptRecord
         ) async -> AgentCommandResult)? = nil
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
@@ -402,6 +430,73 @@ final class AppModel {
                 } catch {
                     return .init(
                         entityIDs: [],
+                        auditEventID: nil,
+                        error: .unauthorizedProjectRoot
+                    )
+                }
+            }
+        self.repositoryPlanReadbackLoader = repositoryPlanReadbackLoader
+        self.repositoryPlanApplyReconciler = repositoryPlanApplyReconciler
+            ?? { attempt in
+                try await resolvedOnboarding.withAuthorizedProject(projectID: attempt.projectID) { project in
+                    guard project.registration == attempt.registration else {
+                        throw RepositoryPlanReconstructionError.applicationAttemptConflict
+                    }
+                    return try await AgentCommandDispatcher(
+                        store: store,
+                        projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                    ).reconcileReconstructionApply(
+                        projectID: attempt.projectID,
+                        proposalID: attempt.proposalID,
+                        version: attempt.version,
+                        applicationID: attempt.applicationID,
+                        requestID: attempt.requestID
+                    )
+                }
+            }
+        self.repositoryPlanApplyReplayer = repositoryPlanApplyReplayer
+            ?? { attempt in
+                guard let envelope = try? JSONDecoder().decode(
+                    AgentCommandEnvelope.self,
+                    from: attempt.envelopeBytes
+                ), envelope.requestID == attempt.requestID,
+                   envelope.expectedRegistration == attempt.registration,
+                   case let .applyPlanChangeProposal(
+                       proposalID,
+                       version,
+                       _,
+                       _,
+                       applicationID
+                   ) = envelope.command,
+                   proposalID == attempt.proposalID.rawValue,
+                   version == attempt.version,
+                   applicationID == attempt.applicationID else {
+                    return .init(
+                        entityIDs: [attempt.proposalID.rawValue],
+                        auditEventID: nil,
+                        error: .repositoryPlanReconstructionApplicationAttemptConflict
+                    )
+                }
+                do {
+                    return try await resolvedOnboarding.withAuthorizedProject(
+                        projectID: attempt.projectID
+                    ) { project in
+                        guard project.registration == attempt.registration,
+                              project.canonicalRoot.path == envelope.projectRoot else {
+                            return .init(
+                                entityIDs: [attempt.proposalID.rawValue],
+                                auditEventID: nil,
+                                error: .repositoryPlanReconstructionApplicationAttemptConflict
+                            )
+                        }
+                        return await AgentCommandDispatcher(
+                            store: store,
+                            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                        ).dispatchReconstructionApply(envelope, origin: .ownerApp)
+                    }
+                } catch {
+                    return .init(
+                        entityIDs: [attempt.proposalID.rawValue],
                         auditEventID: nil,
                         error: .unauthorizedProjectRoot
                     )
@@ -1474,6 +1569,116 @@ final class AppModel {
                 return
             }
         }
+        let persistedReadbacks: [RepositoryPlanReconstructionReadback]
+        do {
+            persistedReadbacks = try await repositoryPlanReadbackLoader(store, projectID, nil)
+        } catch {
+            repositoryPlanReconstructions[projectID] = .failed(
+                projectID: projectID,
+                message: "Saved repository-plan state is unavailable: \(error.localizedDescription). Retry before starting a new preparation."
+            )
+            return
+        }
+        let recoveredPreparation: RepositoryPlanPreparationReadback?
+        do {
+            recoveredPreparation = try await repositoryPlanPreparationService.recover(
+                projectID: projectID
+            ).last
+        } catch {
+            repositoryPlanReconstructions[projectID] = .failed(
+                projectID: projectID,
+                message: "Saved repository-plan preparation is unavailable: \(error.localizedDescription). Retry before starting a replacement."
+            )
+            return
+        }
+        if let recoveredPreparation,
+           [.queued, .running, .awaitingResolution, .outcomeUnknown]
+            .contains(recoveredPreparation.state) {
+            var presentation = RepositoryPlanReconstructionPresentation.loading(
+                projectID: projectID
+            )
+            presentation.proposalID = recoveredPreparation.identity.proposalID
+            presentation.preparation = recoveredPreparation
+            presentation.apply(recoveredPreparation)
+            repositoryPlanReconstructions[projectID] = presentation
+            return
+        }
+        let latestPersisted = persistedReadbacks.max(by: { lhs, rhs in
+            if lhs.version.createdAt != rhs.version.createdAt {
+                return lhs.version.createdAt < rhs.version.createdAt
+            }
+            return lhs.version.version < rhs.version.version
+        })
+        if let recoveredPreparation,
+           recoveredPreparation.state == .readyForReview {
+            if let latestPersisted,
+               latestPersisted.proposalID == recoveredPreparation.identity.proposalID,
+               latestPersisted.payload.source.registration
+                == recoveredPreparation.identity.registration,
+               latestPersisted.payload.source.rootID == recoveredPreparation.identity.rootID,
+               recoveredPreparation.draftBytes
+                == latestPersisted.payload.source.projectionBytes,
+               let persisted = try? await repositoryPlanPersistedPresentation(
+                   from: latestPersisted
+               ) {
+                repositoryPlanReconstructions[projectID] = persisted
+                return
+            }
+            var presentation = RepositoryPlanReconstructionPresentation.loading(
+                projectID: projectID
+            )
+            presentation.proposalID = recoveredPreparation.identity.proposalID
+            presentation.preparation = recoveredPreparation
+            do {
+                presentation = try await repositoryPlanReviewPresentation(
+                    applying: recoveredPreparation,
+                    to: presentation
+                )
+            } catch {
+                presentation.stage = .reviewLoadFailed
+                presentation.message = "The prepared draft is safe, but its review could not be loaded: \(error.localizedDescription). Retry the review without preparing again."
+                repositoryPlanReconstructions[projectID] = presentation
+                return
+            }
+            repositoryPlanReconstructions[projectID] = presentation
+            return
+        }
+        if let latestPersisted {
+            do {
+                repositoryPlanReconstructions[projectID] = try await repositoryPlanPersistedPresentation(
+                    from: latestPersisted
+                )
+                return
+            } catch {
+                repositoryPlanReconstructions[projectID] = .failed(
+                    projectID: projectID,
+                    message: "Saved repository-plan state could not be restored: \(error.localizedDescription). No saved decision or Apply attempt was changed."
+                )
+                return
+            }
+        }
+        if let recoveredPreparation {
+            var presentation = RepositoryPlanReconstructionPresentation.loading(
+                projectID: projectID
+            )
+            presentation.proposalID = recoveredPreparation.identity.proposalID
+            presentation.preparation = recoveredPreparation
+            if recoveredPreparation.state == .readyForReview {
+                do {
+                    presentation = try await repositoryPlanReviewPresentation(
+                        applying: recoveredPreparation,
+                        to: presentation
+                    )
+                } catch {
+                    presentation.stage = .reviewLoadFailed
+                    presentation.message = "The prepared draft is safe, but its review could not be loaded: \(error.localizedDescription). Retry the review without preparing again."
+                }
+            } else {
+                presentation.apply(recoveredPreparation)
+            }
+            repositoryPlanReconstructions[projectID] = presentation
+            return
+        }
         let generation = (repositoryPlanReconstructionGenerations[projectID] ?? 0) &+ 1
         repositoryPlanReconstructionGenerations[projectID] = generation
         repositoryPlanReconstructions[projectID] = .loading(projectID: projectID)
@@ -1546,6 +1751,7 @@ final class AppModel {
             }
             if readback.state == .readyForReview {
                 presentation.preparation = readback
+                presentation.proposalID = readback.identity.proposalID
             }
             presentation = try await repositoryPlanReviewPresentation(
                 applying: readback,
@@ -1594,6 +1800,7 @@ final class AppModel {
             }
             if readback.state == .readyForReview {
                 presentation.preparation = readback
+                presentation.proposalID = readback.identity.proposalID
             }
             presentation = try await repositoryPlanReviewPresentation(
                 applying: readback,
@@ -1635,6 +1842,7 @@ final class AppModel {
             }
             if readback.state == .readyForReview {
                 presentation.preparation = readback
+                presentation.proposalID = readback.identity.proposalID
             }
             presentation = try await repositoryPlanReviewPresentation(
                 applying: readback,
@@ -1675,6 +1883,7 @@ final class AppModel {
             }
             if readback.state == .readyForReview {
                 presentation.preparation = readback
+                presentation.proposalID = readback.identity.proposalID
             }
             presentation = try await repositoryPlanReviewPresentation(
                 applying: readback,
@@ -1762,6 +1971,44 @@ final class AppModel {
         }
     }
 
+    func beginFreshRepositoryPlanPreparation(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .applied
+                || (presentation.stage == .reviewing
+                    && presentation.review?.savedReadback != nil
+                    && presentation.review?.isSaving == false
+                    && presentation.review?.isUpdating == false
+                    && presentation.review?.isDeciding == false) else { return }
+        let priorStage = presentation.stage
+        let reconstructionGeneration = (repositoryPlanReconstructionGenerations[projectID] ?? 0) &+ 1
+        repositoryPlanReconstructionGenerations[projectID] = reconstructionGeneration
+        _ = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        presentation.stage = .loadingSources
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        do {
+            async let inventory = repositoryPlanSourceLoader(store, projectOnboarding, projectID)
+            async let target = repositoryPlanPreparationService.target()
+            let loadedInventory = try await inventory
+            let loadedTarget = try await target
+            guard repositoryPlanReconstructionGenerations[projectID] == reconstructionGeneration else {
+                return
+            }
+            repositoryPlanReconstructions[projectID] = .selecting(
+                projectID: projectID,
+                inventory: loadedInventory,
+                target: loadedTarget
+            )
+        } catch {
+            guard repositoryPlanReconstructionGenerations[projectID] == reconstructionGeneration else {
+                return
+            }
+            presentation.stage = priorStage
+            presentation.message = "The existing reviewed plan is unchanged, but fresh source disclosure could not be loaded: \(error.localizedDescription). Retry when the sources are available."
+            repositoryPlanReconstructions[projectID] = presentation
+        }
+    }
+
     func setRepositoryPlanAuthorityConfirmed(
         projectID: ProjectID,
         confirmed: Bool
@@ -1806,6 +2053,7 @@ final class AppModel {
             )
             review.authorityConfirmed = false
             review.savedReadback = nil
+            review.isDeciding = false
             review.revision &+= 1
             review.isUpdating = true
             let revision = review.revision
@@ -1834,7 +2082,7 @@ final class AppModel {
             repositoryPlanReconstructions[projectID] = current
         } catch {
             guard var current = repositoryPlanReconstructions[projectID],
-                  var currentReview = current.review,
+                  let currentReview = current.review,
                   currentReview.source == review.source,
                   currentReview.revision == review.revision else { return }
             current.review = currentReview
@@ -1857,6 +2105,7 @@ final class AppModel {
             review.exclusions.removeAll { $0.subject == subject }
             review.exclusions.append(.init(subject: subject, reason: trimmed))
             review.savedReadback = nil
+            review.isDeciding = false
             review.revision &+= 1
             review.isUpdating = true
             let revision = review.revision
@@ -1885,9 +2134,118 @@ final class AppModel {
             repositoryPlanReconstructions[projectID] = current
         } catch {
             guard var current = repositoryPlanReconstructions[projectID],
-                  var currentReview = current.review,
+                  let currentReview = current.review,
                   currentReview.source == review.source,
                   currentReview.revision == review.revision else { return }
+            current.review = currentReview
+            current.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = current
+        }
+    }
+
+    func removeRepositoryPlanExclusion(
+        projectID: ProjectID,
+        subject: RepositoryPlanReconstructionSubject
+    ) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review,
+              review.exclusions.contains(where: { $0.subject == subject }) else { return }
+        review.exclusions.removeAll { $0.subject == subject }
+        review.authorityConfirmed = false
+        review.savedReadback = nil
+        review.isDeciding = false
+        review.revision &+= 1
+        review.isUpdating = true
+        let revision = review.revision
+        presentation.review = review
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        do {
+            let preview = try await repositoryPlanPreviewer(
+                review.source,
+                review.reviewedProjection,
+                review.corrections,
+                review.explicitMappings
+            )
+            guard var current = repositoryPlanReconstructions[projectID],
+                  current.stage == .reviewing,
+                  var currentReview = current.review,
+                  currentReview.revision == revision,
+                  currentReview.source == review.source else { return }
+            Self.applyRepositoryPlanExclusions(
+                currentReview.exclusions,
+                preview: preview,
+                to: &currentReview
+            )
+            currentReview.isUpdating = false
+            current.review = currentReview
+            current.message = nil
+            repositoryPlanReconstructions[projectID] = current
+        } catch {
+            guard var current = repositoryPlanReconstructions[projectID],
+                  var currentReview = current.review,
+                  currentReview.source == review.source,
+                  currentReview.revision == revision else { return }
+            currentReview.isUpdating = false
+            current.review = currentReview
+            current.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = current
+        }
+    }
+
+    func setRepositoryPlanMapping(
+        projectID: ProjectID,
+        subject: RepositoryPlanReconstructionSubject,
+        destinationID: String?
+    ) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review else { return }
+        let trimmedDestination = destinationID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        review.explicitMappings.removeAll { $0.subject == subject }
+        if let trimmedDestination, !trimmedDestination.isEmpty {
+            review.explicitMappings.append(.init(
+                subject: subject,
+                destinationID: trimmedDestination
+            ))
+        }
+        review.authorityConfirmed = false
+        review.savedReadback = nil
+        review.isDeciding = false
+        review.revision &+= 1
+        review.isUpdating = true
+        let revision = review.revision
+        presentation.review = review
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        do {
+            let preview = try await repositoryPlanPreviewer(
+                review.source,
+                review.reviewedProjection,
+                review.corrections,
+                review.explicitMappings
+            )
+            guard var current = repositoryPlanReconstructions[projectID],
+                  current.stage == .reviewing,
+                  var currentReview = current.review,
+                  currentReview.revision == revision,
+                  currentReview.source == review.source else { return }
+            Self.applyRepositoryPlanExclusions(
+                currentReview.exclusions,
+                preview: preview,
+                to: &currentReview
+            )
+            currentReview.isUpdating = false
+            current.review = currentReview
+            current.message = nil
+            repositoryPlanReconstructions[projectID] = current
+        } catch {
+            guard var current = repositoryPlanReconstructions[projectID],
+                  var currentReview = current.review,
+                  currentReview.source == review.source,
+                  currentReview.revision == revision else { return }
+            currentReview.isUpdating = false
             current.review = currentReview
             current.message = error.localizedDescription
             repositoryPlanReconstructions[projectID] = current
@@ -1904,7 +2262,8 @@ final class AppModel {
               review.authorityConfirmed,
               !review.isSaving,
               !review.isUpdating,
-              let proposalID = presentation.preparation?.identity.proposalID,
+              let proposalID = presentation.proposalID
+                ?? presentation.preparation?.identity.proposalID,
               !rationale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
@@ -1957,6 +2316,380 @@ final class AppModel {
         repositoryPlanReconstructions[projectID] = current
     }
 
+    func setRepositoryPlanTerminalEvidence(
+        projectID: ProjectID,
+        evidence: [RepositoryPlanTerminalEvidence]
+    ) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review else { return }
+        guard evidence.allSatisfy({ item in
+            guard case let .ownerAttestation(attestation) = item else { return true }
+            return Data(attestation.decisionID.utf8) == Data(review.decisionID.utf8)
+        }) else {
+            presentation.message = "Every owner attestation must bind this review's exact approval decision."
+            repositoryPlanReconstructions[projectID] = presentation
+            return
+        }
+        guard evidence != review.terminalEvidence else { return }
+        review.terminalEvidence = evidence
+        review.authorityConfirmed = false
+        review.savedReadback = nil
+        review.isDeciding = false
+        review.revision &+= 1
+        review.isUpdating = true
+        let revision = review.revision
+        presentation.review = review
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        do {
+            let preview = try await repositoryPlanPreviewer(
+                review.source,
+                review.reviewedProjection,
+                review.corrections,
+                review.explicitMappings
+            )
+            guard var current = repositoryPlanReconstructions[projectID],
+                  current.stage == .reviewing,
+                  var currentReview = current.review,
+                  currentReview.revision == revision,
+                  currentReview.source == review.source else { return }
+            Self.applyRepositoryPlanExclusions(
+                currentReview.exclusions,
+                preview: preview,
+                to: &currentReview
+            )
+            currentReview.isUpdating = false
+            current.review = currentReview
+            current.message = nil
+            repositoryPlanReconstructions[projectID] = current
+        } catch {
+            guard var current = repositoryPlanReconstructions[projectID],
+                  let currentReview = current.review,
+                  currentReview.source == review.source,
+                  currentReview.revision == revision else { return }
+            current.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = current
+        }
+    }
+
+    func addRepositoryPlanOriginalEvidence(
+        projectID: ProjectID,
+        sourceRef: RepositoryPlanSourceReference
+    ) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              let review = presentation.review else { return }
+        do {
+            let evidence = try RepositoryPlanTerminalEvidenceResolver.original(
+                sourceRef: sourceRef,
+                source: review.source
+            )
+            guard !review.terminalEvidence.contains(evidence) else { return }
+            await setRepositoryPlanTerminalEvidence(
+                projectID: projectID,
+                evidence: review.terminalEvidence + [evidence]
+            )
+        } catch {
+            presentation.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = presentation
+        }
+    }
+
+    func approveRepositoryPlanReconstruction(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review,
+              review.authorityConfirmed,
+              !review.isUpdating,
+              !review.isSaving,
+              !review.isDeciding,
+              review.blockers.isEmpty,
+              !review.comparisons.contains(where: {
+                  $0.disposition == .blocked || $0.disposition == .conflicting
+              }),
+              let saved = review.savedReadback,
+              saved.payload == Self.repositoryPlanPayload(from: review),
+              saved.version.decision == nil else { return }
+        let revision = review.revision
+        review.isDeciding = true
+        presentation.review = review
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        let result = await repositoryPlanOwnerCommandDispatch(
+            projectID,
+            review.source.registration,
+            requestIDGenerator(),
+            .decidePlanChangeProposal(
+                proposalID: saved.proposalID.rawValue,
+                version: saved.version.version,
+                baselineDigest: saved.version.baselineDigest,
+                decisionID: review.decisionID,
+                disposition: .approved
+            )
+        )
+        guard var current = repositoryPlanReconstructions[projectID],
+              current.stage == .reviewing,
+              var currentReview = current.review,
+              currentReview.revision == revision,
+              currentReview.source == review.source else { return }
+        currentReview.isDeciding = false
+        if let error = result.error {
+            current.message = "The reviewed repository plan could not be approved: \(String(describing: error))"
+        } else if let readback = result.repositoryPlanReconstruction,
+                  readback.proposalID == saved.proposalID,
+                  readback.version.version == saved.version.version,
+                  readback.payload == saved.payload,
+                  readback.version.decision?.id == review.decisionID,
+                  readback.version.decision?.disposition == .approved {
+            currentReview.savedReadback = readback
+            current.message = "Approved proposal version \(readback.version.version). Apply remains a separate owner action."
+        } else {
+            current.message = "The exact approved reconstruction readback was unavailable. Refresh before applying."
+        }
+        current.review = currentReview
+        repositoryPlanReconstructions[projectID] = current
+    }
+
+    func applyRepositoryPlanReconstruction(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              let review = presentation.review,
+              review.authorityConfirmed,
+              !review.isUpdating,
+              !review.isSaving,
+              !review.isDeciding,
+              review.blockers.isEmpty,
+              let saved = review.savedReadback,
+              saved.payload == Self.repositoryPlanPayload(from: review),
+              let decision = saved.version.decision,
+              decision.disposition == .approved,
+              decision.id == review.decisionID,
+              saved.version.application == nil else { return }
+        let requestID = requestIDGenerator()
+        let applicationID = "application-\(requestID.uuidString.lowercased())"
+        var applyingReview = review
+        applyingReview.pendingApplyIdentity = .init(
+            proposalID: saved.proposalID,
+            version: saved.version.version,
+            applicationID: applicationID,
+            requestID: requestID
+        )
+        presentation.stage = .applying
+        presentation.review = applyingReview
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        let result = await repositoryPlanOwnerCommandDispatch(
+            projectID,
+            review.source.registration,
+            requestID,
+            .applyPlanChangeProposal(
+                proposalID: saved.proposalID.rawValue,
+                version: saved.version.version,
+                baselineDigest: saved.version.baselineDigest,
+                decisionID: decision.id,
+                applicationID: applicationID
+            )
+        )
+        let exactReadback: RepositoryPlanReconstructionReadback?
+        do {
+            exactReadback = try await repositoryPlanReadbackLoader(
+                store,
+                projectID,
+                saved.proposalID
+            ).first { $0.version.version == saved.version.version }
+        } catch {
+            exactReadback = nil
+        }
+        guard var current = repositoryPlanReconstructions[projectID],
+              current.stage == .applying,
+              var currentReview = current.review,
+              currentReview.revision == review.revision,
+              currentReview.source == review.source else { return }
+        if let exactReadback {
+            currentReview.savedReadback = exactReadback
+        }
+        current.review = currentReview
+        let readback = exactReadback ?? result.repositoryPlanReconstruction
+        if let readback,
+           readback.version.application != nil,
+           readback.applicationAttempt?.state == .applied {
+            currentReview.savedReadback = readback
+            currentReview.pendingApplyIdentity = nil
+            current.review = currentReview
+            current.stage = .applied
+            current.message = "Applied proposal version \(readback.version.version). Refreshing the latest local project projections…"
+            repositoryPlanReconstructions[projectID] = current
+            await refreshAfterRepositoryPlanApplication(
+                projectID: projectID,
+                version: readback.version.version,
+                recovered: false
+            )
+            return
+        }
+        if exactReadback == nil {
+            current.stage = .outcomeUnknown
+            current.message = "Apply may have committed, but its authoritative readback is unavailable. Recover this exact recorded attempt; no new Apply will be created."
+        } else if result.error == .repositoryPlanReconstructionApplicationOutcomeUnknown
+            || result.error == .outcomeUnknown
+            || readback?.applicationAttempt?.state == .pending
+            || readback?.applicationAttempt?.state == .outcomeUnknown {
+            current.stage = .outcomeUnknown
+            current.message = "Apply outcome is unknown. Reconcile the exact recorded attempt before retrying."
+        } else if let error = result.error {
+            current.stage = .reviewing
+            current.message = "The approved repository plan was not applied: \(String(describing: error))"
+        } else {
+            current.stage = .outcomeUnknown
+            current.message = "Apply did not return an exact terminal readback. Reconcile the recorded attempt."
+        }
+        repositoryPlanReconstructions[projectID] = current
+    }
+
+    func recoverRepositoryPlanReconstructionApply(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .outcomeUnknown,
+              let review = presentation.review,
+              let saved = review.savedReadback else { return }
+        let pendingIdentity = review.pendingApplyIdentity
+        let loadedBeforeRecovery: RepositoryPlanReconstructionReadback
+        do {
+            guard let loaded = try await repositoryPlanReadbackLoader(
+                store,
+                projectID,
+                saved.proposalID
+            ).first(where: { $0.version.version == saved.version.version }) else {
+                presentation.message = "The exact Apply readback is still unavailable. Retry recovery without creating a new Apply."
+                repositoryPlanReconstructions[projectID] = presentation
+                return
+            }
+            loadedBeforeRecovery = loaded
+        } catch {
+            presentation.message = "The exact Apply readback is still unavailable: \(error.localizedDescription). Retry recovery without creating a new Apply."
+            repositoryPlanReconstructions[projectID] = presentation
+            return
+        }
+        if loadedBeforeRecovery.version.application != nil,
+           loadedBeforeRecovery.applicationAttempt?.state == .applied {
+            var recoveredReview = review
+            recoveredReview.savedReadback = loadedBeforeRecovery
+            recoveredReview.pendingApplyIdentity = nil
+            presentation.review = recoveredReview
+            presentation.stage = .applied
+            presentation.message = "Recovered the applied proposal version \(loadedBeforeRecovery.version.version). Refreshing the latest local project projections…"
+            repositoryPlanReconstructions[projectID] = presentation
+            await refreshAfterRepositoryPlanApplication(
+                projectID: projectID,
+                version: loadedBeforeRecovery.version.version,
+                recovered: true
+            )
+            return
+        }
+        guard let attempt = loadedBeforeRecovery.applicationAttempt,
+              attempt.state == .pending || attempt.state == .outcomeUnknown,
+              pendingIdentity.map({ identity in
+                  identity.proposalID == attempt.proposalID
+                      && identity.version == attempt.version
+                      && identity.applicationID == attempt.applicationID
+                      && identity.requestID == attempt.requestID
+              }) ?? true else {
+            presentation.message = "The persisted Apply attempt does not match the submitted owner action. No replay was performed."
+            repositoryPlanReconstructions[projectID] = presentation
+            return
+        }
+        presentation.stage = .applying
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        let reconciled: RepositoryPlanReconstructionApplicationAttemptRecord
+        do {
+            reconciled = try await repositoryPlanApplyReconciler(attempt)
+        } catch {
+            guard var current = repositoryPlanReconstructions[projectID],
+                  current.stage == .applying else { return }
+            current.stage = .outcomeUnknown
+            current.message = "The exact Apply attempt could not be reconciled: \(error.localizedDescription)"
+            repositoryPlanReconstructions[projectID] = current
+            return
+        }
+        if reconciled.state == .pending || reconciled.state == .outcomeUnknown {
+            _ = await repositoryPlanApplyReplayer(reconciled)
+        }
+        let exactReadback: RepositoryPlanReconstructionReadback?
+        do {
+            exactReadback = try await repositoryPlanReadbackLoader(
+                store,
+                projectID,
+                saved.proposalID
+            ).first { $0.version.version == saved.version.version }
+        } catch {
+            exactReadback = nil
+        }
+        guard var current = repositoryPlanReconstructions[projectID],
+              current.stage == .applying,
+              var currentReview = current.review,
+              currentReview.source == review.source else { return }
+        guard let exactReadback else {
+            current.stage = .outcomeUnknown
+            current.message = "The exact Apply attempt was reconciled, but its persisted readback is unavailable. Retry recovery without creating a new Apply."
+            repositoryPlanReconstructions[projectID] = current
+            return
+        }
+        currentReview.savedReadback = exactReadback
+        current.review = currentReview
+        if exactReadback.version.application != nil,
+           exactReadback.applicationAttempt?.state == .applied {
+            current.stage = .applied
+            currentReview.pendingApplyIdentity = nil
+            current.review = currentReview
+            current.message = "Recovered the applied proposal version \(exactReadback.version.version). Refreshing the latest local project projections…"
+            repositoryPlanReconstructions[projectID] = current
+            await refreshAfterRepositoryPlanApplication(
+                projectID: projectID,
+                version: exactReadback.version.version,
+                recovered: true
+            )
+        } else if exactReadback.applicationAttempt?.state == .refused {
+            current.stage = .reviewing
+            current.message = "The recorded Apply attempt was refused. Review the exact saved version before taking another owner action."
+            repositoryPlanReconstructions[projectID] = current
+        } else {
+            current.stage = .outcomeUnknown
+            current.message = "Apply outcome remains unknown. Reconcile this exact recorded attempt again; no new Apply was created."
+            repositoryPlanReconstructions[projectID] = current
+        }
+    }
+
+    private func refreshAfterRepositoryPlanApplication(
+        projectID: ProjectID,
+        version: Int64,
+        recovered: Bool
+    ) async {
+        let outcome = await reloadProjectProjections()
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .applied else { return }
+        let action = recovered ? "Recovered the applied" : "Applied"
+        switch outcome {
+        case .published:
+            presentation.message = "\(action) proposal version \(version). The latest local project projections reloaded successfully; open Project Plan, Phase Board, or History to inspect current state and remaining work."
+        case .failed:
+            presentation.message = "\(action) proposal version \(version), but the project view refresh failed. Reload the dashboard before relying on Project Plan, Phase Board, or History."
+        case .superseded:
+            presentation.message = "\(action) proposal version \(version). Another projection reload superseded this refresh; reload the dashboard before relying on Project Plan, Phase Board, or History."
+        }
+        repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    func retryRepositoryPlanProjectionRefresh(projectID: ProjectID) async {
+        guard let presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .applied,
+              let version = presentation.review?.savedReadback?.version.version else { return }
+        await refreshAfterRepositoryPlanApplication(
+            projectID: projectID,
+            version: version,
+            recovered: false
+        )
+    }
+
     private func repositoryPlanReviewPresentation(
         applying readback: RepositoryPlanPreparationReadback,
         to presentation: RepositoryPlanReconstructionPresentation
@@ -1981,7 +2714,21 @@ final class AppModel {
             [],
             []
         )
+        let inferredMappings: [RepositoryPlanReconstructionMappingSelection] = preview.comparisons.compactMap { comparison in
+            guard comparison.disposition == .unchanged,
+                  let destinationID = comparison.destinationID else { return nil }
+            return RepositoryPlanReconstructionMappingSelection(
+                subject: comparison.subject,
+                destinationID: destinationID
+            )
+        }
+        let persistedVersion = try await repositoryPlanReadbackLoader(
+            store,
+            presentation.projectID,
+            readback.identity.proposalID
+        ).map(\.version.version).max()
         updated.preparation = readback
+        updated.proposalID = readback.identity.proposalID
         updated.review = .init(
             source: draft.source,
             originalProjection: draft.originalProjection,
@@ -1990,18 +2737,126 @@ final class AppModel {
             blockers: preview.blockers,
             corrections: [],
             exclusions: [],
-            explicitMappings: [],
+            explicitMappings: inferredMappings,
+            destinationSnapshots: preview.destinationSnapshots,
             terminalEvidence: [],
+            decisionID: "decision-\(requestIDGenerator().uuidString.lowercased())",
             authorityConfirmed: false,
             savedReadback: nil,
-            persistedVersion: nil,
+            persistedVersion: persistedVersion,
             revision: 0,
             isUpdating: false,
-            isSaving: false
+            isSaving: false,
+            isDeciding: false
         )
         updated.stage = .reviewing
         updated.message = nil
         return updated
+    }
+
+    private func repositoryPlanPersistedPresentation(
+        from readback: RepositoryPlanReconstructionReadback
+    ) async throws -> RepositoryPlanReconstructionPresentation {
+        let originalProjection = try JSONDecoder().decode(
+            RepositoryPlanProjection.self,
+            from: readback.payload.source.projectionBytes
+        )
+        let attestationDecisionIDs: Set<String> = Set(
+            readback.payload.terminalEvidence.compactMap { evidence -> String? in
+            guard case let .ownerAttestation(attestation) = evidence else { return nil }
+            return attestation.decisionID
+            }
+        )
+        guard attestationDecisionIDs.count <= 1 else {
+            throw RepositoryPlanReconstructionError.invalidPayload(
+                "Persisted owner attestations bind more than one reconstruction decision."
+            )
+        }
+        let decisionID = readback.version.decision?.id
+            ?? attestationDecisionIDs.first
+            ?? "decision-\(requestIDGenerator().uuidString.lowercased())"
+        guard attestationDecisionIDs.allSatisfy({ Data($0.utf8) == Data(decisionID.utf8) }) else {
+            throw RepositoryPlanReconstructionError.invalidPayload(
+                "Persisted owner attestations do not bind the recorded reconstruction decision."
+            )
+        }
+        let explicitMappings: [RepositoryPlanReconstructionMappingSelection] = readback.payload.comparisons.compactMap { comparison in
+            guard comparison.disposition == .unchanged,
+                  let destinationID = comparison.destinationID else { return nil }
+            return RepositoryPlanReconstructionMappingSelection(
+                subject: comparison.subject,
+                destinationID: destinationID
+            )
+        }
+        let destinationSnapshots: [RepositoryPlanReconstructionDestinationSnapshot]
+        let comparisonWarning: String?
+        do {
+            let preview = try await repositoryPlanPreviewer(
+                readback.payload.source,
+                readback.payload.reviewedProjection,
+                readback.payload.corrections,
+                explicitMappings
+            )
+            destinationSnapshots = preview.destinationSnapshots
+            comparisonWarning = nil
+        } catch {
+            destinationSnapshots = []
+            comparisonWarning = "The saved review and exact Apply state were restored, but the current destination comparison is unavailable: \(error.localizedDescription)."
+        }
+        let stage: RepositoryPlanReconstructionStage
+        if readback.version.application != nil
+            || readback.applicationAttempt?.state == .applied {
+            stage = .applied
+        } else if readback.applicationAttempt?.state == .pending
+            || readback.applicationAttempt?.state == .outcomeUnknown {
+            stage = .outcomeUnknown
+        } else {
+            stage = .reviewing
+        }
+        let persistedMessage = [
+            stage == .outcomeUnknown
+                ? "A recorded Apply attempt needs exact reconciliation before any new Apply."
+                : nil,
+            comparisonWarning,
+        ].compactMap { $0 }.joined(separator: " ")
+        return .init(
+            projectID: readback.payload.source.projectID,
+            proposalID: readback.proposalID,
+            stage: stage,
+            inventory: nil,
+            target: nil,
+            selectedArtifactIDs: [],
+            preparation: nil,
+            review: .init(
+                source: readback.payload.source,
+                originalProjection: originalProjection,
+                reviewedProjection: readback.payload.reviewedProjection,
+                comparisons: readback.payload.comparisons,
+                blockers: readback.payload.blockers,
+                corrections: readback.payload.corrections,
+                exclusions: readback.payload.exclusions,
+                explicitMappings: explicitMappings,
+                destinationSnapshots: destinationSnapshots,
+                terminalEvidence: readback.payload.terminalEvidence,
+                decisionID: decisionID,
+                authorityConfirmed: readback.version.decision?.disposition == .approved,
+                savedReadback: readback,
+                persistedVersion: readback.version.version,
+                revision: 0,
+                isUpdating: false,
+                isSaving: false,
+                isDeciding: false,
+                pendingApplyIdentity: readback.applicationAttempt.map {
+                    .init(
+                        proposalID: $0.proposalID,
+                        version: $0.version,
+                        applicationID: $0.applicationID,
+                        requestID: $0.requestID
+                    )
+                }
+            ),
+            message: persistedMessage.isEmpty ? nil : persistedMessage
+        )
     }
 
     private static func applyRepositoryPlanExclusions(
@@ -2009,6 +2864,7 @@ final class AppModel {
         preview: RepositoryPlanReconstructionPreview,
         to review: inout RepositoryPlanReconstructionReviewPresentation
     ) {
+        review.destinationSnapshots = preview.destinationSnapshots
         let excluded = Set(exclusions.map(\.subject))
         review.comparisons = preview.comparisons.map { comparison in
             guard excluded.contains(comparison.subject) else { return comparison }
@@ -2170,6 +3026,20 @@ final class AppModel {
         default:
             "The reviewed repository plan could not be saved: \(String(describing: error))"
         }
+    }
+
+    private static func repositoryPlanPayload(
+        from review: RepositoryPlanReconstructionReviewPresentation
+    ) -> RepositoryPlanReconstructionPayload {
+        .init(
+            source: review.source,
+            reviewedProjection: review.reviewedProjection,
+            comparisons: review.comparisons,
+            corrections: review.corrections,
+            exclusions: review.exclusions,
+            terminalEvidence: review.terminalEvidence,
+            blockers: review.blockers
+        )
     }
 
     private func reloadRepositoryPlanSourceDisclosure(

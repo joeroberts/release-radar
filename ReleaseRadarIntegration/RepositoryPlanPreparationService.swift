@@ -5,9 +5,35 @@ import ReleaseRadarCore
 protocol RepositoryPlanPreparationClienting: Sendable {
     func target(model: String, effort: String) async throws -> RepositoryPlanPreparationTarget
     func prepare(_ request: RepositoryPlanPreparationRequest) async throws -> RepositoryPlanPreparationReadback
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback
     func status(_ identity: RepositoryPlanPreparationIdentity) async throws -> RepositoryPlanPreparationReadback
     func cancel(_ identity: RepositoryPlanPreparationIdentity) async throws -> RepositoryPlanPreparationReadback
     func close(_ identity: RepositoryPlanPreparationIdentity) async throws
+    func restore(
+        request: RepositoryPlanPreparationRequest,
+        readback: RepositoryPlanPreparationReadback
+    ) async throws
+}
+
+extension RepositoryPlanPreparationClienting {
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback {
+        try await prepare(request)
+    }
+
+    func restore(
+        request: RepositoryPlanPreparationRequest,
+        readback: RepositoryPlanPreparationReadback
+    ) async throws {}
 }
 
 extension ProjectExecutionSetupClient: RepositoryPlanPreparationClienting {
@@ -29,6 +55,15 @@ extension ProjectExecutionSetupClient: RepositoryPlanPreparationClienting {
         try await preparePlanDraft(request)
     }
 
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback {
+        try await preparePlanDraft(request, onProgress: onProgress)
+    }
+
     func status(
         _ identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback {
@@ -43,6 +78,13 @@ extension ProjectExecutionSetupClient: RepositoryPlanPreparationClienting {
 
     func close(_ identity: RepositoryPlanPreparationIdentity) async throws {
         try await closePlanDraft(identity)
+    }
+
+    func restore(
+        request: RepositoryPlanPreparationRequest,
+        readback: RepositoryPlanPreparationReadback
+    ) async throws {
+        try await restorePlanDraft(request, readback: readback)
     }
 }
 
@@ -60,6 +102,10 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         let snapshotBase: URL
         var readback: RepositoryPlanPreparationReadback
         var terminalClosePending: Bool
+        var pendingTerminalReadback: RepositoryPlanPreparationReadback?
+        var runtimeCloseConfirmed: Bool
+        var runtimeRestoreRequired: Bool
+        var persistenceRevision: Int64?
     }
 
     private struct PreparedDraftRecord {
@@ -77,6 +123,8 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
     ) async throws -> RepositoryPlanSourceManifest
     private let snapshotRoot: @Sendable () throws -> URL
     private let identityGenerator: @Sendable () -> UUID
+    private let persistenceStore: DeliveryStore?
+    private let persistenceRequestIDGenerator: @Sendable () -> UUID
     private var proposalIDs: [ProjectID: PlanChangeProposalID] = [:]
     private var reservation: Reservation?
     private var activeAttempt: ActiveAttempt?
@@ -106,6 +154,8 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         }
         self.snapshotRoot = snapshotRoot
         self.identityGenerator = identityGenerator
+        persistenceStore = store
+        persistenceRequestIDGenerator = { UUID() }
     }
 
     init(
@@ -114,12 +164,16 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
             RepositoryPlanPreparationConsent
         ) async throws -> RepositoryPlanSourceManifest,
         snapshotRoot: @escaping @Sendable () throws -> URL,
-        identityGenerator: @escaping @Sendable () -> UUID
+        identityGenerator: @escaping @Sendable () -> UUID,
+        persistenceStore: DeliveryStore? = nil,
+        persistenceRequestIDGenerator: @escaping @Sendable () -> UUID = { UUID() }
     ) {
         self.client = client
         self.sourceCapture = sourceCapture
         self.snapshotRoot = snapshotRoot
         self.identityGenerator = identityGenerator
+        self.persistenceStore = persistenceStore
+        self.persistenceRequestIDGenerator = persistenceRequestIDGenerator
     }
 
     func target() async throws -> RepositoryPlanPreparationTarget {
@@ -197,39 +251,68 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
                 draftBytes: nil,
                 error: nil
             )
+            let persistenceRevision: Int64?
+            if let persistenceStore {
+                persistenceRevision = try await RepositoryPlanPreparationPersistence.begin(
+                    request: request,
+                    requestID: persistenceRequestIDGenerator(),
+                    in: persistenceStore
+                ).revision
+            } else {
+                persistenceRevision = nil
+            }
             activeAttempt = .init(
                 request: request,
                 snapshotRoot: captured.root,
                 snapshotBase: captured.base,
                 readback: initial,
-                terminalClosePending: false
+                terminalClosePending: false,
+                pendingTerminalReadback: nil,
+                runtimeCloseConfirmed: false,
+                runtimeRestoreRequired: false,
+                persistenceRevision: persistenceRevision
             )
             reservation = nil
 
-            let readback = try await client.prepare(request)
+            let readback = try await client.prepare(
+                request,
+                onProgress: { [weak self] progress in
+                    try await self?.recordProgress(progress, request: request)
+                }
+            )
             guard readback.identity == request.identity,
                   activeAttempt?.request.identity == request.identity else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
             try capturePreparedDraft(readback, request: request)
             activeAttempt?.readback = readback
-            try await closeKnownTerminal(readback)
+            if Self.isKnownTerminal(readback) {
+                try await closeKnownTerminal(readback)
+            } else {
+                try await persist(readback)
+            }
             return readback
         } catch {
             if reservation == pending { reservation = nil }
             if let active = activeAttempt,
                active.request.identity.attemptID == pending.attemptID {
+                if active.runtimeCloseConfirmed || active.pendingTerminalReadback != nil {
+                    throw error
+                }
                 if let retained = try? await client.status(active.request.identity),
                    retained.identity == active.request.identity {
                     try capturePreparedDraft(retained, request: active.request)
                     activeAttempt?.readback = retained
+                    if Self.isKnownTerminal(retained) {
+                        try await closeKnownTerminal(retained)
+                    } else {
+                        try await persist(retained)
+                    }
                     return retained
                 }
-                activeAttempt = nil
-                try? RepositoryPlanPreparationSnapshotStore.remove(
-                    active.snapshotRoot,
-                    below: active.snapshotBase
-                )
+                let unknown = Self.unknownReadback(from: active.readback, error: error)
+                activeAttempt?.readback = unknown
+                try? await persist(unknown)
             } else if let materialized {
                 try? RepositoryPlanPreparationSnapshotStore.remove(
                     materialized.root,
@@ -252,7 +335,11 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         try capturePreparedDraft(readback, request: active.request)
         activeAttempt?.readback = readback
         activeAttempt?.terminalClosePending = false
-        try await closeKnownTerminal(readback)
+        if Self.isKnownTerminal(readback) {
+            try await closeKnownTerminal(readback)
+        } else {
+            try await persist(readback)
+        }
         return readback
     }
 
@@ -272,6 +359,9 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
                 error: error
             )
             activeAttempt?.terminalClosePending = false
+            if let unknown = activeAttempt?.readback {
+                try? await persist(unknown)
+            }
             throw error
         }
         guard readback.identity == identity,
@@ -281,7 +371,11 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         try capturePreparedDraft(readback, request: active.request)
         activeAttempt?.readback = readback
         activeAttempt?.terminalClosePending = false
-        try await closeKnownTerminal(readback)
+        if Self.isKnownTerminal(readback) {
+            try await closeKnownTerminal(readback)
+        } else {
+            try await persist(readback)
+        }
         return readback
     }
 
@@ -289,10 +383,38 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback {
         let active = try requireActive(identity)
+        if let pendingTerminal = active.pendingTerminalReadback {
+            try await closeKnownTerminal(pendingTerminal)
+            return pendingTerminal
+        }
         guard active.readback.state == .outcomeUnknown else {
             throw RepositoryPlanPreparationError(code: .invalidRequest)
         }
         if !active.terminalClosePending {
+            if active.runtimeRestoreRequired {
+                do {
+                    try await client.restore(
+                        request: active.request,
+                        readback: active.readback
+                    )
+                    guard activeAttempt?.request.identity == identity else {
+                        throw RepositoryPlanPreparationError(code: .identityMismatch)
+                    }
+                    activeAttempt?.runtimeRestoreRequired = false
+                } catch {
+                    guard activeAttempt?.request.identity == identity else {
+                        throw RepositoryPlanPreparationError(code: .identityMismatch)
+                    }
+                    activeAttempt?.readback = Self.unknownReadback(
+                        from: active.readback,
+                        error: error
+                    )
+                    if let unknown = activeAttempt?.readback {
+                        try? await persist(unknown)
+                    }
+                    throw error
+                }
+            }
             let readback = try await client.status(identity)
             guard readback.identity == identity,
                   activeAttempt?.request.identity == identity else {
@@ -302,18 +424,82 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
             activeAttempt?.readback = readback
             activeAttempt?.terminalClosePending = false
             if readback.state == .outcomeUnknown {
+                try await persist(readback)
                 return try await closeUncertainAttempt(
                     try requireActive(identity),
                     identity: identity
                 )
             }
             if ![.readyForReview, .failed, .cancelled].contains(readback.state) {
+                try await persist(readback)
                 return readback
             }
             try await closeKnownTerminal(readback)
             return readback
         }
         return try await closeUncertainAttempt(active, identity: identity)
+    }
+
+    func recover(projectID: ProjectID) async throws -> [RepositoryPlanPreparationReadback] {
+        guard let persistenceStore else { return [] }
+        let records = try await RepositoryPlanPreparationPersistence.load(
+            projectID: projectID,
+            from: persistenceStore
+        ).filter {
+            $0.isCurrent && $0.replacedByAttemptID == nil
+                && [.queued, .running, .awaitingResolution, .outcomeUnknown, .readyForReview]
+                    .contains($0.state)
+        }
+        guard let record = records.max(by: { $0.updatedAt < $1.updatedAt }) else { return [] }
+        let readback = Self.readback(from: record)
+        proposalIDs[projectID] = record.request.identity.proposalID
+        let snapshotRoot = URL(fileURLWithPath: record.request.snapshot.rootPath, isDirectory: true)
+        let snapshotBase = snapshotRoot.deletingLastPathComponent()
+        if record.state == .readyForReview, let bytes = record.draftBytes {
+            preparedDraft = .init(
+                identity: record.request.identity,
+                request: record.request,
+                bytes: bytes
+            )
+            activeAttempt = nil
+        } else {
+            activeAttempt = .init(
+                request: record.request,
+                snapshotRoot: snapshotRoot,
+                snapshotBase: snapshotBase,
+                readback: readback,
+                terminalClosePending: false,
+                pendingTerminalReadback: nil,
+                runtimeCloseConfirmed: false,
+                runtimeRestoreRequired: true,
+                persistenceRevision: record.revision
+            )
+            preparedDraft = nil
+            do {
+                try await client.restore(request: record.request, readback: readback)
+                activeAttempt?.runtimeRestoreRequired = false
+                let observed = try await client.status(record.request.identity)
+                guard observed.identity == record.request.identity else {
+                    throw RepositoryPlanPreparationError(code: .identityMismatch)
+                }
+                try capturePreparedDraft(observed, request: record.request)
+                activeAttempt?.readback = observed
+                if Self.isKnownTerminal(observed) {
+                    try await closeKnownTerminal(observed)
+                } else {
+                    try await persist(observed)
+                }
+                reservation = nil
+                return [observed]
+            } catch {
+                let unknown = Self.unknownReadback(from: readback, error: error)
+                activeAttempt?.readback = unknown
+                try await persist(unknown)
+                return [unknown]
+            }
+        }
+        reservation = nil
+        return [readback]
     }
 
     func reviewDraft(
@@ -371,24 +557,26 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         _ active: ActiveAttempt,
         identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback {
-        do {
-            try await client.close(identity)
-        } catch {
-            guard activeAttempt?.request.identity == identity else {
-                throw RepositoryPlanPreparationError(code: .identityMismatch)
+        if !active.runtimeCloseConfirmed {
+            do {
+                try await client.close(identity)
+            } catch {
+                guard activeAttempt?.request.identity == identity else {
+                    throw RepositoryPlanPreparationError(code: .identityMismatch)
+                }
+                if let failure = error as? RepositoryPlanPreparationError,
+                   failure.code == .outcomeUnknown {
+                    activeAttempt?.terminalClosePending = false
+                } else {
+                    activeAttempt?.terminalClosePending = true
+                }
+                throw error
             }
-            activeAttempt?.terminalClosePending = true
-            throw error
         }
         guard activeAttempt?.request.identity == identity else {
             throw RepositoryPlanPreparationError(code: .identityMismatch)
         }
-        activeAttempt = nil
-        try RepositoryPlanPreparationSnapshotStore.remove(
-            active.snapshotRoot,
-            below: active.snapshotBase
-        )
-        return .init(
+        let terminal = RepositoryPlanPreparationReadback(
             identity: identity,
             state: .failed,
             threadID: active.readback.threadID,
@@ -396,6 +584,16 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
             draftBytes: nil,
             error: "The uncertain preparation was ended and its exact runtime was closed."
         )
+        activeAttempt?.runtimeCloseConfirmed = true
+        activeAttempt?.terminalClosePending = false
+        activeAttempt?.pendingTerminalReadback = terminal
+        try await persist(terminal)
+        activeAttempt = nil
+        try RepositoryPlanPreparationSnapshotStore.remove(
+            active.snapshotRoot,
+            below: active.snapshotBase
+        )
+        return terminal
     }
 
     private func requireActive(
@@ -407,28 +605,81 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         return activeAttempt
     }
 
+    private func persist(_ readback: RepositoryPlanPreparationReadback) async throws {
+        guard let persistenceStore,
+              let active = activeAttempt,
+              let revision = active.persistenceRevision else { return }
+        let record = try await RepositoryPlanPreparationPersistence.record(
+            identity: active.request.identity,
+            expectedRevision: revision,
+            readback: readback,
+            in: persistenceStore
+        )
+        guard activeAttempt?.request.identity == active.request.identity else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        activeAttempt?.persistenceRevision = record.revision
+    }
+
+    private func recordProgress(
+        _ readback: RepositoryPlanPreparationReadback,
+        request: RepositoryPlanPreparationRequest
+    ) async throws {
+        guard readback.identity == request.identity,
+              activeAttempt?.request == request,
+              [.queued, .running, .awaitingResolution, .outcomeUnknown]
+                .contains(readback.state) else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        activeAttempt?.readback = readback
+        try await persist(readback)
+    }
+
+    private static func readback(
+        from record: RepositoryPlanPreparationRecord
+    ) -> RepositoryPlanPreparationReadback {
+        .init(
+            identity: record.request.identity,
+            state: record.state,
+            threadID: record.threadID,
+            turnID: record.turnID,
+            draftBytes: record.draftBytes,
+            error: record.error
+        )
+    }
+
     private func closeKnownTerminal(
         _ readback: RepositoryPlanPreparationReadback
     ) async throws {
-        guard [.readyForReview, .failed, .cancelled].contains(readback.state),
+        guard Self.isKnownTerminal(readback),
               let active = activeAttempt,
               active.request.identity == readback.identity else { return }
-        do {
-            try await client.close(readback.identity)
-        } catch {
-            guard activeAttempt?.request.identity == readback.identity else {
-                throw RepositoryPlanPreparationError(code: .identityMismatch)
+        activeAttempt?.pendingTerminalReadback = readback
+        if !active.runtimeCloseConfirmed {
+            do {
+                try await client.close(readback.identity)
+            } catch {
+                guard activeAttempt?.request.identity == readback.identity else {
+                    throw RepositoryPlanPreparationError(code: .identityMismatch)
+                }
+                activeAttempt?.readback = Self.unknownReadback(
+                    from: readback,
+                    error: error
+                )
+                activeAttempt?.terminalClosePending = true
+                if let unknown = activeAttempt?.readback {
+                    try? await persist(unknown)
+                }
+                throw error
             }
-            activeAttempt?.readback = Self.unknownReadback(
-                from: readback,
-                error: error
-            )
-            activeAttempt?.terminalClosePending = true
-            throw error
         }
         guard activeAttempt?.request.identity == readback.identity else {
             throw RepositoryPlanPreparationError(code: .identityMismatch)
         }
+        activeAttempt?.runtimeCloseConfirmed = true
+        activeAttempt?.terminalClosePending = false
+        activeAttempt?.readback = readback
+        try await persist(readback)
         activeAttempt = nil
         if readback.state != .readyForReview {
             try RepositoryPlanPreparationSnapshotStore.remove(
@@ -436,6 +687,10 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
                 below: active.snapshotBase
             )
         }
+    }
+
+    private static func isKnownTerminal(_ readback: RepositoryPlanPreparationReadback) -> Bool {
+        [.readyForReview, .failed, .cancelled].contains(readback.state)
     }
 
     private func validate(_ consent: RepositoryPlanPreparationConsent) throws {

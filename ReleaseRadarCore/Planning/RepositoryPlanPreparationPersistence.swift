@@ -202,7 +202,7 @@ public enum RepositoryPlanPreparationPersistence {
         case .awaitingResolution:
             [.running, .readyForReview, .failed, .cancelled, .outcomeUnknown].contains(to)
         case .outcomeUnknown:
-            [.failed, .cancelled].contains(to)
+            [.readyForReview, .failed, .cancelled].contains(to)
         case .readyForReview, .failed, .cancelled:
             false
         }

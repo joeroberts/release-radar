@@ -505,6 +505,113 @@ struct SidebarView: View {
                                 await model.reconcileRepositoryPlanPreparation(projectID: projectID)
                             }
                         },
+                        restartRepositoryPlanPreparation: {
+                            Task {
+                                await model.restartRepositoryPlanPreparation(projectID: projectID)
+                            }
+                        },
+                        setRepositoryPlanCorrection: { subject, field, value in
+                            Task {
+                                await model.setRepositoryPlanCorrection(
+                                    projectID: projectID,
+                                    subject: subject,
+                                    field: field,
+                                    chosenValue: value
+                                )
+                            }
+                        },
+                        setRepositoryPlanExclusion: { subject, reason in
+                            Task {
+                                await model.setRepositoryPlanExclusion(
+                                    projectID: projectID,
+                                    subject: subject,
+                                    reason: reason
+                                )
+                            }
+                        },
+                        setRepositoryPlanTerminalEvidence: { evidence in
+                            Task {
+                                await model.setRepositoryPlanTerminalEvidence(
+                                    projectID: projectID,
+                                    evidence: evidence
+                                )
+                            }
+                        },
+                        setRepositoryPlanMapping: { subject, destinationID in
+                            Task {
+                                await model.setRepositoryPlanMapping(
+                                    projectID: projectID,
+                                    subject: subject,
+                                    destinationID: destinationID
+                                )
+                            }
+                        },
+                        removeRepositoryPlanExclusion: { subject in
+                            Task {
+                                await model.removeRepositoryPlanExclusion(
+                                    projectID: projectID,
+                                    subject: subject
+                                )
+                            }
+                        },
+                        addRepositoryPlanOriginalEvidence: { sourceRef in
+                            Task {
+                                await model.addRepositoryPlanOriginalEvidence(
+                                    projectID: projectID,
+                                    sourceRef: sourceRef
+                                )
+                            }
+                        },
+                        beginFreshRepositoryPlanPreparation: {
+                            Task {
+                                await model.beginFreshRepositoryPlanPreparation(
+                                    projectID: projectID
+                                )
+                            }
+                        },
+                        retryRepositoryPlanProjectionRefresh: {
+                            Task {
+                                await model.retryRepositoryPlanProjectionRefresh(
+                                    projectID: projectID
+                                )
+                            }
+                        },
+                        setRepositoryPlanAuthorityConfirmed: { confirmed in
+                            model.setRepositoryPlanAuthorityConfirmed(
+                                projectID: projectID,
+                                confirmed: confirmed
+                            )
+                        },
+                        saveRepositoryPlanReconstruction: { rationale in
+                            Task {
+                                await model.saveRepositoryPlanReconstruction(
+                                    projectID: projectID,
+                                    rationale: rationale
+                                )
+                            }
+                        },
+                        approveRepositoryPlanReconstruction: {
+                            Task {
+                                await model.approveRepositoryPlanReconstruction(projectID: projectID)
+                            }
+                        },
+                        applyRepositoryPlanReconstruction: {
+                            Task {
+                                await model.applyRepositoryPlanReconstruction(projectID: projectID)
+                            }
+                        },
+                        recoverRepositoryPlanReconstructionApply: {
+                            Task {
+                                await model.recoverRepositoryPlanReconstructionApply(projectID: projectID)
+                            }
+                        },
+                        openRepositoryPlanBoard: {
+                            model.viewAllPhases(projectID: projectID)
+                            Task { await model.navigate(to: .phaseBoard(projectID)) }
+                        },
+                        openRepositoryPlanHistory: {
+                            Task { await model.navigate(to: .activity(projectID)) }
+                        },
                         referenceQueryContextIdentity: model.referenceQueryContextIdentity(projectID: projectID),
                         isReferenceQueryReady: model.isReferenceQueryReady(projectID: projectID),
                         requestedFocus: model.navigationFocus,

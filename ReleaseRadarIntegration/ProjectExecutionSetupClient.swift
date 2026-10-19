@@ -10,6 +10,20 @@ protocol PlanPreparationServicing: Sendable {
         context: CodexExecutionContextLease,
         allowedInstructionSources: [String]
     ) async throws -> RepositoryPlanPreparationReadback
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String],
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback
+    func restore(
+        _ request: RepositoryPlanPreparationRequest,
+        from readback: RepositoryPlanPreparationReadback,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String]
+    ) async throws -> RepositoryPlanPreparationReadback
     func status(
         _ identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback
@@ -17,6 +31,32 @@ protocol PlanPreparationServicing: Sendable {
         _ identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback
     func close(_ identity: RepositoryPlanPreparationIdentity) async throws
+}
+
+extension PlanPreparationServicing {
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String],
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback {
+        try await prepare(
+            request,
+            context: context,
+            allowedInstructionSources: allowedInstructionSources
+        )
+    }
+
+    func restore(
+        _ request: RepositoryPlanPreparationRequest,
+        from readback: RepositoryPlanPreparationReadback,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String]
+    ) async throws -> RepositoryPlanPreparationReadback {
+        throw RepositoryPlanPreparationError(code: .unsupportedRuntime)
+    }
 }
 
 extension PlanPreparationAdapter: PlanPreparationServicing {
@@ -30,6 +70,93 @@ extension PlanPreparationAdapter: PlanPreparationServicing {
             context: context as any ExecutionContextLease & AnyObject,
             allowedInstructionSources: allowedInstructionSources
         )
+    }
+
+    func prepare(
+        _ request: RepositoryPlanPreparationRequest,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String],
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback {
+        try await prepare(
+            request,
+            context: context as any ExecutionContextLease & AnyObject,
+            allowedInstructionSources: allowedInstructionSources,
+            onProgress: onProgress
+        )
+    }
+
+    func restore(
+        _ request: RepositoryPlanPreparationRequest,
+        from readback: RepositoryPlanPreparationReadback,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String]
+    ) async throws -> RepositoryPlanPreparationReadback {
+        try await restore(
+            request,
+            from: readback,
+            context: context as any ExecutionContextLease & AnyObject,
+            allowedInstructionSources: allowedInstructionSources
+        )
+    }
+}
+
+private final class PlanPreparationRuntimeRegistry: @unchecked Sendable {
+    static let shared = PlanPreparationRuntimeRegistry()
+
+    private struct Entry {
+        let request: RepositoryPlanPreparationRequest
+        let preparation: any PlanPreparationServicing
+    }
+
+    private let lock = NSLock()
+    private var entries: [UUID: Entry] = [:]
+
+    func register(
+        request: RepositoryPlanPreparationRequest,
+        preparation: any PlanPreparationServicing
+    ) throws {
+        try lock.withLock {
+            if let existing = entries[request.identity.attemptID] {
+                guard existing.request == request else {
+                    throw RepositoryPlanPreparationError(code: .identityMismatch)
+                }
+                return
+            }
+            entries[request.identity.attemptID] = .init(
+                request: request,
+                preparation: preparation
+            )
+        }
+    }
+
+    func restore(
+        request: RepositoryPlanPreparationRequest
+    ) throws -> any PlanPreparationServicing {
+        guard let restored = try restoreIfPresent(request: request) else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        return restored
+    }
+
+    func restoreIfPresent(
+        request: RepositoryPlanPreparationRequest
+    ) throws -> (any PlanPreparationServicing)? {
+        try lock.withLock {
+            guard let entry = entries[request.identity.attemptID] else { return nil }
+            guard entry.request == request else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            return entry.preparation
+        }
+    }
+
+    func remove(identity: RepositoryPlanPreparationIdentity) {
+        lock.withLock {
+            entries.removeValue(forKey: identity.attemptID)
+        }
     }
 }
 
@@ -132,6 +259,15 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     func preparePlanDraft(
         _ request: RepositoryPlanPreparationRequest
     ) async throws -> RepositoryPlanPreparationReadback {
+        try await preparePlanDraft(request, onProgress: { _ in })
+    }
+
+    func preparePlanDraft(
+        _ request: RepositoryPlanPreparationRequest,
+        onProgress: @escaping @Sendable (
+            RepositoryPlanPreparationReadback
+        ) async throws -> Void
+    ) async throws -> RepositoryPlanPreparationReadback {
         if let cleanupFailure { throw cleanupFailure }
         guard transport == nil, planPreparation == nil,
               let current = try contextStore().codexContext(),
@@ -148,12 +284,17 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         let adapter = planPreparationFactory()
         planPreparation = adapter
         planPreparationIdentity = request.identity
+        try PlanPreparationRuntimeRegistry.shared.register(
+            request: request,
+            preparation: adapter
+        )
         contextAccess = nil // Ownership transfers to the adapter's transport.
         do {
             return try await adapter.prepare(
                 request,
                 context: lease,
-                allowedInstructionSources: globalInstruction.map { [$0] } ?? []
+                allowedInstructionSources: globalInstruction.map { [$0] } ?? [],
+                onProgress: onProgress
             )
         } catch {
             if (try? await adapter.status(request.identity)) == nil {
@@ -161,9 +302,72 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                 planPreparation = nil
                 planPreparationIdentity = nil
                 boundContext = nil
+                PlanPreparationRuntimeRegistry.shared.remove(identity: request.identity)
             }
             throw error
         }
+    }
+
+    func restorePlanDraft(
+        _ request: RepositoryPlanPreparationRequest,
+        readback: RepositoryPlanPreparationReadback
+    ) async throws {
+        if let cleanupFailure { throw cleanupFailure }
+        guard transport == nil,
+              readback.identity == request.identity,
+              planPreparation == nil,
+              planPreparationIdentity == nil else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        guard let current = try contextStore().codexContext(),
+              current.id == request.codexContextID else {
+            throw CodexExecutionContextError.changed
+        }
+        if let boundContext, boundContext != current {
+            throw CodexExecutionContextError.changed
+        }
+        boundContext = current
+        if let restored = try PlanPreparationRuntimeRegistry.shared.restoreIfPresent(
+            request: request
+        ) {
+            let observed = try await restored.status(request.identity)
+            guard observed.identity == readback.identity else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            planPreparation = restored
+            planPreparationIdentity = request.identity
+            return
+        }
+
+        try await useCodexContext(request.codexContextID)
+        guard let lease = contextAccess, boundContext == current else {
+            throw CodexExecutionContextError.accessRequired
+        }
+        let globalInstruction = try current.globalInstructionSource()
+        try lease.validate()
+        let restored = planPreparationFactory()
+        contextAccess = nil
+        do {
+            let observed = try await restored.restore(
+                request,
+                from: readback,
+                context: lease,
+                allowedInstructionSources: globalInstruction.map { [$0] } ?? []
+            )
+            guard observed.identity == readback.identity else {
+                throw RepositoryPlanPreparationError(code: .identityMismatch)
+            }
+            try PlanPreparationRuntimeRegistry.shared.register(
+                request: request,
+                preparation: restored
+            )
+            planPreparation = restored
+        } catch {
+            try? lease.physicallyClosed()
+            boundContext = nil
+            throw error
+        }
+        planPreparationIdentity = request.identity
     }
 
     func planDraftStatus(
@@ -192,6 +396,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         self.planPreparation = nil
         planPreparationIdentity = nil
         boundContext = nil
+        PlanPreparationRuntimeRegistry.shared.remove(identity: identity)
     }
 
     static func setup(plugin: CodexPluginLifecycleCoordinator?) -> ProjectExecutionSetupCoordinator {

@@ -91,13 +91,32 @@ public struct RepositoryPlanReconstructionMappingSelection: Codable, Equatable, 
 public struct RepositoryPlanReconstructionPreview: Codable, Equatable, Sendable {
     public let comparisons: [RepositoryPlanReconstructionComparison]
     public let blockers: [RepositoryPlanReconstructionBlocker]
+    public let destinationSnapshots: [RepositoryPlanReconstructionDestinationSnapshot]
 
     public init(
         comparisons: [RepositoryPlanReconstructionComparison],
-        blockers: [RepositoryPlanReconstructionBlocker]
+        blockers: [RepositoryPlanReconstructionBlocker],
+        destinationSnapshots: [RepositoryPlanReconstructionDestinationSnapshot] = []
     ) {
         self.comparisons = comparisons
         self.blockers = blockers
+        self.destinationSnapshots = destinationSnapshots
+    }
+}
+
+public struct RepositoryPlanReconstructionDestinationSnapshot: Codable, Equatable, Sendable {
+    public let subject: RepositoryPlanReconstructionSubject
+    public let destinationID: String
+    public let fields: Data
+
+    public init(
+        subject: RepositoryPlanReconstructionSubject,
+        destinationID: String,
+        fields: Data
+    ) {
+        self.subject = subject
+        self.destinationID = destinationID
+        self.fields = fields
     }
 }
 

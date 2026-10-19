@@ -1,10 +1,323 @@
 import CryptoKit
+import Darwin
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class PlanPreparationAdapterTests: XCTestCase {
+    func testRegistryMissRecoversExactStoredTerminalTurnWithoutStartingWork() async throws {
+        for terminal in [
+            StoredPreparationRecoveryPeer.Terminal.completed,
+            .failed,
+            .interrupted,
+        ] {
+            let fixture = try PreparationAdapterFixture()
+            let peer = StoredPreparationRecoveryPeer(
+                request: fixture.request,
+                terminal: terminal,
+                projectionText: fixture.projectionText
+            )
+            let adapter = PlanPreparationAdapter(serverFactory: { _, _, _, onMessage in
+                peer.onMessage = onMessage
+                return peer
+            })
+            let saved = RepositoryPlanPreparationReadback(
+                identity: fixture.request.identity,
+                state: .outcomeUnknown,
+                threadID: "thread-101",
+                turnID: "turn-101",
+                draftBytes: nil,
+                error: "The original preparation connection was lost."
+            )
+
+            let recovered = try await adapter.restore(
+                fixture.request,
+                from: saved,
+                context: PreparationLease(),
+                allowedInstructionSources: fixture.allowedSources
+            )
+
+            let expected: RepositoryPlanPreparationState = switch terminal {
+            case .completed: .readyForReview
+            case .failed: .failed
+            case .interrupted: .cancelled
+            }
+            XCTAssertEqual(recovered.state, expected)
+            XCTAssertEqual(recovered.threadID, "thread-101")
+            XCTAssertEqual(recovered.turnID, "turn-101")
+            XCTAssertEqual(
+                recovered.draftBytes,
+                terminal == .completed ? Data(fixture.projectionText.utf8) : nil
+            )
+            XCTAssertTrue(peer.calls.contains("thread/read"))
+            XCTAssertTrue(peer.calls.contains("thread/turns/list"))
+            if terminal == .completed {
+                XCTAssertTrue(peer.calls.contains("thread/items/list"))
+            }
+            XCTAssertTrue(Set(peer.calls).isDisjoint(with: [
+                "thread/start", "turn/start", "thread/fork", "thread/resume", "turn/interrupt",
+            ]))
+
+            try await adapter.close(fixture.request.identity)
+            XCTAssertEqual(peer.closeCount, 1)
+        }
+    }
+
+    func testRegistryMissKeepsUnresolvedStoredTurnUnknownAndFreshPeerCloseCannotEndIt() async throws {
+        for mode in [
+            StoredPreparationRecoveryPeer.Mode.inProgress,
+            .missingTurn,
+            .mismatchedThread,
+            .mismatchedTurn,
+            .mismatchedWorkingDirectory,
+            .notLoaded,
+            .incompletePagination,
+        ] {
+            let fixture = try PreparationAdapterFixture()
+            let peer = StoredPreparationRecoveryPeer(
+                request: fixture.request,
+                mode: mode,
+                projectionText: fixture.projectionText
+            )
+            let adapter = PlanPreparationAdapter(serverFactory: { _, _, _, onMessage in
+                peer.onMessage = onMessage
+                return peer
+            })
+            let saved = RepositoryPlanPreparationReadback(
+                identity: fixture.request.identity,
+                state: .outcomeUnknown,
+                threadID: "thread-101",
+                turnID: "turn-101",
+                draftBytes: nil,
+                error: "The exact stored turn still needs reconciliation."
+            )
+
+            let recovered = try await adapter.restore(
+                fixture.request,
+                from: saved,
+                context: PreparationLease(),
+                allowedInstructionSources: fixture.allowedSources
+            )
+
+            XCTAssertEqual(recovered.state, .outcomeUnknown, "mode: \(mode)")
+            XCTAssertEqual(recovered.identity, fixture.request.identity)
+            XCTAssertEqual(recovered.threadID, "thread-101")
+            XCTAssertEqual(recovered.turnID, "turn-101")
+            XCTAssertNil(recovered.draftBytes)
+            XCTAssertTrue(Set(peer.calls).isDisjoint(with: [
+                "thread/start", "turn/start", "thread/fork", "thread/resume", "turn/interrupt",
+            ]))
+
+            await XCTAssertThrowsErrorAsync(
+                try await adapter.close(fixture.request.identity)
+            )
+            let retained = try await adapter.status(fixture.request.identity)
+            XCTAssertEqual(retained.state, .outcomeUnknown)
+            XCTAssertEqual(retained.identity, fixture.request.identity)
+        }
+    }
+
+    func testRecoverySetupFailureCannotBeBypassedByStatusHistoryQuery() async throws {
+        for failure in StoredPreparationRecoveryPeer.SetupFailure.allCases {
+            let fixture = try PreparationAdapterFixture()
+            let peer = StoredPreparationRecoveryPeer(
+                request: fixture.request,
+                terminal: .completed,
+                projectionText: fixture.projectionText,
+                setupFailure: failure
+            )
+            let adapter = PlanPreparationAdapter(serverFactory: { _, _, _, onMessage in
+                peer.onMessage = onMessage
+                return peer
+            })
+            let saved = RepositoryPlanPreparationReadback(
+                identity: fixture.request.identity,
+                state: .outcomeUnknown,
+                threadID: "thread-101",
+                turnID: "turn-101",
+                draftBytes: nil,
+                error: "The selected recovery setup is unavailable."
+            )
+
+            let initiallyRejected = try await adapter.restore(
+                fixture.request,
+                from: saved,
+                context: PreparationLease(),
+                allowedInstructionSources: fixture.allowedSources
+            )
+            XCTAssertEqual(initiallyRejected.state, .outcomeUnknown, "failure: \(failure)")
+            XCTAssertFalse(peer.calls.contains("thread/read"), "failure: \(failure)")
+            XCTAssertFalse(peer.calls.contains("thread/turns/list"), "failure: \(failure)")
+            XCTAssertFalse(peer.calls.contains("thread/items/list"), "failure: \(failure)")
+
+            let stillRejected = try await adapter.status(fixture.request.identity)
+            let queriedHistory = peer.calls.contains(where: {
+                ["thread/read", "thread/turns/list", "thread/items/list"].contains($0)
+            })
+            guard stillRejected.state == .outcomeUnknown, !queriedHistory else {
+                XCTFail(
+                    "Rejected \(failure) setup must remain unknown without querying history."
+                )
+                continue
+            }
+
+            peer.acceptSetup()
+            let recovered = try await adapter.status(fixture.request.identity)
+            XCTAssertEqual(recovered.state, .readyForReview, "failure: \(failure)")
+            XCTAssertEqual(recovered.draftBytes, Data(fixture.projectionText.utf8))
+            let firstHistoryQuery = try XCTUnwrap(peer.calls.firstIndex(of: "thread/read"))
+            let lastConfiguration = try XCTUnwrap(peer.calls.lastIndex(of: "config/read"))
+            XCTAssertGreaterThan(firstHistoryQuery, lastConfiguration, "failure: \(failure)")
+            XCTAssertTrue(Set(peer.calls).isDisjoint(with: [
+                "thread/start", "turn/start", "thread/fork", "thread/resume", "turn/interrupt",
+            ]))
+        }
+    }
+
+    func testRegistryMissRejectsMismatchedSelectedContextBeforeCreatingRecoveryPeer() async throws {
+        let fixture = try PreparationAdapterFixture()
+        let peer = StoredPreparationRecoveryPeer(
+            request: fixture.request,
+            terminal: .completed,
+            projectionText: fixture.projectionText
+        )
+        let harness = try makeStoredRecoveryHarness(fixture: fixture)
+        let mismatched = RepositoryPlanPreparationRequest(
+            identity: harness.request.identity,
+            sourceManifest: harness.request.sourceManifest,
+            snapshot: harness.request.snapshot,
+            projectionID: harness.request.projectionID,
+            projectionRevision: harness.request.projectionRevision,
+            codexContextID: UUID(),
+            model: harness.request.model,
+            effort: harness.request.effort
+        )
+        let saved = RepositoryPlanPreparationReadback(
+            identity: mismatched.identity,
+            state: .outcomeUnknown,
+            threadID: "thread-101",
+            turnID: "turn-101",
+            draftBytes: nil,
+            error: nil
+        )
+
+        await XCTAssertThrowsErrorAsync(
+            try await harness.client.restorePlanDraft(mismatched, readback: saved)
+        )
+        XCTAssertEqual(harness.factoryUses.value, 0)
+        XCTAssertTrue(peer.calls.isEmpty)
+    }
+
+    func testSetupClientRegistryMissCreatesRecoveryServiceAndBindsRecoveredReadback() async throws {
+        let fixture = try PreparationAdapterFixture()
+        let service = AppPreparationService()
+        let harness = try makeStoredRecoveryHarness(
+            fixture: fixture,
+            recoveryService: service
+        )
+        let saved = RepositoryPlanPreparationReadback(
+            identity: harness.request.identity,
+            state: .outcomeUnknown,
+            threadID: "thread-101",
+            turnID: "turn-101",
+            draftBytes: nil,
+            error: "The original preparation connection was lost."
+        )
+        let recovered = RepositoryPlanPreparationReadback(
+            identity: harness.request.identity,
+            state: .failed,
+            threadID: "thread-101",
+            turnID: "turn-101",
+            draftBytes: nil,
+            error: "The exact stored turn failed."
+        )
+        await service.setRestoreResult(recovered)
+
+        try await harness.client.restorePlanDraft(harness.request, readback: saved)
+        let observed = try await harness.client.planDraftStatus(harness.request.identity)
+        let restoreCalls = await service.restoreCalls
+        let prepareCalls = await service.prepareCalls
+
+        XCTAssertEqual(observed, recovered)
+        XCTAssertEqual(harness.factoryUses.value, 1)
+        XCTAssertEqual(restoreCalls, 1)
+        XCTAssertEqual(prepareCalls, 0)
+    }
+
+    func testSetupClientRelaunchRestoresExactPreparationForStatusCancelAndClose() async throws {
+        let fixture = try PreparationAdapterFixture()
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let store = try ProjectExecutionFileStore(root: root, create: true)
+        let home = root.appendingPathComponent("selected-codex")
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        try Data("selected global instructions".utf8).write(to: home.appendingPathComponent("AGENTS.md"))
+        let context = try CodexExecutionContext(home: home, bookmark: Data([1]))
+        try store.saveCodexContext(context, expected: nil)
+        let request = RepositoryPlanPreparationRequest(
+            identity: fixture.request.identity,
+            sourceManifest: fixture.request.sourceManifest,
+            snapshot: fixture.request.snapshot,
+            projectionID: fixture.request.projectionID,
+            projectionRevision: fixture.request.projectionRevision,
+            codexContextID: context.id,
+            model: fixture.request.model,
+            effort: fixture.request.effort
+        )
+        let service = AppPreparationService()
+        let first = ProjectExecutionSetupClient(
+            plugin: nil,
+            executionRoot: { root },
+            contextAccessFactory: { selected, files in
+                try CodexExecutionContextLease(
+                    context: selected,
+                    current: { try files.codexContext() },
+                    resolve: { _ in .init(url: home, isStale: false) },
+                    start: { _ in true },
+                    stop: { _ in }
+                )
+            },
+            planPreparationFactory: { service }
+        )
+        try await first.useCodexContext(context.id)
+        let running = try await first.preparePlanDraft(request)
+
+        let replacementFactoryUses = PreparationCounter()
+        let relaunched = ProjectExecutionSetupClient(
+            plugin: nil,
+            executionRoot: { root },
+            contextAccessFactory: { selected, files in
+                try CodexExecutionContextLease(
+                    context: selected,
+                    current: { try files.codexContext() },
+                    resolve: { _ in .init(url: home, isStale: false) },
+                    start: { _ in true },
+                    stop: { _ in }
+                )
+            },
+            planPreparationFactory: {
+                replacementFactoryUses.increment()
+                return AppPreparationService()
+            }
+        )
+
+        try await relaunched.restorePlanDraft(request, readback: running)
+        let restoredStatus = try await relaunched.planDraftStatus(request.identity)
+        XCTAssertEqual(restoredStatus, running)
+        let interrupted = try await relaunched.cancelPlanDraft(request.identity)
+        XCTAssertEqual(interrupted, running)
+        await service.finishCancelled()
+        let cancelled = try await relaunched.planDraftStatus(request.identity)
+        XCTAssertEqual(cancelled.state, .cancelled)
+        try await relaunched.closePlanDraft(request.identity)
+
+        let closed = await service.closed
+        XCTAssertTrue(closed)
+        XCTAssertEqual(replacementFactoryUses.value, 0)
+    }
+
     func testSetupClientPrepareCleanupCloseFailureRetainsPreparationOwnership() async throws {
         let fixture = try PreparationAdapterFixture()
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
@@ -132,6 +445,124 @@ final class PlanPreparationAdapterTests: XCTestCase {
         XCTAssertEqual(peer.calls, ["initialize", "account/read", "config/read", "thread/start", "mcpServerStatus/list", "turn/start"])
         XCTAssertEqual(peer.turnStarts, 1)
         XCTAssertEqual(lease.validations, 1)
+    }
+
+    func testPreparePublishesLearnedThreadBeforeTurnDispatchAndTurnImmediatelyAfterResponse() async throws {
+        let fixture = try PreparationAdapterFixture()
+        let peer = PreparationPeer(request: fixture.request)
+        let progress = PreparationProgressRecorder()
+        let adapter = PlanPreparationAdapter(serverFactory: { _, _, _, message in
+            peer.onMessage = message
+            return peer
+        })
+
+        let readback = try await adapter.prepare(
+            fixture.request,
+            context: PreparationLease(),
+            allowedInstructionSources: fixture.allowedSources,
+            onProgress: { value in
+                await progress.record(value, calls: peer.calls)
+            }
+        )
+
+        let observations = await progress.values
+        guard observations.count == 2 else {
+            XCTFail("Expected thread and turn identity progress before return; got \(observations.count).")
+            return
+        }
+        XCTAssertEqual(observations.map(\.readback.threadID), ["thread-101", "thread-101"])
+        XCTAssertEqual(observations.map(\.readback.turnID), [nil, "turn-101"])
+        XCTAssertFalse(observations[0].calls.contains("turn/start"))
+        XCTAssertEqual(observations[1].calls.last, "turn/start")
+        XCTAssertEqual(readback.turnID, "turn-101")
+    }
+
+    func testStoredThreadWithoutExactTurnStaysUnknownAndNeverSelectsLatestTurn() async throws {
+        let fixture = try PreparationAdapterFixture()
+        let peer = StoredPreparationRecoveryPeer(
+            request: fixture.request,
+            terminal: .completed,
+            projectionText: fixture.projectionText
+        )
+        let adapter = PlanPreparationAdapter(serverFactory: { _, _, _, onMessage in
+            peer.onMessage = onMessage
+            return peer
+        })
+        let saved = RepositoryPlanPreparationReadback(
+            identity: fixture.request.identity,
+            state: .outcomeUnknown,
+            threadID: "thread-101",
+            turnID: nil,
+            draftBytes: nil,
+            error: "Turn dispatch may have occurred before its identity was persisted."
+        )
+
+        let recovered = try await adapter.restore(
+            fixture.request,
+            from: saved,
+            context: PreparationLease(),
+            allowedInstructionSources: fixture.allowedSources
+        )
+
+        XCTAssertEqual(recovered.state, .outcomeUnknown)
+        XCTAssertEqual(recovered.threadID, "thread-101")
+        XCTAssertNil(recovered.turnID)
+        XCTAssertFalse(peer.calls.contains("thread/turns/list"))
+        XCTAssertFalse(peer.calls.contains("thread/items/list"))
+        XCTAssertTrue(Set(peer.calls).isDisjoint(with: [
+            "thread/start", "turn/start", "thread/fork", "thread/resume", "turn/interrupt",
+        ]))
+    }
+
+    func testCodexExecutableResolverPrefersVerifiedNestedNativeBinaryAndNeverWrapper() throws {
+        let fixture = try CodexExecutableLayoutFixture()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let nested = try fixture.createNestedExecutable()
+        _ = try fixture.createLegacyExecutable()
+        _ = try fixture.createWrapper()
+        var verifications: [(String, String)] = []
+
+        let resolved = try CodexExecutionIdentity.resolveExecutable(
+            applicationPath: fixture.application.path,
+            codeVerifier: { verifications.append(($0, $1)) }
+        )
+
+        XCTAssertEqual(resolved, nested.path)
+        XCTAssertEqual(verifications.map(\.0), [fixture.application.path, nested.path])
+        XCTAssertEqual(verifications.map(\.1), ["com.openai.codex", "codex"])
+        XCTAssertFalse(resolved.contains("/bin/codex"))
+    }
+
+    func testCodexExecutableResolverUsesVerifiedLegacyOnlyWhenNestedIsAbsent() throws {
+        let fixture = try CodexExecutableLayoutFixture()
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+        let legacy = try fixture.createLegacyExecutable()
+        _ = try fixture.createWrapper()
+        var verifications: [(String, String)] = []
+
+        let resolved = try CodexExecutionIdentity.resolveExecutable(
+            applicationPath: fixture.application.path,
+            codeVerifier: { verifications.append(($0, $1)) }
+        )
+
+        XCTAssertEqual(resolved, legacy.path)
+        XCTAssertEqual(verifications.map(\.0), [fixture.application.path, legacy.path])
+        XCTAssertEqual(verifications.map(\.1), ["com.openai.codex", "codex"])
+    }
+
+    func testCodexExecutableResolverRejectsWrapperUnsafeComponentsAndInvalidExecutableKinds() throws {
+        for defect in CodexExecutableLayoutFixture.Defect.allCases {
+            let fixture = try CodexExecutableLayoutFixture()
+            addTeardownBlock { try? FileManager.default.removeItem(at: fixture.root) }
+            try fixture.install(defect)
+            XCTAssertThrowsError(
+                try CodexExecutionIdentity.resolveExecutable(
+                    applicationPath: fixture.application.path,
+                    codeVerifier: { _, _ in }
+                ),
+                "defect: \(defect)"
+            )
+        }
     }
 
     func testTurnInputCarriesCapturedSourceBytesAndTypedProjectionContract() async throws {
@@ -440,6 +871,203 @@ final class PlanPreparationAdapterTests: XCTestCase {
         let status = try await adapter.status(fixture.request.identity)
         XCTAssertEqual(status.threadID, "thread-101")
     }
+
+    private func makeStoredRecoveryHarness(
+        fixture: PreparationAdapterFixture,
+        recoveryService: AppPreparationService? = nil
+    ) throws -> StoredPreparationRecoveryHarness {
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let store = try ProjectExecutionFileStore(root: root, create: true)
+        let home = root.appendingPathComponent("selected-codex")
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        try Data("selected global instructions".utf8).write(
+            to: home.appendingPathComponent("AGENTS.md")
+        )
+        let context = try CodexExecutionContext(home: home, bookmark: Data([1]))
+        try store.saveCodexContext(context, expected: nil)
+        let identity = RepositoryPlanPreparationIdentity(
+            registration: fixture.request.identity.registration,
+            rootID: fixture.request.identity.rootID,
+            proposalID: fixture.request.identity.proposalID,
+            attemptID: UUID()
+        )
+        let request = RepositoryPlanPreparationRequest(
+            identity: identity,
+            sourceManifest: fixture.request.sourceManifest,
+            snapshot: fixture.request.snapshot,
+            projectionID: fixture.request.projectionID,
+            projectionRevision: fixture.request.projectionRevision,
+            codexContextID: context.id,
+            model: fixture.request.model,
+            effort: fixture.request.effort
+        )
+        let factoryUses = PreparationCounter()
+        let client = ProjectExecutionSetupClient(
+            plugin: nil,
+            executionRoot: { root },
+            contextAccessFactory: { selected, files in
+                try CodexExecutionContextLease(
+                    context: selected,
+                    current: { try files.codexContext() },
+                    resolve: { _ in .init(url: home, isStale: false) },
+                    start: { _ in true },
+                    stop: { _ in }
+                )
+            },
+            planPreparationFactory: {
+                factoryUses.increment()
+                return recoveryService ?? AppPreparationService()
+            }
+        )
+        return .init(
+            client: client,
+            request: request,
+            factoryUses: factoryUses
+        )
+    }
+}
+
+private struct StoredPreparationRecoveryHarness {
+    let client: ProjectExecutionSetupClient
+    let request: RepositoryPlanPreparationRequest
+    let factoryUses: PreparationCounter
+}
+
+private actor PreparationProgressRecorder {
+    struct Observation: Sendable {
+        let readback: RepositoryPlanPreparationReadback
+        let calls: [String]
+    }
+
+    private(set) var values: [Observation] = []
+
+    func record(
+        _ readback: RepositoryPlanPreparationReadback,
+        calls: [String]
+    ) {
+        values.append(.init(readback: readback, calls: calls))
+    }
+}
+
+private struct CodexExecutableLayoutFixture {
+    enum Defect: CaseIterable, CustomStringConvertible {
+        case wrapperOnly
+        case symlinkComponent
+        case groupWritableComponent
+        case worldWritableComponent
+        case executableDirectory
+        case nonExecutableFile
+
+        var description: String {
+            switch self {
+            case .wrapperOnly: "wrapper-only"
+            case .symlinkComponent: "symlink-component"
+            case .groupWritableComponent: "group-writable-component"
+            case .worldWritableComponent: "world-writable-component"
+            case .executableDirectory: "executable-directory"
+            case .nonExecutableFile: "non-executable-file"
+            }
+        }
+    }
+
+    let root: URL
+    let application: URL
+
+    private var resources: URL {
+        application.appendingPathComponent("Contents/Resources", isDirectory: true)
+    }
+
+    private var nestedExecutable: URL {
+        resources.appendingPathComponent(
+            "codex-cli/CodexCLI.app/Contents/MacOS/codex",
+            isDirectory: false
+        )
+    }
+
+    private var legacyExecutable: URL {
+        resources.appendingPathComponent("codex", isDirectory: false)
+    }
+
+    private var wrapper: URL {
+        resources.appendingPathComponent("codex-cli/bin/codex", isDirectory: false)
+    }
+
+    init() throws {
+        root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        application = root.appendingPathComponent("ChatGPT.app", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: resources,
+            withIntermediateDirectories: true
+        )
+        guard chmod(root.path, 0o700) == 0,
+              chmod(application.path, 0o755) == 0,
+              chmod(application.appendingPathComponent("Contents").path, 0o755) == 0,
+              chmod(resources.path, 0o755) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+    }
+
+    func createNestedExecutable() throws -> URL {
+        try createExecutable(at: nestedExecutable)
+    }
+
+    func createLegacyExecutable() throws -> URL {
+        try createExecutable(at: legacyExecutable)
+    }
+
+    func createWrapper() throws -> URL {
+        try createExecutable(at: wrapper)
+    }
+
+    func install(_ defect: Defect) throws {
+        switch defect {
+        case .wrapperOnly:
+            _ = try createWrapper()
+        case .symlinkComponent:
+            let target = root.appendingPathComponent("linked-codex-cli", isDirectory: true)
+            try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+            try FileManager.default.createSymbolicLink(
+                at: resources.appendingPathComponent("codex-cli", isDirectory: true),
+                withDestinationURL: target
+            )
+            _ = try createNestedExecutable()
+        case .groupWritableComponent:
+            _ = try createNestedExecutable()
+            guard chmod(resources.appendingPathComponent("codex-cli").path, 0o775) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        case .worldWritableComponent:
+            _ = try createNestedExecutable()
+            guard chmod(resources.appendingPathComponent("codex-cli").path, 0o777) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        case .executableDirectory:
+            try FileManager.default.createDirectory(
+                at: nestedExecutable,
+                withIntermediateDirectories: true
+            )
+        case .nonExecutableFile:
+            _ = try createExecutable(at: nestedExecutable)
+            guard chmod(nestedExecutable.path, 0o644) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        }
+    }
+
+    private func createExecutable(at url: URL) throws -> URL {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("fixture".utf8).write(to: url)
+        guard chmod(url.path, 0o755) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        return url
+    }
 }
 
 private actor AppPreparationService: PlanPreparationServicing {
@@ -449,10 +1077,14 @@ private actor AppPreparationService: PlanPreparationServicing {
     private(set) var instructionSources: [String] = []
     private(set) var requestIdentity: RepositoryPlanPreparationIdentity?
     private(set) var closed = false
+    private(set) var prepareCalls = 0
+    private(set) var restoreCalls = 0
     private var failPrepareCleanupClose = false
+    private var restoreResult: RepositoryPlanPreparationReadback?
 
     func prepare(_ request: RepositoryPlanPreparationRequest, context: CodexExecutionContextLease,
                  allowedInstructionSources: [String]) async throws -> RepositoryPlanPreparationReadback {
+        prepareCalls += 1
         contextLease = context
         contextID = context.context.id; instructionSources = allowedInstructionSources; requestIdentity = request.identity
         let value = RepositoryPlanPreparationReadback(identity: request.identity,
@@ -465,6 +1097,25 @@ private actor AppPreparationService: PlanPreparationServicing {
         }
         return value
     }
+    func restore(
+        _ request: RepositoryPlanPreparationRequest,
+        from readback: RepositoryPlanPreparationReadback,
+        context: CodexExecutionContextLease,
+        allowedInstructionSources: [String]
+    ) async throws -> RepositoryPlanPreparationReadback {
+        restoreCalls += 1
+        contextLease = context
+        contextID = context.context.id
+        instructionSources = allowedInstructionSources
+        requestIdentity = request.identity
+        guard readback.identity == request.identity,
+              let restoreResult,
+              restoreResult.identity == request.identity else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        self.readback = restoreResult
+        return restoreResult
+    }
     func status(_ identity: RepositoryPlanPreparationIdentity) async throws -> RepositoryPlanPreparationReadback {
         guard let readback, readback.identity == identity else { throw RepositoryPlanPreparationError(code: .identityMismatch) }
         return readback
@@ -472,6 +1123,7 @@ private actor AppPreparationService: PlanPreparationServicing {
     func cancel(_ identity: RepositoryPlanPreparationIdentity) async throws -> RepositoryPlanPreparationReadback { try await status(identity) }
     func close(_ identity: RepositoryPlanPreparationIdentity) async throws { _ = try await status(identity); contextLease?.release(); contextLease = nil; closed = true }
     func setPrepareCleanupCloseFailure(_ value: Bool) { failPrepareCleanupClose = value }
+    func setRestoreResult(_ value: RepositoryPlanPreparationReadback) { restoreResult = value }
     func seed(_ identity: RepositoryPlanPreparationIdentity) { readback = .init(identity: identity, state: .running, threadID: "thread", turnID: "turn", draftBytes: nil, error: nil) }
     func finishCancelled() { guard let readback else { return }; self.readback = .init(identity: readback.identity, state: .cancelled,
         threadID: readback.threadID, turnID: readback.turnID, draftBytes: nil, error: nil) }
@@ -533,6 +1185,239 @@ private final class PreparationPeer: ExecutionPeer, @unchecked Sendable {
     }
     private func config() -> [String: Any] { ["permissions": [PlanPreparationPolicy.permissionProfileID: ["filesystem": [":root": "deny", ":minimal": "read", ":workspace_roots": [".": "read"]], "network": ["enabled": false]]]] }
     private var projectionText: String { "{\"documents\":[],\"format\":\"release-radar.repository-plan\",\"phaseDependencies\":[],\"phases\":[],\"projectionID\":\"00000000-0000-4000-8000-000000000102\",\"projectionRevision\":1,\"repositoryID\":\"repository-101\",\"schemaVersion\":1,\"ticketDependencies\":[],\"tickets\":[]}" }
+}
+
+private final class StoredPreparationRecoveryPeer: ExecutionPeer, @unchecked Sendable {
+    enum Terminal: Equatable {
+        case completed
+        case failed
+        case interrupted
+    }
+
+    enum Mode {
+        case terminal(Terminal)
+        case inProgress
+        case missingTurn
+        case mismatchedThread
+        case mismatchedTurn
+        case mismatchedWorkingDirectory
+        case notLoaded
+        case incompletePagination
+    }
+
+    enum SetupFailure: CaseIterable, Equatable, CustomStringConvertible {
+        case rejectedAccount
+        case rejectedConfiguration
+
+        var description: String {
+            switch self {
+            case .rejectedAccount: "rejected-account"
+            case .rejectedConfiguration: "rejected-configuration"
+            }
+        }
+    }
+
+    var request: RepositoryPlanPreparationRequest
+    let mode: Mode
+    let projectionText: String
+    let setupFailure: SetupFailure?
+    var onMessage: (@Sendable (RPCObject) -> Void)?
+    private(set) var calls: [String] = []
+    private(set) var closeCount = 0
+    private var setupAccepted = false
+
+    init(
+        request: RepositoryPlanPreparationRequest,
+        terminal: Terminal,
+        projectionText: String,
+        setupFailure: SetupFailure? = nil
+    ) {
+        self.request = request
+        mode = .terminal(terminal)
+        self.projectionText = projectionText
+        self.setupFailure = setupFailure
+    }
+
+    init(
+        request: RepositoryPlanPreparationRequest,
+        mode: Mode,
+        projectionText: String
+    ) {
+        self.request = request
+        self.mode = mode
+        self.projectionText = projectionText
+        setupFailure = nil
+    }
+
+    func acceptSetup() {
+        setupAccepted = true
+    }
+
+    func send(_ message: [String: Any]) throws {}
+
+    func close() throws {
+        closeCount += 1
+    }
+
+    func call(_ method: String, _ parameters: RPCObject) async throws -> RPCObject {
+        calls.append(method)
+        switch method {
+        case "initialize":
+            return try RPCObject([:])
+        case "account/read":
+            return try RPCObject([
+                "account": [
+                    "type": setupFailure == .rejectedAccount && !setupAccepted
+                        ? "apiKey"
+                        : "chatgpt"
+                ]
+            ])
+        case "config/read":
+            return try RPCObject([
+                "config": setupFailure == .rejectedConfiguration && !setupAccepted
+                    ? [:]
+                    : configuration()
+            ])
+        case "thread/read":
+            return try RPCObject(["thread": thread()])
+        case "thread/turns/list":
+            return try RPCObject(turnsPage())
+        case "thread/items/list":
+            return try itemsPage(parameters)
+        default:
+            throw RepositoryPlanPreparationError(
+                code: .invalidRequest,
+                detail: "Unexpected recovery RPC \(method)."
+            )
+        }
+    }
+
+    private func configuration() -> [String: Any] {
+        [
+            "permissions": [
+                PlanPreparationPolicy.permissionProfileID: [
+                    "filesystem": [
+                        ":root": "deny",
+                        ":minimal": "read",
+                        ":workspace_roots": [".": "read"],
+                    ],
+                    "network": ["enabled": false],
+                ]
+            ]
+        ]
+    }
+
+    private func thread() -> [String: Any] {
+        [
+            "id": mode.isMismatchedThread ? "thread-other" : "thread-101",
+            "cwd": mode.isMismatchedWorkingDirectory
+                ? request.snapshot.rootPath
+                : request.snapshot.workingPath,
+            "modelProvider": "openai",
+            "model": request.model,
+            "reasoningEffort": request.effort,
+            "status": ["type": "idle"],
+            "turns": [],
+        ]
+    }
+
+    private func turnsPage() -> [String: Any] {
+        switch mode {
+        case .missingTurn:
+            return ["data": [], "nextCursor": NSNull()]
+        case .mismatchedTurn:
+            return ["data": [[
+                "id": "turn-other",
+                "status": "completed",
+                "items": [],
+                "itemsView": "notLoaded",
+            ]], "nextCursor": NSNull()]
+        default:
+            return ["data": [[
+                "id": "turn-101",
+                "status": turnStatus,
+                "items": [],
+                "itemsView": itemsView,
+            ]], "nextCursor": NSNull()]
+        }
+    }
+
+    private func itemsPage(_ parameters: RPCObject) throws -> RPCObject {
+        let object = try parameters.object()
+        let cursor = object["cursor"] as? String
+        switch mode {
+        case .terminal(.completed):
+            if cursor == nil {
+                return try RPCObject(["data": [], "nextCursor": "items-page-2"])
+            }
+            return try RPCObject(["data": [[
+                "turnId": "turn-101",
+                "item": [
+                    "id": "item-101",
+                    "type": "agentMessage",
+                    "text": projectionText,
+                    "phase": "final_answer",
+                ],
+            ]], "nextCursor": NSNull()])
+        case .notLoaded:
+            return try RPCObject(["data": [], "nextCursor": "items-still-not-loaded"])
+        case .incompletePagination:
+            if cursor == nil {
+                return try RPCObject(["data": [[
+                    "turnId": "turn-101",
+                    "item": [
+                        "id": "item-101",
+                        "type": "agentMessage",
+                        "text": projectionText,
+                        "phase": "final_answer",
+                    ],
+                ]], "nextCursor": "items-page-2"])
+            }
+            throw AppServerTransportError(
+                message: "The remaining exact item page is unavailable.",
+                outcomeUnknown: true
+            )
+        default:
+            return try RPCObject(["data": [], "nextCursor": NSNull()])
+        }
+    }
+
+    private var turnStatus: String {
+        switch mode {
+        case .terminal(.completed), .notLoaded, .incompletePagination:
+            "completed"
+        case .terminal(.failed):
+            "failed"
+        case .terminal(.interrupted):
+            "interrupted"
+        case .inProgress:
+            "inProgress"
+        case .missingTurn, .mismatchedThread, .mismatchedTurn,
+                .mismatchedWorkingDirectory:
+            "completed"
+        }
+    }
+
+    private var itemsView: String {
+        switch mode {
+        case .terminal(.completed), .notLoaded, .incompletePagination:
+            "notLoaded"
+        default:
+            "full"
+        }
+    }
+}
+
+private extension StoredPreparationRecoveryPeer.Mode {
+    var isMismatchedThread: Bool {
+        if case .mismatchedThread = self { return true }
+        return false
+    }
+
+    var isMismatchedWorkingDirectory: Bool {
+        if case .mismatchedWorkingDirectory = self { return true }
+        return false
+    }
 }
 
 private actor PreparationRPCGate {

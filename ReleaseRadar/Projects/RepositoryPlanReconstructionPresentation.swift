@@ -20,6 +20,12 @@ protocol RepositoryPlanPreparationServicing: Sendable {
     func reconcile(
         identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback
+
+    func recover(projectID: ProjectID) async throws -> [RepositoryPlanPreparationReadback]
+}
+
+extension RepositoryPlanPreparationServicing {
+    func recover(projectID: ProjectID) async throws -> [RepositoryPlanPreparationReadback] { [] }
 }
 
 struct RepositoryPlanPreparationTarget: Codable, Equatable, Sendable {
@@ -49,13 +55,24 @@ struct RepositoryPlanReconstructionReviewPresentation: Equatable, Sendable {
     var corrections: [RepositoryPlanReconstructionCorrection]
     var exclusions: [RepositoryPlanReconstructionExclusion]
     var explicitMappings: [RepositoryPlanReconstructionMappingSelection]
+    var destinationSnapshots: [RepositoryPlanReconstructionDestinationSnapshot] = []
     var terminalEvidence: [RepositoryPlanTerminalEvidence]
+    let decisionID: String
     var authorityConfirmed: Bool
     var savedReadback: RepositoryPlanReconstructionReadback?
     var persistedVersion: Int64?
     var revision: UInt64
     var isUpdating: Bool
     var isSaving: Bool
+    var isDeciding: Bool
+    var pendingApplyIdentity: RepositoryPlanPendingApplyIdentity? = nil
+}
+
+struct RepositoryPlanPendingApplyIdentity: Equatable, Sendable {
+    let proposalID: PlanChangeProposalID
+    let version: Int64
+    let applicationID: String
+    let requestID: UUID
 }
 
 enum RepositoryPlanReconstructionStage: Equatable, Sendable {
@@ -73,6 +90,7 @@ enum RepositoryPlanReconstructionStage: Equatable, Sendable {
 
 struct RepositoryPlanReconstructionPresentation: Equatable, Sendable {
     let projectID: ProjectID
+    var proposalID: PlanChangeProposalID? = nil
     var stage: RepositoryPlanReconstructionStage
     var inventory: RepositoryPlanSourceInventory?
     var target: RepositoryPlanPreparationTarget?
@@ -126,6 +144,7 @@ struct RepositoryPlanReconstructionPresentation: Equatable, Sendable {
     }
 
     mutating func apply(_ readback: RepositoryPlanPreparationReadback) {
+        proposalID = readback.identity.proposalID
         preparation = readback
         stage = readback.state == .outcomeUnknown
             ? .outcomeUnknown
