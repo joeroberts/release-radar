@@ -49,6 +49,54 @@ enum DeliveryGoalAssignmentEditorLoadOutcome: Equatable, Sendable { case loaded(
 struct DeliveryGoalAssignmentEdit: Equatable, Sendable { let ticketID: TicketID; let goalID: DeliveryGoalID? }
 struct DeliveryGoalAssignmentSaveOutcome: Equatable, Sendable { enum Status: Equatable, Sendable { case confirmed(savedRevision: Int64, auditEventID: AuditEventID, readback: DeliveryGoalAssignmentEditorSnapshot); case savedNeedsReload(savedRevision: Int64, auditEventID: AuditEventID); case rejected(error: AgentCommandError, refreshedEditor: DeliveryGoalAssignmentEditorSnapshot?); case unconfirmed(error: AgentCommandError) }; let attemptID: UUID; let status: Status }
 struct DeliveryGoalAssignmentSaveRecovery: Equatable, Sendable { let attemptID: UUID; let edits: [DeliveryGoalAssignmentEdit]; let expectedRevision: Int64; let error: AgentCommandError }
+
+struct PhasePlanFinalizationReadback: Equatable, Sendable {
+    let projectID: ProjectID
+    let phaseID: PhaseID
+    let revision: Int64
+    let readyRevision: Int64?
+    let state: PhasePlanState
+}
+
+struct PhasePlanFinalizationOutcome: Equatable, Sendable {
+    enum Status: Equatable, Sendable {
+        case confirmed(savedRevision: Int64, auditEventID: AuditEventID, readback: PhasePlanFinalizationReadback)
+        case savedNeedsReload(savedRevision: Int64, auditEventID: AuditEventID)
+        case rejected(error: AgentCommandError, readback: PhasePlanFinalizationReadback?)
+        case unconfirmed(error: AgentCommandError)
+    }
+
+    let attemptID: UUID
+    let status: Status
+}
+
+struct PhasePlanFinalizationRecovery: Equatable, Sendable {
+    let attemptID: UUID
+    let expectedRevision: Int64
+    let error: AgentCommandError
+}
+
+func phasePlanFinalizationErrorMessage(_ error: AgentCommandError) -> String {
+    switch error {
+    case let .phasePlanIncomplete(failure):
+        if failure.incompleteGoalIDs.isEmpty,
+           failure.unassignedTicketIDs.isEmpty,
+           failure.conflictingTicketIDs.isEmpty {
+            return "This draft has no actionable Delivery Goal. Create one, then finalize the phase plan."
+        }
+        return "This draft is not ready. Complete the linked Delivery Goals, assign the linked tickets, and resolve the linked conflicts before finalizing."
+    case .staleProjectRegistration, .planRevisionConflict:
+        "This phase plan changed. Refresh the project plan, then finalize the current revision."
+    case .appUnavailable:
+        "Release Radar is temporarily unavailable. The exact finalization attempt is retained; reconcile it before retrying."
+    case .outcomeUnknown:
+        "Release Radar could not confirm finalization. Reconcile the same saved attempt before trying again."
+    case .completedPhaseReadOnly:
+        "This completed phase cannot be finalized."
+    default:
+        "The phase plan could not be finalized. Refresh the project plan and try again."
+    }
+}
 func deliveryGoalAssignmentDraftErrorMessage(_ error: AgentCommandError) -> String {
     switch error {
     case let .goalNotActionable(goalID):
@@ -112,6 +160,9 @@ struct ProjectPlanView: View {
     var saveDeliveryGoalAssignmentDraft: ((PhaseID, Int64, [DeliveryGoalAssignmentEdit]) async -> DeliveryGoalAssignmentSaveOutcome)? = nil
     var reconcileDeliveryGoalAssignmentDraftSave: ((UUID) async -> DeliveryGoalAssignmentSaveOutcome)? = nil
     var deliveryGoalAssignmentDraftSaveRecovery: ((PhaseID) -> DeliveryGoalAssignmentSaveRecovery?)? = nil
+    var finalizePhasePlan: ((PhaseID, Int64) async -> PhasePlanFinalizationOutcome)? = nil
+    var reconcilePhasePlanFinalization: ((UUID) async -> PhasePlanFinalizationOutcome)? = nil
+    var phasePlanFinalizationRecovery: ((PhaseID) -> PhasePlanFinalizationRecovery?)? = nil
     var repositoryPlanReconstruction: RepositoryPlanReconstructionPresentation? = nil
     var openRepositoryPlanReconstruction: (() -> Void)? = nil
     var setRepositoryPlanSourceSelected: ((String, Bool) -> Void)? = nil
@@ -162,6 +213,11 @@ struct ProjectPlanView: View {
     @State private var deliveryGoalAssignmentSelections: [TicketID: String] = [:]
     @State private var deliveryGoalAssignmentEditorMessage: String?
     @State private var isSavingDeliveryGoalAssignments = false
+    @State private var phasePlanFinalizationPhaseID: PhaseID?
+    @State private var phasePlanFinalizationMessage: String?
+    @State private var phasePlanFinalizationFailure: PhasePlanReadinessFailure?
+    @State private var phasePlanFinalizationNeedsReload = false
+    @State private var isFinalizingPhasePlan = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -450,6 +506,16 @@ struct ProjectPlanView: View {
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("edit-delivery-goal-assignments-\(phase.id.rawValue)")
                 }
+                if let finalizePhasePlan {
+                    let eligible = phase.lifecycle.lifecycle != .completed && phase.readiness.state == .draft
+                    Button("Finalize plan") { beginPhasePlanFinalization(phase) }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .disabled(!eligible || isFinalizingPhasePlan)
+                        .accessibilityLabel(eligible
+                            ? "Finalize \(phase.name) plan at revision \(phase.readiness.revision)"
+                            : "Finalize \(phase.name) plan unavailable: \(phase.lifecycle.lifecycle == .completed ? "the phase is completed" : "the plan is already Ready")")
+                        .accessibilityIdentifier("finalize-phase-plan-\(phase.id.rawValue)")
+                }
             }
             Text(readinessSummary(phase.readiness))
                 .font(.subheadline)
@@ -461,6 +527,10 @@ struct ProjectPlanView: View {
             Text("\(phase.ticketCount) tickets · \(phase.deliveryGoals.count) Delivery Goals")
                 .font(.caption)
                 .foregroundStyle(RekonTheme.secondaryText)
+            if phasePlanFinalizationPhaseID == phase.id,
+               let message = phasePlanFinalizationMessage {
+                phasePlanFinalizationFeedback(phase: phase, message: message)
+            }
             if phase.deliveryGoals.isEmpty {
                 Text("No Delivery Goals recorded").font(.caption).foregroundStyle(.tertiary)
             } else {
@@ -519,6 +589,117 @@ struct ProjectPlanView: View {
         .overlay { RoundedRectangle(cornerRadius: 12).stroke(RekonTheme.border, lineWidth: RekonBorder.hairline) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-plan-phase-\(phase.id.rawValue)")
+    }
+
+    private func beginPhasePlanFinalization(_ phase: ProjectPlanPhaseProjection) {
+        guard let finalizePhasePlan,
+              phase.lifecycle.lifecycle != .completed,
+              phase.readiness.state == .draft,
+              !isFinalizingPhasePlan else { return }
+        phasePlanFinalizationPhaseID = phase.id
+        phasePlanFinalizationMessage = nil
+        phasePlanFinalizationFailure = nil
+        phasePlanFinalizationNeedsReload = false
+        isFinalizingPhasePlan = true
+        Task {
+            handlePhasePlanFinalizationOutcome(
+                await finalizePhasePlan(phase.id, phase.readiness.revision)
+            )
+        }
+    }
+
+    private func reconcilePhasePlanFinalization(_ attemptID: UUID) {
+        guard let reconcilePhasePlanFinalization, !isFinalizingPhasePlan else { return }
+        isFinalizingPhasePlan = true
+        Task { handlePhasePlanFinalizationOutcome(await reconcilePhasePlanFinalization(attemptID)) }
+    }
+
+    private func handlePhasePlanFinalizationOutcome(_ outcome: PhasePlanFinalizationOutcome) {
+        isFinalizingPhasePlan = false
+        switch outcome.status {
+        case let .confirmed(savedRevision, _, readback):
+            phasePlanFinalizationPhaseID = readback.phaseID
+            phasePlanFinalizationFailure = nil
+            phasePlanFinalizationNeedsReload = false
+            phasePlanFinalizationMessage = "Phase plan is Ready at revision \(savedRevision)."
+        case let .savedNeedsReload(savedRevision, _):
+            phasePlanFinalizationFailure = nil
+            phasePlanFinalizationNeedsReload = true
+            phasePlanFinalizationMessage = "Finalization was saved at revision \(savedRevision). Reload the project plan; do not repeat the finalization."
+        case let .rejected(error, readback):
+            phasePlanFinalizationFailure = if case let .phasePlanIncomplete(failure) = error { failure } else { nil }
+            phasePlanFinalizationNeedsReload = readback == nil && finalizationRequiresReload(error)
+            phasePlanFinalizationMessage = phasePlanFinalizationErrorMessage(error)
+        case let .unconfirmed(error):
+            phasePlanFinalizationFailure = nil
+            phasePlanFinalizationNeedsReload = false
+            phasePlanFinalizationMessage = phasePlanFinalizationErrorMessage(error)
+        }
+    }
+
+    private func focusFinalizationTicket(_ ticketID: TicketID) {
+        selectedTicketID = ticketID
+        focusChanged(.ticket(ticketID))
+        focusedTicketID = ticketID
+        accessibilityFocusedTicketID = ticketID
+    }
+
+    private func finalizationRequiresReload(_ error: AgentCommandError) -> Bool {
+        switch error {
+        case .planRevisionConflict, .staleProjectRegistration: true
+        default: false
+        }
+    }
+
+    @ViewBuilder private func phasePlanFinalizationFeedback(
+        phase: ProjectPlanPhaseProjection,
+        message: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(RekonTheme.danger)
+                .accessibilityIdentifier("phase-plan-finalization-message")
+            if let failure = phasePlanFinalizationFailure {
+                if failure.incompleteGoalIDs.isEmpty,
+                   failure.unassignedTicketIDs.isEmpty,
+                   failure.conflictingTicketIDs.isEmpty {
+                    Button("Create a Delivery Goal") { openDeliveryGoalEditor(phase.id, goalID: nil) }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("create-delivery-goal-for-finalization-\(phase.id.rawValue)")
+                }
+                ForEach(failure.incompleteGoalIDs, id: \.self) { goalID in
+                    Button("Complete Delivery Goal \(goalID.rawValue)") {
+                        openDeliveryGoalEditor(phase.id, goalID: goalID)
+                    }
+                    .buttonStyle(.link)
+                    .accessibilityIdentifier("phase-plan-incomplete-goal-\(goalID.rawValue)")
+                }
+                ForEach(failure.unassignedTicketIDs, id: \.self) { ticketID in
+                    Button("Assign ticket \(ticketID.rawValue)") { focusFinalizationTicket(ticketID) }
+                        .buttonStyle(.link)
+                        .accessibilityIdentifier("phase-plan-uncovered-ticket-\(ticketID.rawValue)")
+                }
+                ForEach(failure.conflictingTicketIDs, id: \.self) { ticketID in
+                    Button("Resolve ticket \(ticketID.rawValue) conflict") { focusFinalizationTicket(ticketID) }
+                        .buttonStyle(.link)
+                        .accessibilityIdentifier("phase-plan-conflicting-ticket-\(ticketID.rawValue)")
+                }
+            }
+            if let recovery = phasePlanFinalizationRecovery?(phase.id) {
+                Button("Reconcile saved finalization") { reconcilePhasePlanFinalization(recovery.attemptID) }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(isFinalizingPhasePlan)
+                    .accessibilityIdentifier("reconcile-phase-plan-finalization")
+            }
+            if phasePlanFinalizationNeedsReload {
+                Button("Reload project plan") {
+                    Task { await reloadPhaseLifecycle?() }
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("reload-phase-plan-finalization")
+            }
+        }
     }
 
     @ViewBuilder private var deliveryGoalEditorSheet: some View {
