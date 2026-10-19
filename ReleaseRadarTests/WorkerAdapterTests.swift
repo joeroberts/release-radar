@@ -420,9 +420,10 @@ final class WorkerAdapterTests: XCTestCase {
             let peer = Peer(policy: valid.policy)
             var configured = response
             if var projects = configured["data"] as? [[String: Any]] {
+                let canonicalRoot = try CodexExecutionContext.canonicalPath(valid.policy.policy.primaryRoot)
                 projects = projects.map { project in
                     guard project["id"] as? String != nil else { return project }
-                    return project.merging(["roots": [["path": try CodexExecutionContext.canonicalPath(valid.policy.policy.primaryRoot)]]]) { _, replacement in replacement }
+                    return project.merging(["roots": [["path": canonicalRoot]]]) { _, replacement in replacement }
                 }
                 configured["data"] = projects
             }
