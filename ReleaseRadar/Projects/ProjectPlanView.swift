@@ -88,7 +88,7 @@ func phasePlanFinalizationErrorMessage(_ error: AgentCommandError) -> String {
     case .staleProjectRegistration, .planRevisionConflict:
         "This phase plan changed. Refresh the project plan, then finalize the current revision."
     case .appUnavailable:
-        "Release Radar is temporarily unavailable. The exact finalization attempt is retained; reconcile it before retrying."
+        "Release Radar is temporarily unavailable. No finalization was sent; try again when it is available."
     case .outcomeUnknown:
         "Release Radar could not confirm finalization. Reconcile the same saved attempt before trying again."
     case .completedPhaseReadOnly:
@@ -628,8 +628,13 @@ struct ProjectPlanView: View {
             phasePlanFinalizationMessage = "Finalization was saved at revision \(savedRevision). Reload the project plan; do not repeat the finalization."
         case let .rejected(error, readback):
             phasePlanFinalizationFailure = if case let .phasePlanIncomplete(failure) = error { failure } else { nil }
-            phasePlanFinalizationNeedsReload = readback == nil && finalizationRequiresReload(error)
-            phasePlanFinalizationMessage = phasePlanFinalizationErrorMessage(error)
+            phasePlanFinalizationNeedsReload = finalizationRequiresReload(error)
+            let message = phasePlanFinalizationErrorMessage(error)
+            phasePlanFinalizationMessage = if finalizationRequiresReload(error), let readback {
+                "\(message) Current saved revision: \(readback.revision)."
+            } else {
+                message
+            }
         case let .unconfirmed(error):
             phasePlanFinalizationFailure = nil
             phasePlanFinalizationNeedsReload = false

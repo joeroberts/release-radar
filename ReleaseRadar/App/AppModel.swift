@@ -5550,7 +5550,7 @@ final class AppModel {
             pending.projectID, pending.registration, attemptID, pending.envelope.command
         )
         if let error = result.error {
-            if error == .outcomeUnknown || error == .appUnavailable {
+            if error == .outcomeUnknown {
                 var retained = pending
                 retained.error = error
                 pendingPhasePlanFinalizations[attemptID] = retained
