@@ -2692,7 +2692,7 @@ final class AppRouteTests: XCTestCase {
         }
         XCTAssertEqual(
             persisted.0,
-            ["\(seeded.first.id.rawValue):ROAD-2", "\(seeded.second.id.rawValue):ROAD-1"]
+            ["\(seeded.second.id.rawValue):ROAD-1", "\(seeded.first.id.rawValue):ROAD-2"]
         )
         XCTAssertEqual(persisted.1, ["foreign-assignment-goal:EMPTY-1"])
         XCTAssertEqual(persisted.2, "phase_plan")
