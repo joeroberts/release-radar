@@ -2991,6 +2991,70 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanFinalizationUsesExactRevisionReturnsAuditedReadyReadbackAndPersists() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Cover every eligible ticket before finalization",
+            auditEventID: .init(rawValue: "seed-finalization-coverage")
+        ) { connection in
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: fixture.projectID,
+                phaseID: fixture.roadmapPhaseID,
+                expectedRevision: 2,
+                goalUpserts: [],
+                assignments: [
+                    .init(goalID: seeded.first.id, ticketID: .init(rawValue: "ROAD-1")),
+                    .init(goalID: seeded.first.id, ticketID: .init(rawValue: "ROAD-2")),
+                    .init(goalID: seeded.second.id, ticketID: .init(rawValue: "ROAD-X")),
+                ],
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "seed-finalization-coverage"),
+                connection: connection
+            )
+        }
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        let outcome = await model.finalizePhasePlan(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 3
+        )
+        guard case let .confirmed(savedRevision, auditEventID, readback) = outcome.status else {
+            return XCTFail("Finalization must return an authoritative Ready receipt, got \(outcome.status)")
+        }
+        XCTAssertEqual(savedRevision, 3, "Finalization must not advance the saved plan revision")
+        XCTAssertEqual(readback.revision, 3)
+        XCTAssertEqual(readback.readyRevision, 3)
+        XCTAssertEqual(readback.state, .ready)
+        XCTAssertEqual(
+            model.dashboard?.plan(for: fixture.projectID)?.phases.first { $0.id == fixture.roadmapPhaseID }?.readiness.revision,
+            3
+        )
+        let audit = try await fixture.store.read { connection in
+            try connection.scalarText("SELECT entity_type FROM audit_events WHERE id=?", bindings: [.text(auditEventID.rawValue)])
+        }
+        XCTAssertEqual(audit, "phase_plan", "Finalization receipt must identify its persisted audit event")
+
+        let reopenedStore = DeliveryStore(databaseURL: fixture.databaseURL)
+        let reopened = AppModel(
+            store: reopenedStore,
+            projectOnboarding: FolderProjectOnboarding(store: reopenedStore, bookmarkStore: fixture.bookmarks),
+            externalServicesSuppressed: true
+        )
+        await reopened.loadDashboard()
+        let persisted = try XCTUnwrap(
+            reopened.dashboard?.plan(for: fixture.projectID)?.phases.first { $0.id == fixture.roadmapPhaseID }
+        )
+        XCTAssertEqual(persisted.readiness.revision, 3)
+        XCTAssertEqual(persisted.readiness.readyRevision, 3)
+        XCTAssertEqual(persisted.readiness.state, .ready)
+    }
+
+    @MainActor
     func testProjectPlanStaleRevisionPreservesFieldsAndRequiresExplicitFreshAttempt() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
