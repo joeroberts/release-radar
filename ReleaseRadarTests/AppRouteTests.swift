@@ -8942,7 +8942,11 @@ final class AppRouteTests: XCTestCase {
             doneCriteria: ["Assignment is explicit"],
             sortOrder: first.sortOrder + 1
         )
-        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed Delivery Goal assignments") { connection in
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Seed Delivery Goal assignments",
+            auditEventID: .init(rawValue: "seed-delivery-goal-assignments")
+        ) { connection in
             _ = try DeliveryPlanningPolicy.applyRevision(
                 projectID: fixture.projectID,
                 phaseID: fixture.roadmapPhaseID,
@@ -8954,6 +8958,8 @@ final class AppRouteTests: XCTestCase {
                 auditEventID: .init(rawValue: "seed-delivery-goal-assignments"),
                 connection: connection
             )
+        }
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed foreign Delivery Goal assignment") { connection in
             try connection.execute(
                 "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('EMPTY-1',?,?,?,'backlog')",
                 bindings: [.text(fixture.projectID.rawValue), .text(fixture.emptyPhaseID.rawValue), .text("Foreign assignment remains unchanged.")]
@@ -8961,6 +8967,16 @@ final class AppRouteTests: XCTestCase {
             try TicketLaneOrderingPolicy.maintainPlacedTicket(
                 projectID: fixture.projectID, ticketID: .init(rawValue: "EMPTY-1"), lane: .backlog, connection: connection
             )
+            try connection.execute(
+                "INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('assignment-evidence',?,?,?,1)",
+                bindings: [.text(fixture.projectID.rawValue), .text("ROAD-1"), .text("synthetic/assignment-evidence")]
+            )
+        }
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Assign foreign phase Delivery Goal",
+            auditEventID: .init(rawValue: "seed-foreign-assignment")
+        ) { connection in
             let foreign = DeliveryGoalDraft(
                 id: .init(rawValue: "foreign-assignment-goal"),
                 title: "Foreign phase goal",
@@ -8978,10 +8994,6 @@ final class AppRouteTests: XCTestCase {
                 supersededGoalIDs: [],
                 auditEventID: .init(rawValue: "seed-foreign-assignment"),
                 connection: connection
-            )
-            try connection.execute(
-                "INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('assignment-evidence',?,?,?,1)",
-                bindings: [.text(fixture.projectID.rawValue), .text("ROAD-1"), .text("synthetic/assignment-evidence")]
             )
         }
         return (first: first, second: second)
