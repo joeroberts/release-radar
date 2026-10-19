@@ -142,6 +142,55 @@ final class WorkerAdapterTests: XCTestCase {
             .workerAttemptID, attempt)
     }
 
+    func testWorkerPolicyDoesNotCloseOrMarkAnotherAttemptWithTheSameSession() throws {
+        let fixture = try fixture()
+        let runtimeAttempt = UUID(); let persistedAttempt = UUID()
+        var persisted = fixture.policy.assignment
+        persisted.sessionID = "shared-session"
+        persisted.launchReserved = true
+        persisted.workerAttemptID = persistedAttempt
+        try fixture.store.saveAssignment(persisted, expected: fixture.policy.assignment)
+
+        XCTAssertThrowsError(try fixture.policy.mark(.closed, sessionID: "shared-session",
+            attemptID: runtimeAttempt, from: [.authorized], connectionClosed: true))
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
+            persisted, "A close from attempt A must not stamp connection closure onto attempt B")
+
+        XCTAssertThrowsError(try fixture.policy.mark(.unknown, sessionID: "shared-session",
+            attemptID: runtimeAttempt, from: [.authorized]))
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
+            persisted, "Fallback uncertainty from attempt A must not mutate attempt B")
+    }
+
+    func testWorkerPolicyMarksOnlyTheMatchingAttemptAndSupportsReservedPrebindClose() throws {
+        do {
+            let fixture = try fixture()
+            let attempt = UUID()
+            var bound = fixture.policy.assignment
+            bound.sessionID = "session-one"
+            bound.launchReserved = true
+            bound.workerAttemptID = attempt
+            try fixture.store.saveAssignment(bound, expected: fixture.policy.assignment)
+            try fixture.policy.mark(.closed, sessionID: "session-one", attemptID: attempt,
+                from: [.authorized], connectionClosed: true)
+            let closed = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+            XCTAssertEqual(closed.workerAttemptID, attempt)
+            XCTAssertEqual(closed.connectionClosed, true)
+        }
+
+        do {
+            let fixture = try fixture()
+            let attempt = UUID()
+            try fixture.policy.reserve(attemptID: attempt)
+            try fixture.policy.mark(.stopped, sessionID: nil, attemptID: attempt,
+                from: [.unknown], connectionClosed: true)
+            let closed = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+            XCTAssertEqual(closed.workerAttemptID, attempt)
+            XCTAssertNil(closed.sessionID)
+            XCTAssertEqual(closed.connectionClosed, true)
+        }
+    }
+
     actor Gate {
         private var entered = false
         private var waiter: CheckedContinuation<Void, Never>?
