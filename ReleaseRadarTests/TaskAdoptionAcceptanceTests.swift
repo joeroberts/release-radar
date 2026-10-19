@@ -142,8 +142,17 @@ final class TaskAdoptionAcceptanceTests: XCTestCase {
         XCTAssertEqual(after, before, "A complete inventory read must not create audits, receipts, or delivery rows")
         XCTAssertNil(result.error)
 
+        let previewSource = try JSONEncoder().encode(result)
+        await MainActor.run {
+            let previewAttachment = XCTAttachment(data: previewSource)
+            previewAttachment.name = "delivery-inventory-preview-source.json"
+            previewAttachment.lifetime = .keepAlways
+            XCTContext.runActivity(named: "Owner preview source") { activity in
+                activity.add(previewAttachment)
+            }
+        }
         let resultObject = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: JSONEncoder().encode(result)) as? [String: Any]
+            JSONSerialization.jsonObject(with: previewSource) as? [String: Any]
         )
         let inventory = try XCTUnwrap(resultObject["deliveryInventory"] as? [String: Any])
         XCTAssertEqual(inventory["isComplete"] as? Bool, true)
@@ -309,6 +318,28 @@ final class TaskAdoptionAcceptanceTests: XCTestCase {
         let before = try await writeSensitiveCounts(fixture.store)
         let result = await deliveryInventory(fixture)
         XCTAssertEqual(result.error, .documentation(.inventoryTooLarge))
+        XCTAssertNil(result.deliveryInventory)
+        let after = try await writeSensitiveCounts(fixture.store)
+        XCTAssertEqual(after, before)
+    }
+
+    func testDeliveryInventoryRejectsAnUnavailableReadWithoutWriting() async throws {
+        let fixture = try await makeAuthorizedAdoptionFixture()
+        let before = try await writeSensitiveCounts(fixture.store)
+
+        let result = await fixture.queries.dispatch(
+            .init(
+                version: 1,
+                projectRoot: fixture.root.path,
+                query: .deliveryInventory(
+                    projectID: fixture.registration.projectID.rawValue,
+                    rootID: "root-adoption"
+                )
+            ),
+            admissionDeadline: Date().addingTimeInterval(-1).timeIntervalSince1970
+        )
+
+        XCTAssertEqual(result.error, .appUnavailable)
         XCTAssertNil(result.deliveryInventory)
         let after = try await writeSensitiveCounts(fixture.store)
         XCTAssertEqual(after, before)
