@@ -537,25 +537,31 @@ final class WorkerAdapterTests: XCTestCase {
         XCTAssertEqual(try added[thread].1.object()["threadId"] as? String, "session-one")
     }
 
-    func testFollowUpProjectRootMismatchCannotReachThreadReadOrTurn() async throws {
-        let valid = try fixture()
-        let peer = Peer(policy: valid.policy); peer.completesImmediately = true
-        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
-        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-        let workerID = try XCTUnwrap(started["workerId"] as? String)
-        peer.projectReadResponse = ["project": ["id": "codex-project-one", "roots": [["path": valid.store.root.appendingPathComponent("wrong-root").path]]]]
-        let before = peer.calls.count
+    func testFollowUpProjectReadMismatchOrUnavailableCannotReachThreadReadOrTurn() async throws {
+        for kind in ["root", "unavailable"] {
+            let valid = try fixture()
+            let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+            let workerID = try XCTUnwrap(started["workerId"] as? String)
+            if kind == "root" {
+                peer.projectReadResponse = ["project": ["id": "codex-project-one", "roots": [["path": valid.store.root.appendingPathComponent("wrong-root").path]]]]
+            } else {
+                peer.projectReadFailure = AppServerTransportError(message: "Synthetic project read unavailable", outcomeUnknown: false)
+            }
+            let before = peer.calls.count
 
-        do {
-            _ = try await adapter.followUp(workerID: workerID, prompt: "Continue")
-            XCTFail("A changed project root must prevent the next turn")
-        } catch {}
+            do {
+                _ = try await adapter.followUp(workerID: workerID, prompt: "Continue")
+                XCTFail("Invalid project read must prevent the next turn: \(kind)")
+            } catch {}
 
-        let added = Array(peer.calls.dropFirst(before))
-        XCTAssertTrue(added.contains { $0.0 == "project/list" })
-        XCTAssertTrue(added.contains { $0.0 == "project/read" })
-        XCTAssertFalse(added.contains { $0.0 == "thread/read" || $0.0 == "turn/start" })
-        XCTAssertFalse(peer.calls.contains { $0.0 == "metadata/update" || $0.0 == "thread/update" })
+            let added = Array(peer.calls.dropFirst(before))
+            XCTAssertTrue(added.contains { $0.0 == "project/list" }, kind)
+            XCTAssertTrue(added.contains { $0.0 == "project/read" }, kind)
+            XCTAssertFalse(added.contains { $0.0 == "thread/read" || $0.0 == "turn/start" }, kind)
+            XCTAssertFalse(peer.calls.contains { $0.0 == "metadata/update" || $0.0 == "thread/update" }, kind)
+        }
     }
 
     func testFollowUpThreadAssociationMismatchMalformedOrUnavailableCannotReachTurn() async throws {
