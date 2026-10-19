@@ -3228,10 +3228,10 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanFinalizationReturnsActionableIncompleteDetailsIncludingEmptyTargets() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
         let failure = PhasePlanReadinessFailure(
             unassignedTicketIDs: [.init(rawValue: "ROAD-2")],
-            incompleteGoalIDs: [.init(rawValue: "assignment-goal-a")],
+            incompleteGoalIDs: [seeded.first.id],
             conflictingTicketIDs: [.init(rawValue: "ROAD-X")]
         )
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(
@@ -3333,14 +3333,14 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testNativePhasePlanFinalizationValidationLinksFocusExactUncoveredTicket() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
         await model.loadDashboard()
         let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
         var selectedTicket = TicketID(rawValue: "ROAD-1")
         let failure = PhasePlanReadinessFailure(
             unassignedTicketIDs: [.init(rawValue: "ROAD-2")],
-            incompleteGoalIDs: [.init(rawValue: "assignment-goal-a")],
+            incompleteGoalIDs: [seeded.first.id],
             conflictingTicketIDs: [.init(rawValue: "ROAD-X")]
         )
         let view = ProjectPlanView(
@@ -3376,7 +3376,7 @@ final class AppRouteTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(100))
         }
         let incomplete = try XCTUnwrap(
-            accessibilityElement(nativeWindow, identifier: "phase-plan-incomplete-goal-assignment-goal-a")
+            accessibilityElement(nativeWindow, identifier: "phase-plan-incomplete-goal-\(seeded.first.id.rawValue)")
         )
         let uncovered = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2"))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-conflicting-ticket-ROAD-X"))
