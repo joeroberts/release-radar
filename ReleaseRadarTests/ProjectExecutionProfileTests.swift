@@ -74,4 +74,62 @@ final class ProjectExecutionProfileTests: XCTestCase {
             XCTAssertFalse(profile.absolute.values.contains("write"))
         }
     }
+
+    // Unit-only: active worker sandbox enforcement requires a separate supported runtime probe.
+    func testSharedExecutionSkillProfileAddsOnlyTheRecognizedExactSkillFileRead() throws {
+        let (assignment, policy, paths) = try profileFixture()
+        let skillPath = "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md"
+        let skill = try ProjectExecutionSharedExecutionSkill(
+            skillFile: skillPath,
+            pluginVersion: "0.1.12",
+            packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+        )
+
+        let profile = try ProjectExecutionPermissionProfile(
+            assignment: assignment,
+            policy: policy,
+            paths: paths,
+            sharedExecutionSkill: skill
+        )
+
+        XCTAssertEqual(profile.absolute[skillPath], "read")
+        XCTAssertEqual(profile.absolute.count, try ProjectExecutionPermissionProfile(
+            assignment: assignment, policy: policy, paths: paths
+        ).absolute.count + 1)
+        XCTAssertEqual(profile.filesystemObject[":root"] as? String, "deny")
+        XCTAssertEqual(profile.absolute[policy.primaryRoot], "deny")
+        XCTAssertEqual(profile.absolute[assignment.worktree?.commonGitDirectory ?? ""], "deny")
+        XCTAssertFalse(profile.absolute.values.contains("write"))
+    }
+
+    func testSharedExecutionSkillRejectsNonportableOrUnrecognizedRoots() throws {
+        let skillPath = "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md"
+        let recognizedDigest = "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+        let invalid: [(String, String, String)] = [
+            ("relative/skills/shared-execution", "0.1.12", recognizedDigest),
+            ("/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution", "0.1.12", recognizedDigest),
+            (skillPath, "0.1.7", "75f513d53675b6ae5679d2add575b76f9d32575d605f77702fd91a8c70d9f198"),
+            (skillPath.replacingOccurrences(of: "/0.1.12/", with: "/0.1.12-dev/"), "0.1.12-dev", recognizedDigest),
+            (skillPath, "0.1.12", String(repeating: "a", count: 64)),
+            (skillPath + "/child", "0.1.12", recognizedDigest),
+        ]
+
+        for (path, version, digest) in invalid {
+            XCTAssertThrowsError(try ProjectExecutionSharedExecutionSkill(
+                skillFile: path, pluginVersion: version, packageDigest: digest
+            ), "\(path) must not become a worker read grant")
+        }
+    }
+
+    private func profileFixture() throws -> (ProjectExecutionAssignment, ProjectExecutionPolicy, ProjectExecutionPaths) {
+        let paths = try ProjectExecutionPaths(storageRoot: URL(fileURLWithPath: "/Execution"), projectID: "project-one", taskID: "task-one")
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
+        let policy = ProjectExecutionPolicy(registration: registration, primaryRoot: "/Primary", appServerExecutable: CodexExecutionIdentity.executable, handlerPath: "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator")
+        let worktree = ExecutionWorktree(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: "/Primary/.git", primaryRoot: "/Primary")
+        let assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .review,
+            permissionProfile: "rr-worker", model: "gpt-5.6-terra", effort: "high", authorization: "Existing authorized work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], worktree: worktree)
+        return (assignment, policy, paths)
+    }
 }

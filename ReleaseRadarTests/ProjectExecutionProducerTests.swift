@@ -18,6 +18,13 @@ final class ProjectExecutionProducerTests: XCTestCase {
         var profiles: [ProjectExecutionPermissionProfile] = []
         var seededProfileIDs: Set<String> = []
         func validateInstallation(handlerPath: String) {}
+        func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
+            try .init(
+                skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
+                pluginVersion: "0.1.12",
+                packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+            )
+        }
         func hookStorage(primaryRoot: String) -> ProjectExecutionHookStorage { .projectFile }
         func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws { try await beforeWrite() }
         func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
@@ -213,6 +220,13 @@ final class ProjectExecutionProducerTests: XCTestCase {
         func setConflict(_ value: Bool) { conflict = value }
         func setCloseFailure(_ value: Bool) { closeFails = value }
         func validateInstallation(handlerPath: String) {}
+        func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
+            try .init(
+                skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
+                pluginVersion: "0.1.12",
+                packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+            )
+        }
         func hookStorage(primaryRoot: String) -> ProjectExecutionHookStorage { .projectFile }
         func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws { try await beforeWrite() }
         func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws { try await beforeWrite() }

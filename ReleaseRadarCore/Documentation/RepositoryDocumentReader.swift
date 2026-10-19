@@ -259,6 +259,65 @@ final class RepositoryDocumentReader {
         return (files, directories)
     }
 
+    /// Reads one caller-defined fixed package inventory. Every implied directory
+    /// must contain exactly the named children; no discovery exclusions apply.
+    func readExactFiles(_ paths: Set<String>) throws -> [String: Data] {
+        guard !paths.isEmpty, paths.count <= limits.maximumArtifactCount else {
+            throw RepositoryDocumentError(.limitExceeded)
+        }
+        var children: [String: Set<String>] = ["": []]
+        var directories = Set<String>()
+        for path in paths {
+            try Self.validatePath(path, limits: limits, docsOnly: false)
+            let parts = path.split(separator: "/").map(String.init)
+            var parent = ""
+            for (index, part) in parts.enumerated() {
+                children[parent, default: []].insert(part)
+                let child = parent.isEmpty ? part : parent + "/" + part
+                if index < parts.count - 1 {
+                    guard !paths.contains(child) else {
+                        throw RepositoryDocumentError(.unsafeFileType, path: child)
+                    }
+                    directories.insert(child)
+                    children[child, default: []] = children[child, default: []]
+                } else if directories.contains(child) {
+                    throw RepositoryDocumentError(.unsafeFileType, path: child)
+                }
+                parent = child
+            }
+        }
+        guard let rootChildren = children[""],
+              directories.count <= limits.maximumCollectionCount,
+              Set(try rootDirectoryNames()) == rootChildren else {
+            throw RepositoryDocumentError(.changedDuringRead)
+        }
+        directoryCount += directories.count
+        fileCount += paths.count
+        guard directoryCount <= limits.maximumCollectionCount,
+              fileCount <= limits.maximumArtifactCount else {
+            throw RepositoryDocumentError(.limitExceeded)
+        }
+        for path in directories.sorted(by: {
+            let left = $0.split(separator: "/").count
+            let right = $1.split(separator: "/").count
+            return left == right ? $0 < $1 : left < right
+        }) {
+            let descriptor = try openRelative(path, directory: true)
+            defer { close(descriptor) }
+            var before = stat(), after = stat()
+            guard let expectedChildren = children[path], fstat(descriptor, &before) == 0,
+                  Set(try directoryNames(descriptor, path: path)) == expectedChildren,
+                  fstat(descriptor, &after) == 0, Stamp(before) == Stamp(after) else {
+                throw RepositoryDocumentError(.changedDuringRead, path: path)
+            }
+            stamps[path] = Stamp(after)
+        }
+        var result: [String: Data] = [:]
+        for path in paths.sorted() { result[path] = try read(path) }
+        try verifyStable()
+        return result
+    }
+
     private func rootDirectoryNames() throws -> [String] {
         let descriptor = openat(root, ".", O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_DIRECTORY)
         guard descriptor >= 0 else { throw RepositoryDocumentError(.readFailed) }
