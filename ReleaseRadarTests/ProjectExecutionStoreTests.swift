@@ -47,7 +47,9 @@ final class ProjectExecutionStoreTests: XCTestCase {
             authorization: "Approved work", context: [.init(path: "AGENTS.md",
                 digest: String(repeating: "a", count: 64))],
             excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
-            state: .preparing)
+            state: .preparing, worktree: .init(checkout: "/Worktrees/project-one/delivery-association",
+                baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-delivery-association",
+                commonGitDirectory: "/Primary/.git", primaryRoot: "/Primary"))
         assignment.codexContextID = contextID
         assignment.permissionProfileDefinition = definition
         assignment.profileProvisioningReceipt = .init(state: .verified, provenance: .newlyPrepared,
@@ -63,6 +65,36 @@ final class ProjectExecutionStoreTests: XCTestCase {
         XCTAssertEqual(owned.ownershipProvenance, .verifiedProvisioningReceipt)
         XCTAssertEqual(owned.installationEvidence, .verified)
         XCTAssertFalse(owned.requiresInstallationRecovery)
+
+        let encodedAssignment = try JSONEncoder().encode(assignment)
+        var missingWorktreeObject = try XCTUnwrap(JSONSerialization.jsonObject(with: encodedAssignment)
+            as? [String: Any])
+        missingWorktreeObject["worktree"] = NSNull()
+        let missingWorktree = try JSONDecoder().decode(ProjectExecutionAssignment.self,
+            from: JSONSerialization.data(withJSONObject: missingWorktreeObject))
+        let absentWorktree = ProjectExecutionProfileAssociation.classify(assignment: missingWorktree,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: missingWorktree.permissionProfile)
+        XCTAssertEqual(absentWorktree.category, .unknown)
+        XCTAssertEqual(absentWorktree.assignmentID, missingWorktree.id)
+        XCTAssertEqual(absentWorktree.reason, .missingWorktreeIdentity)
+
+        var inconsistentWorktreeObject = missingWorktreeObject
+        inconsistentWorktreeObject["worktree"] = [
+            "checkout": "/Worktrees/project-one/different-checkout",
+            "baseline": String(repeating: "a", count: 40),
+            "branch": "codex/rr-project-one-different",
+            "commonGitDirectory": "/Primary/.git",
+            "primaryRoot": "/Primary",
+        ]
+        let inconsistentWorktree = try JSONDecoder().decode(ProjectExecutionAssignment.self,
+            from: JSONSerialization.data(withJSONObject: inconsistentWorktreeObject))
+        let mismatchedWorktree = ProjectExecutionProfileAssociation.classify(assignment: inconsistentWorktree,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: inconsistentWorktree.permissionProfile)
+        XCTAssertEqual(mismatchedWorktree.category, .unknown)
+        XCTAssertEqual(mismatchedWorktree.assignmentID, inconsistentWorktree.id)
+        XCTAssertEqual(mismatchedWorktree.reason, .missingWorktreeIdentity)
 
         let equivalentSerialization = Data(#"{ "network" : { "enabled" : false }, "filesystem" : { } }"#.utf8)
         let semanticallyOwned = ProjectExecutionProfileAssociation.classify(assignment: assignment,
@@ -119,6 +151,16 @@ final class ProjectExecutionStoreTests: XCTestCase {
             candidateProfileID: reservedLegacyAttempt.permissionProfile)
         XCTAssertEqual(unknownAttempt.category, .unknown)
         XCTAssertEqual(unknownAttempt.reason, .legacyWorkerIdentityUnavailable)
+
+        var sessionOnlyLegacyAttempt = assignment
+        sessionOnlyLegacyAttempt.launchReserved = false
+        sessionOnlyLegacyAttempt.sessionID = "legacy-session"
+        sessionOnlyLegacyAttempt.workerAttemptID = nil
+        let sessionOnlyUnknown = ProjectExecutionProfileAssociation.classify(assignment: sessionOnlyLegacyAttempt,
+            selectedCodexContextID: contextID, observation: .present(definition),
+            candidateProfileID: sessionOnlyLegacyAttempt.permissionProfile)
+        XCTAssertEqual(sessionOnlyUnknown.category, .unknown)
+        XCTAssertEqual(sessionOnlyUnknown.reason, .legacyWorkerIdentityUnavailable)
 
         var contextlessAssignment = assignment
         contextlessAssignment.codexContextID = nil
