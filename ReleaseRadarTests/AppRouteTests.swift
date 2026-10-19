@@ -3381,19 +3381,19 @@ final class AppRouteTests: XCTestCase {
         let uncovered = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2"))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-conflicting-ticket-ROAD-X"))
         XCTAssertEqual(AXUIElementPerformAction(incomplete, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where !accessibilityText(application).contains("Edit Delivery Goal") {
+        for _ in 0..<20 where !accessibilityText(nativeWindow).contains("Edit Delivery Goal") {
             try await Task.sleep(for: .milliseconds(100))
         }
-        XCTAssertTrue(accessibilityText(application).contains("Edit Delivery Goal"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Edit Delivery Goal"))
         let cancel = try XCTUnwrap(
-            accessibilityElements(application, role: kAXButtonRole).first { element in
+            accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
                 var title: CFTypeRef?
                 _ = AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
                 return title as? String == "Cancel"
             }
         )
         XCTAssertEqual(AXUIElementPerformAction(cancel, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where accessibilityText(application).contains("Edit Delivery Goal") {
+        for _ in 0..<20 where accessibilityText(nativeWindow).contains("Edit Delivery Goal") {
             try await Task.sleep(for: .milliseconds(100))
         }
         XCTAssertEqual(AXUIElementPerformAction(uncovered, kAXPressAction as CFString), .success)
@@ -3559,16 +3559,16 @@ final class AppRouteTests: XCTestCase {
         let createWindow = try XCTUnwrap(accessibilityWindow(createHost.1, title: createHost.0.title))
         let create = try XCTUnwrap(accessibilityElement(createWindow, identifier: "create-delivery-goal-\(fixture.roadmapPhaseID.rawValue)"))
         XCTAssertEqual(AXUIElementPerformAction(create, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where !accessibilityText(createHost.1).contains("New Delivery Goal") { try await Task.sleep(for: .milliseconds(100)) }
-        let inputs = accessibilityElements(createHost.1, role: kAXTextFieldRole)
-            + accessibilityElements(createHost.1, role: kAXTextAreaRole)
+        for _ in 0..<20 where !accessibilityText(createWindow).contains("New Delivery Goal") { try await Task.sleep(for: .milliseconds(100)) }
+        let inputs = accessibilityElements(createWindow, role: kAXTextFieldRole)
+            + accessibilityElements(createWindow, role: kAXTextAreaRole)
         XCTAssertGreaterThanOrEqual(inputs.count, 3, "Create journey must expose title, outcome, and criteria fields")
         for (input, value) in zip(inputs.prefix(3), ["Journey goal", "Deliver the owner-visible outcome", "Owner can verify delivery"]) {
             XCTAssertEqual(AXUIElementSetAttributeValue(input, kAXValueAttribute as CFString, value as CFString), .success)
         }
-        let goalSave = try XCTUnwrap(button(named: "Save", in: createHost.1))
+        let goalSave = try XCTUnwrap(button(named: "Save", in: createWindow))
         XCTAssertEqual(AXUIElementPerformAction(goalSave, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where accessibilityText(createHost.1).contains("New Delivery Goal") { try await Task.sleep(for: .milliseconds(100)) }
+        for _ in 0..<20 where accessibilityText(createWindow).contains("New Delivery Goal") { try await Task.sleep(for: .milliseconds(100)) }
         createHost.0.close()
 
         let goalPlan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
@@ -3578,15 +3578,15 @@ final class AppRouteTests: XCTestCase {
         let assignmentWindow = try XCTUnwrap(accessibilityWindow(assignmentHost.1, title: assignmentHost.0.title))
         let edit = try XCTUnwrap(accessibilityElement(assignmentWindow, identifier: "edit-delivery-goal-assignments-\(fixture.roadmapPhaseID.rawValue)"))
         XCTAssertEqual(AXUIElementPerformAction(edit, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where !accessibilityText(assignmentHost.1).contains("Eligible tickets") { try await Task.sleep(for: .milliseconds(100)) }
-        let pickers = accessibilityElements(assignmentHost.1, role: kAXPopUpButtonRole)
+        for _ in 0..<20 where !accessibilityText(assignmentWindow).contains("Eligible tickets") { try await Task.sleep(for: .milliseconds(100)) }
+        let pickers = accessibilityElements(assignmentWindow, role: kAXPopUpButtonRole)
         XCTAssertEqual(pickers.count, 3, "Assignment journey must expose one picker per eligible ticket")
         for picker in pickers {
             XCTAssertEqual(AXUIElementSetAttributeValue(picker, kAXValueAttribute as CFString, "Journey goal" as CFString), .success)
         }
-        let assignmentSave = try XCTUnwrap(button(named: "Save", in: assignmentHost.1))
+        let assignmentSave = try XCTUnwrap(button(named: "Save", in: assignmentWindow))
         XCTAssertEqual(AXUIElementPerformAction(assignmentSave, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where accessibilityText(assignmentHost.1).contains("Assign Delivery Goal Tickets") { try await Task.sleep(for: .milliseconds(100)) }
+        for _ in 0..<20 where accessibilityText(assignmentWindow).contains("Assign Delivery Goal Tickets") { try await Task.sleep(for: .milliseconds(100)) }
         assignmentHost.0.close()
 
         let assignedPlan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
