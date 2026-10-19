@@ -25,6 +25,7 @@ public enum ProjectExecutionProfileAssociation {
         case definitionMismatch
         case selectedContextMismatch
         case duplicateOwnership
+        case missingWorktreeIdentity
         case legacyWorkerIdentityUnavailable
     }
 
@@ -77,6 +78,9 @@ public enum ProjectExecutionProfileAssociation {
         guard assignment.permissionProfile == candidateProfileID else {
             return .init(category: .outsideAssignmentCleanup)
         }
+        guard let worktree = assignment.worktree, worktree.checkout == assignment.checkoutPath else {
+            return .init(category: .unknown, assignmentID: assignment.id, reason: .missingWorktreeIdentity)
+        }
         guard let assignmentContextID = assignment.codexContextID,
               assignmentContextID == selectedCodexContextID else {
             return .init(category: .unknown, assignmentID: assignment.id, reason: .selectedContextMismatch)
@@ -87,7 +91,8 @@ public enum ProjectExecutionProfileAssociation {
         guard let expected = assignment.permissionProfileDefinition else {
             return .init(category: .unknown, assignmentID: assignment.id, reason: .missingAssignmentDefinition)
         }
-        if assignment.launchReserved == true, assignment.workerAttemptID == nil {
+        if assignment.workerAttemptID == nil,
+           assignment.launchReserved == true || assignment.sessionID != nil {
             return .init(category: .unknown, assignmentID: assignment.id, reason: .legacyWorkerIdentityUnavailable)
         }
         switch observation {

@@ -49,7 +49,7 @@ actor WorkerAdapter {
         let params = message["params"] as? [String: Any] ?? [:]
         if method == "adapter/connectionLost" {
             worker.status = "unknown"; worker.error = "Connection lost; do not redispatch the assignment."
-            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
             catch { worker.error = "Connection lost; assignment revocation failed: \(error.localizedDescription). Stop the worker independently before recovery." }
         } else if worker.status == "unknown" {
             return // Late notifications cannot establish a previously uncertain outcome.
@@ -234,7 +234,7 @@ actor WorkerAdapter {
             let uncertain = unknown(error)
             workers[workerID]?.status = uncertain ? "unknown" : "failed"
             if uncertain {
-                do { try worker.policy.mark(.unknown, sessionID: threadID, from: [.authorized, .stopped]) }
+                do { try worker.policy.mark(.unknown, sessionID: threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
                 catch { workers[workerID]?.error = "Follow-up outcome is uncertain; admission revocation failed: \(error.localizedDescription). Stop the known run independently." }
             }
             throw failure
@@ -246,7 +246,7 @@ actor WorkerAdapter {
         let worker = try worker(workerID)
         guard let thread = worker.threadID, let turn = worker.turnID, let server = worker.server,
               worker.status != "closed" else { throw ProjectExecutionError.identityMismatch }
-        try worker.policy.mark(worker.status == "unknown" ? .unknown : .stopped, sessionID: thread, from: [.authorized])
+        try worker.policy.mark(worker.status == "unknown" ? .unknown : .stopped, sessionID: thread, attemptID: worker.attemptID, from: [.authorized])
         do { _ = try await rpc(server, "turn/interrupt", ["threadId": thread, "turnId": turn]) }
         catch {
             if unknown(error) { workers[workerID]?.status = "unknown" }
@@ -273,7 +273,7 @@ actor WorkerAdapter {
         catch {
             let failure = error
             workers[workerID]?.status = "unknown"; workers[workerID]?.uncertainApproval = ["requestKey": requestKey, "decision": decision]
-            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
             catch { workers[workerID]?.error = "Approval response is uncertain; admission revocation failed: \(error.localizedDescription). Stop the known run independently." }
             throw failure
         }
@@ -292,13 +292,13 @@ actor WorkerAdapter {
         }
         catch {
             workers[workerID]?.status = "unknown"; workers[workerID]?.error = error.localizedDescription
-            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
             catch let revocationError {
                 workers[workerID]?.error = "Cleanup failed: \(error.localizedDescription). Assignment revocation failed: \(revocationError.localizedDescription)."
             }
             throw error
         }
-        try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
+        try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
         workers.removeValue(forKey: workerID)
         return try RPCObject(["workerId": workerID, "status": "connectionClosed", "threadId": worker.threadID.map { $0 as Any } ?? NSNull()])
     }
@@ -308,11 +308,11 @@ actor WorkerAdapter {
             do {
                 if let server = worker.server { try server.close() }
                 else { try worker.contextLease?.physicallyClosed() }
-                try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
+                try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
             }
             catch {
                 workers[worker.id]?.status = "unknown"; workers[worker.id]?.error = error.localizedDescription
-                do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+                do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
                 catch let revocationError {
                     workers[worker.id]?.error = "Cleanup failed: \(error.localizedDescription). Assignment revocation failed: \(revocationError.localizedDescription)."
                 }

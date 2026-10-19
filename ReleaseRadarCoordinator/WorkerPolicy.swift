@@ -68,9 +68,11 @@ struct WorkerPolicy {
         try store.saveAssignment(bound, expected: intent)
     }
 
-    func mark(_ state: ProjectExecutionAssignment.State, sessionID: String?, from allowed: [ProjectExecutionAssignment.State], connectionClosed: Bool = false) throws {
+    func mark(_ state: ProjectExecutionAssignment.State, sessionID: String?, attemptID: UUID,
+              from allowed: [ProjectExecutionAssignment.State], connectionClosed: Bool = false) throws {
         let current = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
         guard current.registration == assignment.registration,
+              current.workerAttemptID == attemptID,
               current.sessionID == sessionID || (connectionClosed && current.sessionID == nil && current.launchReserved == true && current.state != .authorized) else { throw ProjectExecutionError.identityMismatch }
         guard allowed.contains(current.state) else { return } // Preserve owner revocation/STOP.
         var changed = current; changed.state = state
