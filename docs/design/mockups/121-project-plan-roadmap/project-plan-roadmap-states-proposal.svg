@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Proposed Project Plan empty, large-plan, and recovery states</title>
+  <desc id="desc">Three panels show an actionable empty plan, a grouped large roadmap, and truthful stale or uncertain-result recovery that preserves the last successful data and prevents duplicate mutations.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07131e"/><stop offset="1" stop-color="#0d2434"/></linearGradient>
+    <style>
+      .panel { fill:#091b28; stroke:#34536a; stroke-width:1.5; }
+      .card { fill:#0c2130; stroke:#29485f; }
+      .selected { fill:#123449; stroke:#50d8f0; stroke-width:2; }
+      .button { fill:#123449; stroke:#3d708e; }
+      .primary { fill:#17b8cf; }
+      .warning { fill:#3b2a16; stroke:#a9772d; }
+      .error { fill:#3a2024; stroke:#b95f68; }
+      .chipBlue { fill:#103a52; stroke:#3694b5; }
+      .chipAmber { fill:#4a3215; stroke:#d59a3a; }
+      .chipGreen { fill:#123b32; stroke:#3aa985; }
+      .text { fill:#eaf3fa; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      .muted { fill:#9db1c1; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      .h1 { font-size:26px; font-weight:700; }
+      .h2 { font-size:18px; font-weight:700; }
+      .body { font-size:15px; }
+      .small { font-size:13px; }
+      .tiny { font-size:12px; }
+      .label { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:14px; font-weight:650; }
+      .rule { stroke:#254052; }
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <text x="40" y="48" class="text h1">Representative states · truthful, actionable, and restrained</text>
+  <text x="40" y="76" class="muted body">The roadmap changes presentation—not meaning—across empty data, large plans, refresh failure, and uncertain mutations.</text>
+
+  <!-- Empty -->
+  <rect x="40" y="108" width="426" height="724" rx="16" class="panel"/>
+  <text x="66" y="146" class="text h2">Empty plan</text>
+  <text x="66" y="171" class="muted small">No confirmed phases exist</text>
+  <circle cx="253" cy="300" r="68" fill="#0f3042" stroke="#3c718d"/>
+  <path d="M216 310h74M226 285h54M236 260h34" stroke="#55d5e8" stroke-width="7" stroke-linecap="round"/>
+  <text x="253" y="403" text-anchor="middle" class="text h2">No phases yet</text>
+  <text x="253" y="433" text-anchor="middle" class="muted body">Prepare a plan from this repository.</text>
+  <text x="253" y="456" text-anchor="middle" class="muted body">Review its source and proposed changes before Apply.</text>
+  <rect x="141" y="491" width="224" height="44" rx="9" class="primary"/>
+  <text x="253" y="518" text-anchor="middle" class="text label" style="fill:#06131c;font-family:Helvetica,sans-serif">Prepare repository plan</text>
+  <rect x="66" y="604" width="374" height="112" rx="10" fill="#0a1a26" stroke="#233b4e"/>
+  <text x="86" y="633" class="text label">Truthful empty state</text>
+  <text x="86" y="660" class="muted small">No “0 of 0”, readiness badge, or Create Goal</text>
+  <text x="86" y="682" class="muted small">unless an editable phase actually exists.</text>
+  <text x="86" y="704" class="muted small">A load failure is an error—not an empty plan.</text>
+
+  <!-- Large -->
+  <rect x="488" y="108" width="426" height="724" rx="16" class="panel"/>
+  <text x="514" y="146" class="text h2">Large plan</text>
+  <text x="514" y="171" class="muted small">Grouped lifecycle order · stable selection</text>
+  <text x="514" y="210" class="muted tiny">IN DELIVERY · 2</text>
+  <rect x="514" y="226" width="374" height="90" rx="10" class="selected"/>
+  <text x="532" y="255" class="text label">5 · Planning model</text>
+  <rect x="746" y="240" width="122" height="22" rx="11" class="chipAmber"/><text x="807" y="256" text-anchor="middle" class="text tiny">2 UNASSIGNED</text>
+  <text x="532" y="286" class="muted small">Draft · 8 / 10 delivered</text><text x="866" y="286" text-anchor="end" class="muted small">Selected  ›</text>
+  <rect x="514" y="328" width="374" height="72" rx="10" class="card"/>
+  <text x="532" y="358" class="text label">6 · Reliability</text><text x="866" y="358" text-anchor="end" class="muted small">Ready  ›</text>
+  <text x="532" y="383" class="muted small">3 / 9 delivered</text>
+  <text x="514" y="436" class="muted tiny">UPCOMING · 8</text>
+  <rect x="514" y="452" width="374" height="64" rx="10" class="card"/><text x="532" y="490" class="text label">7 · Recovery</text><text x="866" y="490" text-anchor="end" class="muted small">Needs goal  ›</text>
+  <rect x="514" y="528" width="374" height="64" rx="10" class="card"/><text x="532" y="566" class="text label">8 · Integration</text><text x="866" y="566" text-anchor="end" class="muted small">Not started  ›</text>
+  <rect x="514" y="604" width="374" height="64" rx="10" class="card"/><text x="532" y="642" class="text label">9 · Distribution</text><text x="866" y="642" text-anchor="end" class="muted small">Not started  ›</text>
+  <rect x="514" y="690" width="374" height="52" rx="9" fill="#0a1a26" stroke="#233b4e"/>
+  <text x="532" y="722" class="text label">Completed · 4 phases</text><text x="866" y="722" text-anchor="end" class="muted small">Show  ›</text>
+  <text x="514" y="782" class="muted small">One vertical sequence; no horizontal phase carousel.</text>
+  <text x="514" y="804" class="muted small">Refreshing preserves selection and scroll position.</text>
+
+  <!-- Recovery -->
+  <rect x="936" y="108" width="464" height="724" rx="16" class="panel"/>
+  <text x="962" y="146" class="text h2">Freshness and recovery</text>
+  <text x="962" y="171" class="muted small">Last good data remains useful without pretending it is current</text>
+  <rect x="962" y="204" width="412" height="116" rx="10" class="warning"/>
+  <text x="982" y="234" class="text label" style="fill:#ffd88f;font-family:Helvetica,sans-serif">May be out of date</text>
+  <text x="982" y="261" class="text small">The last successful roadmap is still shown.</text>
+  <text x="982" y="284" class="muted small">Editing and finalization are paused until refresh succeeds.</text>
+  <rect x="1258" y="267" width="96" height="36" rx="8" class="button"/>
+  <text x="1306" y="290" text-anchor="middle" class="text label">Retry</text>
+  <rect x="962" y="338" width="412" height="126" rx="10" class="card" opacity=".72"/>
+  <rect x="980" y="356" width="94" height="22" rx="11" class="chipBlue"/><text x="1027" y="372" text-anchor="middle" class="text tiny">IN DELIVERY</text>
+  <text x="980" y="408" class="text h2">Planning</text>
+  <text x="980" y="435" class="muted small">Last confirmed: Draft · 8 / 10 delivered</text>
+  <path d="M1330 387l22 22M1352 387l-22 22" stroke="#e9b45e" stroke-width="2"/>
+
+  <rect x="962" y="492" width="412" height="126" rx="10" class="warning"/>
+  <text x="982" y="522" class="text label" style="fill:#ffd88f;font-family:Helvetica,sans-serif">Saved; published view needs reload</text>
+  <text x="982" y="549" class="text small">Keep the receipt. Do not send Save again.</text>
+  <rect x="982" y="566" width="174" height="36" rx="8" class="button"/>
+  <text x="1069" y="589" text-anchor="middle" class="text label">Reload saved result</text>
+
+  <rect x="962" y="636" width="412" height="144" rx="10" class="error"/>
+  <text x="982" y="666" class="text label" style="fill:#ffc4c9;font-family:Helvetica,sans-serif">Save outcome is unknown</text>
+  <text x="982" y="693" class="text small">Keep edits and the exact attempt. Check it before</text>
+  <text x="982" y="715" class="text small">starting any new mutation.</text>
+  <rect x="982" y="731" width="214" height="36" rx="8" class="button"/>
+  <text x="1089" y="754" text-anchor="middle" class="text label">Reconcile saved attempt</text>
+
+  <text x="40" y="876" class="muted small">PROPOSAL · Synthetic content · Not runtime evidence</text>
+</svg>
