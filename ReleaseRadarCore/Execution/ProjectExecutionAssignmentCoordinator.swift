@@ -588,6 +588,8 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             }
         } else {
             assignment.permissionProfileDefinition = definition
+            assignment.profileProvisioningReceipt = .init(state: .pending, provenance: .newlyPrepared,
+                requestedAt: Date(), verifiedAt: nil)
             try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
                 try store.saveAssignment(assignment, expected: intent)
             }
@@ -604,6 +606,15 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                 blockingAssignmentID: nil,
                 evidence: .observedAtFailure
             ))
+        }
+        if assignment.profileProvisioningReceipt?.state == .pending {
+            var verified = assignment
+            verified.profileProvisioningReceipt?.state = .verified
+            verified.profileProvisioningReceipt?.verifiedAt = Date()
+            try withProjectExecutionPreparationStage(.assignmentStoreCompareAndSwap) {
+                try store.saveAssignment(verified, expected: assignment)
+            }
+            assignment = verified
         }
         guard let tree = assignment.worktree, tree.checkout == paths.checkout.path,
               assignment.checkoutPath == paths.checkout.path, tree.primaryRoot == policy.primaryRoot else {

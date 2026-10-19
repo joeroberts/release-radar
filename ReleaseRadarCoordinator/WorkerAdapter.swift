@@ -4,6 +4,7 @@ import ReleaseRadarCore
 actor WorkerAdapter {
     struct Worker {
         let id: String
+        let attemptID: UUID
         let policy: WorkerPolicy
         var server: (any ExecutionPeer)?
         var threadID: String?
@@ -87,8 +88,9 @@ actor WorkerAdapter {
         guard selected.assignment.sessionID == nil,
               !workers.values.contains(where: { $0.policy.assignment.registration == selected.assignment.registration && $0.policy.assignment.id == assignmentID }) else { throw ProjectExecutionError.conflict }
         starting = true; defer { starting = false }
-        let id = UUID().uuidString
-        workers[id] = Worker(id: id, policy: selected)
+        let attemptID = UUID()
+        let id = attemptID.uuidString
+        workers[id] = Worker(id: id, attemptID: attemptID, policy: selected)
         do {
             guard try store.policy(projectID: projectID) == selected.policy else { throw ProjectExecutionError.assignmentNotAuthorized }
             var args = AppServerTransport.executionSetupArguments
@@ -107,10 +109,10 @@ actor WorkerAdapter {
                 // RR only hands off a fresh authorized launch. Existing uncertain
                 // reservations cannot acquire another grant after restart.
                 lease = try CoordinatorCodexContextLease.acquire(store: store, projectID: projectID,
-                    assignmentID: assignmentID, contextID: contextID, attemptID: UUID(uuidString: id)!)
+                    assignmentID: assignmentID, contextID: contextID, attemptID: attemptID)
             }
             workers[id]?.contextLease = lease
-            try selected.reserve() // Durable intent still precedes every child launch.
+            try selected.reserve(attemptID: attemptID) // Durable intent still precedes every child launch.
             if let serverFactory { server = try serverFactory(selected.policy.appServerExecutable, args, onMessage) }
             else if let lease { server = try AppServerTransport(executable: selected.policy.appServerExecutable, arguments: args, context: lease, onMessage: onMessage) }
             else { throw CodexExecutionContextAccessFailure(stage: .handoff) }
@@ -154,7 +156,7 @@ actor WorkerAdapter {
                 cursor = inventory["nextCursor"] as? String
             } while cursor != nil
             try await verifyHook(server, selected: selected)
-            try selected.bind(sessionID: threadID)
+            try selected.bind(sessionID: threadID, attemptID: attemptID)
             workers[id]?.verified = true; workers[id]?.status = "ready"
             _ = try await followUp(workerID: id, prompt: value)
         } catch {
@@ -213,10 +215,10 @@ actor WorkerAdapter {
               let threadID = worker.threadID, let server = worker.server else { throw ProjectExecutionError.assignmentNotAuthorized }
         workers[workerID]?.busy = true
         defer { workers[workerID]?.busy = false }
-        let assignment = try worker.policy.current(sessionID: threadID)
+        let assignment = try worker.policy.current(sessionID: threadID, attemptID: worker.attemptID)
         try await verifyHook(server, selected: worker.policy)
         // Re-read after awaited readiness: a revocation during discovery still prevents admission.
-        _ = try worker.policy.current(sessionID: threadID)
+        _ = try worker.policy.current(sessionID: threadID, attemptID: worker.attemptID)
         guard workers[workerID]?.threadID == threadID, workers[workerID]?.verified == true,
               ["ready", "completed", "interrupted", "failed"].contains(workers[workerID]?.status ?? "unknown") else { throw ProjectExecutionError.assignmentNotAuthorized }
         workers[workerID]?.status = "startingTurn"
@@ -258,7 +260,7 @@ actor WorkerAdapter {
         let worker = try worker(workerID)
         if decision == "accept" {
             guard let session = worker.threadID else { throw ProjectExecutionError.identityMismatch }
-            _ = try worker.policy.current(sessionID: session)
+            _ = try worker.policy.current(sessionID: session, attemptID: worker.attemptID)
         }
         guard !worker.busy, let request = worker.approvals[requestKey], let requestID = request["id"],
               let params = request["params"] as? [String: Any], params["threadId"] as? String == worker.threadID,
