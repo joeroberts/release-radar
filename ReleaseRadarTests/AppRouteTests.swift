@@ -2758,6 +2758,12 @@ final class AppRouteTests: XCTestCase {
         XCTAssertTrue((await capture.requests()).isEmpty)
     }
 
+    func testDeliveryGoalDraftErrorMessageUsesPlainLanguageForStaleRevision() {
+        let message = deliveryGoalDraftErrorMessage(.planRevisionConflict(expected: 1, current: 2))
+        XCTAssertEqual(message, "This phase plan changed. Refresh the plan, keep your edits, then save again.")
+        XCTAssertFalse(message.contains("planRevisionConflict"))
+    }
+
     @MainActor
     func testLoadDeliveryGoalEditorRejectsImmutableAcceptedGoal() async throws {
         let fixture = try await makeRR9OwnerFixture()
@@ -2959,6 +2965,20 @@ final class AppRouteTests: XCTestCase {
             hosting.layoutSubtreeIfNeeded()
             XCTAssertTrue(accessibilityText(application).contains("New Delivery Goal"))
             XCTAssertTrue(accessibilityText(application).contains("Done criteria, one per line"))
+            let save = try XCTUnwrap(
+                accessibilityElements(application, role: kAXButtonRole).first { element in
+                    var title: CFTypeRef?
+                    return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success
+                        && (title as? String) == "Save"
+                },
+                "Delivery Goal editor must expose Save through accessibility"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(save, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            XCTAssertTrue(
+                accessibilityText(application).contains("Enter a title, intended outcome, and at least one done criterion."),
+                "Validation must name the required correction in plain language"
+            )
             let cancel = try XCTUnwrap(
                 accessibilityElements(application, role: kAXButtonRole).first { element in
                     var title: CFTypeRef?
