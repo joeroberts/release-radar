@@ -2437,6 +2437,240 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanEditGoalPersistsTypedFieldsRevisionAndAuthoritativeSortOrder() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = DeliveryGoalDraft(
+            id: .init(rawValue: "existing-goal"),
+            title: "Existing title",
+            outcome: "Existing intended outcome",
+            doneCriteria: ["Existing done criterion"],
+            sortOrder: 7
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed editable delivery goal") { connection in
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: fixture.projectID,
+                phaseID: fixture.roadmapPhaseID,
+                expectedRevision: 0,
+                goalUpserts: [existing],
+                assignments: [],
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "seed-editable-delivery-goal"),
+                connection: connection
+            )
+        }
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+
+        let edited = DeliveryGoalDraft(
+            id: existing.id,
+            title: "Edited title",
+            outcome: "Edited intended outcome",
+            doneCriteria: ["Edited done criterion one", "Edited done criterion two"],
+            sortOrder: existing.sortOrder
+        )
+        _ = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+
+        let readback = try await fixture.store.read { connection in
+            let plan = try XCTUnwrap(
+                DeliveryPlanningPolicy.loadPlan(
+                    projectID: fixture.projectID,
+                    phaseID: fixture.roadmapPhaseID,
+                    connection: connection
+                )
+            )
+            let goal = try XCTUnwrap(
+                DeliveryPlanningPolicy.loadGoal(
+                    projectID: fixture.projectID,
+                    goalID: existing.id,
+                    connection: connection
+                )
+            )
+            let criteria = try DeliveryPlanningPolicy.loadCriteria(
+                projectID: fixture.projectID,
+                phaseID: fixture.roadmapPhaseID,
+                goalID: existing.id,
+                connection: connection
+            )
+            let audits = try connection.scalarInt(
+                "SELECT COUNT(*) FROM audit_events WHERE entity_type='phase_plan'"
+            )
+            return (plan, goal, criteria, audits)
+        }
+        XCTAssertEqual(readback.0.revision, 2)
+        XCTAssertEqual(readback.1.title, edited.title)
+        XCTAssertEqual(readback.1.outcome, edited.outcome)
+        XCTAssertEqual(readback.1.sortOrder, existing.sortOrder)
+        XCTAssertEqual(readback.2.map(\.criterion), edited.doneCriteria)
+        XCTAssertEqual(readback.3, 2)
+    }
+
+    @MainActor
+    func testLoadDeliveryGoalEditorReturnsPersistedSortOrderAndStableCreateID() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let editorID = UUID(uuidString: "19119119-1111-4111-8111-191191191919")!
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            requestIDGenerator: { editorID },
+            externalServicesSuppressed: true
+        )
+
+        switch await model.loadDeliveryGoalEditor(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            goalID: existing.id
+        ) {
+        case let .loaded(snapshot):
+            XCTAssertEqual(snapshot.planRevision, 1)
+            XCTAssertEqual(snapshot.draft, existing)
+            XCTAssertEqual(snapshot.goalLifecycle, .draft)
+        case let .failed(error):
+            XCTFail("Expected editable Delivery Goal editor, got \(error)")
+        }
+
+        switch await model.loadDeliveryGoalEditor(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            goalID: nil
+        ) {
+        case let .loaded(snapshot):
+            XCTAssertEqual(snapshot.draft.id.rawValue, editorID.uuidString.lowercased())
+            XCTAssertEqual(snapshot.draft.sortOrder, existing.sortOrder + 1)
+            XCTAssertNil(snapshot.goalLifecycle)
+        case let .failed(error):
+            XCTFail("Expected create Delivery Goal editor, got \(error)")
+        }
+    }
+
+    @MainActor
+    func testProjectPlanStaleRevisionPreservesFieldsAndRequiresExplicitFreshAttempt() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(
+            entityIDs: [], auditEventID: nil,
+            error: .planRevisionConflict(expected: 1, current: 2)
+        ))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        let edited = DeliveryGoalDraft(
+            id: existing.id,
+            title: "Keep this edited title",
+            outcome: "Keep this edited outcome",
+            doneCriteria: ["Keep this edited criterion"],
+            sortOrder: existing.sortOrder
+        )
+
+        let outcome = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+
+        guard case let .rejected(error, refreshedEditor) = outcome.status else {
+            return XCTFail("A stale revision must be a definite rejection")
+        }
+        XCTAssertEqual(error, .planRevisionConflict(expected: 1, current: 2))
+        XCTAssertEqual(refreshedEditor?.planRevision, 1)
+        XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.count, 1)
+        assertDeliveryGoalDraftCommand(
+            requests[0].command,
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+    }
+
+    @MainActor
+    func testProjectPlanUnconfirmedSaveReplaysExactEnvelopeWithoutDuplicateGoal() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(
+            entityIDs: [], auditEventID: nil, error: .outcomeUnknown
+        ))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        let edited = DeliveryGoalDraft(
+            id: existing.id,
+            title: "Uncertain edit",
+            outcome: "Retain exact envelope",
+            doneCriteria: ["Reconcile once"],
+            sortOrder: existing.sortOrder
+        )
+        let first = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+        guard case .unconfirmed(error: .outcomeUnknown) = first.status else {
+            return XCTFail("Unknown outcome must retain a replayable attempt")
+        }
+        let recovery = try XCTUnwrap(
+            model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        )
+        XCTAssertEqual(recovery.attemptID, first.attemptID)
+        XCTAssertEqual(recovery.draft, edited)
+        XCTAssertEqual(recovery.expectedRevision, 1)
+
+        let replay = await model.reconcileDeliveryGoalDraftSave(attemptID: first.attemptID)
+        guard case .unconfirmed(error: .outcomeUnknown) = replay.status else {
+            return XCTFail("Replay remains unknown until an authoritative receipt is available")
+        }
+        XCTAssertEqual(replay.attemptID, first.attemptID)
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.map(\.requestID), [first.attemptID, first.attemptID])
+        guard let originalRequest = requests.first else {
+            return XCTFail("An unconfirmed save must dispatch its retained envelope")
+        }
+        XCTAssertEqual(requests.map(\.command), [originalRequest.command, originalRequest.command])
+        assertDeliveryGoalDraftCommand(
+            originalRequest.command,
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+        let persisted = try await fixture.store.read { connection in
+            try DeliveryPlanningPolicy.loadGoal(
+                projectID: fixture.projectID,
+                goalID: existing.id,
+                connection: connection
+            )
+        }
+        XCTAssertEqual(persisted?.title, existing.title)
+        XCTAssertEqual(persisted?.outcome, existing.outcome)
+    }
+
+    @MainActor
     func testTask10NativePlanningControlsAndInspectorWideCompact() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
@@ -7600,6 +7834,59 @@ final class AppRouteTests: XCTestCase {
         )
     }
 
+    private func seedEditableDeliveryGoal(in fixture: RR9OwnerFixture) async throws -> DeliveryGoalDraft {
+        let draft = DeliveryGoalDraft(
+            id: .init(rawValue: "existing-goal"),
+            title: "Existing title",
+            outcome: "Existing intended outcome",
+            doneCriteria: ["Existing done criterion"],
+            sortOrder: 7
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed editable delivery goal") { connection in
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: fixture.projectID,
+                phaseID: fixture.roadmapPhaseID,
+                expectedRevision: 0,
+                goalUpserts: [draft],
+                assignments: [],
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "seed-editable-delivery-goal"),
+                connection: connection
+            )
+        }
+        return draft
+    }
+
+    private func assertDeliveryGoalDraftCommand(
+        _ command: AgentCommand,
+        projectID: ProjectID,
+        phaseID: PhaseID,
+        expectedRevision: Int64,
+        draft: DeliveryGoalDraft,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard case let .applyPhasePlanRevision(
+            commandProjectID,
+            commandPhaseID,
+            commandRevision,
+            goalUpserts,
+            assignments,
+            unassignedTicketIDs,
+            supersededGoalIDs
+        ) = command else {
+            return XCTFail("Delivery Goal save must use applyPhasePlanRevision", file: file, line: line)
+        }
+        XCTAssertEqual(commandProjectID, projectID.rawValue, file: file, line: line)
+        XCTAssertEqual(commandPhaseID, phaseID.rawValue, file: file, line: line)
+        XCTAssertEqual(commandRevision, expectedRevision, file: file, line: line)
+        XCTAssertEqual(goalUpserts, [draft], file: file, line: line)
+        XCTAssertNil(assignments, file: file, line: line)
+        XCTAssertNil(unassignedTicketIDs, file: file, line: line)
+        XCTAssertNil(supersededGoalIDs, file: file, line: line)
+    }
+
     @MainActor
     private func rr9SelectionState(
         store: DeliveryStore,
@@ -7847,6 +8134,27 @@ private final class RR9RequestIDCounter: @unchecked Sendable {
         lock.withLock { generated += 1 }
         return UUID()
     }
+}
+
+private actor DeliveryGoalDraftDispatchCapture {
+    struct Request: Equatable, Sendable {
+        let requestID: UUID
+        let command: AgentCommand
+    }
+
+    private let result: AgentCommandResult
+    private var recorded: [Request] = []
+
+    init(result: AgentCommandResult) {
+        self.result = result
+    }
+
+    func dispatch(requestID: UUID, command: AgentCommand) -> AgentCommandResult {
+        recorded.append(.init(requestID: requestID, command: command))
+        return result
+    }
+
+    func requests() -> [Request] { recorded }
 }
 
 private final class RR9DashboardLoadCounter: @unchecked Sendable {
