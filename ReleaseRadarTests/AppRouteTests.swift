@@ -2680,14 +2680,12 @@ final class AppRouteTests: XCTestCase {
 
         let persisted = try await fixture.store.read { connection in
             (
-                try connection.rows(
-                    "SELECT goal_id,ticket_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? ORDER BY ticket_id",
-                    bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
-                ).map { "\(try $0.text("goal_id")):\(try $0.text("ticket_id"))" },
-                try connection.rows(
-                    "SELECT goal_id,ticket_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? ORDER BY ticket_id",
-                    bindings: [.text(fixture.projectID.rawValue), .text(fixture.emptyPhaseID.rawValue)]
-                ).map { "\(try $0.text("goal_id")):\(try $0.text("ticket_id"))" },
+                try DeliveryPlanningPolicy.loadAssignments(
+                    projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID, connection: connection
+                ).map { "\($0.goalID.rawValue):\($0.ticketID.rawValue)" },
+                try DeliveryPlanningPolicy.loadAssignments(
+                    projectID: fixture.projectID, phaseID: fixture.emptyPhaseID, connection: connection
+                ).map { "\($0.goalID.rawValue):\($0.ticketID.rawValue)" },
                 try connection.scalarText("SELECT entity_type FROM audit_events WHERE id=?", bindings: [.text(auditEventID.rawValue)]),
                 try connection.scalarText("SELECT project_id FROM evidence WHERE id='assignment-evidence'")
             )
@@ -8933,7 +8931,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     private static func seedDeliveryGoalAssignmentFixture(
         in fixture: RR9OwnerFixture
-    ) async throws -> (DeliveryGoalDraft, DeliveryGoalDraft) {
+    ) async throws -> (first: DeliveryGoalDraft, second: DeliveryGoalDraft) {
         let first = try await seedEditableDeliveryGoal(in: fixture)
         let second = DeliveryGoalDraft(
             id: .init(rawValue: "assignment-goal-b"),
@@ -8984,7 +8982,7 @@ final class AppRouteTests: XCTestCase {
                 bindings: [.text(fixture.projectID.rawValue), .text("ROAD-1"), .text("synthetic/assignment-evidence")]
             )
         }
-        return (first, second)
+        return (first: first, second: second)
     }
 
     private func assertDeliveryGoalDraftCommand(
