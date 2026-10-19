@@ -2674,6 +2674,95 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanInvalidDraftExplainsCorrectionWithoutDispatching() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+
+        let result = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: .init(id: existing.id, title: " ", outcome: "", doneCriteria: ["  "], sortOrder: existing.sortOrder)
+        )
+
+        guard case let .rejected(error: .invalidPlanMutation(message), refreshedEditor: nil) = result.status else {
+            return XCTFail("Incomplete draft must be rejected before dispatch")
+        }
+        XCTAssertEqual(message, "Enter a title, intended outcome, and at least one done criterion.")
+        XCTAssertTrue((await capture.requests()).isEmpty)
+    }
+
+    @MainActor
+    func testLoadDeliveryGoalEditorRejectsImmutableAcceptedGoal() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Make Delivery Goal immutable") { connection in
+            try connection.execute(
+                "UPDATE delivery_goals SET lifecycle='accepted' WHERE project_id=? AND phase_id=? AND id=?",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue), .text(existing.id.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+
+        let result = await model.loadDeliveryGoalEditor(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            goalID: existing.id
+        )
+
+        XCTAssertEqual(result, .failed(.goalNotActionable(existing.id)))
+    }
+
+    @MainActor
+    func testProjectPlanSavedNeedsReloadRetainsReceiptWithoutReplayEligibility() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let loader = RouteDashboardLoader(failingCalls: [2])
+        let receipt = AgentCommandResult(
+            entityIDs: [existing.id.rawValue],
+            auditEventID: .init(rawValue: "delivery-goal-save-audit"),
+            error: nil,
+            phasePlanRevision: 2
+        )
+        let capture = DeliveryGoalDraftDispatchCapture(result: receipt)
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            dashboardLoader: { store in try await loader.load(from: store) },
+            externalServicesSuppressed: true,
+            deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+
+        let result = await model.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: existing
+        )
+
+        guard case let .savedNeedsReload(savedRevision, auditEventID) = result.status else {
+            return XCTFail("A committed save with failed projection readback must not be retried")
+        }
+        XCTAssertEqual(savedRevision, 2)
+        XCTAssertEqual(auditEventID, .init(rawValue: "delivery-goal-save-audit"))
+        XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        XCTAssertEqual((await capture.requests()).count, 1)
+    }
+
+    @MainActor
     func testTask10NativePlanningControlsAndInspectorWideCompact() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
