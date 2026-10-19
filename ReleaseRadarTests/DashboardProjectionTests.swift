@@ -512,6 +512,7 @@ final class DashboardProjectionTests: XCTestCase {
         guard case let .loaded(plan)? = loaded.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
             return XCTFail("Expected loaded canonical plan")
         }
+        XCTAssertEqual(plan.revision, revised)
         XCTAssertEqual(plan.tasks.map(\.id.rawValue), ["a", "z"])
         XCTAssertEqual(plan.tasks.map(\.completion), [.pending, .pending])
         XCTAssertEqual(loaded.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 2)
@@ -523,21 +524,80 @@ final class DashboardProjectionTests: XCTestCase {
         guard case let .loaded(completedPlan)? = completed.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
             return XCTFail("Expected completed row")
         }
+        XCTAssertEqual(completedPlan.revision, completedRevision)
+        XCTAssertNil(completedPlan.auditEventID)
         XCTAssertEqual(completedPlan.tasks.map(\.completion), [.completed, .pending])
         XCTAssertEqual(completed.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 2)
-        _ = try await store.transact(actor: .init(id: "fixture"), reason: "Add next task") { c in
+        let addedAuditID = AuditEventID(rawValue: "add-next-task-audit")
+        let addedRevision = try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Add next task",
+            auditEventID: addedAuditID,
+            auditScope: .init(projectID: projectID, entityType: .ticketTaskPlan, entityID: ticketID.rawValue)
+        ) { c in
             try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: ticketID, expectedRevision: completedRevision,
                 additions: [.init(id: .init(rawValue: "next"), label: "Task C", title: "Inspect running UI", sortOrder: 2)],
-                definitionRevisions: [], supersededTaskIDs: [], connection: c)
+                definitionRevisions: [], supersededTaskIDs: [], connection: c).revision
+        }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Record added-task receipt") { c in
+            let result = AgentCommandResult(
+                entityIDs: [ticketID.rawValue],
+                auditEventID: addedAuditID,
+                error: nil,
+                ticketTaskPlanRevision: addedRevision
+            )
+            try c.execute(
+                "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id) VALUES (?, ?, ?, ?, ?)",
+                bindings: [
+                    .text("add-next-task-receipt"),
+                    .blob(Data("fixture".utf8)),
+                    .blob(try JSONEncoder().encode(result)),
+                    .text("2026-10-19T00:00:00Z"),
+                    .text(projectID.rawValue),
+                ]
+            )
         }
         let added = try await DashboardProjection.load(from: store)
         guard case let .loaded(addedPlan)? = added.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
             return XCTFail("Expected added row")
         }
+        XCTAssertEqual(addedPlan.revision, addedRevision)
+        XCTAssertEqual(addedPlan.auditEventID, addedAuditID)
         XCTAssertEqual(addedPlan.tasks.map(\.id.rawValue), ["a", "z", "next"])
         let card = try XCTUnwrap(added.board(for: projectID)?.lane(.blocked)?.cards.first)
         XCTAssertEqual(card.activeTaskCount, 3)
         XCTAssertEqual(card.taskPlan, .loaded(plan: addedPlan))
+
+        let ambiguousAuditID = AuditEventID(rawValue: "ambiguous-task-audit")
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Create ambiguous task audit fixture",
+            auditEventID: ambiguousAuditID,
+            auditScope: .init(projectID: projectID, entityType: .ticketTaskPlan, entityID: ticketID.rawValue)
+        ) { _ in }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Record ambiguous-task receipt") { c in
+            let result = AgentCommandResult(
+                entityIDs: [ticketID.rawValue],
+                auditEventID: ambiguousAuditID,
+                error: nil,
+                ticketTaskPlanRevision: addedRevision
+            )
+            try c.execute(
+                "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id) VALUES (?, ?, ?, ?, ?)",
+                bindings: [
+                    .text("ambiguous-task-receipt"),
+                    .blob(Data("fixture".utf8)),
+                    .blob(try JSONEncoder().encode(result)),
+                    .text("2026-10-19T00:00:01Z"),
+                    .text(projectID.rawValue),
+                ]
+            )
+        }
+        let ambiguous = try await DashboardProjection.load(from: store)
+        guard case let .loaded(ambiguousPlan)? = ambiguous.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
+            return XCTFail("Expected loaded plan with ambiguous audit identity")
+        }
+        XCTAssertNil(ambiguousPlan.auditEventID)
     }
 
     func testTaskQueryFailureDropsOnlyFailedTicketTasksAndRecovers() async throws {

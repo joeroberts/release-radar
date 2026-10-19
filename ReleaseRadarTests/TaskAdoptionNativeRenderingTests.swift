@@ -6,6 +6,100 @@ import XCTest
 
 @MainActor
 final class TaskAdoptionNativeRenderingTests: XCTestCase {
+    func testTaskPlanReadbackStatesRenderAtWideAndCompactWidths() async throws {
+        let baseDetail = TicketDetailProjection(
+            id: .init(rawValue: "ADOPT-READBACK"),
+            outcome: "Read back adopted task plan",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            requires: [],
+            unlocks: [],
+            ownerAttention: [],
+            evidence: [],
+            auditHistory: [],
+            notificationHistory: []
+        )
+        let task = TicketTaskProjection(
+            id: .init(rawValue: "task-readback"),
+            label: "Task 1",
+            title: "Render persisted task readback",
+            completion: .pending
+        )
+        let cases: [(name: String, detail: TicketDetailProjection, text: [String], readbackID: String?)] = [
+            (
+                "exact-audit",
+                .init(
+                    id: baseDetail.id, outcome: baseDetail.outcome, goalContext: baseDetail.goalContext,
+                    requires: [], unlocks: [], ownerAttention: [], evidence: [], auditHistory: [], notificationHistory: [],
+                    taskPlan: .loaded(plan: .init(revision: 8, auditEventID: .init(rawValue: "audit-8"), tasks: [task]))
+                ),
+                ["Revision 8 · Audit audit-8", "Task 1: Render persisted task readback"],
+                "task-plan-readback"
+            ),
+            (
+                "missing-audit",
+                .init(
+                    id: baseDetail.id, outcome: baseDetail.outcome, goalContext: baseDetail.goalContext,
+                    requires: [], unlocks: [], ownerAttention: [], evidence: [], auditHistory: [], notificationHistory: [],
+                    taskPlan: .loaded(plan: .init(revision: 8, tasks: [task]))
+                ),
+                ["Revision 8 · Audit identity unavailable"],
+                "task-plan-readback"
+            ),
+            (
+                "atomic",
+                .init(
+                    id: baseDetail.id, outcome: baseDetail.outcome, goalContext: baseDetail.goalContext,
+                    requires: [], unlocks: [], ownerAttention: [], evidence: [], auditHistory: [], notificationHistory: [],
+                    taskPlan: .noPlan
+                ),
+                ["No task plan"],
+                nil
+            ),
+            (
+                "unavailable",
+                .init(
+                    id: baseDetail.id, outcome: baseDetail.outcome, goalContext: baseDetail.goalContext,
+                    requires: [], unlocks: [], ownerAttention: [], evidence: [], auditHistory: [], notificationHistory: [],
+                    taskPlan: .unavailable(recovery: .init())
+                ),
+                ["Tasks unavailable", "Task information could not be loaded. Reload to try again."],
+                "task-plan-unavailable"
+            ),
+        ]
+
+        for width in [520.0, 320.0] {
+            for scenario in cases {
+                let inspector = NSHostingView(rootView: TicketDetailView(detail: scenario.detail))
+                inspector.frame = NSRect(x: 0, y: 0, width: width, height: 780)
+                let window = NSWindow(contentRect: inspector.frame, styleMask: [.titled], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.title = "Task readback \(scenario.name) — \(Int(width))"
+                window.contentView = inspector
+                let previousPolicy = NSApp.activationPolicy()
+                NSApp.setActivationPolicy(.regular)
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                defer { window.close() }
+                defer { NSApp.setActivationPolicy(previousPolicy) }
+                try await Task.sleep(for: .milliseconds(150))
+                inspector.layoutSubtreeIfNeeded()
+
+                let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+                let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+                let renderedText = accessibilityText(nativeWindow)
+                for expected in scenario.text {
+                    XCTAssertTrue(renderedText.contains(expected), "\(scenario.name) at \(Int(width)) must render \(expected)")
+                }
+                if let readbackID = scenario.readbackID {
+                    XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: readbackID))
+                } else {
+                    XCTAssertNil(accessibilityElement(nativeWindow, identifier: "task-plan-readback"))
+                }
+                try capture(inspector, name: "task-readback-\(scenario.name)-\(Int(width))")
+            }
+        }
+    }
+
     func testTasksHelpIsAvailableAndRendersAtWideAndCompactWidths() async throws {
         let detail = TicketDetailProjection(
             id: .init(rawValue: "ADOPT-1"),

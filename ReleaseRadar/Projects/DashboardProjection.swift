@@ -1262,7 +1262,14 @@ struct TicketTaskProjection: Equatable, Sendable, Identifiable {
 
 struct LoadedTicketTaskPlanProjection: Equatable, Sendable {
     let revision: Int64
+    let auditEventID: AuditEventID?
     let tasks: [TicketTaskProjection]
+
+    init(revision: Int64, auditEventID: AuditEventID? = nil, tasks: [TicketTaskProjection]) {
+        self.revision = revision
+        self.auditEventID = auditEventID
+        self.tasks = tasks
+    }
 }
 
 struct TaskPlanRecoveryProjection: Equatable, Sendable {
@@ -1318,7 +1325,12 @@ enum TicketTaskPlanProjection: Equatable, Sendable {
             return Dictionary(uniqueKeysWithValues: ticketIDs.map { ticketID in
                 let projection: TicketTaskPlanProjection
                 do {
-                    projection = try decode(query(connection, projectID, phaseID, ticketID))
+                    projection = try decode(
+                        query(connection, projectID, phaseID, ticketID),
+                        connection: connection,
+                        projectID: projectID,
+                        ticketID: ticketID
+                    )
                 } catch {
                     projection = unavailableProjection()
                 }
@@ -1327,7 +1339,12 @@ enum TicketTaskPlanProjection: Equatable, Sendable {
         }
         return Dictionary(uniqueKeysWithValues: ticketIDs.map { ticketID in
             do {
-                return (ticketID, try decode(batches[ticketID.rawValue] ?? []))
+                return (ticketID, try decode(
+                    batches[ticketID.rawValue] ?? [],
+                    connection: connection,
+                    projectID: projectID,
+                    ticketID: ticketID
+                ))
             } catch {
                 return (ticketID, unavailableProjection())
             }
@@ -1357,7 +1374,14 @@ enum TicketTaskPlanProjection: Equatable, Sendable {
             )
             let batches = try Dictionary(grouping: rows) { try $0.text("ticket_id") }
             return Dictionary(uniqueKeysWithValues: ticketIDs.map { ticketID in
-                do { return (ticketID, try decode(batches[ticketID.rawValue] ?? [])) }
+                do {
+                    return (ticketID, try decode(
+                        batches[ticketID.rawValue] ?? [],
+                        connection: connection,
+                        projectID: projectID,
+                        ticketID: ticketID
+                    ))
+                }
                 catch { return (ticketID, unavailableProjection()) }
             })
         } catch {
@@ -1365,7 +1389,12 @@ enum TicketTaskPlanProjection: Equatable, Sendable {
         }
     }
 
-    private static func decode(_ rows: [[String: SQLiteValue]]) throws -> TicketTaskPlanProjection {
+    private static func decode(
+        _ rows: [[String: SQLiteValue]],
+        connection: SQLiteConnection,
+        projectID: ProjectID,
+        ticketID: TicketID
+    ) throws -> TicketTaskPlanProjection {
         guard let first = rows.first else { throw DashboardProjectionError.missingColumn("task plan") }
         if first["revision"] == .null { return .noPlan }
         let revision = try first.integer("revision")
@@ -1378,7 +1407,51 @@ enum TicketTaskPlanProjection: Equatable, Sendable {
                 label: try row.text("label"), title: try row.text("title"), completion: completion
             )
         }
-        return .loaded(plan: .init(revision: revision, tasks: tasks))
+        return .loaded(plan: .init(
+            revision: revision,
+            auditEventID: try auditEventID(
+                connection: connection,
+                projectID: projectID,
+                ticketID: ticketID,
+                revision: revision
+            ),
+            tasks: tasks
+        ))
+    }
+
+    private static func auditEventID(
+        connection: SQLiteConnection,
+        projectID: ProjectID,
+        ticketID: TicketID,
+        revision: Int64
+    ) throws -> AuditEventID? {
+        let receiptRows = try connection.rows(
+            "SELECT result_data FROM agent_command_requests WHERE registration_project_id = ?",
+            bindings: [.text(projectID.rawValue)]
+        )
+        var matchingIDs: Set<String> = []
+        for row in receiptRows {
+            guard case let .blob(resultData)? = row["result_data"],
+                  let result = try? JSONDecoder().decode(AgentCommandResult.self, from: resultData),
+                  result.error == nil,
+                  result.ticketTaskPlanRevision == revision,
+                  result.entityIDs.contains(ticketID.rawValue),
+                  let auditEventID = result.auditEventID,
+                  try connection.row(
+                    "SELECT id FROM audit_events WHERE id = ? AND project_id = ? AND entity_type = ? AND entity_id = ?",
+                    bindings: [
+                        .text(auditEventID.rawValue),
+                        .text(projectID.rawValue),
+                        .text(AuditEntityType.ticketTaskPlan.rawValue),
+                        .text(ticketID.rawValue),
+                    ]
+                  ) != nil else {
+                continue
+            }
+            matchingIDs.insert(auditEventID.rawValue)
+        }
+        guard matchingIDs.count == 1, let rawValue = matchingIDs.first else { return nil }
+        return AuditEventID(rawValue: rawValue)
     }
 
     private static func unavailableProjection() -> TicketTaskPlanProjection {

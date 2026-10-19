@@ -163,6 +163,10 @@ struct TicketDetailView: View {
                 Text("No task plan")
                     .foregroundStyle(.secondary)
             case let .loaded(plan):
+                Text("Revision \(plan.revision) · \(plan.auditEventID.map { "Audit \($0.rawValue)" } ?? "Audit identity unavailable")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("task-plan-readback")
                 ForEach(Array(plan.tasks.enumerated()), id: \.element.id) { index, task in
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: task.completion == .completed ? "checkmark.square" : "square")
