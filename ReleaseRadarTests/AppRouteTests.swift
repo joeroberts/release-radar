@@ -2515,6 +2515,62 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanSavedDraftPersistsAcrossFreshModelNavigationAndEditorReadback() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let firstModel = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await firstModel.loadDashboard()
+        let edited = DeliveryGoalDraft(
+            id: existing.id,
+            title: "Saved across relaunch",
+            outcome: "The reopened model reads this exact draft",
+            doneCriteria: ["Open Project Plan after relaunch"],
+            sortOrder: existing.sortOrder
+        )
+        let saved = await firstModel.saveDeliveryGoalDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 1,
+            draft: edited
+        )
+        guard case .confirmed(savedRevision: 2, _, _) = saved.status else {
+            return XCTFail("Fixture save must complete before relaunch verification")
+        }
+
+        let reopenedStore = DeliveryStore(databaseURL: fixture.databaseURL)
+        let reopenedModel = AppModel(
+            store: reopenedStore,
+            projectOnboarding: FolderProjectOnboarding(store: reopenedStore, bookmarkStore: fixture.bookmarks),
+            externalServicesSuppressed: true
+        )
+        await reopenedModel.loadDashboard()
+        await reopenedModel.navigate(to: .projectPlan(fixture.projectID))
+
+        XCTAssertEqual(reopenedModel.selection, .projectPlan(fixture.projectID))
+        XCTAssertEqual(
+            reopenedModel.dashboard?.plan(for: fixture.projectID)?.phases
+                .first(where: { $0.id == fixture.roadmapPhaseID })?.deliveryGoals
+                .first(where: { $0.goalID == existing.id })?.title,
+            edited.title
+        )
+        switch await reopenedModel.loadDeliveryGoalEditor(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            goalID: existing.id
+        ) {
+        case let .loaded(snapshot):
+            XCTAssertEqual(snapshot.planRevision, 2)
+            XCTAssertEqual(snapshot.draft, edited)
+        case let .failed(error):
+            XCTFail("Reopened Project Plan must load the saved Delivery Goal draft: \(error)")
+        }
+    }
+
+    @MainActor
     func testLoadDeliveryGoalEditorReturnsPersistedSortOrderAndStableCreateID() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await seedEditableDeliveryGoal(in: fixture)
