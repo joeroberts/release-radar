@@ -144,6 +144,7 @@
 		A1000000000000000000000B /* ReleaseRadarPluginLifecycleHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000007, ); path = ReleaseRadarPluginLifecycleHelper; sourceTree = "<group>"; };
 		A1000000000000000000000C /* ReleaseRadarDocumentationTool */ = {isa = PBXFileSystemSynchronizedRootGroup; path = ReleaseRadarDocumentationTool; sourceTree = "<group>"; };
 		E10000000000000000000006 /* ReleaseRadarCoordinator */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (E10000000000000000000007, E1000000000000000000000F, E10000000000000000000010, ); path = ReleaseRadarCoordinator; sourceTree = "<group>"; };
+		F10000000000000000000001 /* ReleaseRadarShared */ = {isa = PBXFileSystemSynchronizedRootGroup; path = ReleaseRadarShared; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -221,7 +222,7 @@
 			buildPhases = (C11000000000000000000001 /* Sources */, C11000000000000000000002 /* Frameworks */, C11000000000000000000003 /* Resources */, );
 			buildRules = ();
 			dependencies = ();
-			fileSystemSynchronizedGroups = (A10000000000000000000004 /* ReleaseRadarCore */, );
+			fileSystemSynchronizedGroups = (A10000000000000000000004 /* ReleaseRadarCore */, F10000000000000000000001 /* ReleaseRadarShared */, );
 			name = ReleaseRadarCore;
 			packageProductDependencies = ();
 			productName = ReleaseRadarCore;
