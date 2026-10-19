@@ -3544,6 +3544,9 @@ final class AppRouteTests: XCTestCase {
             }
             let loaderRecords = await loader.records()
             let presentation = assignmentEditorPresentationDiagnostic(host: window, application: application)
+            if let sheet = window.attachedSheet, let content = sheet.contentView {
+                try taskViewCapture(content, name: "delivery-goal-assignments-sheet-\(Int(width))")
+            }
             let showsLoading = editorText.contains("Loading ticket assignments")
             XCTAssertTrue(
                 editorText.contains("Assign Delivery Goal Tickets"),
@@ -3551,6 +3554,7 @@ final class AppRouteTests: XCTestCase {
             )
             XCTAssertTrue(editorText.contains("Covered"), "Assignment editor must explain phase coverage: \(editorText)")
             XCTAssertTrue(editorText.contains("ROAD-1"), "Assignment editor must expose eligible tickets: \(editorText)")
+            guard editorText.contains("Assign Delivery Goal Tickets") else { continue }
             let cancel = try XCTUnwrap(
                 accessibilityElements(application, role: kAXButtonRole).first { element in
                     func text(_ attribute: String) -> String? {
@@ -3635,6 +3639,9 @@ final class AppRouteTests: XCTestCase {
         }
         let loaderRecords = await loader.records()
         let presentation = assignmentEditorPresentationDiagnostic(host: window, application: application)
+        if let sheet = window.attachedSheet, let content = sheet.contentView {
+            try taskViewCapture(content, name: "delivery-goal-assignment-recovery-sheet")
+        }
         let showsLoading = accessibilityText(application).contains("Loading ticket assignments")
         let assignmentEditorDiagnostic = "Assignment editor save is unavailable; loads=\(loaderRecords), presentation=\(presentation), loading=\(showsLoading)"
         let save = try XCTUnwrap(accessibilityElements(application, role: kAXButtonRole).first { element in
@@ -4282,6 +4289,16 @@ final class AppRouteTests: XCTestCase {
 
     }
 
+    private func taskViewCapture(_ view: NSView, name: String) throws {
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func fullWindowCapture(_ window: NSWindow, name: String) throws {
         let image = try XCTUnwrap(CGWindowListCreateImage(
             .null,
@@ -4348,7 +4365,12 @@ final class AppRouteTests: XCTestCase {
             } else {
                 childCount = -1
             }
-            return "title=\(sheet.title.debugDescription),visible=\(sheet.isVisible),key=\(sheet.isKeyWindow),content=\(String(describing: type(of: sheet.contentView))),axChildren=\(childCount)"
+            let content = sheet.contentView
+            let contentChildren = content?.subviews.map { String(describing: type(of: $0)) } ?? []
+            let contentAccessibilityChildren = content?.accessibilityChildren()?.count ?? -1
+            let sheetAccessibilityChildren = sheet.accessibilityChildren()?.count ?? -1
+            let contentBounds = content.map { $0.bounds.debugDescription } ?? "nil"
+            return "title=\(sheet.title.debugDescription),visible=\(sheet.isVisible),key=\(sheet.isKeyWindow),content=\(String(describing: type(of: content))),bounds=\(contentBounds),subviews=\(contentChildren),contentAXChildren=\(contentAccessibilityChildren),sheetAXChildren=\(sheetAccessibilityChildren),axChildren=\(childCount)"
         }
         return "attached=\(host.attachedSheet != nil),sheets=[\(sheets.joined(separator: ";"))],windows=\(accessibilityWindowTitles(application))"
     }
