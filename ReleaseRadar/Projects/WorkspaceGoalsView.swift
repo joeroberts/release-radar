@@ -120,8 +120,8 @@ struct WorkspaceGoalsView: View {
     let goals: WorkspaceGoalsProjection
     let freshness: CodexObservationFreshness
     let openDeliveryGoal: (WorkspaceDeliveryGoalProjection) -> Void
-    let openDeliveryGoalPlanning: (WorkspaceDeliveryGoalProjection) -> Void = { _ in }
-    let openProjectPlanning: (ProjectID) -> Void = { _ in }
+    let openDeliveryGoalPlanning: (WorkspaceDeliveryGoalProjection) -> Void
+    let openProjectPlanning: (ProjectID) -> Void
     let openUnassignedWork: (WorkspaceUnassignedDeliveryWorkProjection) -> Void
     let openExecutionGoal: (WorkspaceExecutionGoalProjection) -> Void
     @Binding var domain: WorkspaceGoalsDomain
