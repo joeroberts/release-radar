@@ -354,8 +354,11 @@ final class WorkerAdapterTests: XCTestCase {
         peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
         let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-        XCTAssertEqual(started["status"] as? String, "inProgress")
-        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
+        let startError = started["error"].map { String(describing: $0) } ?? "nil"
+        let startCalls = peer.calls.map(\.0).joined(separator: ", ")
+        let startDiagnostic = "error=\(startError), calls=\(startCalls)"
+        XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
+        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
         _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
         await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
             "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
@@ -374,8 +377,11 @@ final class WorkerAdapterTests: XCTestCase {
             peer.instructionSources = [expected.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
             let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
             let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-            XCTAssertEqual(started["status"] as? String, "inProgress")
-            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
+            let startError = started["error"].map { String(describing: $0) } ?? "nil"
+            let startCalls = peer.calls.map(\.0).joined(separator: ", ")
+            let startDiagnostic = "error=\(startError), calls=\(startCalls)"
+            XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
+            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
             _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
             await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
                 "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
