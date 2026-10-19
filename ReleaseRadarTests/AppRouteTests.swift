@@ -3076,6 +3076,7 @@ final class AppRouteTests: XCTestCase {
             let buttonCandidates = accessibilityElements(application, role: kAXButtonRole)
             guard let save = buttonCandidates.first(where: { element in
                 textAttribute(element, kAXTitleAttribute) == "Save"
+                    || textAttribute(element, kAXDescriptionAttribute) == "Save"
             }) else {
                 let diagnostics = buttonCandidates.map { element in
                     "title=\(textAttribute(element, kAXTitleAttribute) ?? "nil"), "
@@ -3094,9 +3095,8 @@ final class AppRouteTests: XCTestCase {
             )
             let cancel = try XCTUnwrap(
                 accessibilityElements(application, role: kAXButtonRole).first { element in
-                    var title: CFTypeRef?
-                    return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success
-                        && (title as? String) == "Cancel"
+                    textAttribute(element, kAXTitleAttribute) == "Cancel"
+                        || textAttribute(element, kAXDescriptionAttribute) == "Cancel"
                 },
                 "Delivery Goal editor must expose Cancel through accessibility"
             )
