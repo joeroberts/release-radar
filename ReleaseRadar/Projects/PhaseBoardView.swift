@@ -172,7 +172,7 @@ struct PhaseBoardView: View {
                                 .containerRelativeFrame(.vertical, alignment: .top)
                         }
                     }
-                    .scrollIndicators(.automatic)
+                    .scrollIndicators(.visible)
                     .accessibilityIdentifier("phase-board-vertical-recovery")
                 }
             }

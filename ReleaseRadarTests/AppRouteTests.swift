@@ -1996,22 +1996,17 @@ final class AppRouteTests: XCTestCase {
         let nativeSession: (id: String, ready: URL, complete: URL)?
         if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6D_NATIVE_SESSION"] {
             guard !sessionID.isEmpty,
-                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }),
-                  let markerRootPath = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6D_NATIVE_MARKER_ROOT"],
-                  markerRootPath.hasPrefix("/private/tmp/") else {
-                XCTFail("The Phase 6D native session requires a safe session ID and marker root.")
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The Phase 6D native session requires a safe session ID.")
                 return
             }
-            let markerRoot = URL(fileURLWithPath: markerRootPath, isDirectory: true).standardizedFileURL
-            let enable = markerRoot.appendingPathComponent("phase6d-native-\(sessionID)-enabled")
+            let markerRoot = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ReleaseRadar-Phase6D-\(sessionID)-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: markerRoot, withIntermediateDirectories: false)
             let ready = markerRoot.appendingPathComponent("phase6d-native-\(sessionID)-compact-ready")
             let complete = markerRoot.appendingPathComponent("phase6d-native-\(sessionID)-compact-complete")
-            guard FileManager.default.fileExists(atPath: enable.path) else {
-                throw XCTSkip("The external controller must create the fresh Phase 6D enable marker.")
-            }
             XCTAssertFalse(FileManager.default.fileExists(atPath: ready.path))
             XCTAssertFalse(FileManager.default.fileExists(atPath: complete.path))
-            try FileManager.default.removeItem(at: enable)
             nativeSession = (sessionID, ready, complete)
         } else {
             nativeSession = nil
@@ -2092,6 +2087,8 @@ final class AppRouteTests: XCTestCase {
                     XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-inspector"))
                     XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-row-task-1"))
                     if viewport.width == 760, viewport.height == 700, let nativeSession {
+                        window.setAccessibilityIdentifier("phase6d-native-session")
+                        window.setAccessibilityValue("session=\(nativeSession.id);ready=\(nativeSession.ready.path);complete=\(nativeSession.complete.path)")
                         try Data().write(to: nativeSession.ready, options: .atomic)
                         print(
                             "PHASE6D ADOPTION COMPACT READY: pid \(ProcessInfo.processInfo.processIdentifier); "
