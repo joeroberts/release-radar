@@ -254,6 +254,7 @@ struct ProjectPlanView: View {
                             }
                         }
                         .scrollPosition(id: $roadmapScrollPosition)
+                        .accessibilityIdentifier("project-plan-roadmap-scroll")
                     } else {
                         VStack(alignment: .leading, spacing: 20) {
                             header
@@ -264,17 +265,16 @@ struct ProjectPlanView: View {
                                         .frame(maxWidth: .infinity, alignment: .topLeading)
                                 }
                                 .scrollPosition(id: $roadmapScrollPosition)
+                                .accessibilityIdentifier("project-plan-roadmap-scroll")
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 RekonSeparator(.vertical)
                                 ScrollView {
                                     inspector
                                         .frame(maxWidth: .infinity, alignment: .topLeading)
                                 }
-                                .frame(
-                                    width: min(520, max(440, geometry.size.width * 0.38)),
-                                    maxHeight: .infinity,
-                                    alignment: .top
-                                )
+                                .accessibilityIdentifier("project-plan-inspector-scroll")
+                                .frame(width: min(520, max(440, geometry.size.width * 0.38)))
+                                .frame(maxHeight: .infinity, alignment: .top)
                             }
                             .frame(maxHeight: .infinity)
                         }
@@ -1645,6 +1645,11 @@ struct ProjectPlanView: View {
             }
             return "Finalization validation found incomplete planning work"
         }
+        let actionableGoals = phase.deliveryGoals.filter { $0.lifecycle != .superseded }
+        if actionableGoals.isEmpty { return "No actionable Delivery Goal" }
+        if phase.readiness.unassignedUpcomingCount > 0 {
+            return "\(phase.readiness.unassignedUpcomingCount) upcoming ticket\(phase.readiness.unassignedUpcomingCount == 1 ? " is" : "s are") unassigned"
+        }
         switch phase.readiness.state {
         case .legacyUnassessed:
             return "Plan readiness has not been assessed"
@@ -1674,6 +1679,9 @@ struct ProjectPlanView: View {
             if !failure.unassignedTicketIDs.isEmpty { return "Edit assignments" }
             if !failure.conflictingTicketIDs.isEmpty { return "Resolve assignment conflicts" }
         }
+        let actionableGoals = phase.deliveryGoals.filter { $0.lifecycle != .superseded }
+        if actionableGoals.isEmpty { return "Create Delivery Goal" }
+        if phase.readiness.unassignedUpcomingCount > 0 { return "Edit assignments" }
         switch phase.readiness.state {
         case .legacyUnassessed: return "Assess plan readiness"
         case .draft: return "Review plan"
