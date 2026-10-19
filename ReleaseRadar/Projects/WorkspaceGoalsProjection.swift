@@ -119,6 +119,7 @@ struct WorkspaceGoalsProjection: Equatable, Sendable {
              AND ticket_goal_links.thread_id = observed_goals.thread_id
             JOIN projects ON projects.id = observed_goals.project_id
             WHERE projects.lifecycle = 'active'
+              AND observed_goals.status COLLATE NOCASE <> 'completed'
             ORDER BY observed_goals.last_observed_at DESC, observed_goals.project_id,
                      observed_goals.thread_id, observed_goals.id
             """

@@ -6,7 +6,108 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkspaceGoalsProjectionTests: XCTestCase {
-    func testExecutionDiscoveryRetainsLinkedAndUnlinkedPersistedGoalsWithExactIdentity() async throws {
+    func testCurrentExecutionGoalsExcludeCompletedObservationsButHistoryRetainsThem() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-CurrentWorkspaceGoals-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Seed execution observation source") { connection in
+            try connection.execute(
+                "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('current-execution-thread', ?, 'active', '2026-10-19T10:00:00Z')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        let recorder = MeaningfulDeliveryEventRecorder(store: store)
+        try await recorder.recordGoalObservation(
+            projectID: projectID, threadID: "current-execution-thread", goalID: "current-execution-goal",
+            status: .active, observedAt: Date(timeIntervalSince1970: 1_792_400_400)
+        )
+
+        let activeDashboard = try await DashboardProjection.load(from: store, evidenceReadbacks: [:])
+        XCTAssertTrue(activeDashboard.workspaceGoals.execution.contains { $0.goalID == "current-execution-goal" })
+
+        try await recorder.recordGoalObservation(
+            projectID: projectID, threadID: "current-execution-thread", goalID: "current-execution-goal",
+            status: .completed, observedAt: Date(timeIntervalSince1970: 1_792_400_460)
+        )
+        let completedDashboard = try await DashboardProjection.load(from: store, evidenceReadbacks: [:])
+        XCTAssertFalse(completedDashboard.workspaceGoals.execution.contains { $0.goalID == "current-execution-goal" })
+
+        let history = try await ProjectActivityProjection.load(from: store, projectID: projectID)
+        XCTAssertEqual(
+            history.filtered(by: .observations).items.first { $0.identity.sourceID == "current-execution-thread|current-execution-goal" }?.runtimeState,
+            RuntimeStateLanguage(storedValue: "completed")
+        )
+    }
+
+    func testCurrentExecutionGoalsUseSourceIdentityAcrossRepeatedLoadsAndSameTitleRecords() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ExecutionGoalIdentity-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let otherProjectID = ProjectID(rawValue: "same-title-other-project")
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Seed same-title current execution goals") { connection in
+            for suffix in ["a", "b"] {
+                try connection.execute(
+                    "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES (?, ?, 'active', '2026-10-19T10:00:00Z')",
+                    bindings: [.text("identity-thread-\(suffix)"), .text(projectID.rawValue)]
+                )
+                try connection.execute(
+                    "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES (?, ?, ?, 'active', 'Same visible title', '2026-10-19T10:00:00Z')",
+                    bindings: [.text("identity-goal-\(suffix)"), .text(projectID.rawValue), .text("identity-thread-\(suffix)")]
+                )
+            }
+            try connection.execute(
+                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, 'Same-title other project', 0)",
+                bindings: [.text(otherProjectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('identity-thread-other', ?, 'active', '2026-10-19T10:00:00Z')",
+                bindings: [.text(otherProjectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('identity-goal-other', ?, 'identity-thread-other', 'active', 'Same visible title', '2026-10-19T10:00:00Z')",
+                bindings: [.text(otherProjectID.rawValue)]
+            )
+        }
+
+        let first = try await DashboardProjection.load(from: store, evidenceReadbacks: [:]).workspaceGoals.execution
+        let second = try await DashboardProjection.load(from: store, evidenceReadbacks: [:]).workspaceGoals.execution
+        let firstMatches = first.filter { $0.goalID.hasPrefix("identity-goal-") }
+        let secondMatches = second.filter { $0.goalID.hasPrefix("identity-goal-") }
+
+        XCTAssertEqual(firstMatches.count, 3)
+        XCTAssertEqual(Set(firstMatches.map(\.id)).count, 3)
+        XCTAssertEqual(firstMatches.map(\.id), secondMatches.map(\.id))
+        XCTAssertEqual(Set(firstMatches.map(\.text)), ["Same visible title"])
+        XCTAssertEqual(Set(firstMatches.map { $0.project.id }), [projectID, otherProjectID])
+
+        try await MeaningfulDeliveryEventRecorder(store: store).recordGoalObservation(
+            projectID: projectID, threadID: "identity-thread-a", goalID: "identity-goal-a",
+            status: .active, observedAt: Date(timeIntervalSince1970: 1_792_400_460)
+        )
+        await store.close()
+
+        let reopenedStore = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let reopened = try await DashboardProjection.load(from: reopenedStore, evidenceReadbacks: [:]).workspaceGoals.execution
+        let reopenedMatches = reopened.filter { $0.goalID.hasPrefix("identity-goal-") }
+        XCTAssertEqual(reopenedMatches.count, 3)
+        XCTAssertEqual(Set(reopenedMatches.map(\.id)).count, 3)
+        XCTAssertEqual(
+            reopenedMatches.first { $0.goalID == "identity-goal-a" }?.id,
+            firstMatches.first { $0.goalID == "identity-goal-a" }?.id
+        )
+    }
+
+    func testExecutionDiscoveryRetainsCurrentLinkedGoalsAndExcludesCompletedGoals() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-WorkspaceGoals-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -28,9 +129,8 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
         let dashboard = try await DashboardProjection.load(from: store)
         let goals = dashboard.workspaceGoals
 
-        XCTAssertEqual(goals.execution.count, 2)
-        XCTAssertEqual(goals.execution.first(where: { $0.goalID == "unlinked-goal" })?.threadID, "unlinked-thread")
-        XCTAssertEqual(goals.execution.first(where: { $0.goalID == "unlinked-goal" })?.link, .unlinked)
+        XCTAssertEqual(goals.execution.count, 1)
+        XCTAssertNil(goals.execution.first(where: { $0.goalID == "unlinked-goal" }))
         XCTAssertEqual(goals.execution.first(where: { $0.goalID == "rr06-goal-vd2-07c" })?.link.ticketID, .init(rawValue: "VD2-07c"))
     }
 
