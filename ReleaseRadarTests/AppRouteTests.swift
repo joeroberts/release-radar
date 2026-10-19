@@ -3708,7 +3708,12 @@ final class AppRouteTests: XCTestCase {
             if await loader.count() == 2 { break }
             try await Task.sleep(for: .milliseconds(100))
         }
-        XCTAssertTrue(accessibilityText(nativeWindow).contains("ROAD-1"))
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: "delivery-goal-assignment-editor-message") != nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "delivery-goal-assignment-editor-message"))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "retry-delivery-goal-assignment-load"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Eligible tickets"))
         let retryCount = await loader.count()
         XCTAssertEqual(retryCount, 2)
     }
