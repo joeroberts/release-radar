@@ -491,6 +491,7 @@ struct SidebarView: View {
                         deliveryGoalDraftSaveRecovery: { phaseID in
                             model.deliveryGoalDraftSaveRecovery(projectID: projectID, phaseID: phaseID)
                         },
+                        requestedDeliveryGoalEditor: model.takeWorkspaceDeliveryGoalPlanningTarget(for: projectID),
                         loadDeliveryGoalAssignmentEditor: { phaseID in
                             await model.loadDeliveryGoalAssignmentEditor(projectID: projectID, phaseID: phaseID)
                         },
@@ -499,7 +500,6 @@ struct SidebarView: View {
                         },
                         reconcileDeliveryGoalAssignmentDraftSave: { await model.reconcileDeliveryGoalAssignmentDraftSave(attemptID: $0) },
                         deliveryGoalAssignmentDraftSaveRecovery: { model.deliveryGoalAssignmentDraftSaveRecovery(projectID: projectID, phaseID: $0) },
-                        requestedDeliveryGoalEditor: model.takeWorkspaceDeliveryGoalPlanningTarget(for: projectID),
                         repositoryPlanReconstruction: model.repositoryPlanReconstruction(
                             for: projectID
                         ),
