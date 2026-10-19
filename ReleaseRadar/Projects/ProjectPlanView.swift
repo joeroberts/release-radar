@@ -44,6 +44,13 @@ struct DeliveryGoalEditorTarget: Equatable, Sendable {
     let goalID: DeliveryGoalID?
 }
 
+struct DeliveryGoalAssignmentEditorSnapshot: Equatable, Sendable { let projectID: ProjectID; let phaseID: PhaseID; let planRevision: Int64; let phaseLifecycle: PhaseLifecycle; let tickets: [TicketCardProjection]; let goals: [DeliveryGoalSummaryProjection]; let assignments: [DeliveryGoalAssignment] }
+enum DeliveryGoalAssignmentEditorLoadOutcome: Equatable, Sendable { case loaded(DeliveryGoalAssignmentEditorSnapshot); case failed(AgentCommandError) }
+struct DeliveryGoalAssignmentEdit: Equatable, Sendable { let ticketID: TicketID; let goalID: DeliveryGoalID? }
+struct DeliveryGoalAssignmentSaveOutcome: Equatable, Sendable { enum Status: Equatable, Sendable { case confirmed(savedRevision: Int64, auditEventID: AuditEventID, readback: DeliveryGoalAssignmentEditorSnapshot); case savedNeedsReload(savedRevision: Int64, auditEventID: AuditEventID); case rejected(error: AgentCommandError, refreshedEditor: DeliveryGoalAssignmentEditorSnapshot?); case unconfirmed(error: AgentCommandError) }; let attemptID: UUID; let status: Status }
+struct DeliveryGoalAssignmentSaveRecovery: Equatable, Sendable { let attemptID: UUID; let edits: [DeliveryGoalAssignmentEdit]; let expectedRevision: Int64; let error: AgentCommandError }
+func deliveryGoalAssignmentDraftErrorMessage(_ error: AgentCommandError) -> String { deliveryGoalDraftErrorMessage(error) }
+
 func deliveryGoalDraftErrorMessage(_ error: AgentCommandError) -> String {
     switch error {
     case let .invalidPlanMutation(message): message
@@ -88,6 +95,10 @@ struct ProjectPlanView: View {
     var reconcileDeliveryGoalDraftSave: ((UUID) async -> DeliveryGoalDraftSaveOutcome)? = nil
     var deliveryGoalDraftSaveRecovery: ((PhaseID) -> DeliveryGoalDraftSaveRecovery?)? = nil
     var requestedDeliveryGoalEditor: DeliveryGoalEditorTarget? = nil
+    var loadDeliveryGoalAssignmentEditor: ((PhaseID) async -> DeliveryGoalAssignmentEditorLoadOutcome)? = nil
+    var saveDeliveryGoalAssignmentDraft: ((PhaseID, Int64, [DeliveryGoalAssignmentEdit]) async -> DeliveryGoalAssignmentSaveOutcome)? = nil
+    var reconcileDeliveryGoalAssignmentDraftSave: ((UUID) async -> DeliveryGoalAssignmentSaveOutcome)? = nil
+    var deliveryGoalAssignmentDraftSaveRecovery: ((PhaseID) -> DeliveryGoalAssignmentSaveRecovery?)? = nil
     var repositoryPlanReconstruction: RepositoryPlanReconstructionPresentation? = nil
     var openRepositoryPlanReconstruction: (() -> Void)? = nil
     var setRepositoryPlanSourceSelected: ((String, Bool) -> Void)? = nil
@@ -132,6 +143,9 @@ struct ProjectPlanView: View {
     @State private var deliveryGoalCriteria = ""
     @State private var deliveryGoalEditorMessage: String?
     @State private var isSavingDeliveryGoal = false
+    @State private var showsDeliveryGoalAssignmentEditor = false
+    @State private var deliveryGoalAssignmentEditor: DeliveryGoalAssignmentEditorSnapshot?
+    @State private var deliveryGoalAssignmentEdits: [TicketID: DeliveryGoalID?] = [:]
 
     var body: some View {
         GeometryReader { geometry in
@@ -228,6 +242,7 @@ struct ProjectPlanView: View {
             )
         }
         .sheet(isPresented: $showsDeliveryGoalEditor) { deliveryGoalEditorSheet }
+        .sheet(isPresented: $showsDeliveryGoalAssignmentEditor) { deliveryGoalAssignmentEditorSheet }
     }
 
     private var header: some View {
@@ -414,6 +429,11 @@ struct ProjectPlanView: View {
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("create-delivery-goal-\(phase.id.rawValue)")
                 }
+                if phase.lifecycle.lifecycle != .completed, loadDeliveryGoalAssignmentEditor != nil {
+                    Button("Edit assignments") { openDeliveryGoalAssignmentEditor(phase.id) }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("edit-delivery-goal-assignments-\(phase.id.rawValue)")
+                }
             }
             Text(readinessSummary(phase.readiness))
                 .font(.subheadline)
@@ -544,6 +564,26 @@ struct ProjectPlanView: View {
             }
         }
     }
+
+    @ViewBuilder private var deliveryGoalAssignmentEditorSheet: some View {
+        NavigationStack { Form {
+            if let editor = deliveryGoalAssignmentEditor {
+                Section { Text("Plan revision \(editor.planRevision)"); Text("Covered and uncovered work") }
+                Section("Eligible tickets") { ForEach(editor.tickets) { ticket in
+                    Picker(ticket.id.rawValue, selection: Binding(get: { deliveryGoalAssignmentEdits[ticket.id] ?? currentGoal(ticket.id, editor: editor) }, set: { deliveryGoalAssignmentEdits[ticket.id] = $0 })) {
+                        Text("Unassigned").tag(Optional<DeliveryGoalID>.none)
+                        ForEach(editor.goals.filter { $0.lifecycle != .accepted && $0.lifecycle != .superseded }) { Text($0.title).tag(Optional($0.goalID)) }
+                    }
+                }}
+            } else { ProgressView("Loading ticket assignments") }
+        }.navigationTitle("Assign Delivery Goal Tickets").toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showsDeliveryGoalAssignmentEditor = false } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { saveDeliveryGoalAssignments() }.disabled(deliveryGoalAssignmentEditor == nil) }
+        }}.frame(minWidth: 520, minHeight: 400)
+    }
+    private func currentGoal(_ ticketID: TicketID, editor: DeliveryGoalAssignmentEditorSnapshot) -> DeliveryGoalID? { editor.assignments.first { $0.ticketID == ticketID }?.goalID }
+    private func openDeliveryGoalAssignmentEditor(_ phaseID: PhaseID) { guard let loadDeliveryGoalAssignmentEditor else { return }; deliveryGoalAssignmentEditor = nil; deliveryGoalAssignmentEdits = [:]; showsDeliveryGoalAssignmentEditor = true; Task { if case let .loaded(editor) = await loadDeliveryGoalAssignmentEditor(phaseID) { deliveryGoalAssignmentEditor = editor } } }
+    private func saveDeliveryGoalAssignments() { guard let editor = deliveryGoalAssignmentEditor, let saveDeliveryGoalAssignmentDraft else { return }; let edits = editor.tickets.compactMap { ticket -> DeliveryGoalAssignmentEdit? in let goal = deliveryGoalAssignmentEdits[ticket.id] ?? currentGoal(ticket.id, editor: editor); return goal == currentGoal(ticket.id, editor: editor) ? nil : .init(ticketID: ticket.id, goalID: goal) }; Task { let outcome = await saveDeliveryGoalAssignmentDraft(editor.phaseID, editor.planRevision, edits); if case .confirmed = outcome.status { showsDeliveryGoalAssignmentEditor = false } } }
 
     private func saveCurrentDeliveryGoal() {
         guard let editor = deliveryGoalEditor, let saveDeliveryGoalDraft else { return }
