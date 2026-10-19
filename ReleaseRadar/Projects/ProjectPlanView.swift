@@ -84,7 +84,7 @@ func phasePlanFinalizationErrorMessage(_ error: AgentCommandError) -> String {
            failure.conflictingTicketIDs.isEmpty {
             return "This draft has no actionable Delivery Goal. Create one, then finalize the phase plan."
         }
-        return "This draft is not ready. Complete the linked Delivery Goals, assign the linked tickets, and resolve the linked conflicts before finalizing."
+        return "This draft is incomplete. Complete the linked Delivery Goals, assign the linked tickets, and resolve the linked conflicts before finalizing."
     case .staleProjectRegistration, .planRevisionConflict:
         "This phase plan changed. Refresh the project plan, then finalize the current revision."
     case .appUnavailable:
