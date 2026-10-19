@@ -3348,6 +3348,9 @@ final class AppRouteTests: XCTestCase {
             selectedTicketID: Binding(get: { selectedTicket }, set: { selectedTicket = $0 }),
             openAllPhases: {},
             openPhase: { _ in },
+            loadDeliveryGoalEditor: { phaseID, goalID in
+                await model.loadDeliveryGoalEditor(projectID: fixture.projectID, phaseID: phaseID, goalID: goalID)
+            },
             finalizePhasePlan: { _, _ in
                 .init(attemptID: UUID(), status: .rejected(error: .phasePlanIncomplete(failure), readback: nil))
             }
@@ -3372,9 +3375,27 @@ final class AppRouteTests: XCTestCase {
         for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2") == nil {
             try await Task.sleep(for: .milliseconds(100))
         }
-        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-incomplete-goal-assignment-goal-a"))
+        let incomplete = try XCTUnwrap(
+            accessibilityElement(nativeWindow, identifier: "phase-plan-incomplete-goal-assignment-goal-a")
+        )
         let uncovered = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2"))
         XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-conflicting-ticket-ROAD-X"))
+        XCTAssertEqual(AXUIElementPerformAction(incomplete, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where !accessibilityText(application).contains("Edit Delivery Goal") {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertTrue(accessibilityText(application).contains("Edit Delivery Goal"))
+        let cancel = try XCTUnwrap(
+            accessibilityElements(application, role: kAXButtonRole).first { element in
+                var title: CFTypeRef?
+                _ = AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
+                return title as? String == "Cancel"
+            }
+        )
+        XCTAssertEqual(AXUIElementPerformAction(cancel, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityText(application).contains("Edit Delivery Goal") {
+            try await Task.sleep(for: .milliseconds(100))
+        }
         XCTAssertEqual(AXUIElementPerformAction(uncovered, kAXPressAction as CFString), .success)
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(selectedTicket.rawValue, "ROAD-2", "Uncovered-ticket correction must navigate to that exact ticket")
