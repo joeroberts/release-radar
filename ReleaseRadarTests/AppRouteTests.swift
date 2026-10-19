@@ -2831,6 +2831,49 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanAssignmentDraftReturnsSavedNeedsReloadWhenProjectionPublicationFails() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let loader = DeliveryGoalAssignmentFailingReload()
+        let receipt = AgentCommandResult(
+            entityIDs: ["ROAD-1"],
+            auditEventID: .init(rawValue: "assignment-receipt"),
+            error: nil,
+            phasePlanRevision: 3
+        )
+        let capture = DeliveryGoalDraftDispatchCapture(result: receipt)
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            dashboardLoader: { store in try await loader.load(store) },
+            externalServicesSuppressed: true,
+            deliveryGoalAssignmentDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+        let result = await model.saveDeliveryGoalAssignmentDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 2,
+            edits: [.init(ticketID: .init(rawValue: "ROAD-1"), goalID: seeded.second.id)]
+        )
+        guard case let .savedNeedsReload(savedRevision, auditEventID) = result.status else {
+            return XCTFail("A valid receipt without a published projection must not be confirmed: \(result.status)")
+        }
+        XCTAssertEqual(savedRevision, 3)
+        XCTAssertEqual(auditEventID.rawValue, "assignment-receipt")
+        XCTAssertNil(model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        XCTAssertEqual(
+            model.dashboard?.plan(for: fixture.projectID)?.phases.first { $0.id == fixture.roadmapPhaseID }?.readiness.revision,
+            2,
+            "The stale published projection must not be presented as the saved revision"
+        )
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.count, 1)
+    }
+
+    @MainActor
     func testProjectPlanAssignmentDraftKeepsPendingAttemptsPhaseKeyedAndRejectsDefiniteReplayFailure() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
@@ -9270,6 +9313,20 @@ private actor DeliveryGoalAssignmentDispatchSequence {
     }
 
     func requests() -> [Request] { recorded }
+}
+
+private actor DeliveryGoalAssignmentFailingReload {
+    private var calls = 0
+
+    func load(_ store: DeliveryStore) async throws -> DashboardProjection {
+        calls += 1
+        guard calls == 1 else {
+            throw NSError(domain: "ReleaseRadarTests", code: 192, userInfo: [
+                NSLocalizedDescriptionKey: "Synthetic projection reload failure",
+            ])
+        }
+        return try await DashboardProjection.load(from: store)
+    }
 }
 
 private final class RR9DashboardLoadCounter: @unchecked Sendable {
