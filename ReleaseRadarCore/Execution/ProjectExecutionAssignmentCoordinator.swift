@@ -616,9 +616,11 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                     try store.saveAssignment(verified, expected: assignment)
                 }
             } catch let conflict as ProjectExecutionPreparationConflict {
-                let currentPolicy = try? store.policy(projectID: assignment.registration.projectID.rawValue)
-                let currentAssignment = try? store.assignment(projectID: assignment.registration.projectID.rawValue,
-                    taskID: assignment.id)
+                guard let currentPolicy = try? store.policy(projectID: assignment.registration.projectID.rawValue),
+                      let currentAssignment = try? store.assignment(projectID: assignment.registration.projectID.rawValue,
+                        taskID: assignment.id) else {
+                    throw conflict
+                }
                 guard currentPolicy == policy, currentAssignment == assignment else {
                     throw ProjectExecutionError.assignmentNotAuthorized
                 }
