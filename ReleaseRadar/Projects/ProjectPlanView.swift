@@ -232,7 +232,10 @@ struct ProjectPlanView: View {
     @State private var showsRetiredOriginals = false
     @State private var showsPlanChanges = false
     @State private var showsTechnicalRecord = false
+    @State private var showsPhaseTickets = false
     @State private var usesCompactLayout = false
+    @State private var roadmapScrollPosition: String?
+    @State private var roadmapScrollRestorePosition: String?
 
     var body: some View {
         GeometryReader { geometry in
@@ -274,16 +277,21 @@ struct ProjectPlanView: View {
                     .padding(24)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
+                .scrollPosition(id: $roadmapScrollPosition)
                 .onChange(of: navigationScrollTargetID(forWidth: geometry.size.width), initial: true) { _, targetID in
                     guard let targetID else { return }
-                    proxy.scrollTo(targetID, anchor: .center)
                     applyRequestedFocus()
+                    Task { @MainActor in
+                        await Task.yield()
+                        proxy.scrollTo(targetID, anchor: .center)
+                    }
                 }
                 .onChange(of: showsCompactPhaseDetail) { _, showsDetail in
                     guard !showsDetail, let selectedPhaseID else { return }
                     Task { @MainActor in
                         await Task.yield()
-                        proxy.scrollTo(phaseScrollID(selectedPhaseID), anchor: .center)
+                        roadmapScrollPosition = roadmapScrollRestorePosition ?? phaseScrollID(selectedPhaseID)
+                        await Task.yield()
                         focusedPhaseID = selectedPhaseID
                         accessibilityFocusedPhaseID = selectedPhaseID
                     }
@@ -427,10 +435,11 @@ struct ProjectPlanView: View {
 
             if plan.phases.isEmpty {
                 ContentUnavailableView(
-                    "No phases recorded",
+                    "No phases yet",
                     systemImage: "list.bullet.rectangle",
                     description: Text("Prepare the repository plan to create a roadmap from recorded planning evidence.")
                 )
+                if !plan.proposals.isEmpty { planChanges }
             } else {
                 ForEach(phaseLifecycleOrder, id: \.rawValue) { lifecycle in
                     let phases = orderedPhases.filter { $0.lifecycle.lifecycle == lifecycle }
@@ -440,6 +449,7 @@ struct ProjectPlanView: View {
                             LazyVStack(spacing: 8) {
                                 ForEach(phases) { phase in phaseRow(phase) }
                             }
+                            .scrollTargetLayout()
                         }
                     }
                 }
@@ -623,6 +633,7 @@ struct ProjectPlanView: View {
     private func compactPhaseDetail(_ phase: ProjectPlanPhaseProjection) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
+                roadmapScrollPosition = roadmapScrollRestorePosition
                 showsCompactPhaseDetail = false
             } label: {
                 Label("Back to roadmap", systemImage: "chevron.left")
@@ -803,7 +814,7 @@ struct ProjectPlanView: View {
     }
 
     private func phaseTickets(_ phase: ProjectPlanPhaseProjection) -> some View {
-        DisclosureGroup {
+        DisclosureGroup(isExpanded: $showsPhaseTickets) {
             VStack(alignment: .leading, spacing: 8) {
                 if phase.tickets.isEmpty {
                     Text("No tickets are placed in this phase.")
@@ -1662,9 +1673,11 @@ struct ProjectPlanView: View {
         selectedProposalVersion = nil
         showsTechnicalRecord = false
         showsPlanChanges = false
+        showsPhaseTickets = false
         focusedPhaseID = phaseID
         accessibilityFocusedPhaseID = phaseID
         if usesCompactLayout {
+            roadmapScrollRestorePosition = roadmapScrollPosition ?? phaseScrollID(phaseID)
             showsCompactPhaseDetail = true
             Task { @MainActor in
                 await Task.yield()
@@ -1725,7 +1738,15 @@ struct ProjectPlanView: View {
                 phase.tickets.contains(where: { $0.id == ticketID })
             }) {
                 selectedPhaseID = phase.id
-                if usesCompactLayout { showsCompactPhaseDetail = true }
+                showsPhaseTickets = true
+                if usesCompactLayout {
+                    roadmapScrollRestorePosition = roadmapScrollPosition ?? phaseScrollID(phase.id)
+                    showsCompactPhaseDetail = true
+                }
+            } else if plan.unassignedTickets.contains(where: { $0.id == ticketID }) {
+                showsUnplacedWork = true
+            } else if plan.retiredTickets.contains(where: { $0.id == ticketID }) {
+                showsRetiredOriginals = true
             }
             focusedProposal = nil
             accessibilityFocusedProposal = nil
