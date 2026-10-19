@@ -3064,7 +3064,7 @@ final class AppRouteTests: XCTestCase {
         ]
 
         for (name, receipt) in receipts {
-            let capture = DeliveryGoalAssignmentDispatchCapture(result: receipt)
+            let capture = DeliveryGoalDraftDispatchCapture(result: receipt)
             let model = AppModel(
                 store: fixture.store,
                 projectOnboarding: fixture.onboarding,
@@ -3102,7 +3102,7 @@ final class AppRouteTests: XCTestCase {
         let fixture = try await makeRR9OwnerFixture()
         _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
 
-        let unknown = DeliveryGoalAssignmentDispatchCapture(result: .init(
+        let unknown = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .outcomeUnknown
         ))
         let unknownModel = AppModel(
@@ -3130,7 +3130,7 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(unknownRequests.map(\.requestID), [first.attemptID, first.attemptID])
         XCTAssertEqual(unknownRequests[0].command, unknownRequests[1].command)
 
-        let unavailable = DeliveryGoalAssignmentDispatchCapture(result: .init(
+        let unavailable = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .appUnavailable
         ))
         let unavailableModel = AppModel(
@@ -3159,7 +3159,7 @@ final class AppRouteTests: XCTestCase {
         let unavailableRequests = await unavailable.requests()
         XCTAssertEqual(unavailableRequests.count, 2, "Unavailable finalization must use a fresh explicit retry")
 
-        let definite = DeliveryGoalAssignmentDispatchCapture(result: .init(
+        let definite = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .planRevisionConflict(expected: 2, current: 3)
         ))
         let model = AppModel(
@@ -3188,7 +3188,7 @@ final class AppRouteTests: XCTestCase {
         let fixture = try await makeRR9OwnerFixture()
         _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
         let loader = DeliveryGoalAssignmentFailingReload()
-        let capture = DeliveryGoalAssignmentDispatchCapture(result: .init(
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [],
             auditEventID: .init(rawValue: "finalization-receipt"),
             error: nil,
@@ -3234,7 +3234,7 @@ final class AppRouteTests: XCTestCase {
             incompleteGoalIDs: [.init(rawValue: "assignment-goal-a")],
             conflictingTicketIDs: [.init(rawValue: "ROAD-X")]
         )
-        let capture = DeliveryGoalAssignmentDispatchCapture(result: .init(
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .phasePlanIncomplete(failure)
         ))
         let model = AppModel(
