@@ -96,7 +96,7 @@ public enum ProjectExecutionProfileAssociation {
         case .missing:
             return .init(category: .unknown, assignmentID: assignment.id, reason: .profileMissing)
         case let .present(actual):
-            guard actual == expected else {
+            guard sameDefinition(actual, expected) else {
                 return .init(category: .unknown, assignmentID: assignment.id, reason: .definitionMismatch)
             }
             switch assignment.profileProvisioningReceipt?.state {
@@ -113,5 +113,13 @@ public enum ProjectExecutionProfileAssociation {
                     requiresInstallationRecovery: true)
             }
         }
+    }
+
+    private static func sameDefinition(_ lhs: Data, _ rhs: Data) -> Bool {
+        guard let left = try? JSONSerialization.jsonObject(with: lhs) as? [String: Any],
+              let right = try? JSONSerialization.jsonObject(with: rhs) as? [String: Any] else {
+            return false
+        }
+        return NSDictionary(dictionary: left).isEqual(to: right)
     }
 }
