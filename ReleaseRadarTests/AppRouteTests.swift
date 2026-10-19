@@ -3098,38 +3098,65 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    func testProjectPlanFinalizationRetainsUnknownAndUnavailableAttemptsButClearsDefiniteFailures() async throws {
+    func testProjectPlanFinalizationRetainsOnlyUnknownAttemptsAndClearsDefiniteFailures() async throws {
         let fixture = try await makeRR9OwnerFixture()
         _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
 
-        for error in [AgentCommandError.outcomeUnknown, .appUnavailable] {
-            let capture = DeliveryGoalAssignmentDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: error))
-            let model = AppModel(
-                store: fixture.store,
-                projectOnboarding: fixture.onboarding,
-                externalServicesSuppressed: true,
-                phasePlanFinalizationOwnerCommandDispatch: { _, _, requestID, command in
-                    await capture.dispatch(requestID: requestID, command: command)
-                }
-            )
-            let first = await model.finalizePhasePlan(
-                projectID: fixture.projectID,
-                phaseID: fixture.roadmapPhaseID,
-                expectedRevision: 2
-            )
-            guard case let .unconfirmed(actual) = first.status else {
-                return XCTFail("\(error) must retain an actionable finalization attempt: \(first.status)")
+        let unknown = DeliveryGoalAssignmentDispatchCapture(result: .init(
+            entityIDs: [], auditEventID: nil, error: .outcomeUnknown
+        ))
+        let unknownModel = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            phasePlanFinalizationOwnerCommandDispatch: { _, _, requestID, command in
+                await unknown.dispatch(requestID: requestID, command: command)
             }
-            XCTAssertEqual(actual, error)
-            XCTAssertEqual(
-                model.phasePlanFinalizationRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)?.attemptID,
-                first.attemptID
-            )
-            _ = await model.reconcilePhasePlanFinalization(attemptID: first.attemptID)
-            let requests = await capture.requests()
-            XCTAssertEqual(requests.map(\.requestID), [first.attemptID, first.attemptID])
-            XCTAssertEqual(requests[0].command, requests[1].command)
+        )
+        let first = await unknownModel.finalizePhasePlan(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 2
+        )
+        guard case .unconfirmed(error: .outcomeUnknown) = first.status else {
+            return XCTFail("Only an unknown finalization outcome may retain a replayable attempt: \(first.status)")
         }
+        XCTAssertEqual(
+            unknownModel.phasePlanFinalizationRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)?.attemptID,
+            first.attemptID
+        )
+        _ = await unknownModel.reconcilePhasePlanFinalization(attemptID: first.attemptID)
+        let unknownRequests = await unknown.requests()
+        XCTAssertEqual(unknownRequests.map(\.requestID), [first.attemptID, first.attemptID])
+        XCTAssertEqual(unknownRequests[0].command, unknownRequests[1].command)
+
+        let unavailable = DeliveryGoalAssignmentDispatchCapture(result: .init(
+            entityIDs: [], auditEventID: nil, error: .appUnavailable
+        ))
+        let unavailableModel = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            phasePlanFinalizationOwnerCommandDispatch: { _, _, requestID, command in
+                await unavailable.dispatch(requestID: requestID, command: command)
+            }
+        )
+        let rejectedUnavailable = await unavailableModel.finalizePhasePlan(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 2
+        )
+        guard case let .rejected(error: .appUnavailable, readback: readback) = rejectedUnavailable.status else {
+            return XCTFail("Unavailable finalization must be a definite retryable rejection: \(rejectedUnavailable.status)")
+        }
+        XCTAssertEqual(readback?.revision, 2)
+        XCTAssertNil(unavailableModel.phasePlanFinalizationRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        _ = await unavailableModel.finalizePhasePlan(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: 2
+        )
+        XCTAssertEqual((await unavailable.requests()).count, 2, "Unavailable finalization must use a fresh explicit retry")
 
         let definite = DeliveryGoalAssignmentDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .planRevisionConflict(expected: 2, current: 3)
@@ -3235,6 +3262,118 @@ final class AppRouteTests: XCTestCase {
             phasePlanFinalizationErrorMessage(.phasePlanIncomplete(empty)).localizedCaseInsensitiveContains("no actionable"),
             "An empty readiness failure must not invent a link target"
         )
+    }
+
+    @MainActor
+    func testNativePhasePlanFinalizationStaleReadbackShowsCurrentRevisionAndReloadControl() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let reloads = PhasePlanFinalizationReloadCapture()
+        let staleReadback = PhasePlanFinalizationReadback(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            revision: 3,
+            readyRevision: nil,
+            state: .draft
+        )
+        let view = ProjectPlanView(
+            plan: plan,
+            selectedTicketID: .constant(.init(rawValue: "ROAD-1")),
+            openAllPhases: {},
+            openPhase: { _ in },
+            reloadPhaseLifecycle: { await reloads.record() },
+            finalizePhasePlan: { _, _ in
+                .init(
+                    attemptID: UUID(),
+                    status: .rejected(
+                        error: .planRevisionConflict(expected: 2, current: 3),
+                        readback: staleReadback
+                    )
+                )
+            }
+        )
+        let window = NSWindow(
+            contentRect: .init(x: 30, y: 30, width: 1_280, height: 850),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Phase finalization stale readback"
+        let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let finalize = try XCTUnwrap(
+            accessibilityElement(nativeWindow, identifier: "finalize-phase-plan-\(fixture.roadmapPhaseID.rawValue)")
+        )
+        XCTAssertEqual(AXUIElementPerformAction(finalize, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: "reload-phase-plan-finalization") == nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let message = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "phase-plan-finalization-message"))
+        XCTAssertTrue(accessibilityText(message).contains("Current saved revision: 3"))
+        let reload = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "reload-phase-plan-finalization"))
+        XCTAssertEqual(AXUIElementPerformAction(reload, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where await reloads.count() == 0 { try await Task.sleep(for: .milliseconds(100)) }
+        XCTAssertEqual(await reloads.count(), 1)
+        XCTAssertTrue(window.isVisible)
+        XCTAssertTrue(hosting.bounds.width > 0)
+    }
+
+    @MainActor
+    func testNativePhasePlanFinalizationValidationLinksFocusExactUncoveredTicket() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        var selectedTicket = TicketID(rawValue: "ROAD-1")
+        let failure = PhasePlanReadinessFailure(
+            unassignedTicketIDs: [.init(rawValue: "ROAD-2")],
+            incompleteGoalIDs: [.init(rawValue: "assignment-goal-a")],
+            conflictingTicketIDs: [.init(rawValue: "ROAD-X")]
+        )
+        let view = ProjectPlanView(
+            plan: plan,
+            selectedTicketID: Binding(get: { selectedTicket }, set: { selectedTicket = $0 }),
+            openAllPhases: {},
+            openPhase: { _ in },
+            finalizePhasePlan: { _, _ in
+                .init(attemptID: UUID(), status: .rejected(error: .phasePlanIncomplete(failure), readback: nil))
+            }
+        )
+        let window = NSWindow(
+            contentRect: .init(x: 30, y: 30, width: 1_280, height: 850),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Phase finalization validation links"
+        let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let finalize = try XCTUnwrap(
+            accessibilityElement(nativeWindow, identifier: "finalize-phase-plan-\(fixture.roadmapPhaseID.rawValue)")
+        )
+        XCTAssertEqual(AXUIElementPerformAction(finalize, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2") == nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-incomplete-goal-assignment-goal-a"))
+        let uncovered = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "phase-plan-uncovered-ticket-ROAD-2"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-plan-conflicting-ticket-ROAD-X"))
+        XCTAssertEqual(AXUIElementPerformAction(uncovered, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(selectedTicket.rawValue, "ROAD-2", "Uncovered-ticket correction must navigate to that exact ticket")
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("draft is incomplete"))
     }
 
     @MainActor
@@ -9927,6 +10066,13 @@ private actor DeliveryGoalAssignmentReconcileCapture {
 
     func record(_ attemptID: UUID) { recorded.append(attemptID) }
     func attempts() -> [UUID] { recorded }
+}
+
+private actor PhasePlanFinalizationReloadCapture {
+    private var reloads = 0
+
+    func record() { reloads += 1 }
+    func count() -> Int { reloads }
 }
 
 private actor DeliveryGoalAssignmentLoadCapture {
