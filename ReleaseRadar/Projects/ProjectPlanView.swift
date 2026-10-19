@@ -44,6 +44,30 @@ struct DeliveryGoalEditorTarget: Equatable, Sendable {
     let goalID: DeliveryGoalID?
 }
 
+func deliveryGoalDraftErrorMessage(_ error: AgentCommandError) -> String {
+    switch error {
+    case let .invalidPlanMutation(message): message
+    case .planRevisionConflict:
+        "This phase plan changed. Refresh the plan, keep your edits, then save again."
+    case let .completedPhaseReadOnly(phaseID):
+        "Phase \(phaseID.rawValue) is completed and cannot be changed."
+    case let .goalNotFound(goalID):
+        "Delivery Goal \(goalID.rawValue) is no longer available. Refresh the plan."
+    case let .goalNotActionable(goalID):
+        "Delivery Goal \(goalID.rawValue) is immutable and cannot be edited."
+    case .staleProjectRegistration:
+        "This project changed. Refresh it before saving the Delivery Goal."
+    case .appUnavailable:
+        "Release Radar is temporarily unavailable. Your edits are still here; try the same saved attempt again."
+    case .outcomeUnknown:
+        "Release Radar could not confirm that save. Reconcile the same saved attempt before creating another goal."
+    case .unauthorizedProjectRoot:
+        "Release Radar cannot access this project. Reauthorize it, then try again."
+    default:
+        "The Delivery Goal could not be saved. Refresh the plan and try again."
+    }
+}
+
 struct ProjectPlanView: View {
     let plan: ProjectPlanProjection
     @Binding var selectedTicketID: TicketID
@@ -516,7 +540,7 @@ struct ProjectPlanView: View {
                 deliveryGoalOutcome = editor.draft.outcome
                 deliveryGoalCriteria = editor.draft.doneCriteria.joined(separator: "\n")
             case let .failed(error):
-                deliveryGoalEditorMessage = String(describing: error)
+                deliveryGoalEditorMessage = deliveryGoalDraftErrorMessage(error)
             }
         }
     }
@@ -537,7 +561,7 @@ struct ProjectPlanView: View {
             case .savedNeedsReload:
                 deliveryGoalEditorMessage = "Saved. Reload the project plan before editing again."
             case let .rejected(error, refreshedEditor):
-                deliveryGoalEditorMessage = String(describing: error)
+                deliveryGoalEditorMessage = deliveryGoalDraftErrorMessage(error)
                 if let refreshedEditor { deliveryGoalEditor = refreshedEditor }
             case .unconfirmed:
                 deliveryGoalEditorMessage = "Save outcome is uncertain. Reopen this editor after the saved attempt is reconciled."
@@ -557,7 +581,7 @@ struct ProjectPlanView: View {
             case .savedNeedsReload:
                 deliveryGoalEditorMessage = "Saved. Reload the project plan before editing again."
             case let .rejected(error, refreshedEditor):
-                deliveryGoalEditorMessage = String(describing: error)
+                deliveryGoalEditorMessage = deliveryGoalDraftErrorMessage(error)
                 if let refreshedEditor { deliveryGoalEditor = refreshedEditor }
             case .unconfirmed:
                 deliveryGoalEditorMessage = "Save outcome is still uncertain. Reconcile the same saved attempt again later."
