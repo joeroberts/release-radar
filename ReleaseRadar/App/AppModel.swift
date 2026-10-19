@@ -5161,7 +5161,11 @@ final class AppModel {
                         phaseID: phaseID
                     )
                 }
-                return .init(projectID: projectID, phaseID: phaseID, planRevision: plan.revision, phaseLifecycle: lifecycle.lifecycle, tickets: tickets, goals: goals, assignments: assignments)
+                return .init(
+                    projectID: projectID, phaseID: phaseID, planRevision: plan.revision,
+                    phaseLifecycle: lifecycle.lifecycle, tickets: tickets, goals: goals,
+                    assignments: assignments.map { .init(goalID: $0.goalID, ticketID: $0.ticketID) }
+                )
             }
             return .loaded(snapshot)
         } catch { return .failed(deliveryGoalEditorError(error)) }
@@ -5174,14 +5178,17 @@ final class AppModel {
             return .init(attemptID: pendingAttemptID, status: .unconfirmed(error: .outcomeUnknown))
         }
         guard Set(edits.map(\.ticketID)).count == edits.count, !edits.isEmpty else { return .init(attemptID: attemptID, status: .rejected(error: .invalidPlanMutation("Choose one distinct ticket assignment before saving."), refreshedEditor: nil)) }
-        let authorization: (ProjectRegistration, String)
+        let authorization: (ProjectRegistration?, String)
         do { authorization = try await projectOnboarding.withAuthorizedProject(projectID: projectID) { ($0.registration, $0.canonicalRoot.path) } }
         catch { return .init(attemptID: attemptID, status: .rejected(error: .unauthorizedProjectRoot, refreshedEditor: nil)) }
+        guard let registration = authorization.0 else {
+            return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
+        }
         let assignments = edits.compactMap { edit in edit.goalID.map { DeliveryGoalAssignment(goalID: $0, ticketID: edit.ticketID) } }
         let command = AgentCommand.applyPhasePlanRevision(projectID: projectID.rawValue, phaseID: phaseID.rawValue, expectedRevision: expectedRevision, assignments: assignments, unassignedTicketIDs: edits.filter { $0.goalID == nil }.map(\.ticketID))
         let pending = PendingDeliveryGoalAssignmentSave(
-            envelope: .init(version: AgentCommandDispatcher.commandEnvelopeVersion, requestID: attemptID, projectRoot: authorization.1, expectedRegistration: authorization.0, reason: "Owner saved Delivery Goal ticket assignments", command: command),
-            projectID: projectID, phaseID: phaseID, registration: authorization.0,
+            envelope: .init(version: AgentCommandDispatcher.commandEnvelopeVersion, requestID: attemptID, projectRoot: authorization.1, expectedRegistration: registration, reason: "Owner saved Delivery Goal ticket assignments", command: command),
+            projectID: projectID, phaseID: phaseID, registration: registration,
             expectedRevision: expectedRevision, edits: edits, error: .outcomeUnknown
         )
         return await resolveDeliveryGoalAssignmentSave(pending, key: key)
@@ -5205,7 +5212,9 @@ final class AppModel {
         }
         do {
             let current = try await projectOnboarding.withAuthorizedProject(projectID: pending.projectID) { ($0.registration, $0.canonicalRoot.path) }
-            guard current.0 == pending.registration, current.1 == pending.envelope.projectRoot else {
+            guard let registration = current.0,
+                  registration == pending.registration,
+                  current.1 == pending.envelope.projectRoot else {
                 removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
                 return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, refreshedEditor: nil))
             }
@@ -5244,7 +5253,12 @@ final class AppModel {
             return .init(attemptID: attemptID, status: .unconfirmed(error: .outcomeUnknown))
         }
         removePendingDeliveryGoalAssignmentSave(attemptID, key: key)
-        _ = await reloadProjectProjections(context: .agentCommandCommitted)
+        guard await reloadProjectProjections(context: .agentCommandCommitted) == .published else {
+            return .init(
+                attemptID: attemptID,
+                status: .savedNeedsReload(savedRevision: savedRevision, auditEventID: auditEventID)
+            )
+        }
         guard let readback = await currentDeliveryGoalAssignmentEditor(projectID: pending.projectID, phaseID: pending.phaseID),
               readback.planRevision == savedRevision else {
             return .init(attemptID: attemptID, status: .savedNeedsReload(savedRevision: savedRevision, auditEventID: auditEventID))
