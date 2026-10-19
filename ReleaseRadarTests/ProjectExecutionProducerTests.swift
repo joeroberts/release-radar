@@ -1543,8 +1543,18 @@ final class ProjectExecutionProducerTests: XCTestCase {
             await configuration.setFailure(false)
             do { _ = try await producer.prepare(project: project, work: work, requestID: request,
                 reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("Collision must refuse") }
-            catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
-            XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: pending.id), pending)
+            catch let conflict as ProjectExecutionPreparationConflict {
+                XCTAssertEqual(conflict.diagnostic, .init(kind: .causeUnavailable,
+                    stage: .preparedAssignmentConfiguration, blockingRequestID: nil,
+                    blockingAssignmentID: nil, evidence: .observedAtFailure))
+            } catch { XCTFail("Collision must remain a typed preparation conflict: \(error)") }
+            let persisted = try store.assignment(projectID: "project-one", taskID: pending.id)
+            var expected = pending; expected.profileProvisioningReceipt = persisted.profileProvisioningReceipt
+            XCTAssertEqual(persisted, expected, "The successful profile readback may settle only its receipt before the later collision")
+            XCTAssertEqual(persisted.profileProvisioningReceipt?.state, .verified)
+            XCTAssertEqual(persisted.profileProvisioningReceipt?.provenance, .newlyPrepared)
+            XCTAssertEqual(persisted.profileProvisioningReceipt?.requestedAt, pending.profileProvisioningReceipt?.requestedAt)
+            XCTAssertNotNil(persisted.profileProvisioningReceipt?.verifiedAt)
             let checks = await configuration.hookChecks; XCTAssertEqual(checks, 0)
             if symlink { XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: layer.path), source.path) }
             else { XCTAssertEqual(try Data(contentsOf: layer), Data("collision".utf8)) }
