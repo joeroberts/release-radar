@@ -3543,9 +3543,11 @@ final class AppRouteTests: XCTestCase {
                 try await Task.sleep(for: .milliseconds(100))
             }
             let loaderRecords = await loader.records()
+            let presentation = assignmentEditorPresentationDiagnostic(host: window, application: application)
+            let showsLoading = editorText.contains("Loading ticket assignments")
             XCTAssertTrue(
                 editorText.contains("Assign Delivery Goal Tickets"),
-                "Timed out waiting for assignment editor; loads=\(loaderRecords), windows=\(accessibilityWindowTitles(application)), loading=\(editorText.contains(\"Loading ticket assignments\")): \(editorText)"
+                "Timed out waiting for assignment editor; loads=\(loaderRecords), presentation=\(presentation), loading=\(showsLoading): \(editorText)"
             )
             XCTAssertTrue(editorText.contains("Covered"), "Assignment editor must explain phase coverage: \(editorText)")
             XCTAssertTrue(editorText.contains("ROAD-1"), "Assignment editor must expose eligible tickets: \(editorText)")
@@ -3632,7 +3634,9 @@ final class AppRouteTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(100))
         }
         let loaderRecords = await loader.records()
-        let assignmentEditorDiagnostic = "Assignment editor save is unavailable; loads=\(loaderRecords), windows=\(accessibilityWindowTitles(application)), loading=\(accessibilityText(application).contains(\"Loading ticket assignments\"))"
+        let presentation = assignmentEditorPresentationDiagnostic(host: window, application: application)
+        let showsLoading = accessibilityText(application).contains("Loading ticket assignments")
+        let assignmentEditorDiagnostic = "Assignment editor save is unavailable; loads=\(loaderRecords), presentation=\(presentation), loading=\(showsLoading)"
         let save = try XCTUnwrap(accessibilityElements(application, role: kAXButtonRole).first { element in
             var description: CFTypeRef?
             var title: CFTypeRef?
@@ -4330,6 +4334,23 @@ final class AppRouteTests: XCTestCase {
             }
             return title as? String
         }
+    }
+
+    private func assignmentEditorPresentationDiagnostic(host: NSWindow, application: AXUIElement) -> String {
+        let sheets = host.sheets.map { sheet in
+            let ax = accessibilityWindow(application, title: sheet.title)
+            var children: CFTypeRef?
+            let childCount: Int
+            if let ax,
+               AXUIElementCopyAttributeValue(ax, kAXChildrenAttribute as CFString, &children) == .success,
+               let elements = children as? [AXUIElement] {
+                childCount = elements.count
+            } else {
+                childCount = -1
+            }
+            return "title=\(sheet.title.debugDescription),visible=\(sheet.isVisible),key=\(sheet.isKeyWindow),content=\(String(describing: type(of: sheet.contentView))),axChildren=\(childCount)"
+        }
+        return "attached=\(host.attachedSheet != nil),sheets=[\(sheets.joined(separator: ";"))],windows=\(accessibilityWindowTitles(application))"
     }
 
     private func accessibilityFrame(_ element: AXUIElement) throws -> CGRect {
