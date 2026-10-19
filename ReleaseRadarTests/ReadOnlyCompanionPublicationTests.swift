@@ -367,4 +367,46 @@ final class ReadOnlyCompanionPublicationTests: XCTestCase {
             XCTAssertEqual($0 as? CompanionPublicationValidationError, .epochReconciliationRequired)
         }
     }
+
+    func testCurrentManifestSchemaIsCompatibleWithCurrentReader() throws {
+        XCTAssertEqual(CompanionManifest.currentSchemaVersion, 1)
+        XCTAssertEqual(CompanionManifest.minimumReaderVersionForCurrentSchema, 1)
+        XCTAssertEqual(CompanionManifest.currentReaderVersion, 1)
+        let manifest = CompanionManifest(
+            registrationID: "registration-A",
+            publisherEpoch: "epoch-A",
+            controlSequence: 1,
+            schemaVersion: CompanionManifest.currentSchemaVersion,
+            minimumReaderVersion: CompanionManifest.minimumReaderVersionForCurrentSchema,
+            activation: .pending,
+            inventory: [],
+            sourceOccurredAt: nil,
+            publishedAt: nil
+        )
+        XCTAssertNoThrow(try manifest.requireCompatible())
+        XCTAssertNoThrow(try manifest.requireCompatible(readerVersion: CompanionManifest.currentReaderVersion))
+    }
+
+    func testManifestCompatibilityRejectsInvalidAndFutureVersions() throws {
+        for (schemaVersion, minimumReaderVersion, readerVersion) in [(0, 1, 1), (1, 0, 1), (1, 1, 0)] {
+            let manifest = CompanionManifest(
+                registrationID: "registration-A", publisherEpoch: "epoch-A", controlSequence: 1,
+                schemaVersion: schemaVersion, minimumReaderVersion: minimumReaderVersion,
+                activation: .pending, inventory: [], sourceOccurredAt: nil, publishedAt: nil
+            )
+            XCTAssertThrowsError(try manifest.requireCompatible(readerVersion: readerVersion)) {
+                XCTAssertEqual($0 as? CompanionManifestCompatibilityError, .invalidVersion)
+            }
+        }
+        for (schemaVersion, minimumReaderVersion) in [(1, 2), (2, 1)] {
+            let manifest = CompanionManifest(
+                registrationID: "registration-A", publisherEpoch: "epoch-A", controlSequence: 1,
+                schemaVersion: schemaVersion, minimumReaderVersion: minimumReaderVersion,
+                activation: .pending, inventory: [], sourceOccurredAt: nil, publishedAt: nil
+            )
+            XCTAssertThrowsError(try manifest.requireCompatible(readerVersion: 1)) {
+                XCTAssertEqual($0 as? CompanionManifestCompatibilityError, .updateRequired)
+            }
+        }
+    }
 }
