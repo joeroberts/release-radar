@@ -2477,12 +2477,16 @@ final class AppRouteTests: XCTestCase {
             doneCriteria: ["Edited done criterion one", "Edited done criterion two"],
             sortOrder: existing.sortOrder
         )
-        _ = await model.saveDeliveryGoalDraft(
+        let save = await model.saveDeliveryGoalDraft(
             projectID: fixture.projectID,
             phaseID: fixture.roadmapPhaseID,
             expectedRevision: 1,
             draft: edited
         )
+        guard case let .confirmed(savedRevision: savedRevision, auditEventID: auditEventID, readback: _) = save.status else {
+            return XCTFail("Editing a Delivery Goal must return a confirmed save receipt, got \(save.status)")
+        }
+        XCTAssertEqual(savedRevision, 2)
 
         let readback = try await fixture.store.read { connection in
             let plan = try XCTUnwrap(
@@ -2505,17 +2509,30 @@ final class AppRouteTests: XCTestCase {
                 goalID: existing.id,
                 connection: connection
             )
-            let audits = try connection.scalarInt(
-                "SELECT COUNT(*) FROM audit_events WHERE entity_type='phase_plan'"
+            let audit = (
+                try connection.scalarText(
+                    "SELECT project_id FROM audit_events WHERE id=?",
+                    bindings: [.text(auditEventID.rawValue)]
+                ),
+                try connection.scalarText(
+                    "SELECT entity_type FROM audit_events WHERE id=?",
+                    bindings: [.text(auditEventID.rawValue)]
+                ),
+                try connection.scalarText(
+                    "SELECT entity_id FROM audit_events WHERE id=?",
+                    bindings: [.text(auditEventID.rawValue)]
+                )
             )
-            return (plan, goal, criteria, audits)
+            return (plan, goal, criteria, audit)
         }
         XCTAssertEqual(readback.0.revision, 2)
         XCTAssertEqual(readback.1.title, edited.title)
         XCTAssertEqual(readback.1.outcome, edited.outcome)
         XCTAssertEqual(readback.1.sortOrder, existing.sortOrder)
         XCTAssertEqual(readback.2.map(\.text), edited.doneCriteria)
-        XCTAssertEqual(readback.3, 2)
+        XCTAssertEqual(readback.3.0, fixture.projectID.rawValue)
+        XCTAssertEqual(readback.3.1, "phase_plan")
+        XCTAssertEqual(readback.3.2, fixture.roadmapPhaseID.rawValue)
     }
 
     @MainActor
@@ -3049,14 +3066,26 @@ final class AppRouteTests: XCTestCase {
                 editorText.contains("Done criteria, one per line"),
                 "Editor sheet omitted its criteria field. Accessible text: \(editorText)"
             )
-            let save = try XCTUnwrap(
-                accessibilityElements(application, role: kAXButtonRole).first { element in
-                    var title: CFTypeRef?
-                    return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success
-                        && (title as? String) == "Save"
-                },
-                "Delivery Goal editor must expose Save through accessibility"
-            )
+            func textAttribute(_ element: AXUIElement, _ attribute: String) -> String? {
+                var value: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+                    return nil
+                }
+                return value as? String
+            }
+            let buttonCandidates = accessibilityElements(application, role: kAXButtonRole)
+            guard let save = buttonCandidates.first(where: { element in
+                textAttribute(element, kAXTitleAttribute) == "Save"
+            }) else {
+                let diagnostics = buttonCandidates.map { element in
+                    "title=\(textAttribute(element, kAXTitleAttribute) ?? "nil"), "
+                        + "description=\(textAttribute(element, kAXDescriptionAttribute) ?? "nil"), "
+                        + "identifier=\(textAttribute(element, kAXIdentifierAttribute) ?? "nil"), "
+                        + "role=\(textAttribute(element, kAXRoleAttribute) ?? "nil")"
+                }.joined(separator: " | ")
+                XCTFail("Delivery Goal editor must expose Save through accessibility. Candidates: \(diagnostics)")
+                return
+            }
             XCTAssertEqual(AXUIElementPerformAction(save, kAXPressAction as CFString), .success)
             try await Task.sleep(for: .milliseconds(150))
             XCTAssertTrue(
