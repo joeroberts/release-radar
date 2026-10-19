@@ -77,7 +77,8 @@ public enum ProjectExecutionProfileAssociation {
         guard assignment.permissionProfile == candidateProfileID else {
             return .init(category: .outsideAssignmentCleanup)
         }
-        guard assignment.codexContextID == selectedCodexContextID else {
+        guard let assignmentContextID = assignment.codexContextID,
+              assignmentContextID == selectedCodexContextID else {
             return .init(category: .unknown, assignmentID: assignment.id, reason: .selectedContextMismatch)
         }
         guard !duplicateAssignmentIDs.contains(assignment.id) else {
