@@ -3544,8 +3544,8 @@ final class AppRouteTests: XCTestCase {
             }
             let loaderRecords = await loader.records()
             let presentation = assignmentEditorPresentationDiagnostic(host: window, application: application)
-            if let sheet = window.attachedSheet, let content = sheet.contentView {
-                try taskViewCapture(content, name: "delivery-goal-assignments-sheet-\(Int(width))")
+            if let sheet = window.attachedSheet {
+                try fullWindowCapture(sheet, name: "delivery-goal-assignments-sheet-\(Int(width))")
             }
             let showsLoading = editorText.contains("Loading ticket assignments")
             XCTAssertTrue(
