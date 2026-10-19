@@ -2690,7 +2690,10 @@ final class AppRouteTests: XCTestCase {
                 try connection.scalarText("SELECT project_id FROM evidence WHERE id='assignment-evidence'")
             )
         }
-        XCTAssertEqual(persisted.0, ["assignment-goal-a:ROAD-2", "assignment-goal-b:ROAD-1"])
+        XCTAssertEqual(
+            persisted.0,
+            ["\(seeded.first.id.rawValue):ROAD-2", "\(seeded.second.id.rawValue):ROAD-1"]
+        )
         XCTAssertEqual(persisted.1, ["foreign-assignment-goal:EMPTY-1"])
         XCTAssertEqual(persisted.2, "phase_plan")
         XCTAssertEqual(persisted.3, fixture.projectID.rawValue)
@@ -2726,7 +2729,7 @@ final class AppRouteTests: XCTestCase {
 
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Make selected phase immutable") { connection in
             try connection.execute(
-                "UPDATE phase_lifecycles SET lifecycle='completed' WHERE project_id=? AND phase_id=?",
+                "UPDATE phase_lifecycles SET lifecycle='completed',revision=1,completion_baseline_digest='fixture-baseline',completed_at='2026-10-19T00:00:00Z' WHERE project_id=? AND phase_id=?",
                 bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
             )
         }
@@ -2928,7 +2931,11 @@ final class AppRouteTests: XCTestCase {
             doneCriteria: ["Read current store"],
             sortOrder: 9
         )
-        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Advance store after dashboard load") { connection in
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Advance store after dashboard load",
+            auditEventID: .init(rawValue: "late-store-goal-audit")
+        ) { connection in
             _ = try DeliveryPlanningPolicy.applyRevision(
                 projectID: fixture.projectID,
                 phaseID: fixture.roadmapPhaseID,
