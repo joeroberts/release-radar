@@ -2777,6 +2777,129 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanAssignmentDraftNeverConfirmsMissingOrMismatchedTypedReceipt() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let edits = [DeliveryGoalAssignmentEdit(ticketID: .init(rawValue: "ROAD-1"), goalID: seeded.second.id)]
+        let receipts: [(String, AgentCommandResult)] = [
+            ("missing", .init(entityIDs: ["ROAD-1"], auditEventID: nil, error: nil)),
+            ("mismatched revision", .init(entityIDs: ["ROAD-1"], auditEventID: .init(rawValue: "receipt-audit"), error: nil, phasePlanRevision: 99)),
+        ]
+
+        for (name, receipt) in receipts {
+            let capture = DeliveryGoalDraftDispatchCapture(result: receipt)
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                externalServicesSuppressed: true,
+                deliveryGoalAssignmentDraftOwnerCommandDispatch: { _, _, requestID, command in
+                    await capture.dispatch(requestID: requestID, command: command)
+                }
+            )
+            let first = await model.saveDeliveryGoalAssignmentDraft(
+                projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID, expectedRevision: 2, edits: edits
+            )
+            guard case .unconfirmed(error: .outcomeUnknown) = first.status else {
+                return XCTFail("\(name) receipt must not be reported as confirmed: \(first.status)")
+            }
+            let pending = try XCTUnwrap(
+                model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+            )
+            XCTAssertEqual(pending.attemptID, first.attemptID)
+            XCTAssertEqual(pending.expectedRevision, 2)
+            XCTAssertEqual(pending.edits, edits)
+
+            let replay = await model.reconcileDeliveryGoalAssignmentDraftSave(attemptID: first.attemptID)
+            guard case .unconfirmed(error: .outcomeUnknown) = replay.status else {
+                return XCTFail("\(name) replay remains unconfirmed without an authoritative receipt: \(replay.status)")
+            }
+            let requests = await capture.requests()
+            XCTAssertEqual(requests.map(\.requestID), [first.attemptID, first.attemptID], "\(name) replay must use the exact retained attempt identity")
+            XCTAssertEqual(requests.map(\.command), [requests[0].command, requests[0].command], "\(name) replay must preserve the exact retained command")
+        }
+    }
+
+    @MainActor
+    func testProjectPlanAssignmentDraftKeepsPendingAttemptsPhaseKeyedAndRejectsDefiniteReplayFailure() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let capture = DeliveryGoalAssignmentDispatchSequence(results: [
+            .init(entityIDs: [], auditEventID: nil, error: .outcomeUnknown),
+            .init(entityIDs: [], auditEventID: nil, error: .outcomeUnknown),
+            .init(entityIDs: [], auditEventID: nil, error: .appUnavailable),
+        ])
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalAssignmentDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        let roadmap = await model.saveDeliveryGoalAssignmentDraft(
+            projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID, expectedRevision: 2,
+            edits: [.init(ticketID: .init(rawValue: "ROAD-1"), goalID: seeded.second.id)]
+        )
+        let empty = await model.saveDeliveryGoalAssignmentDraft(
+            projectID: fixture.projectID, phaseID: fixture.emptyPhaseID, expectedRevision: 1,
+            edits: [.init(ticketID: .init(rawValue: "EMPTY-1"), goalID: .init(rawValue: "foreign-assignment-goal"))]
+        )
+        guard case .unconfirmed = roadmap.status, case .unconfirmed = empty.status else {
+            return XCTFail("Both unknown outcomes must retain independent phase-keyed attempts")
+        }
+        XCTAssertNotNil(model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        XCTAssertNotNil(model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.emptyPhaseID))
+
+        let replay = await model.reconcileDeliveryGoalAssignmentDraftSave(attemptID: roadmap.attemptID)
+        guard case let .rejected(error: .appUnavailable, _) = replay.status else {
+            return XCTFail("A definite replay failure must reject rather than remain pending: \(replay.status)")
+        }
+        XCTAssertNil(model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+        XCTAssertNotNil(model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.emptyPhaseID))
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.map(\.requestID), [roadmap.attemptID, empty.attemptID, roadmap.attemptID])
+        XCTAssertEqual(requests[0].command, requests[2].command, "Replay must preserve its phase's exact command")
+    }
+
+    @MainActor
+    func testProjectPlanAssignmentEditorReadsCurrentStoreSnapshotInsteadOfStaleDashboard() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let lateGoal = DeliveryGoalDraft(
+            id: .init(rawValue: "late-store-goal"),
+            title: "Late store goal",
+            outcome: "Must appear in the same editor snapshot",
+            doneCriteria: ["Read current store"],
+            sortOrder: 9
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Advance store after dashboard load") { connection in
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: fixture.projectID,
+                phaseID: fixture.roadmapPhaseID,
+                expectedRevision: 2,
+                goalUpserts: [lateGoal],
+                assignments: [.init(goalID: lateGoal.id, ticketID: .init(rawValue: "ROAD-X"))],
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "late-store-goal-audit"),
+                connection: connection
+            )
+        }
+
+        switch await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID) {
+        case let .loaded(editor):
+            XCTAssertEqual(editor.planRevision, 3)
+            XCTAssertTrue(editor.goals.contains { $0.goalID == lateGoal.id })
+            XCTAssertTrue(editor.assignments.contains(.init(goalID: lateGoal.id, ticketID: .init(rawValue: "ROAD-X"))))
+            XCTAssertEqual(editor.tickets.map(\.id.rawValue), ["ROAD-1", "ROAD-2", "ROAD-X"])
+        case let .failed(error):
+            XCTFail("Assignment editor must derive one authoritative current store snapshot: \(error)")
+        }
+    }
+
+    @MainActor
     func testProjectPlanAssignmentDraftPersistsAcrossFreshModelNavigationAndReadback() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
@@ -9114,6 +9237,28 @@ private actor DeliveryGoalAssignmentReconcileCapture {
 
     func record(_ attemptID: UUID) { recorded.append(attemptID) }
     func attempts() -> [UUID] { recorded }
+}
+
+private actor DeliveryGoalAssignmentDispatchSequence {
+    struct Request: Equatable, Sendable {
+        let requestID: UUID
+        let command: AgentCommand
+    }
+
+    private var results: [AgentCommandResult]
+    private var recorded: [Request] = []
+
+    init(results: [AgentCommandResult]) { self.results = results }
+
+    func dispatch(requestID: UUID, command: AgentCommand) -> AgentCommandResult {
+        recorded.append(.init(requestID: requestID, command: command))
+        guard !results.isEmpty else {
+            return .init(entityIDs: [], auditEventID: nil, error: .outcomeUnknown)
+        }
+        return results.removeFirst()
+    }
+
+    func requests() -> [Request] { recorded }
 }
 
 private final class RR9DashboardLoadCounter: @unchecked Sendable {
