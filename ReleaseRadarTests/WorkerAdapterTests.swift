@@ -251,6 +251,17 @@ final class WorkerAdapterTests: XCTestCase {
         var delayedThreadStart: Gate?
         var instructionSources: [String]?
         var beforeThreadStartReturn: (() throws -> Void)?
+        // These are deliberately protocol-shaped responses rather than a
+        // second project fixture: WorkerAdapter must resolve the Codex project
+        // through the peer it is about to use for thread/start.
+        var projectListResponses: [[String: Any]] = []
+        var projectListFailure: AppServerTransportError?
+        var projectReadResponse: [String: Any]?
+        var projectReadFailure: AppServerTransportError?
+        var threadReadResponse: [String: Any]?
+        var threadReadFailure: AppServerTransportError?
+        var startProjectID: String? = "codex-project-one"
+        var afterProjectListReturn: (() throws -> Void)?
         init(policy: WorkerPolicy) { self.policy = policy }
         func send(_ object: [String: Any]) throws {
             if sendFailure { throw AppServerTransportError(message: "Fixture uncertain approval response", outcomeUnknown: true) }
@@ -271,11 +282,37 @@ final class WorkerAdapterTests: XCTestCase {
                 if broadRead { fs["/Users"] = "read" }
                 return try RPCObject(["config": ["model_provider": modelProvider, "permissions": [selected.permissionProfile: ["filesystem": fs, "network": ["enabled": false]]]]])
             }
+            if method == "project/list" {
+                if let projectListFailure { throw projectListFailure }
+                let index = calls.filter { $0.0 == "project/list" }.count - 1
+                if index < projectListResponses.count {
+                    let response = try RPCObject(projectListResponses[index])
+                    try afterProjectListReturn?()
+                    return response
+                }
+                let response = try RPCObject(["data": [["id": "codex-project-one", "roots": [["path": try CodexExecutionContext.canonicalPath(policy.policy.primaryRoot)]]]]])
+                try afterProjectListReturn?()
+                return response
+            }
+            if method == "project/read" {
+                if let projectReadFailure { throw projectReadFailure }
+                if let projectReadResponse { return try RPCObject(projectReadResponse) }
+                let params = try parameters.object()
+                return try RPCObject(["project": ["id": params["projectId"] ?? NSNull(), "roots": [["path": try CodexExecutionContext.canonicalPath(policy.policy.primaryRoot)]]]])
+            }
+            if method == "thread/read" {
+                if let threadReadFailure { throw threadReadFailure }
+                if let threadReadResponse { return try RPCObject(threadReadResponse) }
+                let params = try parameters.object()
+                return try RPCObject(["thread": ["id": params["threadId"] ?? NSNull(), "projectId": "codex-project-one", "cwd": selected.checkoutPath]])
+            }
             if method == "thread/start" {
                 if let delayedThreadStart { self.delayedThreadStart = nil; await delayedThreadStart.pause() }
                 if lostStart { throw AppServerTransportError(message: "Unknown start", outcomeUnknown: true) }
                 try beforeThreadStartReturn?()
-                return try RPCObject(["thread": ["id": "session-one", "modelProvider": returnedModelProvider], "cwd": selected.checkoutPath,
+                var thread: [String: Any] = ["id": "session-one", "modelProvider": returnedModelProvider]
+                if let startProjectID { thread["projectId"] = startProjectID }
+                return try RPCObject(["thread": thread, "cwd": selected.checkoutPath,
                     "runtimeWorkspaceRoots": [selected.checkoutPath], "model": selected.model, "reasoningEffort": selected.effort,
                     "activePermissionProfile": ["id": selected.permissionProfile], "sandbox": ["networkAccess": false],
                     "approvalPolicy": "on-request", "instructionSources": instructionSources ?? [selected.checkoutPath + "/AGENTS.md"]])
@@ -329,6 +366,242 @@ final class WorkerAdapterTests: XCTestCase {
         return (store, try WorkerPolicy(store: store, projectID: "project-one", taskID: "task-one"))
     }
 
+    func testDeliveryAndReviewWorkersStartInTheResolvedCodexProject() async throws {
+        for role in [ProjectExecutionAssignment.Role.delivery, .review] {
+            let valid = try fixture(role: role)
+            let peer = Peer(policy: valid.policy)
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one",
+                prompt: "Begin").object()
+
+            let projectList = try XCTUnwrap(peer.calls.first { $0.0 == "project/list" }).1.object()
+            XCTAssertNil(projectList["cursor"], "The first project inventory page is uncursorred")
+            let threadStart = try XCTUnwrap(peer.calls.first { $0.0 == "thread/start" }).1.object()
+            XCTAssertEqual(threadStart["projectId"] as? String, "codex-project-one")
+            XCTAssertEqual(threadStart["cwd"] as? String, valid.policy.assignment.checkoutPath)
+            XCTAssertEqual(threadStart["runtimeWorkspaceRoots"] as? [String], [valid.policy.assignment.checkoutPath])
+            XCTAssertEqual(started["projectId"] as? String, "project-one", "RR project identity stays compatible")
+            XCTAssertEqual(started["codexProjectId"] as? String, "codex-project-one")
+            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, "A verified association admits the first turn")
+        }
+    }
+
+    func testProjectResolutionFollowsPaginationBeforeStartingWorker() async throws {
+        let valid = try fixture()
+        let peer = Peer(policy: valid.policy)
+        peer.projectListResponses = [
+            ["data": [["id": "unrelated", "roots": [["path": valid.store.root.appendingPathComponent("Other").path]]]], "nextCursor": "next-page"],
+            ["data": [["id": "codex-project-one", "roots": [["path": try CodexExecutionContext.canonicalPath(valid.policy.policy.primaryRoot)]]]]],
+        ]
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+        _ = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin")
+
+        let inventories = peer.calls.filter { $0.0 == "project/list" }
+        XCTAssertEqual(inventories.count, 2)
+        XCTAssertNil(try inventories[0].1.object()["cursor"])
+        XCTAssertEqual(try inventories[1].1.object()["cursor"] as? String, "next-page")
+        let threadStart = try XCTUnwrap(peer.calls.first { $0.0 == "thread/start" }).1.object()
+        XCTAssertEqual(threadStart["projectId"] as? String, "codex-project-one")
+    }
+
+    func testMissingOrAmbiguousProjectAssociationNeverStartsAWorker() async throws {
+        let responses: [[String: Any]] = [
+            ["data": []],
+            ["data": [
+                ["id": "first", "roots": [["path": "PLACEHOLDER"]]],
+                ["id": "second", "roots": [["path": "PLACEHOLDER"]]],
+            ]],
+        ]
+
+        for (index, response) in responses.enumerated() {
+            let valid = try fixture()
+            let peer = Peer(policy: valid.policy)
+            var configured = response
+            if var projects = configured["data"] as? [[String: Any]] {
+                let canonicalRoot = try CodexExecutionContext.canonicalPath(valid.policy.policy.primaryRoot)
+                projects = projects.map { project in
+                    guard project["id"] as? String != nil else { return project }
+                    return project.merging(["roots": [["path": canonicalRoot]]]) { _, replacement in replacement }
+                }
+                configured["data"] = projects
+            }
+            peer.projectListResponses = [configured]
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+
+            XCTAssertEqual(started["status"] as? String, "failed")
+            let error = try XCTUnwrap(started["error"] as? String)
+            XCTAssertTrue(error.contains(index == 0
+                ? "No saved Codex project has the registered repository root."
+                : "More than one saved Codex project has the registered repository root."))
+            XCTAssertTrue(error.contains("Close or reconcile the existing unknown assignment"), "Association failure must state the durable recovery route")
+            XCTAssertTrue(error.contains("fresh authorized assignment"), "Association failure must forbid simple same-assignment retry")
+            XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" })
+        }
+    }
+
+    func testReturnedProjectMismatchCannotBindOrStartTurn() async throws {
+        let valid = try fixture()
+        let peer = Peer(policy: valid.policy)
+        peer.startProjectID = "different-codex-project"
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertNil(started["codexProjectId"])
+        XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" })
+        let assignment = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertNil(assignment.sessionID)
+        XCTAssertEqual(assignment.state, .unknown)
+    }
+
+    func testChangedCodexContextDuringProjectResolutionCannotStartWorker() async throws {
+        let valid = try fixture()
+        let original = try XCTUnwrap(valid.store.codexContext())
+        let peer = Peer(policy: valid.policy)
+        peer.afterProjectListReturn = {
+            let changed = try CodexExecutionContext(home: URL(fileURLWithPath: original.homePath), bookmark: Data([2]), id: original.id)
+            try valid.store.saveCodexContext(changed, expected: original)
+        }
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertEqual(peer.calls.filter { $0.0 == "project/list" }.count, 1)
+        XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" })
+    }
+
+    func testMalformedProjectInventoryCannotStartAWorker() async throws {
+        let malformedResponses: [[String: Any]] = [
+            ["data": [["id": 3, "roots": [["path": "/not-used"]]]]],
+            ["data": [], "nextCursor": 4],
+        ]
+
+        for response in malformedResponses {
+            let valid = try fixture()
+            let peer = Peer(policy: valid.policy)
+            peer.projectListResponses = [response]
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+
+            XCTAssertEqual(started["status"] as? String, "failed")
+            let error = try XCTUnwrap(started["error"] as? String)
+            XCTAssertTrue(error.contains("Close or reconcile the existing unknown assignment"))
+            XCTAssertTrue(error.contains("fresh authorized assignment"))
+            XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" })
+        }
+    }
+
+    func testProjectInventoryTransportFailureNeverStartsAndUncertainFailureCannotRedispatch() async throws {
+        for outcomeUnknown in [false, true] {
+            let valid = try fixture()
+            let peer = Peer(policy: valid.policy)
+            peer.projectListFailure = AppServerTransportError(message: "Synthetic project inventory failure", outcomeUnknown: outcomeUnknown)
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+
+            XCTAssertEqual(started["status"] as? String, outcomeUnknown ? "unknown" : "failed")
+            XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" })
+            if outcomeUnknown {
+                let replacement = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+                do {
+                    _ = try await replacement.start(projectID: "project-one", assignmentID: "task-one", prompt: "Retry")
+                    XCTFail("Unknown project inventory must not redispatch")
+                } catch {}
+                XCTAssertEqual(peer.calls.filter { $0.0 == "project/list" }.count, 1)
+            }
+        }
+    }
+
+    func testFollowUpRevalidatesProjectAndThreadAssociationBeforeStartingTurn() async throws {
+        let valid = try fixture()
+        let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let workerID = try XCTUnwrap(started["workerId"] as? String)
+        let before = peer.calls
+
+        _ = try await adapter.followUp(workerID: workerID, prompt: "Continue")
+
+        let added = Array(peer.calls.dropFirst(before.count))
+        let methods = added.map { $0.0 }
+        let list = try XCTUnwrap(methods.firstIndex(of: "project/list"))
+        let project = try XCTUnwrap(methods.firstIndex(of: "project/read"))
+        let thread = try XCTUnwrap(methods.firstIndex(of: "thread/read"))
+        let turn = try XCTUnwrap(methods.firstIndex(of: "turn/start"))
+        XCTAssertLessThan(list, turn); XCTAssertLessThan(project, turn); XCTAssertLessThan(thread, turn)
+        XCTAssertEqual(try added[project].1.object()["projectId"] as? String, "codex-project-one")
+        XCTAssertEqual(try added[thread].1.object()["threadId"] as? String, "session-one")
+    }
+
+    func testFollowUpProjectReadMismatchOrUnavailableCannotReachThreadReadOrTurn() async throws {
+        for kind in ["root", "unavailable"] {
+            let valid = try fixture()
+            let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+            let workerID = try XCTUnwrap(started["workerId"] as? String)
+            if kind == "root" {
+                peer.projectReadResponse = ["project": ["id": "codex-project-one", "roots": [["path": valid.store.root.appendingPathComponent("wrong-root").path]]]]
+            } else {
+                peer.projectReadFailure = AppServerTransportError(message: "Synthetic project read unavailable", outcomeUnknown: false)
+            }
+            let before = peer.calls.count
+
+            do {
+                _ = try await adapter.followUp(workerID: workerID, prompt: "Continue")
+                XCTFail("Invalid project read must prevent the next turn: \(kind)")
+            } catch {}
+
+            let added = Array(peer.calls.dropFirst(before))
+            XCTAssertTrue(added.contains { $0.0 == "project/list" }, kind)
+            XCTAssertTrue(added.contains { $0.0 == "project/read" }, kind)
+            XCTAssertFalse(added.contains { $0.0 == "thread/read" || $0.0 == "turn/start" }, kind)
+            XCTAssertFalse(peer.calls.contains { $0.0 == "metadata/update" || $0.0 == "thread/update" }, kind)
+        }
+    }
+
+    func testFollowUpThreadAssociationMismatchMalformedOrUnavailableCannotReachTurn() async throws {
+        for kind in ["project", "cwd", "malformed", "unavailable"] {
+            let valid = try fixture()
+            let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+            let workerID = try XCTUnwrap(started["workerId"] as? String)
+            switch kind {
+            case "project":
+                peer.threadReadResponse = ["thread": ["id": "session-one", "projectId": "other-project", "cwd": valid.policy.assignment.checkoutPath]]
+            case "cwd":
+                peer.threadReadResponse = ["thread": ["id": "session-one", "projectId": "codex-project-one", "cwd": valid.store.root.appendingPathComponent("wrong-checkout").path]]
+            case "malformed":
+                peer.threadReadResponse = ["thread": ["id": "session-one", "projectId": "codex-project-one"]]
+            default:
+                peer.threadReadFailure = AppServerTransportError(message: "Synthetic thread read unavailable", outcomeUnknown: false)
+            }
+            let before = peer.calls.count
+
+            do {
+                _ = try await adapter.followUp(workerID: workerID, prompt: "Continue")
+                XCTFail("Invalid thread association must prevent the next turn: \(kind)")
+            } catch {}
+
+            let added = Array(peer.calls.dropFirst(before))
+            XCTAssertTrue(added.contains { $0.0 == "project/list" }, kind)
+            XCTAssertTrue(added.contains { $0.0 == "project/read" }, kind)
+            XCTAssertTrue(added.contains { $0.0 == "thread/read" }, kind)
+            XCTAssertFalse(added.contains { $0.0 == "turn/start" }, kind)
+            XCTAssertFalse(peer.calls.contains { $0.0 == "metadata/update" || $0.0 == "thread/update" }, kind)
+            XCTAssertEqual(peer.calls.filter { $0.0 == "thread/start" }.count, 1, kind)
+        }
+    }
+
     func testImageViewingOverridesAreLimitedToReviewAssignments() throws {
         let delivery = try fixture()
         let review = try fixture(role: .review)
@@ -355,16 +628,9 @@ final class WorkerAdapterTests: XCTestCase {
         XCTAssertEqual(selectedGlobalSource, try CodexExecutionContext.canonicalPath(global.path))
         peer.instructionSources = [selectedGlobalSource, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
-        let expectedContextSources = valid.policy.assignment.context.map {
-            valid.policy.assignment.checkoutPath + "/" + $0.path
-        }.joined(separator: ", ")
-        let reportedInstructionSources = (peer.instructionSources ?? []).joined(separator: ", ")
         let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-        let startError = started["error"].map { String(describing: $0) } ?? "nil"
-        let startCalls = peer.calls.map(\.0).joined(separator: ", ")
-        let startDiagnostic = "error=\(startError), global=\(selectedGlobalSource), expected=\(expectedContextSources), reported=\(reportedInstructionSources), calls=\(startCalls)"
-        XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
-        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
+        XCTAssertEqual(started["status"] as? String, "inProgress")
+        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
         _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
         await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
             "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
@@ -384,16 +650,9 @@ final class WorkerAdapterTests: XCTestCase {
             XCTAssertEqual(selectedGlobalSource, try CodexExecutionContext.canonicalPath(expected.path))
             peer.instructionSources = [selectedGlobalSource, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
             let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
-            let expectedContextSources = valid.policy.assignment.context.map {
-                valid.policy.assignment.checkoutPath + "/" + $0.path
-            }.joined(separator: ", ")
-            let reportedInstructionSources = (peer.instructionSources ?? []).joined(separator: ", ")
             let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-            let startError = started["error"].map { String(describing: $0) } ?? "nil"
-            let startCalls = peer.calls.map(\.0).joined(separator: ", ")
-            let startDiagnostic = "error=\(startError), global=\(selectedGlobalSource), expected=\(expectedContextSources), reported=\(reportedInstructionSources), calls=\(startCalls)"
-            XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
-            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
+            XCTAssertEqual(started["status"] as? String, "inProgress")
+            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
             _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
             await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
                 "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
@@ -694,6 +953,10 @@ final class WorkerAdapterTests: XCTestCase {
         XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one").state, .unknown)
         let replacement = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in peer })
         do { _ = try await replacement.start(projectID: "project-one", assignmentID: "task-one", prompt: "Try again"); XCTFail("Unknown must not redispatch") } catch {}
+        XCTAssertEqual(peer.calls.filter { $0.0 == "project/list" }.count, 1,
+            "Unknown launch recovery must not re-resolve association for a replacement worker")
+        let threadStart = try XCTUnwrap(peer.calls.first { $0.0 == "thread/start" }).1.object()
+        XCTAssertEqual(threadStart["projectId"] as? String, "codex-project-one")
         XCTAssertEqual(peer.calls.filter { $0.0 == "thread/start" }.count, 1)
         XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" })
     }
@@ -773,6 +1036,9 @@ final class WorkerAdapterTests: XCTestCase {
         let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.completesImmediately = true
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
         let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        guard started["status"] as? String == "completed" else {
+            return XCTFail("Follow-up gate requires a completed initial turn, got \(started["status"] ?? "missing")")
+        }
         let id = try XCTUnwrap(started["workerId"] as? String)
         let gate = Gate(); peer.delayedHooks = gate
         let first = Task { try await adapter.followUp(workerID: id, prompt: "Continue") }
