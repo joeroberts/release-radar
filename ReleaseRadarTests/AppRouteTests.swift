@@ -2817,7 +2817,8 @@ final class AppRouteTests: XCTestCase {
             return XCTFail("Incomplete draft must be rejected before dispatch")
         }
         XCTAssertEqual(message, "Enter a title, intended outcome, and at least one done criterion.")
-        XCTAssertTrue((await capture.requests()).isEmpty)
+        let requests = await capture.requests()
+        XCTAssertTrue(requests.isEmpty)
     }
 
     func testDeliveryGoalDraftErrorMessageUsesPlainLanguageForStaleRevision() {
@@ -2909,7 +2910,8 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(savedRevision, 2)
         XCTAssertEqual(auditEventID, .init(rawValue: "delivery-goal-save-audit"))
         XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
-        XCTAssertEqual((await capture.requests()).count, 1)
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.count, 1)
     }
 
     @MainActor
@@ -2955,7 +2957,8 @@ final class AppRouteTests: XCTestCase {
             .rejected(error: .staleProjectRegistration, refreshedEditor: nil)
         )
         XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
-        XCTAssertEqual((await capture.requests()).count, 1, "Root mismatch must not replay or rebuild the original envelope")
+        let requests = await capture.requests()
+        XCTAssertEqual(requests.count, 1, "Root mismatch must not replay or rebuild the original envelope")
         let persisted = try await fixture.store.read { connection in
             try DeliveryPlanningPolicy.loadGoal(
                 projectID: fixture.projectID,
@@ -3056,7 +3059,8 @@ final class AppRouteTests: XCTestCase {
             XCTAssertEqual(hosting.bounds.width, width, accuracy: 1)
             try taskCapture(hosting, name: "delivery-goal-draft-\(Int(width))")
         }
-        XCTAssertTrue((await capture.requests()).isEmpty, "Cancelling an editor must not save a draft")
+        let requests = await capture.requests()
+        XCTAssertTrue(requests.isEmpty, "Cancelling an editor must not save a draft")
     }
 
     @MainActor
