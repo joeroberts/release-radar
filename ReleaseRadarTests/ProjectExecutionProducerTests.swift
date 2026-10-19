@@ -23,7 +23,7 @@ final class ProjectExecutionProducerTests: XCTestCase {
         func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
             if sharedSkillContextChanged { throw CodexExecutionContextError.changed }
             if sharedSkillUnavailable { throw ProjectExecutionError.unavailable }
-            try ProjectExecutionSharedExecutionSkill(
+            return try ProjectExecutionSharedExecutionSkill(
                 skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
                 pluginVersion: "0.1.12",
                 packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
@@ -227,7 +227,7 @@ final class ProjectExecutionProducerTests: XCTestCase {
         func setCloseFailure(_ value: Bool) { closeFails = value }
         func validateInstallation(handlerPath: String) {}
         func sharedExecutionSkill() async throws -> ProjectExecutionSharedExecutionSkill {
-            try ProjectExecutionSharedExecutionSkill(
+            return try ProjectExecutionSharedExecutionSkill(
                 skillFile: "/selected/.codex/plugins/cache/release-radar/release-radar/0.1.12/skills/shared-execution/SKILL.md",
                 pluginVersion: "0.1.12",
                 packageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
