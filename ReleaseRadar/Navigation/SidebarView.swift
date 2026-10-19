@@ -278,6 +278,12 @@ struct SidebarView: View {
                     openDeliveryGoal: { item in
                         Task { await model.openWorkspaceDeliveryGoal(item) }
                     },
+                    openDeliveryGoalPlanning: { item in
+                        Task { await model.openWorkspaceDeliveryGoalPlanning(item) }
+                    },
+                    openProjectPlanning: { projectID in
+                        Task { await model.openWorkspaceProjectPlanning(projectID) }
+                    },
                     openUnassignedWork: { item in
                         Task { await model.openWorkspaceUnassignedWork(item) }
                     },
@@ -468,6 +474,24 @@ struct SidebarView: View {
                         reloadPhaseLifecycle: {
                             await model.reloadPhaseLifecycle()
                         },
+                        loadDeliveryGoalEditor: { phaseID, goalID in
+                            await model.loadDeliveryGoalEditor(
+                                projectID: projectID, phaseID: phaseID, goalID: goalID
+                            )
+                        },
+                        saveDeliveryGoalDraft: { phaseID, revision, draft in
+                            await model.saveDeliveryGoalDraft(
+                                projectID: projectID, phaseID: phaseID,
+                                expectedRevision: revision, draft: draft
+                            )
+                        },
+                        reconcileDeliveryGoalDraftSave: { attemptID in
+                            await model.reconcileDeliveryGoalDraftSave(attemptID: attemptID)
+                        },
+                        deliveryGoalDraftSaveRecovery: { phaseID in
+                            model.deliveryGoalDraftSaveRecovery(projectID: projectID, phaseID: phaseID)
+                        },
+                        requestedDeliveryGoalEditor: model.takeWorkspaceDeliveryGoalPlanningTarget(for: projectID),
                         repositoryPlanReconstruction: model.repositoryPlanReconstruction(
                             for: projectID
                         ),

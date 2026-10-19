@@ -6,6 +6,68 @@ enum ProjectPlanLayout {
     static func usesStackedInspector(forWidth width: CGFloat) -> Bool { width < 1_100 }
 }
 
+struct DeliveryGoalEditorSnapshot: Equatable, Sendable {
+    let projectID: ProjectID
+    let phaseID: PhaseID
+    let planRevision: Int64
+    let phaseLifecycle: PhaseLifecycle
+    let goalLifecycle: DeliveryGoalLifecycle?
+    let draft: DeliveryGoalDraft
+}
+
+enum DeliveryGoalEditorLoadOutcome: Equatable, Sendable {
+    case loaded(DeliveryGoalEditorSnapshot)
+    case failed(AgentCommandError)
+}
+
+struct DeliveryGoalDraftSaveOutcome: Equatable, Sendable {
+    enum Status: Equatable, Sendable {
+        case confirmed(savedRevision: Int64, auditEventID: AuditEventID, readback: DeliveryGoalEditorSnapshot)
+        case savedNeedsReload(savedRevision: Int64, auditEventID: AuditEventID)
+        case rejected(error: AgentCommandError, refreshedEditor: DeliveryGoalEditorSnapshot?)
+        case unconfirmed(error: AgentCommandError)
+    }
+
+    let attemptID: UUID
+    let status: Status
+}
+
+struct DeliveryGoalDraftSaveRecovery: Equatable, Sendable {
+    let attemptID: UUID
+    let draft: DeliveryGoalDraft
+    let expectedRevision: Int64
+    let error: AgentCommandError
+}
+
+struct DeliveryGoalEditorTarget: Equatable, Sendable {
+    let phaseID: PhaseID
+    let goalID: DeliveryGoalID?
+}
+
+func deliveryGoalDraftErrorMessage(_ error: AgentCommandError) -> String {
+    switch error {
+    case let .invalidPlanMutation(message): message
+    case .planRevisionConflict:
+        "This phase plan changed. Refresh the plan, keep your edits, then save again."
+    case let .completedPhaseReadOnly(phaseID):
+        "Phase \(phaseID.rawValue) is completed and cannot be changed."
+    case let .goalNotFound(goalID):
+        "Delivery Goal \(goalID.rawValue) is no longer available. Refresh the plan."
+    case let .goalNotActionable(goalID):
+        "Delivery Goal \(goalID.rawValue) is immutable and cannot be edited."
+    case .staleProjectRegistration:
+        "This project changed. Refresh it before saving the Delivery Goal."
+    case .appUnavailable:
+        "Release Radar is temporarily unavailable. Your edits are still here; save again when it is available."
+    case .outcomeUnknown:
+        "Release Radar could not confirm that save. Reconcile the same saved attempt before creating another goal."
+    case .unauthorizedProjectRoot:
+        "Release Radar cannot access this project. Reauthorize it, then try again."
+    default:
+        "The Delivery Goal could not be saved. Refresh the plan and try again."
+    }
+}
+
 struct ProjectPlanView: View {
     let plan: ProjectPlanProjection
     @Binding var selectedTicketID: TicketID
@@ -21,6 +83,11 @@ struct ProjectPlanView: View {
     var refreshProposal: ((PlanChangeProposalID, Int64, String, [PlanChangeOperation]) async -> AgentCommandResult)? = nil
     var transitionPhaseLifecycle: ((PhaseID, Int64, PhaseLifecycleAction, String?, String) async -> AgentCommandResult)? = nil
     var reloadPhaseLifecycle: (() async -> Void)? = nil
+    var loadDeliveryGoalEditor: ((PhaseID, DeliveryGoalID?) async -> DeliveryGoalEditorLoadOutcome)? = nil
+    var saveDeliveryGoalDraft: ((PhaseID, Int64, DeliveryGoalDraft) async -> DeliveryGoalDraftSaveOutcome)? = nil
+    var reconcileDeliveryGoalDraftSave: ((UUID) async -> DeliveryGoalDraftSaveOutcome)? = nil
+    var deliveryGoalDraftSaveRecovery: ((PhaseID) -> DeliveryGoalDraftSaveRecovery?)? = nil
+    var requestedDeliveryGoalEditor: DeliveryGoalEditorTarget? = nil
     var repositoryPlanReconstruction: RepositoryPlanReconstructionPresentation? = nil
     var openRepositoryPlanReconstruction: (() -> Void)? = nil
     var setRepositoryPlanSourceSelected: ((String, Bool) -> Void)? = nil
@@ -58,6 +125,13 @@ struct ProjectPlanView: View {
     @FocusState private var focusedTicketID: TicketID?
     @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
     @State private var showsRepositoryPlanReconstruction = false
+    @State private var showsDeliveryGoalEditor = false
+    @State private var deliveryGoalEditor: DeliveryGoalEditorSnapshot?
+    @State private var deliveryGoalTitle = ""
+    @State private var deliveryGoalOutcome = ""
+    @State private var deliveryGoalCriteria = ""
+    @State private var deliveryGoalEditorMessage: String?
+    @State private var isSavingDeliveryGoal = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -95,6 +169,9 @@ struct ProjectPlanView: View {
         .task {
             reconcileProposalSelection()
             applyRequestedFocus()
+            if let target = requestedDeliveryGoalEditor {
+                openDeliveryGoalEditor(target.phaseID, goalID: target.goalID)
+            }
         }
         .sheet(isPresented: $showsRepositoryPlanReconstruction) {
             RepositoryPlanReconstructionView(
@@ -150,6 +227,7 @@ struct ProjectPlanView: View {
                 }
             )
         }
+        .sheet(isPresented: $showsDeliveryGoalEditor) { deliveryGoalEditorSheet }
     }
 
     private var header: some View {
@@ -331,6 +409,11 @@ struct ProjectPlanView: View {
                 Spacer()
                 Button("Open board") { openPhase(phase.id) }
                     .accessibilityLabel("Open \(phase.name) phase board")
+                if phase.lifecycle.lifecycle != .completed, loadDeliveryGoalEditor != nil {
+                    Button("Create Delivery Goal") { openDeliveryGoalEditor(phase.id, goalID: nil) }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("create-delivery-goal-\(phase.id.rawValue)")
+                }
             }
             Text(readinessSummary(phase.readiness))
                 .font(.subheadline)
@@ -374,6 +457,13 @@ struct ProjectPlanView: View {
                                 }
                             }
                         }
+                        Spacer(minLength: 8)
+                        if goal.lifecycle != .accepted, goal.lifecycle != .superseded,
+                           phase.lifecycle.lifecycle != .completed, loadDeliveryGoalEditor != nil {
+                            Button("Edit") { openDeliveryGoalEditor(phase.id, goalID: goal.goalID) }
+                                .buttonStyle(RekonSecondaryButtonStyle())
+                                .accessibilityIdentifier("edit-delivery-goal-\(goal.goalID.rawValue)")
+                        }
                     }
                 }
             }
@@ -393,6 +483,110 @@ struct ProjectPlanView: View {
         .overlay { RoundedRectangle(cornerRadius: 12).stroke(RekonTheme.border, lineWidth: RekonBorder.hairline) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-plan-phase-\(phase.id.rawValue)")
+    }
+
+    @ViewBuilder private var deliveryGoalEditorSheet: some View {
+        NavigationStack {
+            Form {
+                if let editor = deliveryGoalEditor {
+                    Section {
+                        Text("Plan revision \(editor.planRevision)")
+                        Text(editor.goalLifecycle == nil ? "New Delivery Goal" : "Edit Delivery Goal")
+                    }
+                    Section("Goal") {
+                        TextField("Title", text: $deliveryGoalTitle)
+                        TextField("Intended outcome", text: $deliveryGoalOutcome, axis: .vertical)
+                        TextField("Done criteria, one per line", text: $deliveryGoalCriteria, axis: .vertical)
+                    }
+                    if let message = deliveryGoalEditorMessage {
+                        Text(message).foregroundStyle(RekonTheme.danger)
+                            .accessibilityIdentifier("delivery-goal-editor-message")
+                    }
+                    if let recovery = deliveryGoalDraftSaveRecovery?(editor.phaseID) {
+                        Button("Reconcile saved attempt") { reconcileDeliveryGoalDraftSave(recovery.attemptID) }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .disabled(isSavingDeliveryGoal)
+                            .accessibilityIdentifier("reconcile-delivery-goal-save")
+                    }
+                } else {
+                    ProgressView("Loading Delivery Goal editor")
+                }
+            }
+            .navigationTitle("Delivery Goal")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showsDeliveryGoalEditor = false }
+                        .disabled(isSavingDeliveryGoal)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveCurrentDeliveryGoal() }
+                        .disabled(deliveryGoalEditor == nil || isSavingDeliveryGoal)
+                }
+            }
+        }
+        .frame(minWidth: 480, minHeight: 380)
+    }
+
+    private func openDeliveryGoalEditor(_ phaseID: PhaseID, goalID: DeliveryGoalID?) {
+        guard let loadDeliveryGoalEditor else { return }
+        deliveryGoalEditor = nil
+        deliveryGoalEditorMessage = nil
+        showsDeliveryGoalEditor = true
+        Task {
+            switch await loadDeliveryGoalEditor(phaseID, goalID) {
+            case let .loaded(editor):
+                deliveryGoalEditor = editor
+                deliveryGoalTitle = editor.draft.title
+                deliveryGoalOutcome = editor.draft.outcome
+                deliveryGoalCriteria = editor.draft.doneCriteria.joined(separator: "\n")
+            case let .failed(error):
+                deliveryGoalEditorMessage = deliveryGoalDraftErrorMessage(error)
+            }
+        }
+    }
+
+    private func saveCurrentDeliveryGoal() {
+        guard let editor = deliveryGoalEditor, let saveDeliveryGoalDraft else { return }
+        isSavingDeliveryGoal = true
+        let draft = DeliveryGoalDraft(
+            id: editor.draft.id, title: deliveryGoalTitle, outcome: deliveryGoalOutcome,
+            doneCriteria: deliveryGoalCriteria.components(separatedBy: .newlines), sortOrder: editor.draft.sortOrder
+        )
+        Task {
+            let outcome = await saveDeliveryGoalDraft(editor.phaseID, editor.planRevision, draft)
+            isSavingDeliveryGoal = false
+            switch outcome.status {
+            case .confirmed:
+                showsDeliveryGoalEditor = false
+            case .savedNeedsReload:
+                deliveryGoalEditorMessage = "Saved. Reload the project plan before editing again."
+            case let .rejected(error, refreshedEditor):
+                deliveryGoalEditorMessage = deliveryGoalDraftErrorMessage(error)
+                if let refreshedEditor { deliveryGoalEditor = refreshedEditor }
+            case .unconfirmed:
+                deliveryGoalEditorMessage = "Save outcome is uncertain. Reopen this editor after the saved attempt is reconciled."
+            }
+        }
+    }
+
+    private func reconcileDeliveryGoalDraftSave(_ attemptID: UUID) {
+        guard let reconcileDeliveryGoalDraftSave else { return }
+        isSavingDeliveryGoal = true
+        Task {
+            let outcome = await reconcileDeliveryGoalDraftSave(attemptID)
+            isSavingDeliveryGoal = false
+            switch outcome.status {
+            case .confirmed:
+                showsDeliveryGoalEditor = false
+            case .savedNeedsReload:
+                deliveryGoalEditorMessage = "Saved. Reload the project plan before editing again."
+            case let .rejected(error, refreshedEditor):
+                deliveryGoalEditorMessage = deliveryGoalDraftErrorMessage(error)
+                if let refreshedEditor { deliveryGoalEditor = refreshedEditor }
+            case .unconfirmed:
+                deliveryGoalEditorMessage = "Save outcome is still uncertain. Reconcile the same saved attempt again later."
+            }
+        }
     }
 
     private func retiredTicketRow(_ ticket: RetiredTicketProjection) -> some View {

@@ -120,6 +120,8 @@ struct WorkspaceGoalsView: View {
     let goals: WorkspaceGoalsProjection
     let freshness: CodexObservationFreshness
     let openDeliveryGoal: (WorkspaceDeliveryGoalProjection) -> Void
+    let openDeliveryGoalPlanning: (WorkspaceDeliveryGoalProjection) -> Void
+    let openProjectPlanning: (ProjectID) -> Void
     let openUnassignedWork: (WorkspaceUnassignedDeliveryWorkProjection) -> Void
     let openExecutionGoal: (WorkspaceExecutionGoalProjection) -> Void
     @Binding var domain: WorkspaceGoalsDomain
@@ -138,6 +140,44 @@ struct WorkspaceGoalsView: View {
     @FocusState private var filterFocused: Bool
     @AccessibilityFocusState private var accessibilityFocusedGoalID: Data?
     @AccessibilityFocusState private var accessibilityFilterFocused: Bool
+
+    init(
+        goals: WorkspaceGoalsProjection,
+        freshness: CodexObservationFreshness,
+        openDeliveryGoal: @escaping (WorkspaceDeliveryGoalProjection) -> Void,
+        openDeliveryGoalPlanning: @escaping (WorkspaceDeliveryGoalProjection) -> Void = { _ in },
+        openProjectPlanning: @escaping (ProjectID) -> Void = { _ in },
+        openUnassignedWork: @escaping (WorkspaceUnassignedDeliveryWorkProjection) -> Void,
+        openExecutionGoal: @escaping (WorkspaceExecutionGoalProjection) -> Void,
+        domain: Binding<WorkspaceGoalsDomain>,
+        projectID: Binding<ProjectID?>,
+        deliveryLifecycle: Binding<DeliveryGoalLifecycle?>,
+        executionStatus: Binding<String?>,
+        executionScope: Binding<WorkspaceExecutionScope>,
+        selectedDeliveryID: Binding<Data?>,
+        selectedExecutionID: Binding<Data?>,
+        viewportOffset: Binding<Double?>,
+        requestedFocus: NavigationFocus? = nil,
+        focusChanged: @escaping (NavigationFocus?) -> Void = { _ in }
+    ) {
+        self.goals = goals
+        self.freshness = freshness
+        self.openDeliveryGoal = openDeliveryGoal
+        self.openDeliveryGoalPlanning = openDeliveryGoalPlanning
+        self.openProjectPlanning = openProjectPlanning
+        self.openUnassignedWork = openUnassignedWork
+        self.openExecutionGoal = openExecutionGoal
+        _domain = domain
+        _projectID = projectID
+        _deliveryLifecycle = deliveryLifecycle
+        _executionStatus = executionStatus
+        _executionScope = executionScope
+        _selectedDeliveryID = selectedDeliveryID
+        _selectedExecutionID = selectedExecutionID
+        _viewportOffset = viewportOffset
+        self.requestedFocus = requestedFocus
+        self.focusChanged = focusChanged
+    }
 
     private var projects: [ProjectDashboardProjection] {
         let delivery = goals.delivery.map(\.project)
@@ -213,9 +253,16 @@ struct WorkspaceGoalsView: View {
             title: "Goals",
             subtitle: "Delivery outcomes and persisted Codex execution observations across active projects",
             trailing: AnyView(
-                Button("Help", systemImage: "questionmark.circle") { showsHelp = true }
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .accessibilityIdentifier("goals-help")
+                HStack(spacing: 8) {
+                    if domain == .delivery, let projectID {
+                        Button("Plan Delivery Goals") { openProjectPlanning(projectID) }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .accessibilityIdentifier("goals-open-project-plan")
+                    }
+                    Button("Help", systemImage: "questionmark.circle") { showsHelp = true }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("goals-help")
+                }
             )
         )
     }
@@ -376,6 +423,12 @@ struct WorkspaceGoalsView: View {
             Button("View associated work") { openDeliveryGoal(item) }
                 .buttonStyle(RekonPrimaryButtonStyle())
                 .accessibilityIdentifier("goals-open-associated-work")
+            if item.phaseLifecycle?.lifecycle != .completed,
+               item.goal.lifecycle != .accepted, item.goal.lifecycle != .superseded {
+                Button("Edit planning") { openDeliveryGoalPlanning(item) }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("goals-edit-delivery-goal-planning")
+            }
         }
     }
 
