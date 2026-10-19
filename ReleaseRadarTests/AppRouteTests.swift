@@ -2510,7 +2510,7 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(readback.1.title, edited.title)
         XCTAssertEqual(readback.1.outcome, edited.outcome)
         XCTAssertEqual(readback.1.sortOrder, existing.sortOrder)
-        XCTAssertEqual(readback.2.map(\.criterion), edited.doneCriteria)
+        XCTAssertEqual(readback.2.map(\.text), edited.doneCriteria)
         XCTAssertEqual(readback.3, 2)
     }
 
@@ -2564,10 +2564,10 @@ final class AppRouteTests: XCTestCase {
         let model = AppModel(
             store: fixture.store,
             projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
             deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
                 await capture.dispatch(requestID: requestID, command: command)
-            },
-            externalServicesSuppressed: true
+            }
         )
         await model.loadDashboard()
         let edited = DeliveryGoalDraft(
@@ -2593,8 +2593,11 @@ final class AppRouteTests: XCTestCase {
         XCTAssertNil(model.deliveryGoalDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
         let requests = await capture.requests()
         XCTAssertEqual(requests.count, 1)
+        guard let request = requests.first else {
+            return XCTFail("A stale save must dispatch its original request exactly once")
+        }
         assertDeliveryGoalDraftCommand(
-            requests[0].command,
+            request.command,
             projectID: fixture.projectID,
             phaseID: fixture.roadmapPhaseID,
             expectedRevision: 1,
@@ -2612,10 +2615,10 @@ final class AppRouteTests: XCTestCase {
         let model = AppModel(
             store: fixture.store,
             projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
             deliveryGoalDraftOwnerCommandDispatch: { _, _, requestID, command in
                 await capture.dispatch(requestID: requestID, command: command)
-            },
-            externalServicesSuppressed: true
+            }
         )
         await model.loadDashboard()
         let edited = DeliveryGoalDraft(
