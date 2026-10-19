@@ -98,6 +98,15 @@ final class ProjectExecutionStoreTests: XCTestCase {
         XCTAssertEqual(unknownAttempt.category, .unknown)
         XCTAssertEqual(unknownAttempt.reason, .legacyWorkerIdentityUnavailable)
 
+        var contextlessAssignment = assignment
+        contextlessAssignment.codexContextID = nil
+        let contextless = ProjectExecutionProfileAssociation.classify(assignment: contextlessAssignment,
+            selectedCodexContextID: nil, observation: .present(definition),
+            candidateProfileID: contextlessAssignment.permissionProfile)
+        XCTAssertEqual(contextless.category, .unknown,
+            "Nil context values cannot establish selected-context ownership")
+        XCTAssertEqual(contextless.reason, .selectedContextMismatch)
+
         let mismatch = ProjectExecutionProfileAssociation.classify(assignment: assignment,
             selectedCodexContextID: contextID, observation: .present(Data("different".utf8)),
             candidateProfileID: assignment.permissionProfile)
