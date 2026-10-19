@@ -27,7 +27,7 @@ struct RepositoryPlanReconstructionView: View {
                     ProgressView("Capturing the authorized source snapshot…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityIdentifier("repository-plan-preparation-starting")
-                case .failed:
+                case .failed, .reviewLoadFailed:
                     failure
                 case .preparing:
                     preparationStatus

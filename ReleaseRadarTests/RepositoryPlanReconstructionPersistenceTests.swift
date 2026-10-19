@@ -2382,7 +2382,7 @@ private enum ExactCompletedDestinationSeed: Equatable {
     case retiredExtraTicket
 }
 
-private struct ReconstructionFixture {
+struct ReconstructionFixture {
     let root: URL
     let databaseURL: URL
     let store: DeliveryStore
@@ -2649,7 +2649,7 @@ private struct ReconstructionFixture {
         return (proposalID, saved.baselineDigest, decisionID)
     }
 
-    func counts(proposalID: String, requestID: UUID) async throws -> ReconstructionCounts {
+    fileprivate func counts(proposalID: String, requestID: UUID) async throws -> ReconstructionCounts {
         try await store.read { connection in
             ReconstructionCounts(
                 auditEvents: try connection.scalarInt(
@@ -2715,7 +2715,7 @@ private struct ReconstructionFixture {
         }
     }
 
-    func seedExactCompletedDestination(_ seed: ExactCompletedDestinationSeed) async throws {
+    fileprivate func seedExactCompletedDestination(_ seed: ExactCompletedDestinationSeed) async throws {
         let auditID = AuditEventID(rawValue: "seed-exact-completed-destination")
         try await store.transact(
             actor: .init(id: "fixture"),

@@ -5,6 +5,10 @@ protocol RepositoryPlanPreparationServicing: Sendable {
     func target() async throws -> RepositoryPlanPreparationTarget
     func start(consent: RepositoryPlanPreparationConsent) async throws -> RepositoryPlanPreparationReadback
 
+    func reviewDraft(
+        identity: RepositoryPlanPreparationIdentity
+    ) async throws -> RepositoryPlanPreparedDraft
+
     func status(
         identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback
@@ -31,12 +35,36 @@ struct RepositoryPlanPreparationConsent: Codable, Equatable, Sendable {
     let target: RepositoryPlanPreparationTarget
 }
 
+struct RepositoryPlanPreparedDraft: Equatable, Sendable {
+    let source: RepositoryPlanReconstructionSourceSnapshot
+    let originalProjection: RepositoryPlanProjection
+}
+
+struct RepositoryPlanReconstructionReviewPresentation: Equatable, Sendable {
+    let source: RepositoryPlanReconstructionSourceSnapshot
+    let originalProjection: RepositoryPlanProjection
+    var reviewedProjection: RepositoryPlanProjection
+    var comparisons: [RepositoryPlanReconstructionComparison]
+    var blockers: [RepositoryPlanReconstructionBlocker]
+    var corrections: [RepositoryPlanReconstructionCorrection]
+    var exclusions: [RepositoryPlanReconstructionExclusion]
+    var explicitMappings: [RepositoryPlanReconstructionMappingSelection]
+    var terminalEvidence: [RepositoryPlanTerminalEvidence]
+    var authorityConfirmed: Bool
+    var savedReadback: RepositoryPlanReconstructionReadback?
+    var persistedVersion: Int64?
+    var revision: UInt64
+    var isUpdating: Bool
+    var isSaving: Bool
+}
+
 enum RepositoryPlanReconstructionStage: Equatable, Sendable {
     case loadingSources
     case selectingSources
     case starting
     case preparing(RepositoryPlanPreparationState)
     case reviewing
+    case reviewLoadFailed
     case applying
     case outcomeUnknown
     case applied
@@ -50,6 +78,7 @@ struct RepositoryPlanReconstructionPresentation: Equatable, Sendable {
     var target: RepositoryPlanPreparationTarget?
     var selectedArtifactIDs: Set<String>
     var preparation: RepositoryPlanPreparationReadback?
+    var review: RepositoryPlanReconstructionReviewPresentation?
     var message: String?
 
     static func loading(projectID: ProjectID) -> Self {
@@ -60,6 +89,7 @@ struct RepositoryPlanReconstructionPresentation: Equatable, Sendable {
             target: nil,
             selectedArtifactIDs: [],
             preparation: nil,
+            review: nil,
             message: nil
         )
     }
@@ -77,6 +107,7 @@ struct RepositoryPlanReconstructionPresentation: Equatable, Sendable {
             target: target,
             selectedArtifactIDs: [],
             preparation: nil,
+            review: nil,
             message: message
         )
     }
@@ -89,6 +120,7 @@ struct RepositoryPlanReconstructionPresentation: Equatable, Sendable {
             target: nil,
             selectedArtifactIDs: [],
             preparation: nil,
+            review: nil,
             message: message
         )
     }

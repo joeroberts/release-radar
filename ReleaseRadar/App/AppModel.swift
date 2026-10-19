@@ -212,6 +212,18 @@ final class AppModel {
         ProjectID
     ) async throws -> RepositoryPlanSourceInventory
     private let repositoryPlanPreparationService: any RepositoryPlanPreparationServicing
+    private let repositoryPlanPreviewer: @Sendable (
+        RepositoryPlanReconstructionSourceSnapshot,
+        RepositoryPlanProjection,
+        [RepositoryPlanReconstructionCorrection],
+        [RepositoryPlanReconstructionMappingSelection]
+    ) async throws -> RepositoryPlanReconstructionPreview
+    private let repositoryPlanOwnerCommandDispatch: @Sendable (
+        ProjectID,
+        ProjectRegistration,
+        UUID,
+        AgentCommand
+    ) async -> AgentCommandResult
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
@@ -298,7 +310,19 @@ final class AppModel {
                 )
             }
         },
-        repositoryPlanPreparationService: (any RepositoryPlanPreparationServicing)? = nil
+        repositoryPlanPreparationService: (any RepositoryPlanPreparationServicing)? = nil,
+        repositoryPlanPreviewer: (@Sendable (
+            RepositoryPlanReconstructionSourceSnapshot,
+            RepositoryPlanProjection,
+            [RepositoryPlanReconstructionCorrection],
+            [RepositoryPlanReconstructionMappingSelection]
+        ) async throws -> RepositoryPlanReconstructionPreview)? = nil,
+        repositoryPlanOwnerCommandDispatch: (@Sendable (
+            ProjectID,
+            ProjectRegistration,
+            UUID,
+            AgentCommand
+        ) async -> AgentCommandResult)? = nil
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
@@ -342,6 +366,47 @@ final class AppModel {
                 onboarding: resolvedOnboarding,
                 plugin: codexPluginCoordinator
             )
+        self.repositoryPlanPreviewer = repositoryPlanPreviewer ?? { source, projection, corrections, mappings in
+            try await RepositoryPlanReconstructionPreviewQuery.preview(
+                source: source,
+                reviewedProjection: projection,
+                corrections: corrections,
+                explicitMappings: mappings,
+                from: store
+            )
+        }
+        self.repositoryPlanOwnerCommandDispatch = repositoryPlanOwnerCommandDispatch
+            ?? { projectID, registration, requestID, command in
+                do {
+                    return try await resolvedOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                        let dispatcher = AgentCommandDispatcher(
+                            store: store,
+                            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                        )
+                        let envelope = AgentCommandEnvelope(
+                            version: AgentCommandDispatcher.commandEnvelopeVersion,
+                            requestID: requestID,
+                            projectRoot: project.canonicalRoot.path,
+                            expectedRegistration: registration,
+                            reason: "Owner reviewed repository plan reconstruction",
+                            command: command
+                        )
+                        if case .applyPlanChangeProposal = command {
+                            return await dispatcher.dispatchReconstructionApply(
+                                envelope,
+                                origin: .ownerApp
+                            )
+                        }
+                        return await dispatcher.dispatch(envelope, origin: .ownerApp)
+                    }
+                } catch {
+                    return .init(
+                        entityIDs: [],
+                        auditEventID: nil,
+                        error: .unauthorizedProjectRoot
+                    )
+                }
+            }
         self.recoveryServices = recoveryServices
         self.connectorHealthLoader = connectorHealthLoader
         self.recoveryStartupError = recoveryStartupError
@@ -1399,6 +1464,10 @@ final class AppModel {
 
     func openRepositoryPlanReconstruction(projectID: ProjectID) async {
         if let existing = repositoryPlanReconstructions[projectID] {
+            if existing.stage == .reviewLoadFailed {
+                await retryRepositoryPlanReview(projectID: projectID)
+                return
+            }
             guard existing.stage == .failed else { return }
             if let state = existing.preparation?.state,
                ![.failed, .cancelled].contains(state) {
@@ -1475,12 +1544,25 @@ final class AppModel {
             guard readback.identity.registration.projectID == projectID else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
+            if readback.state == .readyForReview {
+                presentation.preparation = readback
+            }
+            presentation = try await repositoryPlanReviewPresentation(
+                applying: readback,
+                to: presentation
+            )
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.stage == .starting else { return }
-            presentation.apply(readback)
             repositoryPlanReconstructions[projectID] = presentation
         } catch {
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration else {
+                return
+            }
+            if presentation.preparation?.state == .readyForReview {
+                presentation.stage = .reviewLoadFailed
+                presentation.review = nil
+                presentation.message = "The prepared draft is safe, but its review could not be loaded: \(error.localizedDescription). Retry the review without preparing again."
+                repositoryPlanReconstructions[projectID] = presentation
                 return
             }
             if let preparation = error as? RepositoryPlanPreparationError,
@@ -1510,18 +1592,30 @@ final class AppModel {
             guard readback.identity == identity else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
+            if readback.state == .readyForReview {
+                presentation.preparation = readback
+            }
+            presentation = try await repositoryPlanReviewPresentation(
+                applying: readback,
+                to: presentation
+            )
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
                 return
             }
-            presentation.apply(readback)
         } catch {
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
                 return
             }
-            presentation.stage = .outcomeUnknown
-            presentation.message = error.localizedDescription
+            if presentation.preparation?.state == .readyForReview {
+                presentation.stage = .reviewLoadFailed
+                presentation.review = nil
+                presentation.message = "The prepared draft is safe, but its review could not be loaded: \(error.localizedDescription). Retry the review without preparing again."
+            } else {
+                presentation.stage = .outcomeUnknown
+                presentation.message = error.localizedDescription
+            }
         }
         repositoryPlanReconstructions[projectID] = presentation
     }
@@ -1539,18 +1633,30 @@ final class AppModel {
             guard readback.identity == identity else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
+            if readback.state == .readyForReview {
+                presentation.preparation = readback
+            }
+            presentation = try await repositoryPlanReviewPresentation(
+                applying: readback,
+                to: presentation
+            )
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
                 return
             }
-            presentation.apply(readback)
         } catch {
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
                 return
             }
-            presentation.stage = .outcomeUnknown
-            presentation.message = error.localizedDescription
+            if presentation.preparation?.state == .readyForReview {
+                presentation.stage = .reviewLoadFailed
+                presentation.review = nil
+                presentation.message = "The prepared draft is safe, but its review could not be loaded: \(error.localizedDescription). Retry the review without preparing again."
+            } else {
+                presentation.stage = .outcomeUnknown
+                presentation.message = error.localizedDescription
+            }
         }
         repositoryPlanReconstructions[projectID] = presentation
     }
@@ -1567,20 +1673,503 @@ final class AppModel {
             guard readback.identity == identity else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
+            if readback.state == .readyForReview {
+                presentation.preparation = readback
+            }
+            presentation = try await repositoryPlanReviewPresentation(
+                applying: readback,
+                to: presentation
+            )
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
                 return
             }
-            presentation.apply(readback)
         } catch {
             guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
                   repositoryPlanReconstructions[projectID]?.preparation?.identity == identity else {
                 return
             }
-            presentation.stage = .outcomeUnknown
-            presentation.message = error.localizedDescription
+            if presentation.preparation?.state == .readyForReview {
+                presentation.stage = .reviewLoadFailed
+                presentation.review = nil
+                presentation.message = "The prepared draft is safe, but its review could not be loaded: \(error.localizedDescription). Retry the review without preparing again."
+            } else {
+                presentation.stage = .outcomeUnknown
+                presentation.message = error.localizedDescription
+            }
         }
         repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    func retryRepositoryPlanReview(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewLoadFailed,
+              let readback = presentation.preparation,
+              readback.state == .readyForReview else { return }
+        let operationGeneration = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        do {
+            presentation = try await repositoryPlanReviewPresentation(
+                applying: readback,
+                to: presentation
+            )
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == readback.identity else {
+                return
+            }
+            repositoryPlanReconstructions[projectID] = presentation
+        } catch {
+            guard repositoryPlanPreparationOperationGenerations[projectID] == operationGeneration,
+                  repositoryPlanReconstructions[projectID]?.preparation?.identity == readback.identity else {
+                return
+            }
+            presentation.stage = .reviewLoadFailed
+            presentation.review = nil
+            presentation.message = "The prepared draft is still safe, but its review could not be loaded: \(error.localizedDescription). Retry without preparing again."
+            repositoryPlanReconstructions[projectID] = presentation
+        }
+    }
+
+    func restartRepositoryPlanPreparation(projectID: ProjectID) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewLoadFailed,
+              presentation.preparation?.state == .readyForReview else { return }
+        let reconstructionGeneration = (repositoryPlanReconstructionGenerations[projectID] ?? 0) &+ 1
+        repositoryPlanReconstructionGenerations[projectID] = reconstructionGeneration
+        _ = nextRepositoryPlanPreparationOperationGeneration(projectID)
+        presentation.stage = .loadingSources
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        do {
+            async let inventory = repositoryPlanSourceLoader(store, projectOnboarding, projectID)
+            async let target = repositoryPlanPreparationService.target()
+            let loadedInventory = try await inventory
+            let loadedTarget = try await target
+            guard repositoryPlanReconstructionGenerations[projectID] == reconstructionGeneration else {
+                return
+            }
+            repositoryPlanReconstructions[projectID] = .selecting(
+                projectID: projectID,
+                inventory: loadedInventory,
+                target: loadedTarget
+            )
+        } catch {
+            guard repositoryPlanReconstructionGenerations[projectID] == reconstructionGeneration else {
+                return
+            }
+            presentation.stage = .reviewLoadFailed
+            presentation.message = "The prepared draft remains safe, but fresh source disclosure could not be loaded: \(error.localizedDescription). Retry the existing review or restart preparation again."
+            repositoryPlanReconstructions[projectID] = presentation
+        }
+    }
+
+    func setRepositoryPlanAuthorityConfirmed(
+        projectID: ProjectID,
+        confirmed: Bool
+    ) {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review else { return }
+        review.authorityConfirmed = confirmed
+        presentation.review = review
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+    }
+
+    func setRepositoryPlanCorrection(
+        projectID: ProjectID,
+        subject: RepositoryPlanReconstructionSubject,
+        field: String,
+        chosenValue: Data
+    ) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review else { return }
+        do {
+            let sourceValue = try Self.repositoryPlanSourceValue(
+                subject: subject,
+                field: field,
+                projection: review.originalProjection
+            )
+            let correction = RepositoryPlanReconstructionCorrection(
+                subject: subject,
+                field: field,
+                sourceValue: sourceValue,
+                chosenValue: chosenValue
+            )
+            review.corrections.removeAll {
+                $0.subject == subject && Data($0.field.utf8) == Data(field.utf8)
+            }
+            review.corrections.append(correction)
+            review.reviewedProjection = try RepositoryPlanReconstructionCorrections.apply(
+                review.corrections,
+                to: review.originalProjection
+            )
+            review.authorityConfirmed = false
+            review.savedReadback = nil
+            review.revision &+= 1
+            review.isUpdating = true
+            let revision = review.revision
+            presentation.review = review
+            presentation.message = nil
+            repositoryPlanReconstructions[projectID] = presentation
+            let preview = try await repositoryPlanPreviewer(
+                review.source,
+                review.reviewedProjection,
+                review.corrections,
+                review.explicitMappings
+            )
+            guard var current = repositoryPlanReconstructions[projectID],
+                  current.stage == .reviewing,
+                  var currentReview = current.review,
+                  currentReview.revision == revision,
+                  currentReview.source == review.source else { return }
+            Self.applyRepositoryPlanExclusions(
+                currentReview.exclusions,
+                preview: preview,
+                to: &currentReview
+            )
+            currentReview.isUpdating = false
+            current.review = currentReview
+            current.message = nil
+            repositoryPlanReconstructions[projectID] = current
+        } catch {
+            guard var current = repositoryPlanReconstructions[projectID],
+                  var currentReview = current.review,
+                  currentReview.source == review.source,
+                  currentReview.revision == review.revision else { return }
+            current.review = currentReview
+            current.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = current
+        }
+    }
+
+    func setRepositoryPlanExclusion(
+        projectID: ProjectID,
+        subject: RepositoryPlanReconstructionSubject,
+        reason: String
+    ) async {
+        let trimmed = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review else { return }
+        do {
+            review.exclusions.removeAll { $0.subject == subject }
+            review.exclusions.append(.init(subject: subject, reason: trimmed))
+            review.savedReadback = nil
+            review.revision &+= 1
+            review.isUpdating = true
+            let revision = review.revision
+            presentation.review = review
+            presentation.message = nil
+            repositoryPlanReconstructions[projectID] = presentation
+            let preview = try await repositoryPlanPreviewer(
+                review.source,
+                review.reviewedProjection,
+                review.corrections,
+                review.explicitMappings
+            )
+            guard var current = repositoryPlanReconstructions[projectID],
+                  current.stage == .reviewing,
+                  var currentReview = current.review,
+                  currentReview.revision == revision,
+                  currentReview.source == review.source else { return }
+            Self.applyRepositoryPlanExclusions(
+                currentReview.exclusions,
+                preview: preview,
+                to: &currentReview
+            )
+            currentReview.isUpdating = false
+            current.review = currentReview
+            current.message = nil
+            repositoryPlanReconstructions[projectID] = current
+        } catch {
+            guard var current = repositoryPlanReconstructions[projectID],
+                  var currentReview = current.review,
+                  currentReview.source == review.source,
+                  currentReview.revision == review.revision else { return }
+            current.review = currentReview
+            current.message = error.localizedDescription
+            repositoryPlanReconstructions[projectID] = current
+        }
+    }
+
+    func saveRepositoryPlanReconstruction(
+        projectID: ProjectID,
+        rationale: String
+    ) async {
+        guard var presentation = repositoryPlanReconstructions[projectID],
+              presentation.stage == .reviewing,
+              var review = presentation.review,
+              review.authorityConfirmed,
+              !review.isSaving,
+              !review.isUpdating,
+              let proposalID = presentation.preparation?.identity.proposalID,
+              !rationale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        let revision = review.revision
+        review.isSaving = true
+        presentation.review = review
+        presentation.message = nil
+        repositoryPlanReconstructions[projectID] = presentation
+        let payload = RepositoryPlanReconstructionPayload(
+            source: review.source,
+            reviewedProjection: review.reviewedProjection,
+            comparisons: review.comparisons,
+            corrections: review.corrections,
+            exclusions: review.exclusions,
+            terminalEvidence: review.terminalEvidence,
+            blockers: review.blockers
+        )
+        let result = await repositoryPlanOwnerCommandDispatch(
+            projectID,
+            review.source.registration,
+            requestIDGenerator(),
+            .saveRepositoryPlanReconstruction(
+                proposalID: proposalID.rawValue,
+                expectedPreviousVersion: review.persistedVersion,
+                rationale: rationale,
+                payload: payload
+            )
+        )
+        guard var current = repositoryPlanReconstructions[projectID],
+              current.stage == .reviewing,
+              var currentReview = current.review,
+              currentReview.source == review.source else { return }
+        currentReview.isSaving = false
+        if let error = result.error {
+            current.message = Self.repositoryPlanSaveFailureMessage(error)
+        } else if let readback = result.repositoryPlanReconstruction,
+                  readback.proposalID == proposalID,
+                  readback.payload == payload {
+            currentReview.persistedVersion = readback.version.version
+            if currentReview.revision == revision {
+                currentReview.savedReadback = readback
+                current.message = "Saved proposal version \(readback.version.version). Approve and Apply remain separate owner actions."
+            } else {
+                current.message = "Saved version \(readback.version.version); newer review edits remain unsaved."
+            }
+        } else {
+            current.message = "The reviewed proposal was not returned. Refresh the review before continuing."
+        }
+        current.review = currentReview
+        repositoryPlanReconstructions[projectID] = current
+    }
+
+    private func repositoryPlanReviewPresentation(
+        applying readback: RepositoryPlanPreparationReadback,
+        to presentation: RepositoryPlanReconstructionPresentation
+    ) async throws -> RepositoryPlanReconstructionPresentation {
+        var updated = presentation
+        guard readback.state == .readyForReview else {
+            updated.apply(readback)
+            return updated
+        }
+        let draft = try await repositoryPlanPreparationService.reviewDraft(
+            identity: readback.identity
+        )
+        guard draft.source.projectID == presentation.projectID,
+              draft.source.registration == readback.identity.registration,
+              draft.source.rootID == readback.identity.rootID,
+              draft.source.projectionBytes == readback.draftBytes else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        let preview = try await repositoryPlanPreviewer(
+            draft.source,
+            draft.originalProjection,
+            [],
+            []
+        )
+        updated.preparation = readback
+        updated.review = .init(
+            source: draft.source,
+            originalProjection: draft.originalProjection,
+            reviewedProjection: draft.originalProjection,
+            comparisons: preview.comparisons,
+            blockers: preview.blockers,
+            corrections: [],
+            exclusions: [],
+            explicitMappings: [],
+            terminalEvidence: [],
+            authorityConfirmed: false,
+            savedReadback: nil,
+            persistedVersion: nil,
+            revision: 0,
+            isUpdating: false,
+            isSaving: false
+        )
+        updated.stage = .reviewing
+        updated.message = nil
+        return updated
+    }
+
+    private static func applyRepositoryPlanExclusions(
+        _ exclusions: [RepositoryPlanReconstructionExclusion],
+        preview: RepositoryPlanReconstructionPreview,
+        to review: inout RepositoryPlanReconstructionReviewPresentation
+    ) {
+        let excluded = Set(exclusions.map(\.subject))
+        review.comparisons = preview.comparisons.map { comparison in
+            guard excluded.contains(comparison.subject) else { return comparison }
+            return .init(
+                kind: comparison.kind,
+                parentSourceID: comparison.parentSourceID,
+                sourceID: comparison.sourceID,
+                destinationID: comparison.destinationID,
+                disposition: .excluded
+            )
+        }
+        review.blockers = preview.blockers.filter { blocker in
+            blocker.subject.map { !excluded.contains($0) } ?? true
+        }
+        func block(_ subject: RepositoryPlanReconstructionSubject, message: String) {
+            guard !excluded.contains(subject),
+                  let index = review.comparisons.firstIndex(where: { $0.subject == subject }) else {
+                return
+            }
+            let comparison = review.comparisons[index]
+            review.comparisons[index] = .init(
+                kind: comparison.kind,
+                parentSourceID: comparison.parentSourceID,
+                sourceID: comparison.sourceID,
+                destinationID: comparison.destinationID,
+                disposition: .blocked
+            )
+            let blocker = RepositoryPlanReconstructionBlocker(
+                code: "excluded_required_record",
+                subject: subject,
+                message: message
+            )
+            if !review.blockers.contains(where: { $0.id == blocker.id }) {
+                review.blockers.append(blocker)
+            }
+        }
+
+        func nonincludedSourceIDs(
+            kind: RepositoryPlanReconstructionRecordKind
+        ) -> Set<String> {
+            Set(review.comparisons.compactMap { comparison in
+                guard comparison.kind == kind,
+                      comparison.disposition != .new,
+                      comparison.disposition != .unchanged else { return nil }
+                return comparison.sourceID
+            })
+        }
+
+        let nonincludedPhases = nonincludedSourceIDs(kind: .phase)
+        for ticket in review.reviewedProjection.tickets {
+            guard let phase = ticket.phaseSourceID, nonincludedPhases.contains(phase) else { continue }
+            block(
+                .init(kind: .ticket, parentSourceID: nil, sourceID: ticket.sourceID),
+                message: "This included ticket requires a nonincluded phase. Explicitly exclude the ticket or restore the phase."
+            )
+        }
+
+        let nonincludedTickets = nonincludedSourceIDs(kind: .ticket)
+        let tasks = review.comparisons.filter { $0.kind == .task }
+        for comparison in tasks {
+            if let parent = comparison.parentSourceID, nonincludedTickets.contains(parent) {
+                block(
+                    comparison.subject,
+                    message: "This included task requires a nonincluded parent ticket. Explicitly exclude the task or restore the parent."
+                )
+            }
+        }
+        for dependency in review.reviewedProjection.phaseDependencies
+            where nonincludedPhases.contains(dependency.subjectSourceID)
+                || nonincludedPhases.contains(dependency.dependsOnSourceID) {
+            block(
+                .init(
+                    kind: .phaseDependency,
+                    parentSourceID: dependency.subjectSourceID,
+                    sourceID: dependency.sourceID
+                ),
+                message: "This phase dependency references a nonincluded phase. Explicitly exclude the dependency or restore both phases."
+            )
+        }
+        for dependency in review.reviewedProjection.ticketDependencies
+            where nonincludedTickets.contains(dependency.subjectSourceID)
+                || nonincludedTickets.contains(dependency.dependsOnSourceID) {
+            block(
+                .init(
+                    kind: .ticketDependency,
+                    parentSourceID: dependency.subjectSourceID,
+                    sourceID: dependency.sourceID
+                ),
+                message: "This ticket dependency references a nonincluded ticket. Explicitly exclude the dependency or restore both tickets."
+            )
+        }
+    }
+
+    private static func repositoryPlanSourceValue(
+        subject: RepositoryPlanReconstructionSubject,
+        field: String,
+        projection: RepositoryPlanProjection
+    ) throws -> Data? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        switch subject.kind {
+        case .phase:
+            guard let value = projection.phases.first(where: { $0.sourceID == subject.sourceID }) else {
+                throw RepositoryPlanReconstructionError.invalidPayload("The phase correction source is unavailable.")
+            }
+            switch field {
+            case "name": return try encoder.encode(value.name)
+            case "lifecycle": return try encoder.encode(value.lifecycle)
+            case "authorityClass": return try encoder.encode(value.authorityClass)
+            default: break
+            }
+        case .ticket:
+            guard let value = projection.tickets.first(where: { $0.sourceID == subject.sourceID }) else {
+                throw RepositoryPlanReconstructionError.invalidPayload("The ticket correction source is unavailable.")
+            }
+            switch field {
+            case "outcome": return try encoder.encode(value.outcome)
+            case "phaseSourceID": return try encoder.encode(value.phaseSourceID)
+            case "lane": return try encoder.encode(value.lane)
+            case "authorityClass": return try encoder.encode(value.authorityClass)
+            default: break
+            }
+        case .task:
+            guard let parent = subject.parentSourceID,
+                  let value = projection.tickets.first(where: { $0.sourceID == parent })?
+                    .taskPlan?.tasks.first(where: { $0.sourceID == subject.sourceID }) else {
+                throw RepositoryPlanReconstructionError.invalidPayload("The task correction source is unavailable.")
+            }
+            switch field {
+            case "authorityClass": return try encoder.encode(value.authorityClass)
+            case "label": return try encoder.encode(value.label)
+            case "title": return try encoder.encode(value.title)
+            case "sortOrder": return try encoder.encode(value.sortOrder)
+            case "completion": return try encoder.encode(value.completion)
+            case "lifecycle": return try encoder.encode(value.lifecycle)
+            default: break
+            }
+        case .phaseDependency, .ticketDependency:
+            let values = subject.kind == .phaseDependency
+                ? projection.phaseDependencies : projection.ticketDependencies
+            guard let value = values.first(where: { $0.sourceID == subject.sourceID }) else {
+                throw RepositoryPlanReconstructionError.invalidPayload("The dependency correction source is unavailable.")
+            }
+            switch field {
+            case "subjectSourceID": return try encoder.encode(value.subjectSourceID)
+            case "dependsOnSourceID": return try encoder.encode(value.dependsOnSourceID)
+            default: break
+            }
+        }
+        throw RepositoryPlanReconstructionError.invalidPayload(
+            "The requested reconstruction correction field is not editable."
+        )
+    }
+
+    private static func repositoryPlanSaveFailureMessage(_ error: AgentCommandError) -> String {
+        switch error {
+        case .repositoryPlanReconstructionStaleSource:
+            "The repository source or destination changed. Prepare or review a fresh version before saving."
+        default:
+            "The reviewed repository plan could not be saved: \(String(describing: error))"
+        }
     }
 
     private func reloadRepositoryPlanSourceDisclosure(
@@ -1623,7 +2212,8 @@ final class AppModel {
         switch stage {
         case .selectingSources, .failed, .preparing(.failed), .preparing(.cancelled):
             true
-        case .loadingSources, .starting, .preparing, .reviewing, .applying, .outcomeUnknown, .applied:
+        case .loadingSources, .starting, .preparing, .reviewing, .reviewLoadFailed,
+             .applying, .outcomeUnknown, .applied:
             false
         }
     }

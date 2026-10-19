@@ -62,6 +62,12 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
         var terminalClosePending: Bool
     }
 
+    private struct PreparedDraftRecord {
+        let identity: RepositoryPlanPreparationIdentity
+        let request: RepositoryPlanPreparationRequest
+        let bytes: Data
+    }
+
     private static let model = "gpt-6-astra"
     private static let effort = "high"
 
@@ -74,6 +80,7 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
     private var proposalIDs: [ProjectID: PlanChangeProposalID] = [:]
     private var reservation: Reservation?
     private var activeAttempt: ActiveAttempt?
+    private var preparedDraft: PreparedDraftRecord?
 
     init(
         store: DeliveryStore,
@@ -136,6 +143,7 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
             throw RepositoryPlanPreparationError(code: .invalidRequest)
         }
         reservation = pending
+        preparedDraft = nil
         proposalIDs[projectID] = proposalID
 
         var materialized: RepositoryPlanPreparationSnapshotStore.Materialized?
@@ -203,6 +211,7 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
                   activeAttempt?.request.identity == request.identity else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
+            try capturePreparedDraft(readback, request: request)
             activeAttempt?.readback = readback
             try await closeKnownTerminal(readback)
             return readback
@@ -212,6 +221,7 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
                active.request.identity.attemptID == pending.attemptID {
                 if let retained = try? await client.status(active.request.identity),
                    retained.identity == active.request.identity {
+                    try capturePreparedDraft(retained, request: active.request)
                     activeAttempt?.readback = retained
                     return retained
                 }
@@ -233,12 +243,13 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
     func status(
         identity: RepositoryPlanPreparationIdentity
     ) async throws -> RepositoryPlanPreparationReadback {
-        _ = try requireActive(identity)
+        let active = try requireActive(identity)
         let readback = try await client.status(identity)
         guard readback.identity == identity,
               activeAttempt?.request.identity == identity else {
             throw RepositoryPlanPreparationError(code: .identityMismatch)
         }
+        try capturePreparedDraft(readback, request: active.request)
         activeAttempt?.readback = readback
         activeAttempt?.terminalClosePending = false
         try await closeKnownTerminal(readback)
@@ -267,6 +278,7 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
               activeAttempt?.request.identity == identity else {
             throw RepositoryPlanPreparationError(code: .identityMismatch)
         }
+        try capturePreparedDraft(readback, request: active.request)
         activeAttempt?.readback = readback
         activeAttempt?.terminalClosePending = false
         try await closeKnownTerminal(readback)
@@ -286,6 +298,7 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
                   activeAttempt?.request.identity == identity else {
                 throw RepositoryPlanPreparationError(code: .identityMismatch)
             }
+            try capturePreparedDraft(readback, request: active.request)
             activeAttempt?.readback = readback
             activeAttempt?.terminalClosePending = false
             if readback.state == .outcomeUnknown {
@@ -301,6 +314,57 @@ actor RepositoryPlanPreparationService: RepositoryPlanPreparationServicing {
             return readback
         }
         return try await closeUncertainAttempt(active, identity: identity)
+    }
+
+    func reviewDraft(
+        identity: RepositoryPlanPreparationIdentity
+    ) async throws -> RepositoryPlanPreparedDraft {
+        guard let preparedDraft, preparedDraft.identity == identity else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        let request = preparedDraft.request
+        let validated = try RepositoryPlanProjectionValidator.validate(
+            preparedDraft.bytes,
+            against: request.sourceManifest
+        )
+        guard validated.projection.projectionID.lowercased()
+                == request.projectionID.uuidString.lowercased(),
+              validated.projection.projectionRevision == request.projectionRevision else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        let manifest = request.sourceManifest
+        return .init(
+            source: .init(
+                projectID: manifest.projectID,
+                rootID: manifest.rootID,
+                registration: manifest.registration,
+                repositoryID: manifest.repositoryID,
+                projectionID: request.projectionID,
+                projectionRevision: request.projectionRevision,
+                projectionBytes: validated.bytes,
+                projectionSHA256: validated.contentSHA256,
+                acceptedCatalogVersion: manifest.acceptedCatalogVersion,
+                acceptedCatalogDigest: manifest.acceptedCatalogDigest,
+                capturedSourceManifest: manifest,
+                observedGitHEAD: nil
+            ),
+            originalProjection: validated.projection
+        )
+    }
+
+    private func capturePreparedDraft(
+        _ readback: RepositoryPlanPreparationReadback,
+        request: RepositoryPlanPreparationRequest
+    ) throws {
+        guard readback.state == .readyForReview else { return }
+        guard readback.identity == request.identity, let bytes = readback.draftBytes else {
+            throw RepositoryPlanPreparationError(code: .identityMismatch)
+        }
+        preparedDraft = .init(
+            identity: request.identity,
+            request: request,
+            bytes: bytes
+        )
     }
 
     private func closeUncertainAttempt(
