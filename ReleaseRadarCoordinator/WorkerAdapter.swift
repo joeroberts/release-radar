@@ -5,7 +5,7 @@ actor WorkerAdapter {
     private struct CodexProjectAssociationError: LocalizedError {
         let detail: String
         var errorDescription: String? {
-            "Codex project association could not be resolved. \(detail) Resolve the saved Codex project for this repository and retry the existing assignment."
+            "Codex project association could not be resolved. \(detail) Close or reconcile the existing unknown assignment in Release Radar, then obtain a fresh authorized assignment."
         }
     }
 
@@ -181,6 +181,7 @@ actor WorkerAdapter {
             guard let config = configResult["config"] as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
             try selected.validate(config: config)
             let codexProjectID = try await resolveCodexProjectID(server: server, selected: selected)
+            try selected.verifyCodexContext()
             guard try store.policy(projectID: projectID) == selected.policy else {
                 throw ProjectExecutionError.assignmentNotAuthorized
             }
@@ -220,7 +221,7 @@ actor WorkerAdapter {
             try selected.bind(sessionID: threadID, attemptID: attemptID)
             workers[id]?.codexProjectID = codexProjectID
             workers[id]?.verified = true; workers[id]?.status = "ready"
-            _ = try await followUp(workerID: id, prompt: value)
+            _ = try await startTurn(workerID: id, prompt: value, revalidateAssociation: false)
         } catch {
             workers[id]?.status = unknown(error) ? "unknown" : "failed"
             workers[id]?.error = error.localizedDescription
@@ -249,6 +250,34 @@ actor WorkerAdapter {
             primaryRoot: canonical, command: "\"" + selected.policy.handlerPath + "\" --hook", requireTrusted: true, inline: selected.policy.hookReceipt?.inline ?? false)
     }
 
+    private func verifyKnownThreadAssociation(
+        server: any ExecutionPeer, threadID: String, selected: WorkerPolicy
+    ) async throws -> String {
+        let expectedRoot = try ProjectExecutionHookReadiness.canonicalPrimaryRoot(selected.policy.primaryRoot)
+        let codexProjectID = try await resolveCodexProjectID(server: server, selected: selected)
+        try selected.verifyCodexContext()
+
+        let projectResult = try await rpc(server, "project/read", ["projectId": codexProjectID])
+        guard let project = projectResult["project"] as? [String: Any],
+              project["id"] as? String == codexProjectID,
+              let roots = project["roots"] as? [[String: Any]],
+              roots.allSatisfy({ $0["path"] is String }),
+              roots.contains(where: { $0["path"] as? String == expectedRoot }) else {
+            throw CodexProjectAssociationError(detail: "The resolved saved Codex project no longer has the registered repository root.")
+        }
+        try selected.verifyCodexContext()
+
+        let threadResult = try await rpc(server, "thread/read", ["threadId": threadID])
+        guard let thread = threadResult["thread"] as? [String: Any],
+              thread["id"] as? String == threadID,
+              thread["projectId"] as? String == codexProjectID,
+              thread["cwd"] as? String == selected.assignment.checkoutPath else {
+            throw CodexProjectAssociationError(detail: "The existing Codex thread no longer matches its project association or checkout.")
+        }
+        try selected.verifyCodexContext()
+        return codexProjectID
+    }
+
     func status(workerID: String) throws -> RPCObject {
         let worker = try worker(workerID)
         var result: [String: Any] = ["workerId": workerID, "status": worker.status,
@@ -272,6 +301,12 @@ actor WorkerAdapter {
     }
 
     func followUp(workerID: String, prompt value: String) async throws -> RPCObject {
+        return try await startTurn(workerID: workerID, prompt: value, revalidateAssociation: true)
+    }
+
+    private func startTurn(
+        workerID: String, prompt value: String, revalidateAssociation: Bool
+    ) async throws -> RPCObject {
         try prompt(value)
         let worker = try worker(workerID)
         guard worker.verified, !worker.busy, ["ready", "completed", "interrupted", "failed"].contains(worker.status),
@@ -279,6 +314,25 @@ actor WorkerAdapter {
         workers[workerID]?.busy = true
         defer { workers[workerID]?.busy = false }
         let assignment = try worker.policy.current(sessionID: threadID, attemptID: worker.attemptID)
+        if revalidateAssociation {
+            do {
+                let codexProjectID = try await verifyKnownThreadAssociation(
+                    server: server, threadID: threadID, selected: worker.policy
+                )
+                workers[workerID]?.codexProjectID = codexProjectID
+            } catch {
+                let uncertain = unknown(error)
+                workers[workerID]?.codexProjectID = nil
+                workers[workerID]?.status = uncertain ? "unknown" : "failed"
+                if uncertain {
+                    do { try worker.policy.mark(.unknown, sessionID: threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
+                    catch { workers[workerID]?.error = "Association revalidation is uncertain; admission revocation failed: \(error.localizedDescription). Stop the known run independently." }
+                } else {
+                    workers[workerID]?.error = error.localizedDescription
+                }
+                throw error
+            }
+        }
         try await verifyHook(server, selected: worker.policy)
         // Re-read after awaited readiness: a revocation during discovery still prevents admission.
         _ = try worker.policy.current(sessionID: threadID, attemptID: worker.attemptID)
