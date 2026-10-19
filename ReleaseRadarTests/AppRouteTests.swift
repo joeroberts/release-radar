@@ -2517,7 +2517,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanSavedDraftPersistsAcrossFreshModelNavigationAndEditorReadback() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let firstModel = AppModel(
             store: fixture.store,
             projectOnboarding: fixture.onboarding,
@@ -2573,7 +2573,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testLoadDeliveryGoalEditorReturnsPersistedSortOrderAndStableCreateID() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let editorID = UUID(uuidString: "19119119-1111-4111-8111-191191191919")!
         let model = AppModel(
             store: fixture.store,
@@ -2612,7 +2612,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanStaleRevisionPreservesFieldsAndRequiresExplicitFreshAttempt() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil,
             error: .planRevisionConflict(expected: 1, current: 2)
@@ -2664,7 +2664,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanUnconfirmedSaveReplaysExactEnvelopeWithoutDuplicateGoal() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .outcomeUnknown
         ))
@@ -2732,7 +2732,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanUnavailableSaveRejectsWithoutRecoveryAndAllowsFreshRetry() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(
             entityIDs: [], auditEventID: nil, error: .appUnavailable
         ))
@@ -2794,7 +2794,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanInvalidDraftExplainsCorrectionWithoutDispatching() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
         let model = AppModel(
             store: fixture.store,
@@ -2830,7 +2830,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testLoadDeliveryGoalEditorRejectsImmutableAcceptedGoal() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let projectID = fixture.projectID
         let phaseID = fixture.roadmapPhaseID
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Make Delivery Goal immutable") { connection in
@@ -2853,7 +2853,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testLoadDeliveryGoalEditorRejectsCompletedPhaseWithoutMutation() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let projectID = fixture.projectID
         let phaseID = fixture.roadmapPhaseID
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed completed phase") { connection in
@@ -2881,7 +2881,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanSavedNeedsReloadRetainsReceiptWithoutReplayEligibility() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let loader = RouteDashboardLoader(failingCalls: [2])
         let receipt = AgentCommandResult(
             entityIDs: [existing.id.rawValue],
@@ -2921,7 +2921,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testProjectPlanUnconfirmedSaveRejectsRootMismatchWithoutRetargetingEnvelope() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        let existing = try await seedEditableDeliveryGoal(in: fixture)
+        let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
         let replacementRoot = fixture.projectRoot.deletingLastPathComponent().appendingPathComponent("replacement", isDirectory: true)
         try FileManager.default.createDirectory(at: replacementRoot, withIntermediateDirectories: true)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(
@@ -2976,7 +2976,7 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testNativeDeliveryGoalDraftEditorRendersWideAndCompactAndCancelsWithoutDispatch() async throws {
         let fixture = try await makeRR9OwnerFixture()
-        _ = try await seedEditableDeliveryGoal(in: fixture)
+        _ = try await Self.seedEditableDeliveryGoal(in: fixture)
         let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
         let model = AppModel(
             store: fixture.store,
@@ -8231,7 +8231,7 @@ final class AppRouteTests: XCTestCase {
         )
     }
 
-    private func seedEditableDeliveryGoal(in fixture: RR9OwnerFixture) async throws -> DeliveryGoalDraft {
+    private static func seedEditableDeliveryGoal(in fixture: RR9OwnerFixture) async throws -> DeliveryGoalDraft {
         let draft = DeliveryGoalDraft(
             id: .init(rawValue: "existing-goal"),
             title: "Existing title",
