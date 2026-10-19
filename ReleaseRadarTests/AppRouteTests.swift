@@ -2631,6 +2631,182 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanAssignmentDraftReassignsOnlySelectedPhaseAndReturnsAuthoritativeReceipt() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        let before = await model.loadDeliveryGoalAssignmentEditor(
+            projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID
+        )
+        guard case let .loaded(beforeEditor) = before else {
+            return XCTFail("An editable phase must load its authoritative ticket-assignment snapshot")
+        }
+        XCTAssertEqual(beforeEditor.planRevision, 2)
+        XCTAssertEqual(beforeEditor.assignments, [.init(goalID: seeded.first.id, ticketID: .init(rawValue: "ROAD-1"))])
+
+        let saved = await model.saveDeliveryGoalAssignmentDraft(
+            projectID: fixture.projectID,
+            phaseID: fixture.roadmapPhaseID,
+            expectedRevision: beforeEditor.planRevision,
+            edits: [
+                .init(ticketID: .init(rawValue: "ROAD-1"), goalID: seeded.second.id),
+                .init(ticketID: .init(rawValue: "ROAD-2"), goalID: seeded.first.id),
+            ]
+        )
+        guard case let .confirmed(savedRevision, auditEventID, readback) = saved.status else {
+            return XCTFail("A saved assignment draft must return an authoritative confirmed receipt, got \(saved.status)")
+        }
+        XCTAssertEqual(savedRevision, 3)
+        XCTAssertEqual(readback.planRevision, 3)
+        XCTAssertEqual(
+            readback.assignments,
+            [.init(goalID: seeded.second.id, ticketID: .init(rawValue: "ROAD-1")),
+             .init(goalID: seeded.first.id, ticketID: .init(rawValue: "ROAD-2"))]
+        )
+        XCTAssertEqual(readback.tickets.map(\.id.rawValue), ["ROAD-1", "ROAD-2", "ROAD-X"])
+
+        let persisted = try await fixture.store.read { connection in
+            (
+                try connection.rows(
+                    "SELECT goal_id,ticket_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? ORDER BY ticket_id",
+                    bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+                ).map { "\(try $0.text(\"goal_id\")):\(try $0.text(\"ticket_id\"))" },
+                try connection.rows(
+                    "SELECT goal_id,ticket_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? ORDER BY ticket_id",
+                    bindings: [.text(fixture.projectID.rawValue), .text(fixture.emptyPhaseID.rawValue)]
+                ).map { "\(try $0.text(\"goal_id\")):\(try $0.text(\"ticket_id\"))" },
+                try connection.scalarText("SELECT entity_type FROM audit_events WHERE id=?", bindings: [.text(auditEventID.rawValue)]),
+                try connection.scalarText("SELECT project_id FROM evidence WHERE id='assignment-evidence'")
+            )
+        }
+        XCTAssertEqual(persisted.0, ["assignment-goal-a:ROAD-2", "assignment-goal-b:ROAD-1"])
+        XCTAssertEqual(persisted.1, ["foreign-assignment-goal:EMPTY-1"])
+        XCTAssertEqual(persisted.2, "phase_plan")
+        XCTAssertEqual(persisted.3, fixture.projectID.rawValue)
+    }
+
+    @MainActor
+    func testProjectPlanAssignmentDraftRejectsInvalidOrImmutableEditsWithoutDispatch() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalAssignmentDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+
+        let duplicate = await model.saveDeliveryGoalAssignmentDraft(
+            projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID, expectedRevision: 2,
+            edits: [
+                .init(ticketID: .init(rawValue: "ROAD-1"), goalID: .init(rawValue: "assignment-goal-a")),
+                .init(ticketID: .init(rawValue: "ROAD-1"), goalID: .init(rawValue: "assignment-goal-b")),
+            ]
+        )
+        guard case let .rejected(error, _) = duplicate.status else {
+            return XCTFail("Duplicate ticket edits must be rejected before dispatch")
+        }
+        XCTAssertFalse(deliveryGoalAssignmentDraftErrorMessage(error).isEmpty)
+        let requestsAfterDuplicate = await capture.requests()
+        XCTAssertTrue(requestsAfterDuplicate.isEmpty)
+
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Make selected phase immutable") { connection in
+            try connection.execute(
+                "UPDATE phase_lifecycles SET lifecycle='completed' WHERE project_id=? AND phase_id=?",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+        }
+        let immutable = await model.loadDeliveryGoalAssignmentEditor(
+            projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID
+        )
+        guard case let .failed(error) = immutable else {
+            return XCTFail("A completed phase must not open an assignment editor")
+        }
+        XCTAssertFalse(deliveryGoalAssignmentDraftErrorMessage(error).isEmpty)
+        let requestsAfterImmutableLoad = await capture.requests()
+        XCTAssertTrue(requestsAfterImmutableLoad.isEmpty)
+    }
+
+    @MainActor
+    func testProjectPlanAssignmentDraftKeepsEditsAcrossStaleUnavailableAndUnknownRecovery() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let edits = [.init(ticketID: TicketID(rawValue: "ROAD-1"), goalID: seeded.second.id)]
+
+        for error in [
+            AgentCommandError.planRevisionConflict(expected: 2, current: 3),
+            .appUnavailable,
+            .outcomeUnknown,
+        ] {
+            let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: error))
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                externalServicesSuppressed: true,
+                deliveryGoalAssignmentDraftOwnerCommandDispatch: { _, _, requestID, command in
+                    await capture.dispatch(requestID: requestID, command: command)
+                }
+            )
+            let first = await model.saveDeliveryGoalAssignmentDraft(
+                projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID, expectedRevision: 2, edits: edits
+            )
+            switch error {
+            case .outcomeUnknown:
+                guard case .unconfirmed = first.status else {
+                    return XCTFail("Unknown assignment outcome must retain a reconcileable edit")
+                }
+                XCTAssertEqual(
+                    model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)?.edits,
+                    edits
+                )
+            default:
+                guard case let .rejected(actual, _) = first.status else {
+                    return XCTFail("Definite assignment failure must be rejected, got \(first.status)")
+                }
+                XCTAssertEqual(actual, error)
+                XCTAssertNil(model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID))
+            }
+            let requests = await capture.requests()
+            XCTAssertEqual(requests.count, 1)
+        }
+    }
+
+    @MainActor
+    func testProjectPlanAssignmentDraftPersistsAcrossFreshModelNavigationAndReadback() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let seeded = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let first = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        let saved = await first.saveDeliveryGoalAssignmentDraft(
+            projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID, expectedRevision: 2,
+            edits: [.init(ticketID: .init(rawValue: "ROAD-2"), goalID: seeded.second.id)]
+        )
+        guard case .confirmed(savedRevision: 3, _, _) = saved.status else {
+            return XCTFail("Assignment persistence fixture must save before reopening")
+        }
+
+        let reopenedStore = DeliveryStore(databaseURL: fixture.databaseURL)
+        let reopened = AppModel(
+            store: reopenedStore,
+            projectOnboarding: FolderProjectOnboarding(store: reopenedStore, bookmarkStore: fixture.bookmarks),
+            externalServicesSuppressed: true
+        )
+        await reopened.loadDashboard()
+        await reopened.navigate(to: .projectPlan(fixture.projectID))
+        switch await reopened.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID) {
+        case let .loaded(editor):
+            XCTAssertEqual(editor.planRevision, 3)
+            XCTAssertTrue(editor.assignments.contains(.init(goalID: seeded.second.id, ticketID: .init(rawValue: "ROAD-2"))))
+        case let .failed(error):
+            XCTFail("A reopened Project Plan must return the saved assignment draft: \(error)")
+        }
+    }
+
+    @MainActor
     func testProjectPlanStaleRevisionPreservesFieldsAndRequiresExplicitFreshAttempt() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let existing = try await Self.seedEditableDeliveryGoal(in: fixture)
@@ -3109,6 +3285,99 @@ final class AppRouteTests: XCTestCase {
         }
         let requests = await capture.requests()
         XCTAssertTrue(requests.isEmpty, "Cancelling an editor must not save a draft")
+    }
+
+    @MainActor
+    func testNativeDeliveryGoalAssignmentEditorRendersWideCompactAndCancelsWithoutDispatch() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let capture = DeliveryGoalDraftDispatchCapture(result: .init(entityIDs: [], auditEventID: nil, error: nil))
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryGoalAssignmentDraftOwnerCommandDispatch: { _, _, requestID, command in
+                await capture.dispatch(requestID: requestID, command: command)
+            }
+        )
+        await model.loadDashboard()
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        for width in [1_280.0, 760.0] {
+            let view = ProjectPlanView(
+                plan: plan,
+                selectedTicketID: .constant(.init(rawValue: "ROAD-1")),
+                openAllPhases: {},
+                openPhase: { _ in },
+                loadDeliveryGoalAssignmentEditor: { phaseID in
+                    await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: phaseID)
+                },
+                saveDeliveryGoalAssignmentDraft: { phaseID, revision, edits in
+                    await model.saveDeliveryGoalAssignmentDraft(
+                        projectID: fixture.projectID, phaseID: phaseID, expectedRevision: revision, edits: edits
+                    )
+                },
+                reconcileDeliveryGoalAssignmentDraftSave: {
+                    await model.reconcileDeliveryGoalAssignmentDraftSave(attemptID: $0)
+                },
+                deliveryGoalAssignmentDraftSaveRecovery: {
+                    model.deliveryGoalAssignmentDraftSaveRecovery(projectID: fixture.projectID, phaseID: $0)
+                }
+            )
+            let window = NSWindow(
+                contentRect: .init(x: 30, y: 30, width: width, height: 850),
+                styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+            )
+            window.isReleasedWhenClosed = false
+            window.title = "Delivery Goal assignments native \(Int(width))"
+            let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+            window.contentView = hosting
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            defer { window.close() }
+
+            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+            for _ in 0..<20 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(100)) }
+            hosting.layoutSubtreeIfNeeded()
+            let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+            let edit = try XCTUnwrap(
+                accessibilityElement(nativeWindow, identifier: "edit-delivery-goal-assignments-\(fixture.roadmapPhaseID.rawValue)"),
+                "Ticket-assignment editor must be reachable at width \(Int(width))"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(edit, kAXPressAction as CFString), .success)
+            var editorText = ""
+            for _ in 0..<20 {
+                hosting.layoutSubtreeIfNeeded()
+                editorText = accessibilityText(application)
+                if editorText.contains("Assign Delivery Goal Tickets") { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            XCTAssertTrue(editorText.contains("Assign Delivery Goal Tickets"), "Timed out waiting for the assignment editor: \(editorText)")
+            XCTAssertTrue(editorText.contains("Covered"), "Assignment editor must explain phase coverage: \(editorText)")
+            XCTAssertTrue(editorText.contains("ROAD-1"), "Assignment editor must expose eligible tickets: \(editorText)")
+            let cancel = try XCTUnwrap(
+                accessibilityElements(application, role: kAXButtonRole).first { element in
+                    func text(_ attribute: String) -> String? {
+                        var value: CFTypeRef?
+                        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+                        return value as? String
+                    }
+                    return text(kAXTitleAttribute) == "Cancel" || text(kAXDescriptionAttribute) == "Cancel"
+                },
+                "Assignment editor must expose Cancel through accessibility"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(cancel, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(150))
+            XCTAssertFalse(accessibilityText(application).contains("Assign Delivery Goal Tickets"))
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(hosting.bounds.width, width, accuracy: 1)
+            try taskCapture(hosting, name: "delivery-goal-assignments-\(Int(width))")
+        }
+        let requests = await capture.requests()
+        XCTAssertTrue(requests.isEmpty, "Cancelling an assignment editor must not dispatch a plan revision")
     }
 
     @MainActor
@@ -8396,6 +8665,63 @@ final class AppRouteTests: XCTestCase {
             )
         }
         return draft
+    }
+
+    @MainActor
+    private static func seedDeliveryGoalAssignmentFixture(
+        in fixture: RR9OwnerFixture
+    ) async throws -> (DeliveryGoalDraft, DeliveryGoalDraft) {
+        let first = try await seedEditableDeliveryGoal(in: fixture)
+        let second = DeliveryGoalDraft(
+            id: .init(rawValue: "assignment-goal-b"),
+            title: "Alternate assignment goal",
+            outcome: "A distinct delivery outcome",
+            doneCriteria: ["Assignment is explicit"],
+            sortOrder: first.sortOrder + 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed Delivery Goal assignments") { connection in
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: fixture.projectID,
+                phaseID: fixture.roadmapPhaseID,
+                expectedRevision: 1,
+                goalUpserts: [second],
+                assignments: [.init(goalID: first.id, ticketID: .init(rawValue: "ROAD-1"))],
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "seed-delivery-goal-assignments"),
+                connection: connection
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('EMPTY-1',?,?,?,'backlog')",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.emptyPhaseID.rawValue), .text("Foreign assignment remains unchanged.")]
+            )
+            try TicketLaneOrderingPolicy.maintainPlacedTicket(
+                projectID: fixture.projectID, ticketID: .init(rawValue: "EMPTY-1"), lane: .backlog, connection: connection
+            )
+            let foreign = DeliveryGoalDraft(
+                id: .init(rawValue: "foreign-assignment-goal"),
+                title: "Foreign phase goal",
+                outcome: "Outside the selected assignment editor",
+                doneCriteria: ["Untouched"],
+                sortOrder: 0
+            )
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: fixture.projectID,
+                phaseID: fixture.emptyPhaseID,
+                expectedRevision: 0,
+                goalUpserts: [foreign],
+                assignments: [.init(goalID: foreign.id, ticketID: .init(rawValue: "EMPTY-1"))],
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "seed-foreign-assignment"),
+                connection: connection
+            )
+            try connection.execute(
+                "INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('assignment-evidence',?,?,?,1)",
+                bindings: [.text(fixture.projectID.rawValue), .text("ROAD-1"), .text("synthetic/assignment-evidence")]
+            )
+        }
+        return (first, second)
     }
 
     private func assertDeliveryGoalDraftCommand(
