@@ -507,6 +507,19 @@ struct SidebarView: View {
                         },
                         reconcileDeliveryGoalAssignmentDraftSave: { await model.reconcileDeliveryGoalAssignmentDraftSave(attemptID: $0) },
                         deliveryGoalAssignmentDraftSaveRecovery: { model.deliveryGoalAssignmentDraftSaveRecovery(projectID: projectID, phaseID: $0) },
+                        finalizePhasePlan: { phaseID, revision in
+                            await model.finalizePhasePlan(
+                                projectID: projectID,
+                                phaseID: phaseID,
+                                expectedRevision: revision
+                            )
+                        },
+                        reconcilePhasePlanFinalization: {
+                            await model.reconcilePhasePlanFinalization(attemptID: $0)
+                        },
+                        phasePlanFinalizationRecovery: {
+                            model.phasePlanFinalizationRecovery(projectID: projectID, phaseID: $0)
+                        },
                         repositoryPlanReconstruction: model.repositoryPlanReconstruction(
                             for: projectID
                         ),

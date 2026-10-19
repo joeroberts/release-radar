@@ -76,6 +76,14 @@ private struct PendingDeliveryGoalAssignmentSave: Sendable {
     let edits: [DeliveryGoalAssignmentEdit]
     var error: AgentCommandError
 }
+private struct PendingPhasePlanFinalization: Sendable {
+    let envelope: AgentCommandEnvelope
+    let projectID: ProjectID
+    let phaseID: PhaseID
+    let registration: ProjectRegistration
+    let expectedRevision: Int64
+    var error: AgentCommandError
+}
 
 private struct PreparedProjectProjections: Sendable {
     let dashboard: DashboardProjection
@@ -262,8 +270,11 @@ final class AppModel {
         AgentCommand
     ) async -> AgentCommandResult
     private let deliveryGoalAssignmentDraftOwnerCommandDispatch: @Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult
+    private let phasePlanFinalizationOwnerCommandDispatch: @Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult
     private var pendingDeliveryGoalAssignmentSaves: [UUID: PendingDeliveryGoalAssignmentSave] = [:]
     private var pendingDeliveryGoalAssignmentSaveIDs: [DeliveryGoalDraftSaveKey: UUID] = [:]
+    private var pendingPhasePlanFinalizations: [UUID: PendingPhasePlanFinalization] = [:]
+    private var pendingPhasePlanFinalizationIDs: [DeliveryGoalDraftSaveKey: UUID] = [:]
     private var pendingDeliveryGoalDraftSaves: [UUID: PendingDeliveryGoalDraftSave] = [:]
     private var pendingDeliveryGoalDraftSaveIDs: [DeliveryGoalDraftSaveKey: UUID] = [:]
     private let repositoryPlanReadbackLoader: @Sendable (
@@ -383,6 +394,7 @@ final class AppModel {
             AgentCommand
         ) async -> AgentCommandResult)? = nil,
         deliveryGoalAssignmentDraftOwnerCommandDispatch: (@Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult)? = nil,
+        phasePlanFinalizationOwnerCommandDispatch: (@Sendable (ProjectID, ProjectRegistration, UUID, AgentCommand) async -> AgentCommandResult)? = nil,
         repositoryPlanReadbackLoader: @escaping @Sendable (
             DeliveryStore,
             ProjectID,
@@ -589,6 +601,32 @@ final class AppModel {
             )
         self.deliveryGoalAssignmentDraftOwnerCommandDispatch = deliveryGoalAssignmentDraftOwnerCommandDispatch
             ?? resolvedDeliveryGoalDraftOwnerCommandDispatch
+        self.phasePlanFinalizationOwnerCommandDispatch = phasePlanFinalizationOwnerCommandDispatch
+            ?? { projectID, registration, requestID, command in
+                do {
+                    return try await resolvedOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                        guard project.registration == registration else {
+                            return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+                        }
+                        return await AgentCommandDispatcher(
+                            store: store,
+                            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                        ).dispatch(
+                            .init(
+                                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                                requestID: requestID,
+                                projectRoot: project.canonicalRoot.path,
+                                expectedRegistration: registration,
+                                reason: "Owner finalized phase plan",
+                                command: command
+                            ),
+                            origin: .ownerApp
+                        )
+                    }
+                } catch {
+                    return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+                }
+            }
         recoveryServices?.observeAgentBridgeHealth { [weak self] snapshot in
             self?.applyConnectorHealthSnapshot(snapshot)
         }
@@ -5449,6 +5487,181 @@ final class AppModel {
     private func removePendingDeliveryGoalAssignmentSave(_ attemptID: UUID, key: DeliveryGoalDraftSaveKey) {
         pendingDeliveryGoalAssignmentSaves.removeValue(forKey: attemptID)
         pendingDeliveryGoalAssignmentSaveIDs.removeValue(forKey: key)
+    }
+
+    func finalizePhasePlan(
+        projectID: ProjectID,
+        phaseID: PhaseID,
+        expectedRevision: Int64
+    ) async -> PhasePlanFinalizationOutcome {
+        let attemptID = requestIDGenerator()
+        let key = DeliveryGoalDraftSaveKey(projectID: projectID, phaseID: phaseID)
+        if let pendingAttemptID = pendingPhasePlanFinalizationIDs[key] {
+            return .init(attemptID: pendingAttemptID, status: .unconfirmed(error: .outcomeUnknown))
+        }
+        let authorization: (ProjectRegistration?, String)
+        do {
+            authorization = try await projectOnboarding.withAuthorizedProject(projectID: projectID) {
+                ($0.registration, $0.canonicalRoot.path)
+            }
+        } catch {
+            return .init(attemptID: attemptID, status: .rejected(error: .unauthorizedProjectRoot, readback: nil))
+        }
+        guard let registration = authorization.0 else {
+            return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, readback: nil))
+        }
+        let command = AgentCommand.finalizePhasePlan(
+            projectID: projectID.rawValue,
+            phaseID: phaseID.rawValue,
+            expectedRevision: expectedRevision
+        )
+        let pending = PendingPhasePlanFinalization(
+            envelope: .init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: attemptID,
+                projectRoot: authorization.1,
+                expectedRegistration: registration,
+                reason: "Owner finalized phase plan",
+                command: command
+            ),
+            projectID: projectID,
+            phaseID: phaseID,
+            registration: registration,
+            expectedRevision: expectedRevision,
+            error: .outcomeUnknown
+        )
+        return await resolvePhasePlanFinalization(pending, key: key)
+    }
+
+    func reconcilePhasePlanFinalization(attemptID: UUID) async -> PhasePlanFinalizationOutcome {
+        guard let pending = pendingPhasePlanFinalizations[attemptID] else {
+            return .init(attemptID: attemptID, status: .rejected(error: .outcomeUnknown, readback: nil))
+        }
+        let key = DeliveryGoalDraftSaveKey(projectID: pending.projectID, phaseID: pending.phaseID)
+        guard pendingPhasePlanFinalizationIDs[key] == attemptID else {
+            return .init(attemptID: attemptID, status: .rejected(error: .outcomeUnknown, readback: nil))
+        }
+        guard pending.envelope.version == AgentCommandDispatcher.commandEnvelopeVersion,
+              pending.envelope.requestID == attemptID,
+              pending.envelope.expectedRegistration == pending.registration,
+              case let .finalizePhasePlan(projectID, phaseID, revision) = pending.envelope.command,
+              Data(projectID.utf8) == Data(pending.projectID.rawValue.utf8),
+              Data(phaseID.utf8) == Data(pending.phaseID.rawValue.utf8),
+              revision == pending.expectedRevision else {
+            removePendingPhasePlanFinalization(attemptID, key: key)
+            return .init(
+                attemptID: attemptID,
+                status: .rejected(
+                    error: .invalidEnvelope("The saved finalization attempt no longer matches its original phase operation."),
+                    readback: nil
+                )
+            )
+        }
+        do {
+            let current = try await projectOnboarding.withAuthorizedProject(projectID: pending.projectID) {
+                ($0.registration, $0.canonicalRoot.path)
+            }
+            guard let registration = current.0,
+                  registration == pending.registration,
+                  current.1 == pending.envelope.projectRoot else {
+                removePendingPhasePlanFinalization(attemptID, key: key)
+                return .init(attemptID: attemptID, status: .rejected(error: .staleProjectRegistration, readback: nil))
+            }
+        } catch {
+            removePendingPhasePlanFinalization(attemptID, key: key)
+            return .init(attemptID: attemptID, status: .rejected(error: .unauthorizedProjectRoot, readback: nil))
+        }
+        return await resolvePhasePlanFinalization(pending, key: key)
+    }
+
+    func phasePlanFinalizationRecovery(
+        projectID: ProjectID,
+        phaseID: PhaseID
+    ) -> PhasePlanFinalizationRecovery? {
+        let key = DeliveryGoalDraftSaveKey(projectID: projectID, phaseID: phaseID)
+        guard let attemptID = pendingPhasePlanFinalizationIDs[key],
+              let pending = pendingPhasePlanFinalizations[attemptID] else { return nil }
+        return .init(attemptID: attemptID, expectedRevision: pending.expectedRevision, error: pending.error)
+    }
+
+    private func resolvePhasePlanFinalization(
+        _ pending: PendingPhasePlanFinalization,
+        key: DeliveryGoalDraftSaveKey
+    ) async -> PhasePlanFinalizationOutcome {
+        let attemptID = pending.envelope.requestID
+        let result = await phasePlanFinalizationOwnerCommandDispatch(
+            pending.projectID, pending.registration, attemptID, pending.envelope.command
+        )
+        if let error = result.error {
+            if error == .outcomeUnknown {
+                var retained = pending
+                retained.error = error
+                pendingPhasePlanFinalizations[attemptID] = retained
+                pendingPhasePlanFinalizationIDs[key] = attemptID
+                return .init(attemptID: attemptID, status: .unconfirmed(error: error))
+            }
+            let readback = await currentPhasePlanFinalizationReadback(
+                projectID: pending.projectID, phaseID: pending.phaseID
+            )
+            removePendingPhasePlanFinalization(attemptID, key: key)
+            return .init(attemptID: attemptID, status: .rejected(error: error, readback: readback))
+        }
+        guard let auditEventID = result.auditEventID,
+              let savedRevision = result.phasePlanRevision,
+              savedRevision == pending.expectedRevision else {
+            var retained = pending
+            retained.error = .outcomeUnknown
+            pendingPhasePlanFinalizations[attemptID] = retained
+            pendingPhasePlanFinalizationIDs[key] = attemptID
+            return .init(attemptID: attemptID, status: .unconfirmed(error: .outcomeUnknown))
+        }
+        removePendingPhasePlanFinalization(attemptID, key: key)
+        guard await reloadProjectProjections(context: .agentCommandCommitted) == .published,
+              let readback = await currentPhasePlanFinalizationReadback(
+                  projectID: pending.projectID, phaseID: pending.phaseID
+              ),
+              readback.revision == savedRevision,
+              readback.state == .ready,
+              readback.readyRevision == savedRevision else {
+            return .init(
+                attemptID: attemptID,
+                status: .savedNeedsReload(savedRevision: savedRevision, auditEventID: auditEventID)
+            )
+        }
+        return .init(
+            attemptID: attemptID,
+            status: .confirmed(savedRevision: savedRevision, auditEventID: auditEventID, readback: readback)
+        )
+    }
+
+    private func currentPhasePlanFinalizationReadback(
+        projectID: ProjectID,
+        phaseID: PhaseID
+    ) async -> PhasePlanFinalizationReadback? {
+        do {
+            return try await store.read { connection in
+                guard let plan = try DeliveryPlanningPolicy.loadPlan(
+                    projectID: projectID, phaseID: phaseID, connection: connection
+                ) else { return nil }
+                return .init(
+                    projectID: projectID,
+                    phaseID: phaseID,
+                    revision: plan.revision,
+                    readyRevision: plan.readyRevision,
+                    state: plan.state
+                )
+            }
+        } catch {
+            return nil
+        }
+    }
+
+    private func removePendingPhasePlanFinalization(
+        _ attemptID: UUID,
+        key: DeliveryGoalDraftSaveKey
+    ) {
+        pendingPhasePlanFinalizations.removeValue(forKey: attemptID)
+        pendingPhasePlanFinalizationIDs.removeValue(forKey: key)
     }
 
     func saveDeliveryGoalDraft(
