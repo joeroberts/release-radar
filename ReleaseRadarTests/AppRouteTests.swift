@@ -3704,7 +3704,10 @@ final class AppRouteTests: XCTestCase {
         XCTAssertTrue(accessibilityText(message).localizedCaseInsensitiveContains("unavailable"))
         let retry = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "retry-delivery-goal-assignment-load"))
         XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where !accessibilityText(nativeWindow).contains("Assign Delivery Goal Tickets") { try await Task.sleep(for: .milliseconds(100)) }
+        for _ in 0..<20 {
+            if await loader.count() == 2 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
         XCTAssertTrue(accessibilityText(nativeWindow).contains("ROAD-1"))
         let retryCount = await loader.count()
         XCTAssertEqual(retryCount, 2)
