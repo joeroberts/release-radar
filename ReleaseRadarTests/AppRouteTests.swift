@@ -3414,7 +3414,7 @@ final class AppRouteTests: XCTestCase {
             var editorText = ""
             for _ in 0..<20 {
                 hosting.layoutSubtreeIfNeeded()
-                editorText = accessibilityText(nativeWindow)
+                editorText = accessibilityText(application)
                 if editorText.contains("New Delivery Goal") { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
@@ -3454,7 +3454,7 @@ final class AppRouteTests: XCTestCase {
                 "Validation must name the required correction in plain language"
             )
             let cancel = try XCTUnwrap(
-                accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
+                accessibilityElements(application, role: kAXButtonRole).first { element in
                     textAttribute(element, kAXTitleAttribute) == "Cancel"
                         || textAttribute(element, kAXDescriptionAttribute) == "Cancel"
                 },
@@ -3538,7 +3538,7 @@ final class AppRouteTests: XCTestCase {
             var editorText = ""
             for _ in 0..<20 {
                 hosting.layoutSubtreeIfNeeded()
-                editorText = accessibilityText(application)
+                editorText = accessibilityText(nativeWindow)
                 if editorText.contains("Assign Delivery Goal Tickets") { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
@@ -3556,7 +3556,7 @@ final class AppRouteTests: XCTestCase {
             XCTAssertTrue(editorText.contains("ROAD-1"), "Assignment editor must expose eligible tickets: \(editorText)")
             guard editorText.contains("Assign Delivery Goal Tickets") else { continue }
             let cancel = try XCTUnwrap(
-                accessibilityElements(application, role: kAXButtonRole).first { element in
+                accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
                     func text(_ attribute: String) -> String? {
                         var value: CFTypeRef?
                         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }

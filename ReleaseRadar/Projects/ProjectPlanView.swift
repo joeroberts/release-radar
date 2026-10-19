@@ -158,6 +158,7 @@ struct ProjectPlanView: View {
     @State private var isSavingDeliveryGoal = false
     @State private var showsDeliveryGoalAssignmentEditor = false
     @State private var deliveryGoalAssignmentEditor: DeliveryGoalAssignmentEditorSnapshot?
+    @State private var deliveryGoalAssignmentEditorPhaseID: PhaseID?
     @State private var deliveryGoalAssignmentSelections: [TicketID: String] = [:]
     @State private var deliveryGoalAssignmentEditorMessage: String?
     @State private var isSavingDeliveryGoalAssignments = false
@@ -600,6 +601,17 @@ struct ProjectPlanView: View {
                         .disabled(isSavingDeliveryGoalAssignments)
                         .accessibilityIdentifier("reconcile-delivery-goal-assignment-save")
                 }
+            } else if let message = deliveryGoalAssignmentEditorMessage {
+                Section {
+                    Text(message)
+                        .foregroundStyle(RekonTheme.danger)
+                        .accessibilityIdentifier("delivery-goal-assignment-editor-message")
+                    if let phaseID = deliveryGoalAssignmentEditorPhaseID {
+                        Button("Retry") { openDeliveryGoalAssignmentEditor(phaseID) }
+                            .buttonStyle(RekonSecondaryButtonStyle())
+                            .accessibilityIdentifier("retry-delivery-goal-assignment-load")
+                    }
+                }
             } else { ProgressView("Loading ticket assignments") }
         }.navigationTitle("Assign Delivery Goal Tickets").toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showsDeliveryGoalAssignmentEditor = false }.disabled(isSavingDeliveryGoalAssignments) }
@@ -611,6 +623,7 @@ struct ProjectPlanView: View {
     private func currentGoal(_ ticketID: TicketID, editor: DeliveryGoalAssignmentEditorSnapshot) -> DeliveryGoalID? { editor.assignments.first { $0.ticketID == ticketID }?.goalID }
     private func openDeliveryGoalAssignmentEditor(_ phaseID: PhaseID) {
         guard let loadDeliveryGoalAssignmentEditor else { return }
+        deliveryGoalAssignmentEditorPhaseID = phaseID
         deliveryGoalAssignmentEditor = nil
         deliveryGoalAssignmentSelections = [:]
         deliveryGoalAssignmentEditorMessage = nil
