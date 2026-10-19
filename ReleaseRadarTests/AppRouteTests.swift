@@ -2667,6 +2667,17 @@ final class AppRouteTests: XCTestCase {
         )
         XCTAssertEqual(readback.tickets.map(\.id.rawValue), ["ROAD-1", "ROAD-2", "ROAD-X"])
 
+        let published = try XCTUnwrap(
+            model.dashboard?.plan(for: fixture.projectID)?.phases.first { $0.id == fixture.roadmapPhaseID }
+        )
+        XCTAssertEqual(published.readiness.revision, 3)
+        XCTAssertEqual(published.readiness.coveredUpcomingCount, 2)
+        XCTAssertEqual(published.readiness.unassignedUpcomingCount, 1)
+        XCTAssertEqual(
+            published.deliveryGoals.first { $0.goalID == seeded.second.id }?.ticketIDs.map(\.rawValue),
+            ["ROAD-1"]
+        )
+
         let persisted = try await fixture.store.read { connection in
             (
                 try connection.rows(
