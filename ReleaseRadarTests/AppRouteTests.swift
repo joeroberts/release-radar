@@ -2447,6 +2447,10 @@ final class AppRouteTests: XCTestCase {
             sortOrder: 7
         )
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed editable delivery goal") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'delivery-goal-draft-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
             _ = try DeliveryPlanningPolicy.applyRevision(
                 projectID: fixture.projectID,
                 phaseID: fixture.roadmapPhaseID,
@@ -3030,10 +3034,21 @@ final class AppRouteTests: XCTestCase {
                 "Create Delivery Goal must be reachable at width \(Int(width))"
             )
             XCTAssertEqual(AXUIElementPerformAction(create, kAXPressAction as CFString), .success)
-            try await Task.sleep(for: .milliseconds(250))
-            hosting.layoutSubtreeIfNeeded()
-            XCTAssertTrue(accessibilityText(application).contains("New Delivery Goal"))
-            XCTAssertTrue(accessibilityText(application).contains("Done criteria, one per line"))
+            var editorText = ""
+            for _ in 0..<20 {
+                hosting.layoutSubtreeIfNeeded()
+                editorText = accessibilityText(application)
+                if editorText.contains("New Delivery Goal") { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            XCTAssertTrue(
+                editorText.contains("New Delivery Goal"),
+                "Timed out waiting for the editor sheet. Accessible text: \(editorText)"
+            )
+            XCTAssertTrue(
+                editorText.contains("Done criteria, one per line"),
+                "Editor sheet omitted its criteria field. Accessible text: \(editorText)"
+            )
             let save = try XCTUnwrap(
                 accessibilityElements(application, role: kAXButtonRole).first { element in
                     var title: CFTypeRef?
