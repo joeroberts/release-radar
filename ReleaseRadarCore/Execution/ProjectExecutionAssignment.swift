@@ -59,8 +59,30 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public var preparedPolicyDigest: String? = nil
     public var uncertainOutcome: Bool? = nil
     public var permissionProfileDefinition: Data? = nil
+    public var profileProvisioningReceipt: ProfileProvisioningReceipt? = nil
+    /// The original runtime worker UUID. This is populated only by the launch
+    /// path; readers must not manufacture a replacement for legacy records.
+    public var workerAttemptID: UUID? = nil
     public var retirement: Retirement? = nil
     public var lostWorkerRecovery: LostWorkerRecovery? = nil
+    public struct ProfileProvisioningReceipt: Codable, Equatable, Sendable {
+        public enum State: String, Codable, Sendable { case pending, verified }
+        public enum Provenance: String, Codable, Sendable { case newlyPrepared, authoritativelyReconciled }
+
+        public let version: Int
+        public var state: State
+        public let provenance: Provenance
+        public let requestedAt: Date
+        public var verifiedAt: Date?
+
+        public init(state: State, provenance: Provenance, requestedAt: Date, verifiedAt: Date?) {
+            version = 1
+            self.state = state
+            self.provenance = provenance
+            self.requestedAt = requestedAt
+            self.verifiedAt = verifiedAt
+        }
+    }
     public struct Retirement: Codable, Equatable, Sendable {
         public let requestID: UUID
         public let priorState: State
@@ -171,6 +193,13 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
                   Set(object.keys) == ["filesystem", "network"], object["filesystem"] is [String: Any],
                   let network = object["network"] as? [String: Any], Set(network.keys) == ["enabled"],
                   network["enabled"] as? Bool == false else { throw ProjectExecutionError.invalidAssignment }
+        }
+        if let receipt = profileProvisioningReceipt {
+            guard permissionProfileDefinition != nil, receipt.version == 1,
+                  (receipt.state == .pending && receipt.verifiedAt == nil)
+                    || (receipt.state == .verified && receipt.verifiedAt != nil) else {
+                throw ProjectExecutionError.invalidAssignment
+            }
         }
         if let retirement {
             guard state != .authorized, state != .preparing,

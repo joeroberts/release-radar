@@ -4,6 +4,7 @@ import ReleaseRadarCore
 actor WorkerAdapter {
     struct Worker {
         let id: String
+        let attemptID: UUID
         let policy: WorkerPolicy
         var server: (any ExecutionPeer)?
         var threadID: String?
@@ -48,7 +49,7 @@ actor WorkerAdapter {
         let params = message["params"] as? [String: Any] ?? [:]
         if method == "adapter/connectionLost" {
             worker.status = "unknown"; worker.error = "Connection lost; do not redispatch the assignment."
-            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
             catch { worker.error = "Connection lost; assignment revocation failed: \(error.localizedDescription). Stop the worker independently before recovery." }
         } else if worker.status == "unknown" {
             return // Late notifications cannot establish a previously uncertain outcome.
@@ -87,8 +88,9 @@ actor WorkerAdapter {
         guard selected.assignment.sessionID == nil,
               !workers.values.contains(where: { $0.policy.assignment.registration == selected.assignment.registration && $0.policy.assignment.id == assignmentID }) else { throw ProjectExecutionError.conflict }
         starting = true; defer { starting = false }
-        let id = UUID().uuidString
-        workers[id] = Worker(id: id, policy: selected)
+        let attemptID = UUID()
+        let id = attemptID.uuidString
+        workers[id] = Worker(id: id, attemptID: attemptID, policy: selected)
         do {
             guard try store.policy(projectID: projectID) == selected.policy else { throw ProjectExecutionError.assignmentNotAuthorized }
             var args = AppServerTransport.executionSetupArguments
@@ -107,10 +109,10 @@ actor WorkerAdapter {
                 // RR only hands off a fresh authorized launch. Existing uncertain
                 // reservations cannot acquire another grant after restart.
                 lease = try CoordinatorCodexContextLease.acquire(store: store, projectID: projectID,
-                    assignmentID: assignmentID, contextID: contextID, attemptID: UUID(uuidString: id)!)
+                    assignmentID: assignmentID, contextID: contextID, attemptID: attemptID)
             }
             workers[id]?.contextLease = lease
-            try selected.reserve() // Durable intent still precedes every child launch.
+            try selected.reserve(attemptID: attemptID) // Durable intent still precedes every child launch.
             if let serverFactory { server = try serverFactory(selected.policy.appServerExecutable, args, onMessage) }
             else if let lease { server = try AppServerTransport(executable: selected.policy.appServerExecutable, arguments: args, context: lease, onMessage: onMessage) }
             else { throw CodexExecutionContextAccessFailure(stage: .handoff) }
@@ -154,7 +156,7 @@ actor WorkerAdapter {
                 cursor = inventory["nextCursor"] as? String
             } while cursor != nil
             try await verifyHook(server, selected: selected)
-            try selected.bind(sessionID: threadID)
+            try selected.bind(sessionID: threadID, attemptID: attemptID)
             workers[id]?.verified = true; workers[id]?.status = "ready"
             _ = try await followUp(workerID: id, prompt: value)
         } catch {
@@ -213,10 +215,10 @@ actor WorkerAdapter {
               let threadID = worker.threadID, let server = worker.server else { throw ProjectExecutionError.assignmentNotAuthorized }
         workers[workerID]?.busy = true
         defer { workers[workerID]?.busy = false }
-        let assignment = try worker.policy.current(sessionID: threadID)
+        let assignment = try worker.policy.current(sessionID: threadID, attemptID: worker.attemptID)
         try await verifyHook(server, selected: worker.policy)
         // Re-read after awaited readiness: a revocation during discovery still prevents admission.
-        _ = try worker.policy.current(sessionID: threadID)
+        _ = try worker.policy.current(sessionID: threadID, attemptID: worker.attemptID)
         guard workers[workerID]?.threadID == threadID, workers[workerID]?.verified == true,
               ["ready", "completed", "interrupted", "failed"].contains(workers[workerID]?.status ?? "unknown") else { throw ProjectExecutionError.assignmentNotAuthorized }
         workers[workerID]?.status = "startingTurn"
@@ -232,7 +234,7 @@ actor WorkerAdapter {
             let uncertain = unknown(error)
             workers[workerID]?.status = uncertain ? "unknown" : "failed"
             if uncertain {
-                do { try worker.policy.mark(.unknown, sessionID: threadID, from: [.authorized, .stopped]) }
+                do { try worker.policy.mark(.unknown, sessionID: threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
                 catch { workers[workerID]?.error = "Follow-up outcome is uncertain; admission revocation failed: \(error.localizedDescription). Stop the known run independently." }
             }
             throw failure
@@ -244,12 +246,28 @@ actor WorkerAdapter {
         let worker = try worker(workerID)
         guard let thread = worker.threadID, let turn = worker.turnID, let server = worker.server,
               worker.status != "closed" else { throw ProjectExecutionError.identityMismatch }
-        try worker.policy.mark(worker.status == "unknown" ? .unknown : .stopped, sessionID: thread, from: [.authorized])
+        let persistenceFailure: Error?
+        do {
+            try worker.policy.mark(worker.status == "unknown" ? .unknown : .stopped, sessionID: thread,
+                attemptID: worker.attemptID, from: [.authorized])
+            persistenceFailure = nil
+        } catch {
+            persistenceFailure = error
+        }
         do { _ = try await rpc(server, "turn/interrupt", ["threadId": thread, "turnId": turn]) }
         catch {
             if unknown(error) { workers[workerID]?.status = "unknown" }
-            workers[workerID]?.error = "STOP was requested for the known run; confirmation failed: \(error.localizedDescription)"
+            if let persistenceFailure {
+                workers[workerID]?.error = "STOP was requested for the known run; confirmation failed: \(error.localizedDescription). Durable STOP evidence is also unconfirmed: \(persistenceFailure.localizedDescription)"
+            } else {
+                workers[workerID]?.error = "STOP was requested for the known run; confirmation failed: \(error.localizedDescription)"
+            }
             throw error
+        }
+        if let persistenceFailure {
+            workers[workerID]?.status = "unknown"
+            workers[workerID]?.error = "STOP was sent to the known run, but durable STOP evidence is unconfirmed: \(persistenceFailure.localizedDescription)"
+            throw persistenceFailure
         }
         return try status(workerID: workerID) // Only turn/completed establishes that work stopped.
     }
@@ -258,7 +276,7 @@ actor WorkerAdapter {
         let worker = try worker(workerID)
         if decision == "accept" {
             guard let session = worker.threadID else { throw ProjectExecutionError.identityMismatch }
-            _ = try worker.policy.current(sessionID: session)
+            _ = try worker.policy.current(sessionID: session, attemptID: worker.attemptID)
         }
         guard !worker.busy, let request = worker.approvals[requestKey], let requestID = request["id"],
               let params = request["params"] as? [String: Any], params["threadId"] as? String == worker.threadID,
@@ -271,7 +289,7 @@ actor WorkerAdapter {
         catch {
             let failure = error
             workers[workerID]?.status = "unknown"; workers[workerID]?.uncertainApproval = ["requestKey": requestKey, "decision": decision]
-            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
             catch { workers[workerID]?.error = "Approval response is uncertain; admission revocation failed: \(error.localizedDescription). Stop the known run independently." }
             throw failure
         }
@@ -290,13 +308,13 @@ actor WorkerAdapter {
         }
         catch {
             workers[workerID]?.status = "unknown"; workers[workerID]?.error = error.localizedDescription
-            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+            do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
             catch let revocationError {
                 workers[workerID]?.error = "Cleanup failed: \(error.localizedDescription). Assignment revocation failed: \(revocationError.localizedDescription)."
             }
             throw error
         }
-        try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
+        try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
         workers.removeValue(forKey: workerID)
         return try RPCObject(["workerId": workerID, "status": "connectionClosed", "threadId": worker.threadID.map { $0 as Any } ?? NSNull()])
     }
@@ -306,11 +324,11 @@ actor WorkerAdapter {
             do {
                 if let server = worker.server { try server.close() }
                 else { try worker.contextLease?.physicallyClosed() }
-                try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
+                try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
             }
             catch {
                 workers[worker.id]?.status = "unknown"; workers[worker.id]?.error = error.localizedDescription
-                do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
+                do { try worker.policy.mark(.unknown, sessionID: worker.threadID, attemptID: worker.attemptID, from: [.authorized, .stopped]) }
                 catch let revocationError {
                     workers[worker.id]?.error = "Cleanup failed: \(error.localizedDescription). Assignment revocation failed: \(revocationError.localizedDescription)."
                 }

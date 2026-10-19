@@ -47,7 +47,7 @@ final class CodexContextHandoffAuthority: @unchecked Sendable {
                   assignment.registration.projectID.rawValue == projectID, assignment.id == assignmentID,
                   assignment.state == .authorized, assignment.sessionID == nil,
                   assignment.launchReserved != true, assignment.uncertainOutcome != true,
-                  assignment.connectionClosed != true,
+                  assignment.connectionClosed != true, assignment.workerAttemptID == nil,
                   !grants.values.contains(where: { $0.assignment.registration == assignment.registration && $0.assignment.id == assignmentID })
             else { throw CodexExecutionContextAccessFailure(stage: .identity) }
             let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: projectID, taskID: assignmentID)
@@ -89,12 +89,14 @@ final class CodexContextHandoffAuthority: @unchecked Sendable {
             let current = try store.assignment(projectID: project, taskID: grant.assignment.id)
             var reserved = grant.assignment
             reserved.state = .unknown; reserved.launchReserved = true; reserved.uncertainOutcome = true
+            reserved.workerAttemptID = grant.attempt
             if current != reserved {
                 guard grant.consumed, let session = current.sessionID,
                       grant.boundSession == nil || grant.boundSession == session else {
                     throw CodexExecutionContextAccessFailure(stage: .identity)
                 }
                 var bound = grant.assignment; bound.sessionID = session; bound.launchReserved = true
+                bound.workerAttemptID = grant.attempt
                 guard current == bound else { throw CodexExecutionContextAccessFailure(stage: .identity) }
                 grant.boundSession = session
             }
@@ -128,6 +130,7 @@ final class CodexContextHandoffAuthority: @unchecked Sendable {
             guard matching.count <= 1 else { throw ProjectExecutionError.conflict }
             guard let (grantID, grant) = matching.first else { return .noMatchingGrant }
             guard grant.assignment.registration == current.registration,
+                  current.workerAttemptID == grant.attempt,
                   !grant.available, grant.consumed, grant.boundSession == sessionID else {
                 throw ProjectExecutionError.identityMismatch
             }

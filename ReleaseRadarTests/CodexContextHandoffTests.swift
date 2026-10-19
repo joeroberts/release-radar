@@ -69,12 +69,12 @@ final class CodexContextHandoffTests: XCTestCase {
         XCTAssertThrowsError(try authority.validate(connection: connection, grantID: grant.id, attemptID: UUID()))
         XCTAssertThrowsError(try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt), "Consumption requires the exact reserved snapshot")
         let policy = try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first")
-        try policy.reserve()
+        try policy.reserve(attemptID: attempt)
         try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
         clock.advance()
         try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
         XCTAssertEqual(scope.count, 0, "Admission expiry must not release an active grant")
-        try policy.bind(sessionID: "synthetic-session")
+        try policy.bind(sessionID: "synthetic-session", attemptID: attempt)
         try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
         let before = try store.assignment(projectID: "handoff-fixture", taskID: "first")
         try authority.confirmedClosed(connection: connection, grantID: grant.id, attemptID: attempt)
@@ -109,7 +109,7 @@ final class CodexContextHandoffTests: XCTestCase {
         let connection = UUID(); let attempt = UUID()
         let grant = try authority.acquire(connection: connection, projectID: "handoff-fixture", assignmentID: "first", contextID: context.id, attemptID: attempt)
         let policy = try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first")
-        try policy.reserve(); clock.advance()
+        try policy.reserve(attemptID: attempt); clock.advance()
         XCTAssertThrowsError(try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt))
         let reserved = try store.assignment(projectID: "handoff-fixture", taskID: "first")
         let restarted = CodexContextHandoffAuthority(store: { store })
@@ -120,12 +120,31 @@ final class CodexContextHandoffTests: XCTestCase {
         XCTAssertEqual(scope.count, 1)
         XCTAssertEqual(try store.assignment(projectID: "handoff-fixture", taskID: "first"), reserved)
     }
+
+    func testHandoffRejectsAReservationWhosePersistedAttemptDiffersFromItsGrant() throws {
+        let (store, context, _, _, authority) = try fixture()
+        let connection = UUID(); let attempt = UUID()
+        let grant = try authority.acquire(connection: connection, projectID: "handoff-fixture",
+            assignmentID: "first", contextID: context.id, attemptID: attempt)
+        let policy = try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first")
+        try policy.reserve(attemptID: attempt)
+        let reserved = try store.assignment(projectID: "handoff-fixture", taskID: "first")
+        var differentAttempt = reserved
+        differentAttempt.workerAttemptID = UUID()
+        try store.saveAssignment(differentAttempt, expected: reserved)
+
+        XCTAssertThrowsError(try authority.validate(connection: connection, grantID: grant.id,
+            attemptID: attempt), "Handoff validation must preserve exact persisted attempt identity")
+        XCTAssertEqual(try store.assignment(projectID: "handoff-fixture", taskID: "first"),
+            differentAttempt)
+    }
+
     func testChangedReceiptOrConnectionLossPreservesGrantUntilExactPhysicalClosure() throws {
         let (store, context, scope, _, authority) = try fixture()
         let connection = UUID(); let attempt = UUID()
         XCTAssertThrowsError(try authority.acquire(connection: connection, projectID: "handoff-fixture", assignmentID: "first", contextID: UUID(), attemptID: attempt))
         let grant = try authority.acquire(connection: connection, projectID: "handoff-fixture", assignmentID: "first", contextID: context.id, attemptID: attempt)
-        try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first").reserve()
+        try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first").reserve(attemptID: attempt)
         try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
         let recovered = try CodexExecutionContext(home: URL(fileURLWithPath: context.homePath), bookmark: Data([2]), id: context.id)
         try store.saveCodexContext(recovered, expected: context)
@@ -138,7 +157,7 @@ final class CodexContextHandoffTests: XCTestCase {
         let (otherStore, otherContext, otherScope, _, other) = try fixture()
         let lost = UUID(); let lostAttempt = UUID()
         let lostGrant = try other.acquire(connection: lost, projectID: "handoff-fixture", assignmentID: "first", contextID: otherContext.id, attemptID: lostAttempt)
-        try WorkerPolicy(store: otherStore, projectID: "handoff-fixture", taskID: "first").reserve()
+        try WorkerPolicy(store: otherStore, projectID: "handoff-fixture", taskID: "first").reserve(attemptID: lostAttempt)
         other.connectionLost(lost)
         XCTAssertThrowsError(try other.validate(connection: lost, grantID: lostGrant.id, attemptID: lostAttempt))
         XCTAssertThrowsError(try other.confirmedClosed(connection: UUID(), grantID: lostGrant.id, attemptID: lostAttempt))
@@ -152,9 +171,9 @@ final class CodexContextHandoffTests: XCTestCase {
         let grant = try authority.acquire(connection: connection, projectID: "handoff-fixture",
             assignmentID: "first", contextID: context.id, attemptID: attempt)
         let policy = try WorkerPolicy(store: store, projectID: "handoff-fixture", taskID: "first")
-        try policy.reserve()
+        try policy.reserve(attemptID: attempt)
         try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
-        try policy.bind(sessionID: "lost-session")
+        try policy.bind(sessionID: "lost-session", attemptID: attempt)
         try authority.validate(connection: connection, grantID: grant.id, attemptID: attempt)
         authority.connectionLost(connection)
 

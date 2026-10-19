@@ -1543,8 +1543,18 @@ final class ProjectExecutionProducerTests: XCTestCase {
             await configuration.setFailure(false)
             do { _ = try await producer.prepare(project: project, work: work, requestID: request,
                 reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("Collision must refuse") }
-            catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
-            XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: pending.id), pending)
+            catch let conflict as ProjectExecutionPreparationConflict {
+                XCTAssertEqual(conflict.diagnostic, .init(kind: .causeUnavailable,
+                    stage: .preparedAssignmentConfiguration, blockingRequestID: nil,
+                    blockingAssignmentID: nil, evidence: .observedAtFailure))
+            } catch { XCTFail("Collision must remain a typed preparation conflict: \(error)") }
+            let persisted = try store.assignment(projectID: "project-one", taskID: pending.id)
+            var expected = pending; expected.profileProvisioningReceipt = persisted.profileProvisioningReceipt
+            XCTAssertEqual(persisted, expected, "The successful profile readback may settle only its receipt before the later collision")
+            XCTAssertEqual(persisted.profileProvisioningReceipt?.state, .verified)
+            XCTAssertEqual(persisted.profileProvisioningReceipt?.provenance, .newlyPrepared)
+            XCTAssertEqual(persisted.profileProvisioningReceipt?.requestedAt, pending.profileProvisioningReceipt?.requestedAt)
+            XCTAssertNotNil(persisted.profileProvisioningReceipt?.verifiedAt)
             let checks = await configuration.hookChecks; XCTAssertEqual(checks, 0)
             if symlink { XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: layer.path), source.path) }
             else { XCTAssertEqual(try Data(contentsOf: layer), Data("collision".utf8)) }
@@ -1638,9 +1648,19 @@ final class ProjectExecutionProducerTests: XCTestCase {
         catch { XCTAssertEqual(error as? ProjectExecutionError, .hookNotReady) }
         let pending = try XCTUnwrap(store.assignments(projectID: "project-one").first)
         XCTAssertEqual(pending.state, .preparing)
+        XCTAssertEqual(pending.profileProvisioningReceipt?.state, .pending,
+            "A failed configuration attempt must preserve durable pending installation evidence")
+        XCTAssertEqual(pending.profileProvisioningReceipt?.provenance, .newlyPrepared)
+        XCTAssertNotNil(pending.permissionProfileDefinition,
+            "The pending receipt must remain bound to the pre-recorded expected definition")
         await configuration.setFailure(false)
         let resumed = try await producer.prepare(project: project, work: work, requestID: request, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
         XCTAssertEqual(resumed.id, pending.id); XCTAssertEqual(resumed.state, .preparing)
+        XCTAssertEqual(resumed.profileProvisioningReceipt?.state, .verified,
+            "Only a successful resumed configuration/readback may verify the same receipt")
+        XCTAssertEqual(resumed.profileProvisioningReceipt?.provenance, .newlyPrepared)
+        XCTAssertNotNil(resumed.profileProvisioningReceipt?.requestedAt)
+        XCTAssertNotNil(resumed.profileProvisioningReceipt?.verifiedAt)
         XCTAssertThrowsError(try resumed.admit(registration: project.registration!, checkoutPath: resumed.checkoutPath, sessionID: "session", boundSessionID: "session"))
         let admitted = try producer.admitPrepared(resumed)
         XCTAssertEqual(admitted.state, .authorized)
@@ -1667,6 +1687,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertNotEqual(review.checkoutPath, delivery.checkoutPath); XCTAssertNil(review.sessionID)
         XCTAssertEqual(review.reviewOfAssignmentID, delivery.id)
         XCTAssertEqual(review.reviewScratchVersion, ProjectExecutionAssignment.xcodeBuildScratchVersion)
+        XCTAssertEqual(review.profileProvisioningReceipt?.state, .verified,
+            "Review provisioning needs the same verified receipt as delivery provisioning")
+        XCTAssertEqual(review.profileProvisioningReceipt?.provenance, .newlyPrepared)
+        XCTAssertNotNil(review.permissionProfileDefinition)
         let profiles = await configuration.profiles
         XCTAssertEqual(profiles.last?.workspace["."], "read")
         XCTAssertEqual(profiles.last?.workspace[".build"], "write")

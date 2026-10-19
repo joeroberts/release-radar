@@ -4,6 +4,13 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkerAdapterTests: XCTestCase {
+    final class AttemptProbe: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: UUID?
+        func record(_ attempt: UUID?) { lock.withLock { value = attempt } }
+        var recorded: UUID? { lock.withLock { value } }
+    }
+
     final class StoreProbe: @unchecked Sendable {
         let root: URL
         private let lock = NSLock()
@@ -86,6 +93,129 @@ final class WorkerAdapterTests: XCTestCase {
         try await service.disconnect()
         XCTAssertEqual(peer.closeCount, 1)
         XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one").connectionClosed, true)
+    }
+
+    func testStartPersistsOneOriginalAttemptBeforeTransportAndRetainsItThroughBind() async throws {
+        let fixture = try fixture()
+        let peer = Peer(policy: fixture.policy)
+        let probe = AttemptProbe()
+        let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in
+            let reserved = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+            XCTAssertEqual(reserved.state, .unknown)
+            XCTAssertEqual(reserved.launchReserved, true)
+            XCTAssertEqual(reserved.uncertainOutcome, true)
+            probe.record(reserved.workerAttemptID)
+            XCTAssertNotNil(probe.recorded,
+                "The original worker UUID must be durable before any transport is constructed")
+            return peer
+        })
+
+        let result = try await adapter.start(projectID: "project-one", assignmentID: "task-one",
+            prompt: "Begin the approved work").object()
+        let workerID = try XCTUnwrap(result["workerId"] as? String)
+        let persisted = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(persisted.workerAttemptID, probe.recorded)
+        XCTAssertEqual(persisted.workerAttemptID?.uuidString, workerID)
+        XCTAssertEqual(persisted.sessionID, "session-one")
+        XCTAssertEqual(persisted.workerAttemptID?.uuidString, workerID,
+            "Binding a session must retain the UUID used for the launch attempt")
+        let reopened = try ProjectExecutionFileStore(root: fixture.store.root, create: false)
+        let afterRestart = try reopened.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(afterRestart.workerAttemptID, persisted.workerAttemptID)
+        XCTAssertEqual(afterRestart.sessionID, persisted.sessionID,
+            "A reopened protected store retains the original attempt/session association")
+    }
+
+    func testWorkerPolicyRejectsDifferentAttemptAfterReservationAndBinding() throws {
+        let fixture = try fixture()
+        let attempt = UUID()
+        try fixture.policy.reserve(attemptID: attempt)
+        let reserved = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(reserved.workerAttemptID, attempt)
+
+        XCTAssertThrowsError(try fixture.policy.bind(sessionID: "session-one", attemptID: UUID()),
+            "A session cannot bind to a different worker attempt")
+        try fixture.policy.bind(sessionID: "session-one", attemptID: attempt)
+        XCTAssertThrowsError(try fixture.policy.current(sessionID: "session-one", attemptID: UUID()),
+            "Subsequent admission must retain the original attempt identity")
+        XCTAssertEqual(try fixture.policy.current(sessionID: "session-one", attemptID: attempt)
+            .workerAttemptID, attempt)
+    }
+
+    func testWorkerPolicyDoesNotCloseOrMarkAnotherAttemptWithTheSameSession() throws {
+        let fixture = try fixture()
+        let runtimeAttempt = UUID(); let persistedAttempt = UUID()
+        var persisted = fixture.policy.assignment
+        persisted.sessionID = "shared-session"
+        persisted.launchReserved = true
+        persisted.workerAttemptID = persistedAttempt
+        try fixture.store.saveAssignment(persisted, expected: fixture.policy.assignment)
+
+        XCTAssertThrowsError(try fixture.policy.mark(.closed, sessionID: "shared-session",
+            attemptID: runtimeAttempt, from: [.authorized], connectionClosed: true))
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
+            persisted, "A close from attempt A must not stamp connection closure onto attempt B")
+
+        XCTAssertThrowsError(try fixture.policy.mark(.unknown, sessionID: "shared-session",
+            attemptID: runtimeAttempt, from: [.authorized]))
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
+            persisted, "Fallback uncertainty from attempt A must not mutate attempt B")
+    }
+
+    func testWorkerPolicyMarksOnlyTheMatchingAttemptAndSupportsReservedPrebindClose() throws {
+        do {
+            let fixture = try fixture()
+            let attempt = UUID()
+            var bound = fixture.policy.assignment
+            bound.sessionID = "session-one"
+            bound.launchReserved = true
+            bound.workerAttemptID = attempt
+            try fixture.store.saveAssignment(bound, expected: fixture.policy.assignment)
+            try fixture.policy.mark(.closed, sessionID: "session-one", attemptID: attempt,
+                from: [.authorized], connectionClosed: true)
+            let closed = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+            XCTAssertEqual(closed.workerAttemptID, attempt)
+            XCTAssertEqual(closed.connectionClosed, true)
+        }
+
+        do {
+            let fixture = try fixture()
+            let attempt = UUID()
+            try fixture.policy.reserve(attemptID: attempt)
+            try fixture.policy.mark(.stopped, sessionID: nil, attemptID: attempt,
+                from: [.unknown], connectionClosed: true)
+            let closed = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+            XCTAssertEqual(closed.workerAttemptID, attempt)
+            XCTAssertNil(closed.sessionID)
+            XCTAssertEqual(closed.connectionClosed, true)
+        }
+    }
+
+    func testInterruptStopsOwnedRuntimeWhenDurableAttemptPersistenceMismatches() async throws {
+        let fixture = try fixture(); let peer = Peer(policy: fixture.policy)
+        let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one",
+            prompt: "Begin the approved work").object()
+        let workerID = try XCTUnwrap(started["workerId"] as? String)
+        let original = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+        var differentAttempt = original
+        differentAttempt.workerAttemptID = UUID()
+        try fixture.store.saveAssignment(differentAttempt, expected: original)
+
+        do {
+            _ = try await adapter.interrupt(workerID: workerID)
+            XCTFail("A mismatched protected attempt cannot claim a durable stop")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .identityMismatch)
+        }
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/interrupt" }.count, 1,
+            "Persistence mismatch must not suppress STOP for the owned runtime thread")
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
+            differentAttempt, "The foreign durable attempt remains byte-for-byte unchanged")
+        let status = try await adapter.status(workerID: workerID).object()
+        XCTAssertEqual(status["status"] as? String, "unknown")
+        XCTAssertTrue((status["error"] as? String)?.contains("durable") == true,
+            "The returned persistence failure must state that durable STOP evidence is unconfirmed")
     }
 
     actor Gate {
@@ -221,11 +351,20 @@ final class WorkerAdapterTests: XCTestCase {
         let global = valid.store.root.appendingPathComponent("AGENTS.md")
         try Data("Owner global guidance".utf8).write(to: global)
         let peer = Peer(policy: valid.policy)
-        peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+        let selectedGlobalSource = try valid.policy.codexContext.globalInstructionSource() ?? "nil"
+        XCTAssertEqual(selectedGlobalSource, try CodexExecutionContext.canonicalPath(global.path))
+        peer.instructionSources = [selectedGlobalSource, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let expectedContextSources = valid.policy.assignment.context.map {
+            valid.policy.assignment.checkoutPath + "/" + $0.path
+        }.joined(separator: ", ")
+        let reportedInstructionSources = (peer.instructionSources ?? []).joined(separator: ", ")
         let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-        XCTAssertEqual(started["status"] as? String, "inProgress")
-        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
+        let startError = started["error"].map { String(describing: $0) } ?? "nil"
+        let startCalls = peer.calls.map(\.0).joined(separator: ", ")
+        let startDiagnostic = "error=\(startError), global=\(selectedGlobalSource), expected=\(expectedContextSources), reported=\(reportedInstructionSources), calls=\(startCalls)"
+        XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
+        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
         _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
         await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
             "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
@@ -241,11 +380,20 @@ final class WorkerAdapterTests: XCTestCase {
             if let override { try Data(override.utf8).write(to: replacement) }
             let expected = override?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? replacement : base
             let peer = Peer(policy: valid.policy)
-            peer.instructionSources = [expected.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+            let selectedGlobalSource = try valid.policy.codexContext.globalInstructionSource() ?? "nil"
+            XCTAssertEqual(selectedGlobalSource, try CodexExecutionContext.canonicalPath(expected.path))
+            peer.instructionSources = [selectedGlobalSource, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
             let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let expectedContextSources = valid.policy.assignment.context.map {
+                valid.policy.assignment.checkoutPath + "/" + $0.path
+            }.joined(separator: ", ")
+            let reportedInstructionSources = (peer.instructionSources ?? []).joined(separator: ", ")
             let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
-            XCTAssertEqual(started["status"] as? String, "inProgress")
-            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
+            let startError = started["error"].map { String(describing: $0) } ?? "nil"
+            let startCalls = peer.calls.map(\.0).joined(separator: ", ")
+            let startDiagnostic = "error=\(startError), global=\(selectedGlobalSource), expected=\(expectedContextSources), reported=\(reportedInstructionSources), calls=\(startCalls)"
+            XCTAssertEqual(started["status"] as? String, "inProgress", startDiagnostic)
+            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" }, startDiagnostic)
             _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
             await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
                 "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))

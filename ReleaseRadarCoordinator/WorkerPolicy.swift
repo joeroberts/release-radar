@@ -37,37 +37,42 @@ struct WorkerPolicy {
         try assignment.verifyContext()
     }
 
-    func current(sessionID: String) throws -> ProjectExecutionAssignment {
+    func current(sessionID: String, attemptID: UUID? = nil) throws -> ProjectExecutionAssignment {
         try verifyCodexContext()
         let currentPolicy = try store.policy(projectID: assignment.registration.projectID.rawValue)
         let current = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
         guard currentPolicy == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
         var original = assignment; original.sessionID = sessionID; original.launchReserved = true
+        if let attemptID { original.workerAttemptID = attemptID }
         guard current == original else { throw ProjectExecutionError.assignmentNotAuthorized }
         try current.admit(registration: policy.registration, checkoutPath: assignment.checkoutPath, sessionID: sessionID, boundSessionID: current.sessionID)
         try verifyContext()
         return current
     }
 
-    func reserve() throws {
+    func reserve(attemptID: UUID? = nil) throws {
         try verifyCodexContext()
         guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
         var intent = assignment; intent.state = .unknown; intent.launchReserved = true; intent.uncertainOutcome = true
+        intent.workerAttemptID = attemptID
         try store.saveAssignment(intent, expected: assignment)
     }
 
-    func bind(sessionID: String) throws {
+    func bind(sessionID: String, attemptID: UUID? = nil) throws {
         try verifyCodexContext()
         guard assignment.sessionID == nil else { throw ProjectExecutionError.conflict }
         guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
-        var bound = assignment; bound.sessionID = sessionID; bound.launchReserved = true
+        var bound = assignment; bound.sessionID = sessionID; bound.launchReserved = true; bound.workerAttemptID = attemptID
         var intent = assignment; intent.state = .unknown; intent.launchReserved = true; intent.uncertainOutcome = true
+        intent.workerAttemptID = attemptID
         try store.saveAssignment(bound, expected: intent)
     }
 
-    func mark(_ state: ProjectExecutionAssignment.State, sessionID: String?, from allowed: [ProjectExecutionAssignment.State], connectionClosed: Bool = false) throws {
+    func mark(_ state: ProjectExecutionAssignment.State, sessionID: String?, attemptID: UUID,
+              from allowed: [ProjectExecutionAssignment.State], connectionClosed: Bool = false) throws {
         let current = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
         guard current.registration == assignment.registration,
+              current.workerAttemptID == attemptID,
               current.sessionID == sessionID || (connectionClosed && current.sessionID == nil && current.launchReserved == true && current.state != .authorized) else { throw ProjectExecutionError.identityMismatch }
         guard allowed.contains(current.state) else { return } // Preserve owner revocation/STOP.
         var changed = current; changed.state = state
