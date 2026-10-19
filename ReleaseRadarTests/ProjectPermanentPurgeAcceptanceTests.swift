@@ -692,7 +692,7 @@ private extension ProjectPermanentPurgeAcceptanceTests {
 
         func seedRemovedTarget(
             includeReplacement: Bool,
-            beforeRemoval: ((ProjectRegistration) async throws -> Void)? = nil
+            beforeRemoval: (@Sendable (ProjectRegistration) async throws -> Void)? = nil
         ) async throws -> RemovedProjectRecord {
             let targetProjectID = targetProjectID
             let replacementProjectID = replacementProjectID
