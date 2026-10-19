@@ -3414,7 +3414,7 @@ final class AppRouteTests: XCTestCase {
             var editorText = ""
             for _ in 0..<20 {
                 hosting.layoutSubtreeIfNeeded()
-                editorText = accessibilityText(application)
+                editorText = accessibilityText(nativeWindow)
                 if editorText.contains("New Delivery Goal") { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
@@ -3454,7 +3454,7 @@ final class AppRouteTests: XCTestCase {
                 "Validation must name the required correction in plain language"
             )
             let cancel = try XCTUnwrap(
-                accessibilityElements(application, role: kAXButtonRole).first { element in
+                accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
                     textAttribute(element, kAXTitleAttribute) == "Cancel"
                         || textAttribute(element, kAXDescriptionAttribute) == "Cancel"
                 },
@@ -3568,7 +3568,7 @@ final class AppRouteTests: XCTestCase {
             )
             XCTAssertEqual(AXUIElementPerformAction(cancel, kAXPressAction as CFString), .success)
             try await Task.sleep(for: .milliseconds(150))
-            XCTAssertFalse(accessibilityText(application).contains("Assign Delivery Goal Tickets"))
+            XCTAssertFalse(accessibilityText(nativeWindow).contains("Assign Delivery Goal Tickets"))
             XCTAssertTrue(window.isVisible)
             XCTAssertEqual(hosting.bounds.width, width, accuracy: 1)
             try taskCapture(hosting, name: "delivery-goal-assignments-\(Int(width))")
@@ -3634,7 +3634,7 @@ final class AppRouteTests: XCTestCase {
             accessibilityElement(nativeWindow, identifier: "edit-delivery-goal-assignments-\(fixture.roadmapPhaseID.rawValue)")
         )
         XCTAssertEqual(AXUIElementPerformAction(open, kAXPressAction as CFString), .success)
-        for _ in 0..<20 where !accessibilityText(application).contains("Assign Delivery Goal Tickets") {
+        for _ in 0..<20 where !accessibilityText(nativeWindow).contains("Assign Delivery Goal Tickets") {
             try await Task.sleep(for: .milliseconds(100))
         }
         let loaderRecords = await loader.records()
@@ -3642,9 +3642,9 @@ final class AppRouteTests: XCTestCase {
         if let sheet = window.attachedSheet, let content = sheet.contentView {
             try taskViewCapture(content, name: "delivery-goal-assignment-recovery-sheet")
         }
-        let showsLoading = accessibilityText(application).contains("Loading ticket assignments")
+        let showsLoading = accessibilityText(nativeWindow).contains("Loading ticket assignments")
         let assignmentEditorDiagnostic = "Assignment editor save is unavailable; loads=\(loaderRecords), presentation=\(presentation), loading=\(showsLoading)"
-        let save = try XCTUnwrap(accessibilityElements(application, role: kAXButtonRole).first { element in
+        let save = try XCTUnwrap(accessibilityElements(nativeWindow, role: kAXButtonRole).first { element in
             var description: CFTypeRef?
             var title: CFTypeRef?
             _ = AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &description)
@@ -3655,13 +3655,13 @@ final class AppRouteTests: XCTestCase {
         var message: AXUIElement?
         for _ in 0..<20 {
             hosting.layoutSubtreeIfNeeded()
-            message = accessibilityElement(application, identifier: "delivery-goal-assignment-editor-message")
+            message = accessibilityElement(nativeWindow, identifier: "delivery-goal-assignment-editor-message")
             if message != nil { break }
             try await Task.sleep(for: .milliseconds(100))
         }
         XCTAssertNotNil(message, "Unknown save must give actionable recovery feedback")
         let reconcile = try XCTUnwrap(
-            accessibilityElement(application, identifier: "reconcile-delivery-goal-assignment-save"),
+            accessibilityElement(nativeWindow, identifier: "reconcile-delivery-goal-assignment-save"),
             "Unknown save must expose the retained-attempt recovery control"
         )
         XCTAssertEqual(AXUIElementPerformAction(reconcile, kAXPressAction as CFString), .success)
@@ -3671,6 +3671,42 @@ final class AppRouteTests: XCTestCase {
         }
         let replayedAttempts = await replay.attempts()
         XCTAssertEqual(replayedAttempts, [attemptID], "Reconcile must reuse the exact retained attempt identity")
+    }
+
+    @MainActor
+    func testNativeDeliveryGoalAssignmentEditorExplainsUnavailableLoadAndRetries() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        _ = try await Self.seedDeliveryGoalAssignmentFixture(in: fixture)
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let plan = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID))
+        let loaded = await model.loadDeliveryGoalAssignmentEditor(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        let loader = DeliveryGoalAssignmentLoadSequence([.failed(.appUnavailable), loaded])
+        let view = ProjectPlanView(
+            plan: plan, selectedTicketID: .constant(.init(rawValue: "ROAD-1")), openAllPhases: {}, openPhase: { _ in },
+            loadDeliveryGoalAssignmentEditor: { _ in await loader.next() }
+        )
+        let window = NSWindow(contentRect: .init(x: 30, y: 30, width: 1_280, height: 850), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.title = "Delivery Goal assignment unavailable"
+        let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let open = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "edit-delivery-goal-assignments-\(fixture.roadmapPhaseID.rawValue)"))
+        XCTAssertEqual(AXUIElementPerformAction(open, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where accessibilityElement(nativeWindow, identifier: "delivery-goal-assignment-editor-message") == nil {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let message = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "delivery-goal-assignment-editor-message"))
+        XCTAssertTrue(accessibilityText(message).localizedCaseInsensitiveContains("unavailable"))
+        let retry = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "retry-delivery-goal-assignment-load"))
+        XCTAssertEqual(AXUIElementPerformAction(retry, kAXPressAction as CFString), .success)
+        for _ in 0..<20 where !accessibilityText(nativeWindow).contains("Assign Delivery Goal Tickets") { try await Task.sleep(for: .milliseconds(100)) }
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("ROAD-1"))
+        XCTAssertEqual(await loader.count(), 2)
     }
 
     @MainActor
@@ -9391,6 +9427,20 @@ private actor DeliveryGoalAssignmentLoadCapture {
     }
 
     func records() -> [String] { recorded }
+}
+
+private actor DeliveryGoalAssignmentLoadSequence {
+    private var outcomes: [DeliveryGoalAssignmentEditorLoadOutcome]
+    private var requests = 0
+
+    init(_ outcomes: [DeliveryGoalAssignmentEditorLoadOutcome]) { self.outcomes = outcomes }
+
+    func next() -> DeliveryGoalAssignmentEditorLoadOutcome {
+        requests += 1
+        return outcomes.removeFirst()
+    }
+
+    func count() -> Int { requests }
 }
 
 private actor DeliveryGoalAssignmentDispatchSequence {
