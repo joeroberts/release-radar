@@ -604,7 +604,9 @@ struct ProjectPlanView: View {
         }.navigationTitle("Assign Delivery Goal Tickets").toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showsDeliveryGoalAssignmentEditor = false }.disabled(isSavingDeliveryGoalAssignments) }
             ToolbarItem(placement: .confirmationAction) { Button("Save") { saveDeliveryGoalAssignments() }.disabled(deliveryGoalAssignmentEditor == nil || isSavingDeliveryGoalAssignments) }
-        }}.frame(minWidth: 520, minHeight: 400)
+        }}
+        .frame(minWidth: 520, minHeight: 400)
+        .accessibilityElement(children: .contain)
     }
     private func currentGoal(_ ticketID: TicketID, editor: DeliveryGoalAssignmentEditorSnapshot) -> DeliveryGoalID? { editor.assignments.first { $0.ticketID == ticketID }?.goalID }
     private func openDeliveryGoalAssignmentEditor(_ phaseID: PhaseID) {
