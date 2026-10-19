@@ -191,6 +191,29 @@ final class WorkerAdapterTests: XCTestCase {
         }
     }
 
+    func testInterruptStopsOwnedRuntimeWhenDurableAttemptPersistenceMismatches() async throws {
+        let fixture = try fixture(); let peer = Peer(policy: fixture.policy)
+        let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one",
+            prompt: "Begin the approved work").object()
+        let workerID = try XCTUnwrap(started["workerId"] as? String)
+        let original = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
+        var differentAttempt = original
+        differentAttempt.workerAttemptID = UUID()
+        try fixture.store.saveAssignment(differentAttempt, expected: original)
+
+        do {
+            _ = try await adapter.interrupt(workerID: workerID)
+            XCTFail("A mismatched protected attempt cannot claim a durable stop")
+        } catch {
+            XCTAssertEqual(error as? ProjectExecutionError, .identityMismatch)
+        }
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/interrupt" }.count, 1,
+            "Persistence mismatch must not suppress STOP for the owned runtime thread")
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one"),
+            differentAttempt, "The foreign durable attempt remains byte-for-byte unchanged")
+    }
+
     actor Gate {
         private var entered = false
         private var waiter: CheckedContinuation<Void, Never>?
