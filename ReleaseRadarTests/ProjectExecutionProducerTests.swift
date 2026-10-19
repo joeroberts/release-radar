@@ -1721,10 +1721,12 @@ final class ProjectExecutionProducerTests: XCTestCase {
                 reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
             XCTFail("A changed selected context must not use the optional-skill fallback")
         } catch let error as CodexExecutionContextError {
-            XCTAssertEqual(error, .changed)
+            XCTAssertEqual(error, CodexExecutionContextError.changed)
         }
-        XCTAssertTrue((await configuration.profiles).isEmpty)
-        XCTAssertEqual(await configuration.hookChecks, 0)
+        let profiles = await configuration.profiles
+        let hookChecks = await configuration.hookChecks
+        XCTAssertTrue(profiles.isEmpty)
+        XCTAssertEqual(hookChecks, 0)
         XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
     }
 
